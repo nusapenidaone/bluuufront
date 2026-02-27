@@ -1,0 +1,10 @@
+name: Status
+form: $/noren/booking/models/status/fields.yaml
+modelClass: Noren\Booking\Models\Status
+defaultRedirect: noren/booking/status
+create:
+    redirect: 'noren/booking/status/update/:id'
+    redirectClose: noren/booking/status
+update:
+    redirect: noren/booking/status
+    redirectClose: noren/booking/status

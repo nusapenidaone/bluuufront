@@ -1,0 +1,10 @@
+name: Method
+form: $/noren/booking/models/method/fields.yaml
+modelClass: Noren\Booking\Models\Method
+defaultRedirect: noren/booking/method
+create:
+    redirect: 'noren/booking/method/update/:id'
+    redirectClose: noren/booking/method
+update:
+    redirect: noren/booking/method
+    redirectClose: noren/booking/method

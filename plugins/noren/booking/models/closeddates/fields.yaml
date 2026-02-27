@@ -1,0 +1,23 @@
+fields:
+    date:
+        label: Date
+        span: auto
+        type: datepicker
+        mode: date
+    boat:
+        label: 'Boat id'
+        span: auto
+        type: relation
+        nameFrom: amo_name
+    lead_id:
+        label: 'Lead id'
+        span: auto
+        type: number
+    qtty:
+        label: Qtty
+        span: auto
+        type: number
+    type:
+        label: Type
+        span: auto
+        type: number

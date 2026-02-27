@@ -1,0 +1,26 @@
+payment:
+    label: Payments
+    manage:
+        form: $/noren/booking/models/payment/fields.yaml
+        list: $/noren/booking/models/payment/columns.yaml
+    view:
+        list: $/noren/booking/models/payment/columns.yaml
+        toolbarButtons: []
+        
+lead:
+    label: Lead
+    manage:
+        form: $/noren/booking/models/lead/fields.yaml
+        list: $/noren/booking/models/lead/columns.yaml
+    view:
+        list: $/noren/booking/models/lead/columns.yaml
+        toolbarButtons: []
+        
+order_history:
+    label: History
+    manage:
+        form: $/noren/booking/models/orderhistory/fields.yaml
+        list: $/noren/booking/models/orderhistory/columns.yaml
+    view:
+        list: $/noren/booking/models/orderhistory/columns.yaml
+        toolbarButtons: []

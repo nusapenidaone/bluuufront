@@ -1,0 +1,12 @@
+columns:
+
+    created_at:
+        label: Created
+        type: datetime
+    order_id:
+        label: Order ID
+        type: number
+    order[email]:
+        label: Email
+        type: number
+

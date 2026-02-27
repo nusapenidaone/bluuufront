@@ -1,0 +1,10 @@
+name: Rates
+form: $/noren/booking/models/rates/fields.yaml
+modelClass: Noren\Booking\Models\Rates
+defaultRedirect: noren/booking/rates
+create:
+    redirect: 'noren/booking/rates/update/:id'
+    redirectClose: noren/booking/rates
+update:
+    redirect: noren/booking/rates
+    redirectClose: noren/booking/rates

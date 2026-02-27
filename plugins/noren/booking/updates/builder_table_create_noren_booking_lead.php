@@ -1,0 +1,25 @@
+<?php namespace Noren\Booking\Updates;
+
+use Schema;
+use October\Rain\Database\Updates\Migration;
+
+class BuilderTableCreateNorenBookingLead extends Migration
+{
+    public function up()
+    {
+        Schema::create('noren_booking_lead', function($table)
+        {
+            $table->increments('id')->unsigned();
+            $table->timestamp('created_at')->nullable();
+            $table->timestamp('updated_at')->nullable();
+            $table->integer('order_id')->nullable();
+            $table->integer('lead_id')->nullable();
+            $table->text('body')->nullable();
+        });
+    }
+    
+    public function down()
+    {
+        Schema::dropIfExists('noren_booking_lead');
+    }
+}

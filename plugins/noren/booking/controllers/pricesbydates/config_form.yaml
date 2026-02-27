@@ -1,0 +1,10 @@
+name: PricesByDates
+form: $/noren/booking/models/pricesbydates/fields.yaml
+modelClass: Noren\Booking\Models\PricesByDates
+defaultRedirect: noren/booking/pricesbydates
+create:
+    redirect: 'noren/booking/pricesbydates/update/:id'
+    redirectClose: noren/booking/pricesbydates
+update:
+    redirect: noren/booking/pricesbydates
+    redirectClose: noren/booking/pricesbydates

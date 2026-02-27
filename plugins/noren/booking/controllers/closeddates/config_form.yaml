@@ -1,0 +1,11 @@
+name: Closeddates
+modelClass: Noren\Booking\Models\Closeddates
+form: $/noren/booking/models/closeddates/fields.yaml
+defaultRedirect: noren/booking/closeddates
+create:
+    redirect: 'noren/booking/closeddates/update/:id'
+    redirectClose: noren/booking/closeddates
+update:
+    redirect: noren/booking/closeddates
+    redirectClose: noren/booking/closeddates
+preview: {  }

@@ -1,0 +1,8 @@
+packagesitems:
+    label: Items
+    manage:
+        form: $/noren/booking/models/packagesitems/fields.yaml
+        list: $/noren/booking/models/packagesitems/columns.yaml
+    view:
+        list: $/noren/booking/models/packagesitems/columns.yaml
+        toolbarButtons: create|delete

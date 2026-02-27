@@ -1,0 +1,36 @@
+fields:
+    included:
+        type: switch
+        label: Included
+        span: full
+    name:
+        label: Name
+        span: auto
+        type: text
+    amo_name:
+        label: 'Amo Name'
+        span: auto
+        type: text
+    description:
+        label: Description
+        size: large
+        span: left
+        type: richeditor
+    menu:
+        label: Menu
+        size: giant
+        span: auto
+        type: richeditor
+        
+    images:
+        label: Images
+        mode: image
+        imageWidth: '100'
+        imageHeight: '100'
+        useCaption: 0
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: fileupload
+

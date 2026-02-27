@@ -1,0 +1,8 @@
+restaurant:
+    label: Restaurants
+    manage:
+        form: $/noren/booking/models/restaurant/fields.yaml
+        list: $/noren/booking/models/restaurant/columns.yaml
+    view:
+        list: $/noren/booking/models/restaurant/columns.yaml
+        toolbarButtons: add|remove

@@ -1,0 +1,10 @@
+name: Types
+form: $/noren/booking/models/types/fields.yaml
+modelClass: Noren\Booking\Models\Types
+defaultRedirect: noren/booking/types
+create:
+    redirect: 'noren/booking/types/update/:id'
+    redirectClose: noren/booking/types
+update:
+    redirect: noren/booking/types
+    redirectClose: noren/booking/types

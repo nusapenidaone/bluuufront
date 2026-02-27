@@ -1,0 +1,30 @@
+columns:
+    name:
+        label: Name
+        type: text
+        searchable: true
+        sortable: true
+    price:
+        label: Price
+        type: number
+        searchable: true
+        sortable: true
+        select: "format(price, 0, 'de_DE')"
+    measure:
+        label: Measure
+        type: text
+        searchable: true
+        sortable: true
+    available:
+        label: Aavailable
+        type: number
+        searchable: true
+        sortable: true
+    recomended:
+        label: Recomended
+        type: switch
+        sortable: true
+    by_request:
+        label: 'By Request'
+        type: switch
+        sortable: true

@@ -1,0 +1,15 @@
+columns:
+    agent[name]:
+        label: agent
+        type: number
+    code:
+        label: Code
+        type: text
+        
+    discount:
+        label: Discount
+        type: number
+    agent_fee:
+        label: 'Agent fee'
+        type: number
+

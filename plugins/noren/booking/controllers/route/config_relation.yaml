@@ -1,0 +1,13 @@
+ecategories:
+    label: Extras Categories
+    manage:
+        form: $/noren/booking/models/ecategories/fields.yaml
+        list: $/noren/booking/models/ecategories/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/ecategories/columns.yaml
+        toolbarButtons: add|remove

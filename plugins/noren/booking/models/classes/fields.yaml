@@ -1,0 +1,17 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    slug:
+        label: Slug
+        span: auto
+        preset:
+            field: name
+            type: slug
+        type: text
+        
+    types:
+        label: Type
+        span: auto
+        type: relation

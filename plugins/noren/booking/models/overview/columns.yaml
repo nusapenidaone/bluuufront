@@ -1,0 +1,10 @@
+columns:
+    name:
+        label: name
+        type: text
+    type:
+        label: Type
+        type: selectable
+        options:
+            1: Start
+            2: End

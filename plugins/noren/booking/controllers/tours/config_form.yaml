@@ -1,0 +1,11 @@
+name: Tours
+modelClass: Noren\Booking\Models\Tours
+form: $/noren/booking/models/tours/fields.yaml
+defaultRedirect: noren/booking/tours
+create:
+    redirect: 'noren/booking/tours/update/:id'
+    redirectClose: noren/booking/tours
+update:
+    redirect: noren/booking/tours
+    redirectClose: noren/booking/tours
+preview: {  }

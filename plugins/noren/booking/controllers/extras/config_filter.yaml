@@ -1,0 +1,8 @@
+scopes:
+
+    ecategories:
+        label: Type
+        modelClass: Noren\Booking\Models\Ecategories
+        #conditions: ecategories_id in (:value)
+        nameFrom: name
+        scope: filterByEcategory

@@ -1,0 +1,10 @@
+name: Includes
+form: $/noren/booking/models/includes/fields.yaml
+modelClass: Noren\Booking\Models\Includes
+defaultRedirect: noren/booking/includes
+create:
+    redirect: 'noren/booking/includes/update/:id'
+    redirectClose: noren/booking/includes
+update:
+    redirect: noren/booking/includes
+    redirectClose: noren/booking/includes

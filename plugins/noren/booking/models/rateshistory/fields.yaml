@@ -1,0 +1,5 @@
+fields:
+    rate:
+        label: Rate
+        span: auto
+        type: number

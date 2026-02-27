@@ -1,0 +1,144 @@
+columns:
+    id:
+        label: 'ID'
+        type: number
+        searchable: true
+        sortable: true
+    external_id:
+        label: 'Extrernal ID'
+        type: number
+        searchable: true
+        sortable: true
+    created_at:
+        label: Created
+        type: datetime
+        searchable: true
+        sortable: true
+        format: 'Y-m-d H:i:s'
+        
+    updated_at:
+        label: Updated
+        type: datetime
+        searchable: true
+        sortable: true
+        format: 'Y-m-d H:i:s'
+        
+    tours:
+        label: Tour
+        type: number
+        searchable: true
+        sortable: true
+        select: name
+        relation: tours
+    travel_date:
+        label: Date
+        type: datetime
+        searchable: true
+        sortable: true
+        format: Y-m-d
+    members:
+        label: Members
+        type: number
+        searchable: true
+        sortable: true
+    cars:
+        label: Cars
+        type: number
+        searchable: true
+        sortable: true
+    total_price:
+        label: Total
+        type: number
+        searchable: true
+        sortable: true
+    discount:
+        label: Discount
+        type: number
+        searchable: true
+        sortable: true
+        
+    program_price:
+        label: Program
+        type: number
+        searchable: true
+        sortable: true
+    transfer_price:
+        label: Transfer
+        type: number
+        searchable: true
+        sortable: true
+    extras_total:
+        label: Extras
+        type: number
+        searchable: true
+        sortable: true
+        
+    cover_price:
+        label: Cover
+        type: number
+        searchable: true
+        sortable: true
+        
+    promocode:
+        label: Promocode
+        type: text
+        searchable: true
+        sortable: true
+    name:
+        label: Name
+        type: text
+        searchable: true
+        sortable: true
+    email:
+        label: Email
+        type: text
+        searchable: true
+        sortable: true
+    whatsapp:
+        label: Whatsapp
+        type: text
+        searchable: true
+        sortable: true
+    status:
+        label: Status
+        type: number
+        searchable: true
+        sortable: true
+        select: name
+        relation: status
+    payment_status:
+        label: 'Pay status'
+        type: number
+        searchable: true
+        sortable: true
+        select: name
+        relation: payment_status
+        
+    Method:
+        label: 'Method'
+        type: number
+        searchable: true
+        sortable: true
+        select: name
+        relation: method
+        
+    amo_lead_id:
+        label: Lead ID
+        type: text
+        
+    link:
+        label: Link
+        type: linkage
+        attributes:
+            target: _blank
+        select: concat('https://baliboattours.kommo.com/leads/detail/', amo_lead_id)
+        
+    key:
+        label: Key
+        type: text
+        searchable: true
+        sortable: true
+        
+        
+        
+        

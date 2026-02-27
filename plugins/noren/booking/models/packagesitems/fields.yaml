@@ -1,0 +1,9 @@
+fields:
+    members_count:
+        label: Count
+        span: auto
+        type: number
+    price:
+        label: Price
+        span: auto
+        type: number

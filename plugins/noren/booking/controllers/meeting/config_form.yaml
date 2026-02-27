@@ -1,0 +1,10 @@
+name: Meeting
+form: $/noren/booking/models/meeting/fields.yaml
+modelClass: Noren\Booking\Models\Meeting
+defaultRedirect: noren/booking/meeting
+create:
+    redirect: 'noren/booking/meeting/update/:id'
+    redirectClose: noren/booking/meeting
+update:
+    redirect: noren/booking/meeting
+    redirectClose: noren/booking/meeting

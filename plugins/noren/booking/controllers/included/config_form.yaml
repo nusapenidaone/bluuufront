@@ -1,0 +1,15 @@
+name: Included
+form: $/noren/booking/models/included/fields.yaml
+modelClass: Noren\Booking\Models\Included
+defaultRedirect: noren/booking/included
+create:
+    redirect: 'noren/booking/included/update/:id'
+    redirectClose: noren/booking/included
+update:
+    redirect: noren/booking/included
+    redirectClose: noren/booking/included
+structure:
+    showTree: false
+    showReorder: true
+    showSorting: true
+    maxDepth: 1

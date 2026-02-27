@@ -1,0 +1,17 @@
+fields:
+    name:
+        label: Name
+        span: left
+        type: text
+    amo_name:
+        label: 'Amo Boat Name'
+        span: left
+        type: text
+    capacity:
+        label: Capacity
+        span: left
+        type: number
+    closed:
+        label: Closed
+        span: auto
+        type: switch

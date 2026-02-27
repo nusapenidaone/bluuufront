@@ -1,0 +1,22 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    color:
+        label: Color
+        options:
+            bg-orange: Orange
+            bg-pink: Pink
+            bg-red: Red
+            bg-purple: Purple
+            bg-blue: 'Deep Ocean Blue'
+            'bg-pure-white c-950': 'Pure White'
+            'bg-tropic-aqua c-950': 'Tropic Aqua'
+            bg-azure-blue: 'Azure Blue'
+            'bg-cool-gray c-950': 'Cool Gray'
+            'bg-misty-blue c-950': 'Misty Blue'
+            'bg-wave-mint c-950': 'Wave Mint'
+        showSearch: true
+        span: auto
+        type: dropdown

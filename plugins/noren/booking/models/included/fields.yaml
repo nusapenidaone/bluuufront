@@ -1,0 +1,18 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    description:
+        label: Description
+        size: small
+        span: auto
+        type: richeditor
+    icon:
+        label: Icon
+        mode: image
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: mediafinder

@@ -1,0 +1,18 @@
+scopes:
+
+    types:
+        label: Type
+        modelClass: Noren\Booking\Models\Types
+        conditions: types_id in (:value)
+        nameFrom: name
+    classes:
+        label: Class
+        modelClass: Noren\Booking\Models\Classes
+        conditions: classes_id in (:value)
+        nameFrom: name
+    category:
+        label: Category
+        modelClass: Noren\Booking\Models\Category
+        conditions: category_id in (:value)
+        nameFrom: name
+        scope: FilterByCategory

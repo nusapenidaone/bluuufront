@@ -1,0 +1,12 @@
+list: $/noren/booking/models/transfer/columns.yaml
+modelClass: Noren\Booking\Models\Transfer
+title: Transfer
+noRecordsMessage: 'backend::lang.list.no_records'
+showSetup: true
+showCheckboxes: true
+recordsPerPage: 20
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: 'backend::lang.list.search_prompt'
+recordUrl: 'noren/booking/transfer/update/:id'

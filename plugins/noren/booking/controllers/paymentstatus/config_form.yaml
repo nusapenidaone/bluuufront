@@ -1,0 +1,10 @@
+name: PaymentStatus
+form: $/noren/booking/models/paymentstatus/fields.yaml
+modelClass: Noren\Booking\Models\PaymentStatus
+defaultRedirect: noren/booking/paymentstatus
+create:
+    redirect: 'noren/booking/paymentstatus/update/:id'
+    redirectClose: noren/booking/paymentstatus
+update:
+    redirect: noren/booking/paymentstatus
+    redirectClose: noren/booking/paymentstatus

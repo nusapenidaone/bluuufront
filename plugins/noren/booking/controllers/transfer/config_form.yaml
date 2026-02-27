@@ -1,0 +1,10 @@
+name: Transfer
+form: $/noren/booking/models/transfer/fields.yaml
+modelClass: Noren\Booking\Models\Transfer
+defaultRedirect: noren/booking/transfer
+create:
+    redirect: 'noren/booking/transfer/update/:id'
+    redirectClose: noren/booking/transfer
+update:
+    redirect: noren/booking/transfer
+    redirectClose: noren/booking/transfer

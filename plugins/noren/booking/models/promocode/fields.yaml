@@ -1,0 +1,23 @@
+fields:
+    agent:
+        label: Agent
+        nameFrom: name
+        descriptionFrom: description
+        span: auto
+        type: relation
+    code:
+        label: Code
+        span: auto
+        type: text
+    agent_fee:
+        label: 'Agent fee'
+        span: auto
+        type: number
+    discount:
+        label: Discount
+        span: auto
+        type: number
+    tours:
+        label: Tours
+        span: auto
+        type: relation

@@ -1,0 +1,151 @@
+  
+pricesbydates:
+    label: Prices
+    manage:
+        form: $/noren/booking/models/pricesbydates/fields.yaml
+        list: $/noren/booking/models/pricesbydates/columns.yaml
+    view:
+        list: $/noren/booking/models/pricesbydates/columns.yaml
+        toolbarButtons: create|delete
+        
+ecategories:
+    label: Extras Categories
+    manage:
+        form: $/noren/booking/models/ecategories/fields.yaml
+        list: $/noren/booking/models/ecategories/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/ecategories/columns.yaml
+        toolbarButtons: add|remove
+        
+program:
+    label: Program
+    manage:
+        form: $/noren/booking/models/program/fields.yaml
+        list: $/noren/booking/models/program/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/program/columns.yaml
+        toolbarButtons: create|add|remove
+        
+overview:
+    label: Overview
+    manage:
+        form: $/noren/booking/models/overview/fields.yaml
+        list: $/noren/booking/models/overview/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/overview/columns.yaml
+        toolbarButtons: create|add|remove
+why:
+    label: 'Why'
+    manage:
+        form: $/noren/booking/models/why/fields.yaml
+        list: $/noren/booking/models/why/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/why/columns.yaml
+        toolbarButtons: create|add|remove   
+includes:
+    label: 'Includes'
+    manage:
+        form: $/noren/booking/models/includes/fields.yaml
+        list: $/noren/booking/models/includes/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/includes/columns.yaml
+        toolbarButtons: create|add|remove
+        
+included:
+    label: 'Included'
+    manage:
+        form: $/noren/booking/models/included/fields.yaml
+        list: $/noren/booking/models/included/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/included/columns.yaml
+        toolbarButtons: create|add|remove
+        
+restaurant:
+    label: 'Restaurant'
+    manage:
+        form: $/noren/booking/models/restaurant/fields.yaml
+        list: $/noren/booking/models/restaurant/columns.yaml
+    view:
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+        list: $/noren/booking/models/includes/columns.yaml
+        toolbarButtons: create|add|remove
+reviews:
+    label: Reviews
+    manage:
+        form: $/noren/bluuu/models/reviews/fields.yaml
+        list: $/noren/bluuu/models/reviews/columns.yaml
+        recordsPerPage: 20
+    view:
+        list: $/noren/bluuu/models/reviews/columns.yaml
+        toolbarButtons: add|remove
+        recordsPerPage: 20
+
+transfer:
+    label: Transfer
+    manage:
+        #form: $/noren/bluuu/models/transfer/fields.yaml
+        list: $/noren/booking/models/transfer/columns.yaml
+    view:
+        list: $/noren/booking/models/transfer/columns.yaml
+        toolbarButtons: add|remove   
+cover:
+    label: Cover
+    manage:
+        #form: $/noren/bluuu/models/transfer/fields.yaml
+        list: $/noren/booking/models/cover/columns.yaml
+    view:
+        list: $/noren/booking/models/cover/columns.yaml
+        toolbarButtons: add|remove  
+faq:
+    label: FAQ
+    manage:
+        form: $/noren/bluuu/models/faq/fields.yaml
+        list: $/noren/bluuu/models/faq/columns.yaml
+    view:
+        list: $/noren/bluuu/models/faq/columns.yaml
+        toolbarButtons: add|remove
+        
+        
+boat:
+    label: Boats
+    manage:
+        form: $/noren/booking/models/boat/fields.yaml
+        list: $/noren/booking/models/boat/columns.yaml
+    view:
+        list: $/noren/booking/models/boat/columns.yaml
+        toolbarButtons: add|remove
+        

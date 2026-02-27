@@ -1,0 +1,23 @@
+fields:
+    date_start:
+        label: 'Date start'
+        mode: date
+        format: Y-m-d
+        span: auto
+        type: datepicker
+    date_end:
+        label: 'Date end'
+        mode: date
+        format: Y-m-d
+        span: auto
+        type: datepicker
+    packages:
+        label: Packages
+        span: auto
+        type: relation
+    low_price:
+        type: switch
+        label: Low Price
+    flash_sale:
+        type: switch
+        label: Flash Sale

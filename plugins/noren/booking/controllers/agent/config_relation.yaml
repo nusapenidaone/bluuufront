@@ -1,0 +1,8 @@
+promocode:
+    label: Promocodes
+    manage:
+        form: $/noren/booking/models/promocode/fields.yaml
+        list: $/noren/booking/models/promocode/columns.yaml
+    view:
+        list: $/noren/booking/models/promocode/columns.yaml
+        toolbarButtons: create|delete

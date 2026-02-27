@@ -1,0 +1,29 @@
+fields:
+    method:
+        label: 'Payment Methods'
+        prompt: 'Add new item'
+        displayMode: accordion
+        span: full
+        type: repeater
+        form:
+            fields:
+                id:
+                    label: ID
+                    span: auto
+                    type: number
+                code:
+                    label: Code
+                    span: auto
+                    type: text
+                name:
+                    label: Name
+                    span: auto
+                    type: text
+                text:
+                    label: Text
+                    span: auto
+                    type: text
+                icon:
+                    label: Icon
+                    span: auto
+                    type: text

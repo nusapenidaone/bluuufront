@@ -1,0 +1,10 @@
+name: Lead
+form: $/noren/booking/models/lead/fields.yaml
+modelClass: Noren\Booking\Models\Lead
+defaultRedirect: noren/booking/lead
+create:
+    redirect: 'noren/booking/lead/update/:id'
+    redirectClose: noren/booking/lead
+update:
+    redirect: noren/booking/lead
+    redirectClose: noren/booking/lead

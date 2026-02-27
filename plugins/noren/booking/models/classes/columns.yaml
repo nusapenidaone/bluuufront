@@ -1,0 +1,11 @@
+columns:
+    name:
+        label: Name
+        type: text
+    # slug:
+    #     label: Link
+    #     type: linkage
+    #     attributes:
+    #         target: _blank
+    #     select: concat('/boking/private-tours/', slug)
+        

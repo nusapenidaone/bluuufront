@@ -1,0 +1,37 @@
+tabs:
+    fields:
+        name:
+            label: Name
+            span: auto
+            type: text
+            tab: Main
+        slug:
+            label: Slug
+            span: auto
+            preset:
+                field: name
+                type: slug
+            type: text
+            tab: Main
+        description:
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Main
+        tours:
+            label: Tours
+            span: auto
+            type: relation
+            tab: Main            
+        seo_title:
+            label: 'SEO Title'
+            span: auto
+            type: text
+            tab: SEO
+        seo_description:
+            label: 'SEO Description'
+            size: small
+            span: auto
+            type: textarea
+            tab: SEO

@@ -1,0 +1,6 @@
+fields:
+
+    body:
+        label: JSON данные
+        type: partial
+        path: $/noren/booking/partials/_details.php

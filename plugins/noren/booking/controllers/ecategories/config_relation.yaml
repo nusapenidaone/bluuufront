@@ -1,0 +1,8 @@
+extras:
+    label: Extras
+    manage:
+        form: $/noren/booking/models/extras/fields.yaml
+        list: $/noren/booking/models/extras/columns.yaml
+    view:
+        list: $/noren/booking/models/extras/columns.yaml
+        toolbarButtons: create|delete|add|remove

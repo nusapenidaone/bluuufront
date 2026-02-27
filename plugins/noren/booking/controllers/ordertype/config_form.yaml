@@ -1,0 +1,10 @@
+name: OrderType
+form: $/noren/booking/models/ordertype/fields.yaml
+modelClass: Noren\Booking\Models\OrderType
+defaultRedirect: noren/booking/ordertype
+create:
+    redirect: 'noren/booking/ordertype/update/:id'
+    redirectClose: noren/booking/ordertype
+update:
+    redirect: noren/booking/ordertype
+    redirectClose: noren/booking/ordertype

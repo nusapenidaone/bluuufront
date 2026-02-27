@@ -1,0 +1,10 @@
+name: Cancelation
+form: $/noren/booking/models/cancelation/fields.yaml
+modelClass: Noren\Booking\Models\Cancelation
+defaultRedirect: noren/booking/cancelation
+create:
+    redirect: 'noren/booking/cancelation/update/:id'
+    redirectClose: noren/booking/cancelation
+update:
+    redirect: noren/booking/cancelation
+    redirectClose: noren/booking/cancelation

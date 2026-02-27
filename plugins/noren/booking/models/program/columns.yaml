@@ -1,0 +1,11 @@
+columns:
+    name:
+        label: Name
+        type: text
+    price:
+        label: Price
+        type: text
+        select: "format(price, 0, 'de_DE')"
+    included:
+        label: Included
+        type: switch

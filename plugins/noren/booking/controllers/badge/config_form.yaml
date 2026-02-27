@@ -1,0 +1,10 @@
+name: Badge
+form: $/noren/booking/models/badge/fields.yaml
+modelClass: Noren\Booking\Models\Badge
+defaultRedirect: noren/booking/badge
+create:
+    redirect: 'noren/booking/badge/update/:id'
+    redirectClose: noren/booking/badge
+update:
+    redirect: noren/booking/badge
+    redirectClose: noren/booking/badge

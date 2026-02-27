@@ -1,0 +1,22 @@
+columns:
+    created_at:
+        label: Created
+        type: datetime
+    status:
+        label: Status
+        type: selectable
+        options:
+            1: Paid
+            2: Expired
+    order_id:
+        label: Order ID
+        type: number
+    method:
+        label: Method
+        type: selectable
+        options:
+            1: Xendit
+            2: Paypal
+    order[email]:
+        label: Email
+        type: number

@@ -1,0 +1,39 @@
+<?php
+
+
+
+foreach ($value as $record) {
+    // Преобразуем scientific notation в обычное число
+    $oldValue = (float)$record->old_value;
+    echo number_format($oldValue, 10, '.', '') . "<br>";
+}
+
+?>
+
+
+<!-- [
+  {
+    "id": 1,
+    "revisionable_type": "Noren\\Booking\\Models\\Rates",
+    "revisionable_id": 4,
+    "user_id": null,
+    "field": "rate",
+    "cast": null,
+    "old_value": "0.00005190",
+    "new_value": "5.19E-5",
+    "created_at": "2025-09-16T14:02:43.000000Z",
+    "updated_at": "2025-09-16T14:02:43.000000Z"
+  },
+  {
+    "id": 2,
+    "revisionable_type": "Noren\\Booking\\Models\\Rates",
+    "revisionable_id": 4,
+    "user_id": null,
+    "field": "rate",
+    "cast": null,
+    "old_value": "0.00005190",
+    "new_value": "5.191E-5",
+    "created_at": "2025-09-16T14:07:15.000000Z",
+    "updated_at": "2025-09-16T14:07:15.000000Z"
+  }
+] -->

@@ -1,0 +1,28 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    amo_name:
+        label: 'Amo Name'
+        span: auto
+        type: text
+    price:
+        label: Price
+        span: auto
+        type: number
+    bus_price:
+        label: 'Bus Price (> 5 pax)'
+        span: auto
+        type: number
+    short_description:
+        label: Short Description
+        size: small
+        span: left
+        type: richeditor
+        
+    description:
+        label: Description
+        size: large
+        span: right
+        type: richeditor

@@ -1,0 +1,13 @@
+fields:
+    name:
+        label: name
+        span: left
+        type: text
+    icon:
+        label: Icon
+        mode: image
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: mediafinder

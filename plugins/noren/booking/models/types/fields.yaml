@@ -1,0 +1,43 @@
+tabs:
+    fields:
+        name:
+            label: Name
+            span: auto
+            type: text
+            tab: Main
+        slug:
+            label: Slug
+            span: auto
+            preset:
+                field: name
+                type: slug
+            type: text
+            tab: Main
+        amo_id:
+            label: 'Amo ID'
+            span: auto
+            type: number
+            tab: Main
+        description:
+            label: Description
+            size: small
+            span: auto
+            type: richeditor
+            tab: Main
+        info:
+            label: Info
+            size: small
+            span: auto
+            type: richeditor
+            tab: Main
+        seo_title:
+            label: 'SEO Title'
+            span: auto
+            type: text
+            tab: SEO
+        seo_description:
+            label: 'SEO Description'
+            size: small
+            span: auto
+            type: textarea
+            tab: SEO

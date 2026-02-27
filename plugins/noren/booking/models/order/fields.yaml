@@ -1,0 +1,269 @@
+tabs:
+    fields:
+
+        travel_date:
+            label: 'Travel date'
+            span: row
+            type: datepicker
+            format: Y-m-d
+            mode: date
+            spanClass: col-lg-2
+            tab: Main
+        adults:
+            label: Adults
+            span: row
+            type: number
+            spanClass: col-lg-2
+            tab: Main
+        kids:
+            label: Kids
+            span: row
+            type: number
+            spanClass: col-lg-2
+            tab: Main
+        children:
+            label: Children
+            span: row
+            type: number
+            spanClass: col-lg-2
+            tab: Main
+        members:
+            label: Members
+            span: row
+            type: number
+            spanClass: col-lg-2
+            tab: Main
+        cars:
+            label: Cars
+            span: row
+            type: number
+            spanClass: col-lg-2
+            tab: Main
+        _ruler2:
+            type: ruler
+            tab: Main
+        tours:
+            label: Tour
+            span: row
+            type: relation
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
+        program:
+            label: Program
+            span: row
+            type: relation
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
+        restaurant:
+            label: Restaurant
+            span: row
+            type: relation
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
+        transfer:
+            label: Transfer
+            span: row
+            type: relation
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
+        cover:
+            label: Cover
+            span: row
+            type: relation
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
+        method:
+            label: Method
+            span: row
+            type: relation
+            spanClass: col-lg-2
+            tab: Main
+        _ruler3:
+            type: ruler
+            tab: Main
+        boat_price:
+            label: 'Boat price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        tour_price:
+            label: 'Tour price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        program_price:
+            label: 'Program price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        transfer_price:
+            label: 'Transfer price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        cover_price:
+            label: 'Cover price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        extras_total:
+            label: 'Extras total'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        _ruler4:
+            type: ruler
+            tab: Main
+        deposite:
+            label: 'Deposite (%)'
+            span: row
+            options:
+                0: '0'
+                50: '50'
+                100: '100'
+            showSearch: true
+            spanClass: col-lg-2
+            type: dropdown
+            tab: Main
+        discount:
+            label: 'Discount (%)'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            
+            tab: Main
+        full_price:
+            label: 'Total without Discount'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        discount_price:
+            label: 'Discount Price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        total_price:
+            label: Total
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        deposite_summ:
+            label: 'Deposite Summ'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+
+
+            
+
+            
+        name:
+            label: Name
+            span: row
+            type: text
+            spanClass: col-4
+            tab: User
+        email:
+            label: Email
+            span: row
+            type: text
+            spanClass: col-4
+            tab: User
+        whatsapp:
+            label: Whatsapp
+            span: row
+            type: text
+            spanClass: col-4
+            tab: User
+        pickup_address:
+            label: 'Pickup address'
+            span: auto
+            type: text
+            tab: User
+        dropoff_address:
+            label: 'Dropoff address'
+            span: auto
+            type: text
+            tab: User
+        requests:
+            label: Requests
+            span: auto
+            type: textarea
+            tab: User
+        payment:
+            type: relation
+            span: full
+            label: Payments
+            tab: Data
+        lead:
+            type: relation
+            span: full
+            label: Lead
+            tab: Data
+        order_history:
+            type: relation
+            span: full
+            label: History
+            tab: Data            
+fields:
+    external_id: 
+        label: External ID
+        type: text
+        disabled: true
+        span: row
+        spanClass: col-lg-2
+        tab: Main
+    status:
+        label: Status
+        span: row
+        type: relation
+        spanClass: col-lg-2
+        tab: Main
+        emptyOption: '--'
+    payment_status:
+        label: 'Payment status'
+        span: row
+        type: relation
+        spanClass: col-lg-2
+        emptyOption: '--'
+
+    order_type:
+        label: 'Order Type'
+        span: row
+        type: relation
+        spanClass: col-lg-2
+    promocode:
+        label: Promocode
+        span: row
+        type: text
+        spanClass: col-lg-2
+    amo_lead_id:
+        label: Amo Lead ID
+        span: row
+        type: number
+        spanClass: col-lg-2

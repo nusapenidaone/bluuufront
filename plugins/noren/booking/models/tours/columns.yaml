@@ -1,0 +1,42 @@
+columns:
+    id:
+        label: ID
+        type: Number
+    name:
+        label: Name
+        type: text
+    boat_price:
+        label: 'Boat Price'
+        type: number
+        select: "format(boat_price, 0, 'de_DE')"
+    slug:
+        label: Slug
+        type: partial
+        path: link
+        clickable: '0'
+    types:
+        label: Types
+        type: text
+        relation: types
+        valueFrom: name
+    classes:
+        label: Classes
+        type: text
+        relation: classes
+        valueFrom: name
+    partner:
+        label: Partner
+        type: switch
+    static:
+        label: Static
+        type: switch
+    category:
+        label: Category
+        type: text
+        relation: category
+        valueFrom: name
+    amo_boat_name:
+        label: 'Amo Boat Name'
+        span: auto
+        type: text
+        

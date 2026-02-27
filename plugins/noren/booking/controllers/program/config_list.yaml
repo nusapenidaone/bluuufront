@@ -1,0 +1,17 @@
+list: $/noren/booking/models/program/columns.yaml
+modelClass: Noren\Booking\Models\Program
+title: Program
+noRecordsMessage: 'backend::lang.list.no_records'
+showSetup: true
+showCheckboxes: true
+recordsPerPage: 20
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: 'backend::lang.list.search_prompt'
+recordUrl: 'noren/booking/program/update/:id'
+structure:
+    showTree: false
+    showReorder: true
+    showSorting: true
+    maxDepth: 1

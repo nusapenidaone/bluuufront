@@ -1,0 +1,26 @@
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Members</th>
+            <th>Price</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody data-control="items-container">
+        {% for item in items %}
+        <tr>
+            <td>
+                <input type="number" name="PackageItemsEditor[members_count][{{ loop.index0 }}]" value="{{ item.members_count }}" class="form-control" />
+            </td>
+            <td>
+                <input type="number" name="PackageItemsEditor[price][{{ loop.index0 }}]" value="{{ item.price }}" class="form-control" />
+            </td>
+            <td>
+                <button type="button" class="btn btn-danger btn-sm" data-remove-item>-</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<button type="button" class="btn btn-default" data-add-item>+ Add</button>

@@ -1,0 +1,70 @@
+tabs:
+    fields:
+        by_request:
+            label: 'By Request'
+            span: auto
+            type: switch
+            tab: Main
+        recomended:
+            label: Recomended
+            span: auto
+            type: switch
+            tab: Main
+        name:
+            label: Name
+            span: auto
+            type: text
+            tab: Main
+        price:
+            label: Price
+            span: auto
+            type: number
+            tab: Main
+        measure:
+            label: Measure
+            span: auto
+            type: text
+            tab: Main
+        available:
+            label: Available
+            span: auto
+            type: number
+            tab: Main
+        ecategories:
+            label: Categories
+            nameFrom: name
+            descriptionFrom: description
+            span: auto
+            type: relation
+            tab: Main
+        amo_id:
+            label: 'Kommo ID'
+            span: auto
+            type: number
+            tab: Main
+        parent:
+            label: 'Parent Extra'
+            span: auto
+            type: relation
+            nameFrom: name
+            emptyOption: '— None (this is a parent) —'
+            tab: Main
+        description:
+            label: Description
+            size: large
+            span: left
+            type: richeditor
+            tab: Main
+        details:
+            label: Details
+            size: large
+            span: auto
+            type: richeditor
+            tab: Main
+        images:
+            label: Images
+            type: fileupload
+            mode: image
+            imageHeight: 400
+            imageWidth: 400
+            tab: Images

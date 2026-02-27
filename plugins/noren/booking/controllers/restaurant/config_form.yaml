@@ -1,0 +1,10 @@
+name: Restaurant
+form: $/noren/booking/models/restaurant/fields.yaml
+modelClass: Noren\Booking\Models\Restaurant
+defaultRedirect: noren/booking/restaurant
+create:
+    redirect: 'noren/booking/restaurant/update/:id'
+    redirectClose: noren/booking/restaurant
+update:
+    redirect: noren/booking/restaurant
+    redirectClose: noren/booking/restaurant

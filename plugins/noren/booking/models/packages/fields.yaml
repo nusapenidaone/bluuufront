@@ -1,0 +1,80 @@
+fields:
+    name:
+        label: Name
+        span: full
+        type: text
+       
+       
+    pricelist:
+        type: datatable
+        span: auto
+        adding: true
+        deleting: true
+        recordsPerPage: false
+        searching: false
+        columns:
+            members_count:
+                type: string
+                title: Count
+                validation:
+                    integer:
+                        message: Please enter a number
+            price:
+                type: string
+                title: Price
+                validation:
+                    integer:
+                        message: Please enter a number
+        
+    # packagesitems:
+    #     label: Package Items
+    #     type: PackageItemsEditor
+    # packagesitems:
+    #     label: Package Items
+    #     type: relation
+    #     list:
+    #         columns:
+    #             members_count:
+    #                 label: Members
+    #             price:
+    #                 label: Price
+    #     form:
+    #         fields:
+    #             members_count:
+    #                 label: Members
+    #                 type: number
+    #                 span: auto
+    #             price:
+    #                 label: Price
+    #                 type: number
+    #                 span: auto
+        
+    # packagesitems:
+    #     label: Prices
+    #     type: repeater
+    #     context:
+    #         - update
+    #         - preview
+    #     form:
+    #         fields:
+    #             members_count:
+    #                 label: Count
+    #                 type: number
+    #                 span: auto
+    #             price:
+    #                 label: Price
+    #                 type: number
+    #                 span: auto
+                    
+                    
+                    
+                    
+        
+    # packagesitems:
+    #     nameFrom: name
+    #     descriptionFrom: description
+    #     span: auto
+    #     context:
+    #         - update
+    #         - preview
+    #     type: relation

@@ -1,0 +1,8 @@
+columns:
+    name:
+        label: Name
+        type: text
+    price:
+        label: Price
+        type: number
+        select: "format(price, 0, 'de_DE')"

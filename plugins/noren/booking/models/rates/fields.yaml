@@ -1,0 +1,18 @@
+fields:
+    code:
+        label: Code
+        span: auto
+        type: text
+    name:
+        label: Name
+        span: left
+        type: text
+    rate:
+        label: Rate
+        span: left
+        type: number
+    revision_history:
+        label: History
+        span: full
+        type: relation
+        path: list

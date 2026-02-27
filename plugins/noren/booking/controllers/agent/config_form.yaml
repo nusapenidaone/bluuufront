@@ -1,0 +1,10 @@
+name: Agent
+form: $/noren/booking/models/agent/fields.yaml
+modelClass: Noren\Booking\Models\Agent
+defaultRedirect: noren/booking/agent
+create:
+    redirect: 'noren/booking/agent/update/:id'
+    redirectClose: noren/booking/agent
+update:
+    redirect: noren/booking/agent
+    redirectClose: noren/booking/agent

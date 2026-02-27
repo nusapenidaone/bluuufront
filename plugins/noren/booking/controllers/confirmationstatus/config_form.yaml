@@ -1,0 +1,10 @@
+name: ConfirmationStatus
+form: $/noren/booking/models/confirmationstatus/fields.yaml
+modelClass: Noren\Booking\Models\ConfirmationStatus
+defaultRedirect: noren/booking/confirmationstatus
+create:
+    redirect: 'noren/booking/confirmationstatus/update/:id'
+    redirectClose: noren/booking/confirmationstatus
+update:
+    redirect: noren/booking/confirmationstatus
+    redirectClose: noren/booking/confirmationstatus

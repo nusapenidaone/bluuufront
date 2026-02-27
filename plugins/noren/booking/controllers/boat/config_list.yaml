@@ -1,0 +1,12 @@
+list: $/noren/booking/models/boat/columns.yaml
+modelClass: Noren\Booking\Models\Boat
+title: Boat
+noRecordsMessage: 'backend::lang.list.no_records'
+showSetup: true
+showCheckboxes: true
+recordsPerPage: 20
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: 'backend::lang.list.search_prompt'
+recordUrl: 'noren/booking/boat/update/:id'

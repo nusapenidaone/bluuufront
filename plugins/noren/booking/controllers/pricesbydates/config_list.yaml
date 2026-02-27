@@ -1,0 +1,12 @@
+list: $/noren/booking/models/pricesbydates/columns.yaml
+modelClass: Noren\Booking\Models\PricesByDates
+title: PricesByDates
+noRecordsMessage: 'backend::lang.list.no_records'
+showSetup: true
+showCheckboxes: true
+recordsPerPage: 20
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: 'backend::lang.list.search_prompt'
+recordUrl: 'noren/booking/pricesbydates/update/:id'

@@ -1,0 +1,371 @@
+tabs:
+    fields:
+        static:
+            label: 'Static Position'
+            span: auto
+            type: switch
+            tab: Main
+        partner:
+            label: Partner
+            span: auto
+            type: switch
+            tab: Main
+        name:
+            label: Name
+            span: auto
+            type: text
+            tab: Main
+        slug:
+            label: Slug
+            span: auto
+            preset:
+                field: name
+                type: slug
+            type: text
+            tab: Main
+        types:
+            label: Type
+            span: auto
+            type: relation
+            tab: Main
+        category:
+            label: Category
+            type: relation
+            span: auto
+            tab: Main
+        classes:
+            label: Class
+            span: auto
+            type: relation
+            tab: Main
+        capacity:
+            label: Capacity
+            span: auto
+            type: number
+            tab: Main
+        size:
+            label: 'Boat Size'
+            span: auto
+            type: number
+            tab: Main
+        duration:
+            label: Duration
+            span: auto
+            type: number
+            tab: Main
+        badge:
+            label: Badge
+            span: auto
+            type: relation
+            tab: Main
+            emptyOption: '--'
+        boat_id:
+            label: 'Old boat ID'
+            span: auto
+            type: number
+            tab: Main
+        description:
+            label: Description
+            size: large
+            span: auto
+            type: richeditor
+            tab: Main
+        list:
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: auto
+            type: repeater
+            tab: Main
+            form:
+                fields:
+                    icon:
+                        label: Dropdown
+                        options:
+                            check-icon-green: 'Check icon'
+                            none-icon-red: 'None icon'
+                            plus-icon-green: 'Plus icon'
+                            minis-icon-red: 'Minus icon'
+                        showSearch: true
+                        span: auto
+                        type: dropdown
+                    test:
+                        label: Text
+                        span: full
+                        type: text
+        boat_price:
+            label: 'Boat price'
+            span: auto
+            type: number
+            tab: Price
+        packages:
+            label: 'Default price pack'
+            nameFrom: name
+            descriptionFrom: description
+            span: auto
+            type: relation
+            tab: Price
+        percent:
+            label: 'Gross percent'
+            span: auto
+            type: number
+            tab: Price
+        gross_price:
+            label: 'Gross price'
+            span: auto
+            type: number
+            tab: Price
+        show_price:
+            label: 'Show price'
+            span: auto
+            type: number
+            tab: Price
+        pricesbydates:
+            label: 'Price by dates'
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Price
+        ecategories:
+            label: 'Extras categories'
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Extras
+        overview:
+            label: 'Tour Overview'
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Program
+        program:
+            label: 'Tour Program'
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Program
+        restaurant:
+            label: Restaurants
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Restaurants
+        transfer:
+            label: Transfer
+            span: full
+            type: relation
+            tab: Transfer
+            context:
+                - update
+                - preview
+        cover:
+            label: Cover
+            span: full
+            type: relation
+            tab: Cover
+            context:
+                - update
+                - preview
+        why:
+            label: Why
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Includes
+        included:
+            label: Included
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Includes
+        includes:
+            label: 'What include'
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Includes
+        reviews:
+            label: Reviews
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Reviews
+        faq:
+            label: Faq
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: FAQ
+        cancelation:
+            label: Cancelation
+            span: auto
+            type: relation
+            tab: Info
+        meeting:
+            label: 'Meeting Point'
+            span: auto
+            type: relation
+            tab: Info
+        additional:
+            label: 'Additional Info'
+            span: auto
+            type: relation
+            tab: Info
+        images:
+            label: Images
+            mode: image
+            imageWidth: 400
+            imageHeight: 400
+            useCaption: true
+            thumbOptions:
+                mode: crop
+                extension: auto
+            span: full
+            type: fileupload
+            tab: Images
+        memo:
+            label: Memo
+            mode: file
+            useCaption: 0
+            thumbOptions:
+                mode: crop
+                extension: auto
+            span: auto
+            type: fileupload
+            tab: Images
+        youtube:
+            label: Youtube
+            span: auto
+            type: text
+            tab: Images
+        meta_title:
+            label: Title
+            span: left
+            type: text
+            tab: SEO
+        meta_description:
+            label: Description
+            span: full
+            type: textarea
+            size: small
+            tab: SEO
+        amo_tour_name:
+            label: 'Amo Tour Name'
+            span: auto
+            type: text
+            tab: Kommo
+        amo_boat_name:
+            label: 'Amo Boat Name'
+            span: auto
+            type: text
+            tab: Kommo
+        amo_odoo_id:
+            label: 'Amo Odoo Boat ID'
+            span: auto
+            type: number
+            tab: Kommo
+        amo_odoo_name:
+            label: 'Amo Odoo Boat Name'
+            span: auto
+            type: text
+            tab: Kommo
+        amo_source_id:
+            label: 'Amo Source ID'
+            span: auto
+            type: number
+            tab: Kommo
+        amo_source_name:
+            label: 'Amo Source Name'
+            span: auto
+            type: text
+            tab: Kommo
+        similar:
+            label: 'Similar Tours'
+            span: auto
+            type: relation
+            tab: Similar
+            nameFrom: name
+            emptyOption: '--'
+        boat:
+            label: Boat
+            span: full
+            type: relation
+            tab: Boats
+            nameFrom: name
+            emptyOption: '--'
+            
+        json[subtitle]:
+            label: Subtitle
+            span: left
+            type: text
+            tab: New
+        json[props]:
+            label: Props
+            span: auto
+            type: repeater
+            tab: New
+            form:
+                fields:
+                    text:
+                        label: Text
+                        type: text
+        json[list]:
+            label: List
+            span: auto
+            type: repeater
+            tab: New
+            form:
+                fields:
+                    text:
+                        label: Text
+                        type: text
+        json[included]:
+            label: Included
+            span: auto
+            type: repeater
+            tab: New
+            form:
+                fields:
+                    text:
+                        label: Text
+                        type: text 

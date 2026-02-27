@@ -1,0 +1,10 @@
+name: EmailStstus
+form: $/noren/booking/models/emailstatus/fields.yaml
+modelClass: Noren\Booking\Models\EmailStatus
+defaultRedirect: noren/booking/emailststus
+create:
+    redirect: 'noren/booking/emailststus/update/:id'
+    redirectClose: noren/booking/emailststus
+update:
+    redirect: noren/booking/emailststus
+    redirectClose: noren/booking/emailststus

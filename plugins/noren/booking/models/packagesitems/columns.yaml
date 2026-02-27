@@ -1,0 +1,8 @@
+columns:
+    members_count:
+        label: Count
+        type: number
+    price:
+        label: Price
+        type: number
+        select: "format(price, 0, 'de_DE')"

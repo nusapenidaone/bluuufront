@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+
+    <url>
+            <loc>{{ url('/') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>1</priority>
+    </url>
+    <url>
+            <loc>{{ url('/nusa-penida') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    {%for t in types%}
+    <url>
+            <loc>{{ url('/nusa-penida/'~t.slug) }}</loc>
+            <lastmod>{{ t.updated_at|date('c') }}</lastmod>
+            <priority>0.8</priority>
+    </url>
+    {%endfor%}
+    
+    {%for t in tours%}
+    <url>
+            <loc>{{ url('/nusa-penida/'~t.types.slug~'/'~t.slug) }}</loc>
+            <lastmod>{{ t.updated_at|date('c') }}</lastmod>
+            <priority>0.7</priority>
+    </url>
+    {%endfor%}
+
+    
+    <url>
+            <loc>{{ url('/reviews') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    
+
+    
+    <url>
+            <loc>{{ url('/gallery') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    
+    <url>
+            <loc>{{ url('/our-service') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    <url>
+            <loc>{{ url('/vacancies') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    <url>
+            <loc>{{ url('/about') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    <url>
+            <loc>{{ url('/information') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    
+    <url>
+            <loc>{{ url('/blog') }}</loc>
+            <lastmod>{{ "now"|date("Y-m-01\\TH:i:sP") }}</lastmod>
+            <priority>0.9</priority>
+    </url>
+    
+    {%for a in blog%}
+    <url>
+            <loc>{{ url('/blog/'~a.slug) }}</loc>
+            <lastmod>{{ a.updated_at|date('c') }}</lastmod>
+            <priority>0.7</priority>
+    </url>
+    {%endfor%}
+    
+    
+</urlset>

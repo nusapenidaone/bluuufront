@@ -1,0 +1,29 @@
+fields:
+    per_boat:
+        label: 'Price Per Boat'
+        span: full
+        type: switch
+    name:
+        label: Name
+        span: auto
+        type: text
+    amo_id:
+        label: 'Amo Id'
+        span: auto
+        type: text
+    price:
+        label: Price
+        span: auto
+        type: number
+        
+    short_description:
+        label: Short Description
+        size: small
+        span: left
+        type: richeditor
+        
+    description:
+        label: Description
+        size: large
+        span: right
+        type: richeditor

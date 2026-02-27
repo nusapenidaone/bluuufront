@@ -1,0 +1,11 @@
+name: Extras
+modelClass: Noren\Booking\Models\Extras
+form: $/noren/booking/models/extras/fields.yaml
+defaultRedirect: noren/booking/extras
+create:
+    redirect: 'noren/booking/extras/update/:id'
+    redirectClose: noren/booking/extras
+update:
+    redirect: noren/booking/extras
+    redirectClose: noren/booking/extras
+preview: {  }

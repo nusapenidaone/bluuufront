@@ -1,0 +1,10 @@
+name: Overview
+form: $/noren/booking/models/overview/fields.yaml
+modelClass: Noren\Booking\Models\Overview
+defaultRedirect: noren/booking/overview
+create:
+    redirect: 'noren/booking/overview/update/:id'
+    redirectClose: noren/booking/overview
+update:
+    redirect: noren/booking/overview
+    redirectClose: noren/booking/overview

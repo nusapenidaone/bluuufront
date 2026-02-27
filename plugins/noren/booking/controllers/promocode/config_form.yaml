@@ -1,0 +1,10 @@
+name: Promocode
+form: $/noren/booking/models/promocode/fields.yaml
+modelClass: Noren\Booking\Models\Promocode
+defaultRedirect: noren/booking/promocode
+create:
+    redirect: 'noren/booking/promocode/update/:id'
+    redirectClose: noren/booking/promocode
+update:
+    redirect: noren/booking/promocode
+    redirectClose: noren/booking/promocode

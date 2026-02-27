@@ -1,0 +1,7 @@
+columns:
+    name:
+        label: Name
+        type: text
+    show_name:
+        label: 'Show Name'
+        type: text

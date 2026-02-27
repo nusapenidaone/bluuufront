@@ -1,0 +1,16 @@
+columns:
+    id:
+        label: id
+        type: number
+    status:
+        label: Status
+        type: switch
+    name:
+        label: Name
+        type: text
+    email:
+        label: Email
+        type: text
+    whatsapp:
+        label: Whatsapp
+        type: text

@@ -1,0 +1,55 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    type:
+        label: Type
+        options:
+            1: Start
+            2: End
+        showSearch: true
+        span: auto
+        type: dropdown
+    description:
+        label: Description
+        size: large
+        span: auto
+        type: richeditor
+    img:
+        label: Image
+        mode: image
+        imageWidth: '100'
+        imageHeight: '100'
+        useCaption: 0
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: fileupload
+    list_title:
+        label: 'List title'
+        span: auto
+        type: text
+    list:
+        label: List
+        prompt: 'Add new item'
+        displayMode: accordion
+        span: auto
+        type: repeater
+        form:
+            fields:
+                icon:
+                    label: Icon
+                    options:
+                        check-icon-green: 'Check icon'
+                        none-icon-red: 'None icon'
+                        plus-icon-green: 'Plus icon'
+                        minis-icon-red: 'Minus icon'
+                    showSearch: true
+                    span: full
+                    type: dropdown
+                text:
+                    label: Text
+                    span: full
+                    type: text

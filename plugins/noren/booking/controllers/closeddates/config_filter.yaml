@@ -1,0 +1,15 @@
+scopes:
+    boat:
+        label: Type
+        modelClass: Noren\Booking\Models\Boat
+        conditions: boat_id in (:value)
+        nameFrom: amo_name
+
+
+    date:
+        label: Date
+        type: date
+        conditions:
+            before: date <= :value
+            after: date > :value
+            between: date >= :after AND date <= :before

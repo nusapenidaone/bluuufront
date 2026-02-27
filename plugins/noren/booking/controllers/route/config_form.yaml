@@ -1,0 +1,10 @@
+name: Route
+form: $/noren/booking/models/route/fields.yaml
+modelClass: Noren\Booking\Models\Route
+defaultRedirect: noren/booking/route
+create:
+    redirect: 'noren/booking/route/update/:id'
+    redirectClose: noren/booking/route
+update:
+    redirect: noren/booking/route
+    redirectClose: noren/booking/route

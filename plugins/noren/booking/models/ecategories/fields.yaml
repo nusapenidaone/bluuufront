@@ -1,0 +1,18 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    show_name:
+        label: 'Show Name'
+        span: auto
+        type: text
+    extras:
+        label: Extras
+        nameFrom: name
+        descriptionFrom: description
+        span: full
+        context:
+            - update
+            - preview
+        type: relation

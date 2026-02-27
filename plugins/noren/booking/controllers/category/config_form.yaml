@@ -1,0 +1,10 @@
+name: Category
+form: $/noren/booking/models/category/fields.yaml
+modelClass: Noren\Booking\Models\Category
+defaultRedirect: noren/booking/category
+create:
+    redirect: 'noren/booking/category/update/:id'
+    redirectClose: noren/booking/category
+update:
+    redirect: noren/booking/category
+    redirectClose: noren/booking/category

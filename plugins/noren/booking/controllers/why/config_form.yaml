@@ -1,0 +1,10 @@
+name: Why
+form: $/noren/booking/models/why/fields.yaml
+modelClass: Noren\Booking\Models\Why
+defaultRedirect: noren/booking/why
+create:
+    redirect: 'noren/booking/why/update/:id'
+    redirectClose: noren/booking/why
+update:
+    redirect: noren/booking/why
+    redirectClose: noren/booking/why

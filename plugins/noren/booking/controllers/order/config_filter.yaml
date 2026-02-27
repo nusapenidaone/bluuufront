@@ -1,0 +1,47 @@
+scopes:
+    order_type:
+        label: Type
+        modelClass: Noren\Booking\Models\OrderType
+        conditions: order_type_id in (:value)
+        nameFrom: name
+    status:
+        label: Status
+        modelClass: Noren\Booking\Models\Status
+        conditions: status_id in (:value)
+        nameFrom: name
+    payment_status:
+        label: Pay Status
+        modelClass: Noren\Booking\Models\PaymentStatus
+        conditions: payment_status_id in (:value)
+        nameFrom: name     
+    method:
+        label: Method
+        modelClass: Noren\Booking\Models\Method
+        conditions: method_id in (:value)
+        nameFrom: name  
+    tour_types:
+        label: Tour Type
+        modelClass: Noren\Booking\Models\Types
+        nameFrom: name
+        scope: filterByTourTypes
+
+    tours:
+        label: Tours
+        modelClass: Noren\Booking\Models\Tours
+        conditions: tours_id in (:value)
+        nameFrom: name
+
+    travel_date:
+        label: Date
+        type: date
+        conditions:
+            after: travel_date >= :value
+            before: travel_date <= :value
+            between: travel_date >= :after AND travel_date <= :before
+    created_at:
+        label: Created
+        type: date
+        conditions:
+            after: created_at >= :value
+            before: created_at <= :value
+            between: created_at >= :after AND created_at <= :before

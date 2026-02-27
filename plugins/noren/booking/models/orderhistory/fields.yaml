@@ -1,0 +1,23 @@
+fields:
+    order_id:
+        label: 'Order id'
+        span: auto
+        type: number
+    difference:
+        label: Difference
+        span: auto
+        type: number
+    old_data:
+        label: 'Old data'
+        span: auto
+        type: partial
+        path: $/noren/booking/partials/_details.php
+    new_data:
+        label: 'New data'
+        span: auto
+        type: partial
+        path: $/noren/booking/partials/_details.php
+    status:
+        label: Status
+        span: auto
+        type: switch

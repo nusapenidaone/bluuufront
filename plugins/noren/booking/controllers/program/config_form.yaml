@@ -1,0 +1,10 @@
+name: Program
+form: $/noren/booking/models/program/fields.yaml
+modelClass: Noren\Booking\Models\Program
+defaultRedirect: noren/booking/program
+create:
+    redirect: 'noren/booking/program/update/:id'
+    redirectClose: noren/booking/program
+update:
+    redirect: noren/booking/program
+    redirectClose: noren/booking/program

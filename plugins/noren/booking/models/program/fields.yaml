@@ -1,0 +1,85 @@
+tabs:
+    fields:
+        included:
+            label: Included
+            span: full
+            type: switch
+            tab: Main
+        name:
+            label: Name
+            span: auto
+            type: text
+            tab: Main
+        amo_name:
+            label: 'Amo Name'
+            span: auto
+            type: text
+            tab: Main
+        amo_extras_id:
+            label: 'Amo Extras ID'
+            span: auto
+            type: number
+            tab: Main
+            
+        price:
+            label: Price
+            span: auto
+            type: number
+            tab: Main
+        description:
+            label: Description
+            size: large
+            span: auto
+            type: richeditor
+            tab: Main
+
+        restaurant:
+            label: Restaurants
+            type: relation
+            namefrom: name
+            tab: Restaurants
+
+                        
+            
+        list:
+            label: List
+            prompt: 'Add new'
+            displayMode: accordion
+            span: auto
+            type: repeater
+            tab: Main
+            form:
+                fields:
+                    time:
+                        label: Time
+                        span: auto
+                        type: text
+                    duration:
+                        label: Duration
+                        span: auto
+                        type: text
+                    title:
+                        label: Title
+                        span: full
+                        type: text
+                    description:
+                        label: Description
+                        span: full
+                        type: text
+                    icon:
+                        label: Icon
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: auto
+                        type: mediafinder
+        images:
+            label: Images
+            type: fileupload
+            mode: image
+            imageHeight: 400
+            imageWidth: 400
+            tab: Images

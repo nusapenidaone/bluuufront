@@ -1,0 +1,10 @@
+name: Ecategories
+form: $/noren/booking/models/ecategories/fields.yaml
+modelClass: Noren\Booking\Models\Ecategories
+defaultRedirect: noren/booking/ecategories
+create:
+    redirect: 'noren/booking/ecategories/update/:id'
+    redirectClose: noren/booking/ecategories
+update:
+    redirect: noren/booking/ecategories
+    redirectClose: noren/booking/ecategories

@@ -1,0 +1,18 @@
+columns:
+    date_start:
+        label: Start
+        type: date
+        format: Y-m-d
+    date_end:
+        label: End
+        type: date
+        format: Y-m-d
+    'packages[name]':
+        label: packages
+        type: text
+    low_price:
+        label: Low Price
+        type: switch
+    flash_sale:
+        label: Flash Sale
+        type: switch

@@ -1,0 +1,44 @@
+revision_history:
+    label: Revision History
+    view:
+        toolbarButtons: []
+        recordsPerPage: 20
+        list:
+            columns:
+                # field:
+                #     label: Field
+                #     type: text
+                old_value:
+                    label: Old Value
+                    type: number
+                    valueFrom: "old_value"
+                    format: "%.8f"
+                new_value:
+                    label: New Value
+                    type: number
+                    valueFrom: "new_value"
+                    format: "%.8f"
+                created_at:
+                    label: Changed At
+                    type: datetime
+        # form:
+        #     fields:
+        #         field:
+        #             label: Field
+        #             type: text
+        #             span: auto
+        #         old_value:
+        #             label: Old Value
+        #             type: number
+        #             span: auto
+        #             readonly: true
+        #         new_value:
+        #             label: New Value
+        #             type: number
+        #             span: auto
+        #             readonly: true
+        #         created_at:
+        #             label: Changed At
+        #             type: datetime
+        #             span: auto
+        #             readonly: true

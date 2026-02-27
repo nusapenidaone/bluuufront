@@ -1,0 +1,10 @@
+name: Classes
+form: $/noren/booking/models/classes/fields.yaml
+modelClass: Noren\Booking\Models\Classes
+defaultRedirect: noren/booking/classes
+create:
+    redirect: 'noren/booking/classes/update/:id'
+    redirectClose: noren/booking/classes
+update:
+    redirect: noren/booking/classes
+    redirectClose: noren/booking/classes

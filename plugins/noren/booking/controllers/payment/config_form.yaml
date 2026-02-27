@@ -1,0 +1,10 @@
+name: Payment
+form: $/noren/booking/models/payment/fields.yaml
+modelClass: Noren\Booking\Models\Payment
+defaultRedirect: noren/booking/payment
+create:
+    redirect: 'noren/booking/payment/update/:id'
+    redirectClose: noren/booking/payment
+update:
+    redirect: noren/booking/payment
+    redirectClose: noren/booking/payment

@@ -1,0 +1,181 @@
+plugin:
+    name: 'noren.booking::lang.plugin.name'
+    description: 'noren.booking::lang.plugin.description'
+    author: Noren
+    icon: oc-icon-adjust
+    homepage: ''
+navigation:
+    main-menu-item:
+        label: Tours
+        url: noren/booking/tours
+        icon: icon-ship
+        permissions:
+            - admin
+        order: '2'
+        sideMenu:
+            side-menu-item3:
+                label: Tours
+                url: noren/booking/tours
+                icon: icon-ticket
+            side-menu-item:
+                label: 'Tour Types'
+                url: noren/booking/types
+                icon: icon-sliders
+            side-menu-item2:
+                label: 'Tour Classes'
+                url: noren/booking/classes
+                icon: icon-sitemap
+            side-menu-item14:
+                label: Badge
+                url: noren/booking/badge
+                icon: icon-tag
+            side-menu-item4:
+                label: 'Price Packages'
+                url: noren/booking/packages
+                icon: icon-money
+            side-menu-item19:
+                label: Included
+                url: noren/booking/included
+                icon: icon-list
+            side-menu-item5:
+                label: 'What include'
+                url: noren/booking/includes
+                icon: icon-check
+            side-menu-item8:
+                label: 'Tour Program'
+                url: noren/booking/program
+                icon: icon-map-marker
+            side-menu-item6:
+                label: Extras
+                url: noren/booking/extras
+                icon: icon-th-large
+            side-menu-item7:
+                label: 'Extras Catergories'
+                url: noren/booking/ecategories
+                icon: icon-sitemap
+            side-menu-item9:
+                label: Restaurants
+                url: noren/booking/restaurant
+                icon: icon-cutlery
+            side-menu-item11:
+                label: Transfer
+                url: noren/booking/transfer
+                icon: icon-car
+            side-menu-item12:
+                label: Cover
+                url: noren/booking/cover
+                icon: icon-street-view
+            side-menu-item13:
+                label: Rates
+                url: noren/booking/rates
+                icon: icon-usd
+            side-menu-item15:
+                label: Cancelation
+                url: noren/booking/cancelation
+                icon: icon-file
+            side-menu-item16:
+                label: 'Meeting Point'
+                url: noren/booking/meeting
+                icon: icon-file
+            side-menu-item17:
+                label: Additional
+                url: noren/booking/additional
+                icon: icon-info
+            side-menu-item18:
+                label: Overview
+                url: noren/booking/overview
+                icon: icon-sort-amount-asc
+            side-menu-item10:
+                label: Why
+                url: noren/booking/why
+                icon: icon-tasks
+            side-menu-item20:
+                label: Category
+                url: noren/booking/category
+                icon: icon-filter
+            side-menu-item21:
+                label: Routes
+                url: noren/booking/route
+                icon: icon-subway
+    main-menu-item2:
+        label: Orders
+        url: noren/booking/order
+        icon: icon-list-ul
+        permissions:
+            - admin
+        order: '3'
+        sideMenu:
+            side-menu-item4:
+                label: Orders
+                url: noren/booking/order
+                icon: icon-reorder
+            side-menu-item6:
+                label: 'Order Type'
+                url: noren/booking/ordertype
+                icon: icon-server
+            side-menu-item8:
+                label: Method
+                url: noren/booking/method
+                icon: icon-table
+            side-menu-item5:
+                label: Payment
+                url: noren/booking/payment
+                icon: icon-money
+            side-menu-item:
+                label: Status
+                url: noren/booking/status
+                icon: icon-check
+            side-menu-item3:
+                label: 'Payment Status'
+                url: noren/booking/paymentstatus
+                icon: icon-check
+            side-menu-item2:
+                label: 'Confirmation Status'
+                url: noren/booking/confirmationstatus
+                icon: icon-check
+            side-menu-item7:
+                label: Leads
+                url: noren/booking/lead
+                icon: icon-tasks
+    main-menu-item3:
+        label: Agents
+        url: noren/booking/agent
+        icon: icon-users
+        permissions:
+            - admin
+        order: '4'
+        sideMenu:
+            side-menu-item:
+                label: Agents
+                url: noren/booking/agent
+                icon: icon-users
+            side-menu-item2:
+                label: Promocodes
+                url: noren/booking/promocode
+                icon: icon-ticket
+    main-menu-item4:
+        label: Calendar
+        url: noren/booking/calendar
+        icon: icon-calendar
+        permissions:
+            - admin
+        sideMenu:
+            side-menu-item:
+                label: Boats
+                url: noren/booking/boat
+                icon: icon-ship
+            side-menu-item2:
+                label: Closed
+                url: noren/booking/closeddates
+                icon: icon-calendar
+            side-menu-item3:
+                label: Calendar
+                url: noren/booking/calendar
+                icon: icon-calendar
+permissions:
+    admin:
+        tab: Booking
+        label: Admin
+    editor:
+        tab: Booking
+        label: Editor

@@ -1,0 +1,10 @@
+name: Cover
+form: $/noren/booking/models/cover/fields.yaml
+modelClass: Noren\Booking\Models\Cover
+defaultRedirect: noren/booking/cover
+create:
+    redirect: 'noren/booking/cover/update/:id'
+    redirectClose: noren/booking/cover
+update:
+    redirect: noren/booking/cover
+    redirectClose: noren/booking/cover

@@ -1,0 +1,17 @@
+title: Packages
+modelClass: Noren\Booking\Models\Packages
+list: $/noren/booking/models/packages/columns.yaml
+recordUrl: 'noren/booking/packages/update/:id'
+noRecordsMessage: 'backend::lang.list.no_records'
+recordsPerPage: 20
+showSetup: true
+showCheckboxes: true
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: 'backend::lang.list.search_prompt'
+structure:
+    showTree: false
+    showReorder: true
+    showSorting: true
+    maxDepth: 1
