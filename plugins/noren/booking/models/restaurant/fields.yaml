@@ -15,7 +15,8 @@ fields:
         label: Description
         size: large
         span: left
-        type: richeditor
+        type: codeeditor
+        language: html
     menu:
         label: Menu
         size: giant

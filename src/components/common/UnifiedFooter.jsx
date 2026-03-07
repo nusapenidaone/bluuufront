@@ -10,6 +10,7 @@ import {
   Youtube,
 } from "lucide-react";
 import { useCurrency } from "../../CurrencyContext";
+import { useSiteContacts } from "../../hooks/useSiteContacts";
 
 const DEFAULT_SECTIONS = [
   { id: "tours", label: "Tours" },
@@ -37,6 +38,7 @@ function normalizeSections(sections) {
 export default function UnifiedFooter({ links = DEFAULT_SECTIONS }) {
   const currency = useCurrency();
   const selectedCurrency = currency?.selectedCurrency;
+  const contacts = useSiteContacts();
   const sections = normalizeSections(links);
   const currencyLabel = selectedCurrency ? selectedCurrency.toUpperCase() : "IDR";
 
@@ -85,26 +87,32 @@ export default function UnifiedFooter({ links = DEFAULT_SECTIONS }) {
                   <MessageCircle className="mt-0.5 h-4 w-4 text-secondary-600" />
                   <div>
                     <div className="text-xs text-secondary-500">For chats</div>
-                    <div className="text-base font-semibold text-secondary-900">+62 815-4748-3381</div>
+                    <a href={contacts.whatsapp?.link} className="text-base font-semibold text-secondary-900 transition hover:text-primary-600">
+                      {contacts.whatsapp?.number}
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="mt-0.5 h-4 w-4 text-secondary-600" />
                   <div>
                     <div className="text-xs text-secondary-500">For calls</div>
-                    <div className="text-base font-semibold text-secondary-900">+62 813-7026-2777</div>
+                    <a href={contacts.phone?.link} className="text-base font-semibold text-secondary-900 transition hover:text-primary-600">
+                      {contacts.phone?.number}
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mail className="mt-0.5 h-4 w-4 text-secondary-600" />
                   <div>
                     <div className="text-xs text-secondary-500">Write us</div>
-                    <div className="text-base font-semibold text-secondary-900">info@bluuu.tours</div>
+                    <a href={`mailto:${contacts.email}`} className="text-base font-semibold text-secondary-900 transition hover:text-primary-600">
+                      {contacts.email}
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 pt-2">
                   <a
-                    href="https://instagram.com"
+                    href={contacts.instagram || "#"}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="Instagram"
@@ -113,7 +121,7 @@ export default function UnifiedFooter({ links = DEFAULT_SECTIONS }) {
                     <Instagram className="h-5 w-5" />
                   </a>
                   <a
-                    href="https://wa.me/6281547483381"
+                    href={contacts.whatsapp?.link || "#"}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="WhatsApp"
@@ -122,7 +130,7 @@ export default function UnifiedFooter({ links = DEFAULT_SECTIONS }) {
                     <MessageCircle className="h-5 w-5" />
                   </a>
                   <a
-                    href="https://youtube.com"
+                    href={contacts.youtube || "#"}
                     target="_blank"
                     rel="noreferrer"
                     aria-label="YouTube"
@@ -141,16 +149,12 @@ export default function UnifiedFooter({ links = DEFAULT_SECTIONS }) {
                 <div className="text-xs uppercase tracking-wide text-secondary-500">Our location</div>
                 <div className="mt-3 flex items-start gap-3 text-sm text-secondary-600">
                   <MapPin className="mt-0.5 h-4 w-4 text-secondary-600" />
-                  <span>
-                    Jl. Tukad Punggawa No.238, Serangan,
-                    <br />
-                    Denpasar Selatan, Kota Denpasar, Bali 80228
-                  </span>
+                  <span dangerouslySetInnerHTML={{ __html: contacts.address }} />
                 </div>
               </div>
               <div className="lg:flex lg:justify-end">
                 <a
-                  href="https://maps.google.com/?q=Jl.+Tukad+Punggawa+No.238,+Serangan,+Denpasar+Selatan,+Bali+80228"
+                  href={contacts.location || "#"}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-secondary-900 transition hover:text-primary-600"
@@ -179,13 +183,19 @@ export default function UnifiedFooter({ links = DEFAULT_SECTIONS }) {
               </div>
               <div className="flex flex-wrap items-center gap-4 text-sm text-secondary-600">
                 <span>©2026 All Rights Reserved</span>
-                <a href="#" className="transition hover:text-primary-600">
+                <a href="/private" className="transition hover:text-primary-600">
+                  Private tour
+                </a>
+                <a href="/shared" className="transition hover:text-primary-600">
+                  Shared tour
+                </a>
+                <a href="/policy/health" className="transition hover:text-primary-600">
                   Safety &amp; Sustainability Policy
                 </a>
-                <a href="#" className="transition hover:text-primary-600">
+                <a href="/policy/privacy" className="transition hover:text-primary-600">
                   Privacy policy
                 </a>
-                <a href="#" className="transition hover:text-primary-600">
+                <a href="/policy/cancellation" className="transition hover:text-primary-600">
                   Cancelation Policy
                 </a>
               </div>

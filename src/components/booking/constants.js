@@ -3,19 +3,11 @@ import {
     MapPin,
     BadgeCheck,
     LifeBuoy,
-    Ship,
-    Fish,
-    Coffee,
-    Waves,
-    UtensilsCrossed,
-    Ticket,
-    Shield,
 } from "lucide-react";
 import sharedData from "../../data/shared.json";
 
 const ICON_MAP = {
     Star, MapPin, BadgeCheck, LifeBuoy,
-    Ship, Fish, Coffee, Waves, UtensilsCrossed, Ticket, Shield,
 };
 
 export const BRAND = {
@@ -30,18 +22,17 @@ export const GROUP_TRANSFER_THRESHOLD = 4;
 export const REVIEW_COUNT_VALUE = parseInt(String(BRAND.reviewCount).replace(/[^0-9]/g, ""), 10) || 0;
 export const REVIEW_COUNT_SHORT = REVIEW_COUNT_VALUE ? `${Math.floor(REVIEW_COUNT_VALUE / 500) * 500}+` : BRAND.reviewCount;
 
-export const STYLE_RECOMMENDATIONS = sharedData.styleRecommendations;
 export const EXTRAS_CATEGORY_BY_VIBE = sharedData.extrasCategoryByVibe;
-export const EXTRAS_FILTERS = sharedData.extrasFilters;
 export const LINKS = sharedData.links;
 export const REVIEW_SOURCES = sharedData.reviewSources;
 export const INFO_REVIEWS = sharedData.reviews;
+export const REVIEW_SOURCE_ICON_MAP = {
+    tripadvisor: "https://cdn.simpleicons.org/tripadvisor/34e0a1",
+    airbnb: "https://cdn.simpleicons.org/airbnb/FF5A5F",
+    klook: "https://cdn.simpleicons.org/klook/FF5B00",
+    google: "https://cdn.simpleicons.org/googlemaps/1a73e8",
+};
 export const TRUST_INCLUDED_SHORT = sharedData.trustIncludedShort;
-export const TRUST_INCLUDED = sharedData.trustIncluded.map((item) => ({
-    ...item,
-    icon: ICON_MAP[item.icon],
-}));
-export const BOOKING_STEPS = sharedData.bookingSteps;
 export const INFO_DRAWER_TABS = sharedData.infoDrawerTabs;
 export const SECTIONS = sharedData.sections;
 export const SECTION_BACKGROUNDS = sharedData.sectionBackgrounds ?? {

@@ -1,13 +1,12 @@
 import { fetchWithRetry } from './shared';
-
-const API_BASE_URL = 'https://bluuu.tours/api/new';
+import { apiUrl } from './base';
 
 export async function fetchPrivateTours() {
-    const res = await fetchWithRetry(`${API_BASE_URL}/private-tours`);
+    const res = await fetchWithRetry(apiUrl('tours/private'));
     return await res.json();
 }
 
 export async function fetchTourDetail(slug) {
-    const res = await fetchWithRetry(`${API_BASE_URL}/tour/${slug}`);
+    const res = await fetchWithRetry(apiUrl(`tour/${slug}`));
     return await res.json();
 }

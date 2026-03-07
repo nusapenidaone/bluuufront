@@ -2,14 +2,13 @@ import React from "react";
 import { Star, ExternalLink } from "lucide-react";
 import { PremiumSection, PremiumContainer } from "../ui/Section";
 import { SecondaryLink } from "../ui/Links";
-import { LINKS } from "../constants";
+import { LINKS, REVIEW_SOURCES, REVIEW_SOURCE_ICON_MAP } from "../constants";
 
 export function SocialProof() {
-    const reviewSources = [
-        { id: "tripadvisor", label: "TripAdvisor", href: LINKS.reviews[1].href, iconSrc: "https://cdn.simpleicons.org/tripadvisor/34e0a1" },
-        { id: "airbnb", label: "Airbnb", href: "https://www.airbnb.com/", iconSrc: "https://cdn.simpleicons.org/airbnb/FF5A5F" },
-        { id: "google", label: "Google Maps", href: LINKS.reviews[2].href, iconSrc: "https://cdn.simpleicons.org/googlemaps/1a73e8" },
-    ];
+    const reviewSources = REVIEW_SOURCES.map((source) => ({
+        ...source,
+        iconSrc: REVIEW_SOURCE_ICON_MAP[source.id] || "",
+    }));
 
     const guestPhotos = [
         "https://bluuu.tours/resize/3dbd5b63d137007364cbd61f35a12728-1",

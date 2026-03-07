@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { apiUrl } from "./api/base";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -43,7 +44,8 @@ export default function Payment() {
   const date = params.get("date") || "";
   const adults = Math.max(1, parseInt(params.get("adults") || "1", 10));
   const kids = Math.max(0, parseInt(params.get("kids") || "0", 10));
-  const boatId = params.get("boat") || "";                    // private tour ID
+  const boatId = params.get("boat") || "";                    // tour ID
+  const tourType = params.get("tourType") || "private";       // "private" | "shared"
   const styleId = params.get("style") || "";                  // route/program ID
   const payMode = params.get("payMode") || "full";            // "full" | "part"
   const payMethod = params.get("payMethod") || "card";        // "card" | "paypal"
@@ -157,7 +159,8 @@ export default function Payment() {
       const headers = { "Content-Type": "application/json" };
       if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
 
-      const res = await fetch("/api/new/order/private", {
+      const orderEndpoint = tourType === "shared" ? "order/shared" : "order/private";
+      const res = await fetch(apiUrl(orderEndpoint), {
         method: "POST",
         headers,
         credentials: "include",

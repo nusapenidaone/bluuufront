@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { fetchExtras, fetchExtraCategories, fetchRoutes } from '../api/extras';
+import { fetchExtras, fetchExtraCategories, fetchPrivateRoutes, fetchSharedRoutes } from '../api/extras';
 
 const ExtrasContext = createContext();
 
 export function ExtrasProvider({ children }) {
     const [extras, setExtras] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [routes, setRoutes] = useState([]);
+    const [privateRoutes, setPrivateRoutes] = useState([]);
+    const [sharedRoutes, setSharedRoutes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -14,14 +15,16 @@ export function ExtrasProvider({ children }) {
         async function loadData() {
             try {
                 setLoading(true);
-                const [extrasData, categoriesData, routesData] = await Promise.all([
+                const [extrasData, categoriesData, privateRoutesData, sharedRoutesData] = await Promise.all([
                     fetchExtras(),
                     fetchExtraCategories(),
-                    fetchRoutes()
+                    fetchPrivateRoutes(),
+                    fetchSharedRoutes(),
                 ]);
                 setExtras(extrasData);
                 setCategories(categoriesData);
-                setRoutes(routesData);
+                setPrivateRoutes(privateRoutesData);
+                setSharedRoutes(sharedRoutesData);
                 setError(null);
             } catch (err) {
                 console.error('Error loading extras data:', err);
@@ -36,7 +39,8 @@ export function ExtrasProvider({ children }) {
     const value = {
         extras,
         categories,
-        routes,
+        privateRoutes,
+        sharedRoutes,
         loading,
         error,
     };

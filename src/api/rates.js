@@ -1,8 +1,8 @@
-const API_BASE_URL = 'https://bluuu.tours/api/new';
+import { apiUrl } from './base';
 
 export async function fetchRates() {
     try {
-        const response = await fetch(`${API_BASE_URL}/rates`);
+        const response = await fetch(apiUrl('rates'));
         if (!response.ok) {
             throw new Error(`Failed to fetch rates: ${response.statusText}`);
         }

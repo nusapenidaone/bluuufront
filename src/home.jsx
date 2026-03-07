@@ -1,11 +1,19 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { faqs } from "./data/shared.json";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Fancybox } from "@fancyapps/ui";
+import "@fancyapps/ui/dist/fancybox/fancybox.css";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCurrency } from "./CurrencyContext";
 import { useTours } from "./ToursContext";
+import { useExtras } from "./contexts/ExtrasContext";
 import Modal from "./components/common/Modal";
+import Navbar from "./components/common/Navbar";
+import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { cn } from "./lib/utils";
+import { useSiteContacts } from "./hooks/useSiteContacts";
+import { useSEO } from "./hooks/useSEO";
+import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
+import LogoSlider from "./components/common/LogoSlider";
 
 // Global formatters to bridge legacy utility functions with React Context
 let _globalFormatPrice = (val, opts) => `IDR ${Number(val).toLocaleString()}`;
@@ -17,6 +25,7 @@ const CurrencyBridge = () => {
   return null;
 };
 import {
+  Anchor,
   ArrowRight,
   BadgeCheck,
   Calendar,
@@ -24,14 +33,18 @@ import {
   Camera,
   Check,
   ChevronDown,
+  Clock,
   Plus,
   Coffee,
+  Fish,
   Trophy,
   ExternalLink,
   Globe,
   LifeBuoy,
   MapPin,
+  Mail,
   MessageCircle,
+  Phone,
   Play,
   Shield,
   Ship,
@@ -42,7 +55,29 @@ import {
   Users,
   UtensilsCrossed,
   Waves,
+  Wine,
 } from "lucide-react";
+
+const ROUTE_ICON_MAP = {
+  MapPin, Fish, Clock, LifeBuoy, UtensilsCrossed, Camera, Shield, Waves,
+  Anchor, Sun, BadgeCheck, Ship, Coffee, Ticket, Users, Wine, Globe, Star,
+  Calendar, ArrowRight, Car, Sparkles,
+};
+
+function getScheduleIcon(title) {
+  const t = (title || "").toLowerCase();
+  if (/snorkel|swim|wave|crystal|lagoon|reef/.test(t)) return Waves;
+  if (/lunch|restaurant|food|dinner|eat|meal/.test(t)) return UtensilsCrossed;
+  if (/depart|departure/.test(t)) return Ship;
+  if (/return|back|cruise|transfer/.test(t)) return Anchor;
+  if (/manta|dive|fish/.test(t)) return Fish;
+  if (/car|land|tour|viewpoint|cliff|trek|hike|temple|monument/.test(t)) return Car;
+  if (/meeting|briefing|welcome|pickup/.test(t)) return Users;
+  if (/coffee|drink|break/.test(t)) return Coffee;
+  if (/photo|camera/.test(t)) return Camera;
+  if (/sunset|sun|rise/.test(t)) return Sun;
+  return MapPin;
+}
 
 const BRAND = {
   name: "Bluuu",
@@ -57,8 +92,8 @@ const BRAND = {
   ],
 };
 
-const ACCENT = "#FF8F00";
-const ACCENT_DARK = "#E67F00";
+const ACCENT = "#045cff";
+const ACCENT_DARK = "#0a4deb";
 const PAGE_BG = "#FFFFFF";
 const HERO_BACKGROUND_IMAGE = "https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp";
 
@@ -247,199 +282,193 @@ function Pill({ icon: Icon, children }) {
   );
 }
 
-function Navbar() {
-  return (
-    <div className="sticky top-4 z-50">
-      <div className="mx-auto flex max-w-[1280px] items-center justify-between gap-4 rounded-[45px] border border-neutral-200 bg-white px-4 py-3 backdrop-blur sm:px-6">
-        <div className="flex items-center gap-3">
-          <img
-            src="https://bluuu.tours/themes/bluuu/assets/img/logo.svg"
-            alt={`${BRAND.name} logo`}
-            className="h-6 w-auto"
-          />
-        </div>
-
-        <div className="hidden items-center gap-2 lg:flex">
-          {SECTIONS.filter((s) => s.id !== "book").map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="rounded-[24px] px-3 py-2 text-sm text-secondary-600 transition hover:bg-neutral-50 hover:text-secondary-900 font-semibold"
-            >
-              {s.label}
-            </a>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-4">
-          <button
-            onClick={() => window.dispatchEvent(new CustomEvent("open-settings"))}
-            className="flex items-center gap-2 rounded-[24px] px-2 py-2 text-sm font-medium text-secondary-600 transition hover:bg-neutral-50 hover:text-secondary-900 sm:px-3"
-          >
-            <Globe className="h-5 w-5 text-primary-600 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Settings</span>
-          </button>
-
-          <a
-            href="#book"
-            className={cn(
-              "hidden xs:inline-flex items-center justify-center gap-2 rounded-[45px] bg-primary-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 active:bg-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
-            )}
-          >
-            <span className="hidden sm:inline">Check</span> availability <ArrowRight className="h-4 w-4" />
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 
 
 
-
-function HeroGallery({ images = [] }) {
-  // If no images provided, render nothing or a fallback
-  if (!images || images.length === 0) return null;
-
-  // Create an array format expected by the gallery, defaulting labels
-  const items = images.slice(0, 5).map((img, i) => ({
-    label: `Gallery image ${i + 1}`,
-    src: typeof img === 'string' ? img : (img.original || img.thumb1 || ""),
-  })).filter(item => item.src);
-
-  if (items.length === 0) return null;
-
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[180px]">
-      <div className="relative col-span-2 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm sm:col-span-2 sm:row-span-2">
-        <img
-          src={items[0].src}
-          alt={items[0].label}
-          loading="lazy"
-          decoding="async"
-          className="aspect-[4/3] h-full w-full scale-[1.4] origin-center object-cover sm:aspect-auto"
-        />
-        <div className="absolute inset-x-0 bottom-0 bg-white px-3 py-2 text-xs font-semibold text-secondary-900 backdrop-blur">
-          {items[0].label}
-        </div>
-      </div>
-
-      {items.slice(1).map((it) => (
-        <div
-          key={it.src}
-          className="relative overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm"
-        >
-          <div className="h-full bg-white">
-            <img
-              src={it.src}
-              alt={it.label}
-              loading="lazy"
-              decoding="async"
-              className="aspect-[4/3] h-full w-full object-cover sm:aspect-auto"
-            />
-          </div>
-          <div className="absolute inset-x-0 bottom-0 bg-white px-3 py-2 text-xs font-semibold text-secondary-900 backdrop-blur">
-            {it.label}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function GalleryBlock() {
-  const { loading, privateTours } = useTours();
-  const [videoOpen, setVideoOpen] = useState(false);
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  const { loading, gallery: apiGallery, privateTours } = useTours();
+
+  // Use dedicated gallery items; fall back to tour images if none
+  const galleryItems = useMemo(() => {
+    if (apiGallery?.length) {
+      return apiGallery.map((g) => ({
+        id: g.id,
+        src: g.url,
+        thumb: g.thumb || g.url,
+        title: g.title || "",
+      }));
+    }
+    return (privateTours || [])
+      .flatMap((t) => t.images_with_thumbs || [])
+      .filter(Boolean)
+      .map((img, i) => ({
+        id: i,
+        src: img.original || img.thumb1 || img,
+        thumb: img.thumb1 || img.original || img,
+        title: "",
+      }));
+  }, [apiGallery, privateTours]);
+
+  // Desktop: 5 previews (1 large + 2×2); Mobile: 3 previews (1 large + 2 bottom)
+  const preview = galleryItems.slice(0, 5);
+  const remaining = galleryItems.length - 5;
+  const previewMob = galleryItems.slice(0, 3);
+  const remainingMob = galleryItems.length - 3;
+
+  const openFancybox = (startIndex = 0) => {
+    Fancybox.show(
+      galleryItems.map((item) => ({
+        src: item.src,
+        thumb: item.thumb,
+        caption: item.title || undefined,
+      })),
+      { startIndex }
+    );
+  };
 
   return (
     <section id="gallery" className="py-12 sm:py-16">
       <div className="mx-auto max-w-[1280px] px-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        {/* Header */}
+        <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.22em] text-secondary-500">
-              Gallery
-            </div>
-            <div className="mt-2 text-2xl font-bold leading-[1.08] text-secondary-900 sm:text-3xl">
+            <div className="text-xs font-black uppercase tracking-widest text-primary-600">Gallery</div>
+            <h2 className="mt-1.5 text-2xl font-bold text-secondary-900 sm:text-3xl">
               A quick look at the day
-            </div>
-            <div className="mt-2 max-w-3xl text-sm leading-6 text-secondary-600 sm:text-base">
-              Browse highlights: lounge, yacht comfort, snorkeling, Kelingking, mantas, and post-tour moments.
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              type="button"
-              className="text-sm font-semibold text-secondary-600 transition hover:text-secondary-900"
-              onClick={() => setGalleryOpen(true)}
-            >
-              View all photos
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-secondary-900"
-              onClick={() => setVideoOpen(true)}
-            >
-              <Play className="h-4 w-4 text-primary-600" fill="currentColor" />
-              Watch video
-            </button>
+            </h2>
           </div>
         </div>
 
-        <div className="mt-5">
-          {loading ? (
-            <GallerySkeleton />
-          ) : (
-            <HeroGallery images={(privateTours || []).flatMap((t) => t.images_with_thumbs || [])} />
-          )}
-        </div>
+        {/* Gallery grid */}
+        {loading ? (
+          <GallerySkeleton />
+        ) : previewMob.length > 0 ? (
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl">
+
+            {/* ── MOBILE: 1 large + 2 bottom ── */}
+            <div className="grid h-[340px] grid-rows-[2fr_1fr] gap-[3px] sm:hidden">
+              {/* Large image */}
+              <button
+                type="button"
+                className="group relative overflow-hidden"
+                onClick={() => openFancybox(0)}
+              >
+                <img
+                  src={previewMob[0].thumb}
+                  alt={previewMob[0].title || "Gallery"}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
+              </button>
+
+              {/* 2 small images in a row */}
+              <div className="grid grid-cols-2 gap-[3px]">
+                {[previewMob[1], previewMob[2]].map((item, i) => {
+                  if (!item) return <div key={i} className="bg-neutral-200" />;
+                  const isLast = i === 1 && remainingMob > 0;
+                  return (
+                    <button
+                      key={item.id ?? i}
+                      type="button"
+                      className="group relative overflow-hidden"
+                      onClick={() => openFancybox(i + 1)}
+                    >
+                      <img
+                        src={item.thumb}
+                        alt={item.title || "Gallery"}
+                        loading="lazy"
+                        className={cn(
+                          "h-full w-full object-cover transition duration-700",
+                          isLast ? "brightness-[0.55]" : "group-hover:scale-[1.04]"
+                        )}
+                      />
+                      {!isLast && (
+                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
+                      )}
+                      {isLast && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-white">
+                          <Camera className="h-5 w-5 opacity-70" />
+                          <span className="text-2xl font-bold leading-none">+{remainingMob}</span>
+                          <span className="text-xs font-medium opacity-70">more photos</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── DESKTOP: 1 large left + 2×2 right ── */}
+            <div className="hidden h-[520px] grid-cols-2 gap-[3px] sm:grid">
+              {/* Main large image */}
+              <button
+                type="button"
+                className="group relative overflow-hidden"
+                onClick={() => openFancybox(0)}
+              >
+                <img
+                  src={preview[0].thumb}
+                  alt={preview[0].title || "Gallery"}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
+              </button>
+
+              {/* 2 × 2 grid */}
+              <div className="grid grid-cols-2 grid-rows-2 gap-[3px]">
+                {[preview[1], preview[2], preview[3], preview[4]].map((item, i) => {
+                  if (!item) return <div key={i} className="bg-neutral-200" />;
+                  const isLast = i === 3 && remaining > 0;
+                  return (
+                    <button
+                      key={item.id ?? i}
+                      type="button"
+                      className="group relative overflow-hidden"
+                      onClick={() => openFancybox(i + 1)}
+                    >
+                      <img
+                        src={item.thumb}
+                        alt={item.title || "Gallery"}
+                        loading="lazy"
+                        className={cn(
+                          "h-full w-full object-cover transition duration-700",
+                          isLast ? "brightness-[0.55]" : "group-hover:scale-[1.04]"
+                        )}
+                      />
+                      {!isLast && (
+                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
+                      )}
+                      {isLast && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-white">
+                          <Camera className="h-5 w-5 opacity-70" />
+                          <span className="text-2xl font-bold leading-none">+{remaining}</span>
+                          <span className="text-xs font-medium opacity-70">more photos</span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Floating "Show all photos" pill */}
+            <button
+              type="button"
+              className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-secondary-900 shadow-md transition hover:bg-neutral-50 hover:shadow-lg"
+              onClick={() => openFancybox(0)}
+            >
+              <Camera className="h-4 w-4 text-secondary-500" />
+              Show all photos
+            </button>
+          </div>
+        ) : null}
       </div>
 
-      {galleryOpen ? (
-        <Modal
-          isOpen={galleryOpen}
-          onClose={() => setGalleryOpen(false)}
-          title="All photos"
-          maxWidth="max-w-6xl"
-          className="border-neutral-300 bg-white"
-        >
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(privateTours || []).flatMap(t => t.images_with_thumbs || []).map((img, idx) => (
-              <div key={idx} className="overflow-hidden rounded-2xl border border-neutral-200">
-                <img
-                  src={img.original || img.thumb1}
-                  alt="Tour gallery"
-                  loading="lazy"
-                  decoding="async"
-                  className="h-48 w-full object-cover sm:h-56"
-                />
-              </div>
-            ))}
-          </div>
-        </Modal>
-      ) : null}
-      {videoOpen ? (
-        <Modal
-          isOpen={videoOpen}
-          onClose={() => setVideoOpen(false)}
-          title="Bluuu tour video"
-          maxWidth="max-w-5xl"
-          bodyClassName="p-0"
-          className="border-neutral-300 bg-black"
-        >
-          <div className="aspect-video w-full">
-            <iframe
-              title="Bluuu tour video"
-              src="https://www.youtube.com/embed/KUL8f7Z6d7Q?autoplay=1&rel=0"
-              allow="autoplay; encrypted-media"
-              allowFullScreen
-              className="h-full w-full"
-            />
-          </div>
-        </Modal>
-      ) : null}
     </section>
   );
 }
@@ -515,124 +544,332 @@ function TourPicker({ activeTourId, onSelectTour }) {
 }
 
 function Hero() {
-  return (
-    <section className="relative">
-      <div className="mx-auto max-w-[1280px] px-4 py-16 sm:py-20">
-        <div
-          className="relative overflow-hidden rounded-[36px] border border-white/20 bg-cover bg-center shadow-[0_30px_80px_rgba(15,23,42,0.28)]"
-          style={{
-            backgroundImage: `linear-gradient(120deg, rgba(12, 16, 24, 0.42) 0%, rgba(12, 16, 24, 0.28) 45%, rgba(12, 16, 24, 0.08) 100%), url('${HERO_BACKGROUND_IMAGE}')`,
-          }}
-        >
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-0 w-full bg-gradient-to-r from-[#0b0f18]/55 via-[#0b0f18]/40 to-transparent" />
-          <div className="pointer-events-none absolute right-0 top-28 z-0 h-80 w-80 rounded-full bg-[#ffd7b0]/25 blur-[80px]" />
+  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
 
-          <div className="relative z-10 px-6 py-14 sm:px-10 sm:py-16">
-            <div className="grid gap-10 lg:grid-cols-12 lg:items-center">
-              <motion.div
-                className="lg:col-span-7"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const rect = el.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight && rect.bottom > 0;
+      if (inView) {
+        if (el.paused) { el.play().catch(() => {}); }
+        setPlaying(true);
+      } else {
+        if (!el.paused) { el.pause(); }
+        setPlaying(false);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onScroll);
+      window.removeEventListener("touchmove", onScroll);
+    };
+  }, []);
+
+  const handlePlay = () => {
+    videoRef.current?.play().catch(() => {});
+    setPlaying(true);
+  };
+
+  return (
+    <section className="relative overflow-hidden pt-12 sm:pt-20">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center"
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-semibold text-secondary-600 shadow-sm">
+              <Star className="h-4 w-4 text-amber-400" fill="currentColor" />
+              4.9 / {BRAND.reviewCount} reviews
+            </span>
+            <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-600 sm:text-sm">
+              Full day tour · Bali to Nusa Penida · All-inclusive
+            </p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-secondary-900 sm:text-6xl lg:text-7xl">
+              Award-winning tours to{" "}
+              <span className="text-primary-600">Nusa Penida</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-sm text-secondary-600 sm:text-xl">
+              Manta rays, snorkeling, diving, and a land tour — shared speedboat or private yacht, all in one unforgettable day.
+            </p>
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <a
+                href="#tours"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("tours")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary-600 px-8 text-base font-bold text-white shadow-xl transition hover:bg-primary-700 hover:scale-105 active:scale-95 sm:h-14"
               >
-                <div className="flex flex-wrap gap-2">
-                  {TOUR_HIGHLIGHT_BADGES.map((badge) => (
-                    <span
-                      key={badge.label}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-white/90 shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
-                    >
-                      <badge.icon className="h-3.5 w-3.5 text-white" />
-                      {badge.label}
-                    </span>
+                View tours <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+            <p className="mt-4 text-sm font-medium text-secondary-500">
+              From {formatIDR(1300000)} / person · Up to 13 guests · Free cancellation 24h
+            </p>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative mt-12 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-3xl"
+        >
+          <div className="aspect-[16/9] sm:aspect-[21/9]">
+            <video
+              ref={videoRef}
+              src="https://bluuu.tours/storage/app/media/video-xl.webm"
+              poster="https://bluuu.tours/storage/app/media/image-30-1.jpg"
+              muted
+              loop
+              playsInline
+              className="h-full w-full object-cover"
+            />
+            {!playing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <button
+                  type="button"
+                  onClick={handlePlay}
+                  className="relative flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-secondary-900 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:bg-white sm:h-24 sm:w-24"
+                >
+                  <Play className="ml-1 h-6 w-6 fill-current sm:h-10 sm:w-10" />
+                  <span className="sr-only">Play video</span>
+                  <div className="absolute inset-0 animate-ping rounded-full bg-white/40" />
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+function TourTypeCards() {
+  const TOUR_OPTIONS = useTourOptions();
+  const { loading } = useTours();
+
+  const privateTour = TOUR_OPTIONS.find((t) => t.id === "private");
+  const sharedTour = TOUR_OPTIONS.find((t) => t.id === "shared");
+
+  const cards = [
+    {
+      id: "shared",
+      tour: sharedTour,
+      label: "Shared tour",
+      badge: "Best value",
+      badgeIcon: Trophy,
+      title: "Shared speedboat tour",
+      description: "Classic shared tour, small groups (max 13 guests), all highlights in one smooth day.",
+      highlights: [
+        "Best snorkel spots + swim with mantas",
+        "Lunch at scenic restaurant",
+        "Land tour to Kelingking Cliff",
+      ],
+      image: "https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp",
+      href: "/shared",
+      cta: "View Options",
+      priceNote: "/ person",
+      featured: false,
+    },
+    {
+      id: "private",
+      tour: privateTour,
+      label: "Private tour",
+      badge: "For families & groups",
+      badgeIcon: Users,
+      title: "Private yacht tour",
+      description: "Your own private yacht, only your group onboard. Choose your boat, add extras, set your pace.",
+      highlights: [
+        "Only your group onboard",
+        "Choose your yacht model",
+        "Add extras: diving, photography & more",
+      ],
+      image: "https://bluuu.tours/storage/app/media/image-30-1.jpg",
+      href: "/private",
+      cta: "View Routes",
+      priceNote: "/ boat",
+      featured: true,
+    },
+  ];
+
+  return (
+    <section id="tours" className="scroll-mt-24 py-16 sm:py-24">
+      <div className="mx-auto max-w-[1280px] px-4">
+        <div className="mb-10 text-center">
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
+            Choose your tour
+          </h2>
+          <p className="mx-auto mt-3 max-w-2xl text-lg leading-relaxed text-secondary-600">
+            Same stunning destination — pick what fits your group best.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          {cards.map((card) => (
+            <a
+              key={card.id}
+              href={card.href}
+              className={cn(
+                "group flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1",
+                card.featured
+                  ? "border-primary-300 bg-white shadow-[0_4px_24px_rgba(37,99,235,0.12)] hover:shadow-[0_8px_32px_rgba(37,99,235,0.2)]"
+                  : "border-neutral-200 bg-white shadow-sm hover:shadow-lg"
+              )}
+            >
+              {/* Featured accent bar */}
+              {card.featured && (
+                <div className="h-1 w-full bg-gradient-to-r from-primary-500 to-primary-700" />
+              )}
+
+              {/* Image */}
+              <div className="relative aspect-[16/9] overflow-hidden">
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+                {/* Badge top-left */}
+                <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-widest shadow text-secondary-900">
+                  {card.badgeIcon && <card.badgeIcon className="h-3.5 w-3.5 text-primary-600" />}
+                  {card.badge}
+                </span>
+                {/* Featured label top-right */}
+                {card.featured && (
+                  <span className="absolute right-4 top-4 inline-flex items-center rounded-full bg-primary-600 px-3 py-1 text-xs font-bold text-white shadow">
+                    Premium
+                  </span>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-1 flex-col p-6">
+                {/* Title row + price */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className={cn(
+                      "text-xs font-black uppercase tracking-widest",
+                      card.featured ? "text-primary-600" : "text-secondary-400"
+                    )}>{card.label}</div>
+                    <h3 className="mt-0.5 text-xl font-bold text-secondary-900">{card.title}</h3>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    {loading ? (
+                      <div className="h-6 w-28 animate-pulse rounded-lg bg-neutral-200" />
+                    ) : (
+                      <>
+                        <div className="text-lg font-bold text-secondary-900">{formatIDR(card.tour?.priceValue ?? 0)}</div>
+                        <div className="text-xs text-secondary-400">{card.priceNote}</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <p className="mt-3 text-sm leading-6 text-secondary-500">{card.description}</p>
+
+                <div className="mt-4 space-y-2.5">
+                  {card.highlights.map((h) => (
+                    <div key={h} className="flex items-center gap-2.5 text-sm text-secondary-700">
+                      <span className={cn(
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                        card.featured ? "bg-primary-100" : "bg-neutral-100"
+                      )}>
+                        <Check className={cn("h-3 w-3", card.featured ? "text-primary-600" : "text-secondary-400")} />
+                      </span>
+                      {h}
+                    </div>
                   ))}
                 </div>
-                <h1 className="mt-6 tracking-tight font-bold text-4xl leading-[1.05] text-white sm:text-6xl">
-                  <span className="block">Award-winning</span>
-                  <span className="block">Bali to Nusa Penida</span>
-                  <span className="block">full day tours</span>
-                </h1>
-                <p className="mt-5 max-w-2xl text-sm leading-6 text-white/80 sm:text-base">
-                  Experience the Ultimate Day Trip: Manta Rays, Snorkeling, Diving and Land Tour – All in One Unforgettable
-                  Day
-                </p>
-                <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <PrimaryLink href="#book" className="px-7 py-3.5 text-base">
-                    View Tours
-                  </PrimaryLink>
-                  <a
-                    href="#"
-                    className="flex items-center gap-3 text-sm font-semibold text-white/90 transition hover:text-white"
-                  >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-white/10 shadow-[0_8px_20px_rgba(0,0,0,0.25)]">
-                      <Play className="h-4 w-4 text-white" />
-                    </span>
-                    Watch video
-                  </a>
+
+                <div className="mt-auto pt-6">
+                  <span className={cn(
+                    "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition",
+                    card.featured
+                      ? "bg-primary-600 text-white group-hover:bg-primary-700"
+                      : "border border-neutral-300 bg-white text-secondary-700 group-hover:border-primary-400 group-hover:text-primary-600"
+                  )}>
+                    {card.cta} <ArrowRight className="h-4 w-4" />
+                  </span>
                 </div>
-
-              </motion.div>
-
-              <motion.div
-                className="lg:col-span-5"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.05 }}
-              >
-                <div className="relative mx-auto max-w-xs origin-top scale-[0.98] [--review-bottom:7rem] [--review-left:1.25rem] [--reviews-right:-0.5rem] [--reviews-top:-1.5rem]">
-                  <div className="absolute -right-10 -top-6 h-28 w-28 rounded-3xl bg-[#ffd6b0] opacity-70 blur-2xl" />
-                  <div className="relative rounded-[28px] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.18)]">
-                    <div className="relative z-20 mb-3 hidden inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-secondary-900 shadow md:absolute md:mb-0 md:left-5 md:top-5">
-                      <BadgeCheck className="h-3.5 w-3.5 text-primary-600" />
-                      Award winner
-                    </div>
-                    <div className="relative overflow-hidden rounded-3xl">
-                      <div className="absolute inset-2 rounded-[18px] border border-white/25 bg-white/10 backdrop-blur-[3px] shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]" />
-                      <img
-                        src="https://bluuu.tours/themes/bluuu/assets/img/winner-2.webp"
-                        alt="Bluuu award winner"
-                        className="relative z-10 h-[376px] w-full object-contain"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-3 w-full max-w-[240px] rounded-2xl bg-white px-3.5 py-2.5 text-sm font-semibold text-secondary-900 shadow-[0_12px_24px_rgba(31,38,48,0.18)] md:absolute md:bottom-[var(--review-bottom)] md:left-[var(--review-left)] md:mt-0 md:w-auto md:max-w-[240px] md:z-20 md:-translate-y-[230px] md:-translate-x-[50px]">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-secondary-600">
-                      Guest review
-                      <div className="flex items-center gap-0.5 text-primary-600">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                          <Star key={index} className="h-3 w-3 fill-[var(--accent)] text-primary-600" />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="mt-1 text-base font-semibold leading-6 text-secondary-900">
-                      "Best day of our vacation"
-                    </div>
-                  </div>
-
-                  <div className="mt-3 w-full max-w-[220px] rounded-2xl border border-neutral-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-secondary-900 shadow-[0_12px_24px_rgba(31,38,48,0.16)] md:absolute md:right-[var(--reviews-right)] md:top-[var(--reviews-top)] md:mt-0 md:w-auto md:max-w-[210px] md:z-20 md:translate-y-[15px] md:translate-x-[25px]">
-                    <span className="text-primary-600">8,500+</span> reviews
-                    <div className="mt-1 text-xs font-medium text-secondary-600">TripAdvisor, Airbnb, Klook</div>
-                  </div>
-
-                  <div className="mt-3 w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-xs text-secondary-600 shadow-[0_14px_30px_rgba(31,38,48,0.18)] md:absolute md:bottom-[-40px] md:-translate-y-1/2 md:translate-x-[10px] md:left-[calc(1.5rem+20px)] md:right-[calc(1.5rem+20px)] md:mt-0 md:w-auto md:z-20">
-                    <div className="space-y-0.5">
-                      <div className="text-base font-semibold leading-5 text-secondary-900">
-                        Bali’s <span className="text-primary-600">#1</span> yacht experience
-                      </div>
-                      <div className="text-xs leading-4 text-secondary-600">
-                        Based on verified guest feedback
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
+              </div>
+            </a>
+          ))}
         </div>
       </div>
     </section>
   );
 }
+
+function RouteCard({ route, bookHref }) {
+  const img = route.photos?.[0]?.path;
+  const chips = (route.highlights || []).slice(0, 4);
+  const detailHref = bookHref;
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      {/* Image */}
+      <div className="aspect-[16/10] w-full overflow-hidden bg-neutral-200">
+        {img && (
+          <img src={img} alt={route.title} loading="lazy" className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]" />
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-base font-bold text-secondary-900">{route.title}</span>
+          {route.badge && (
+            <span className="inline-flex items-center rounded-full border border-primary-200 bg-primary-50 px-2 py-0.5 text-xs font-semibold text-primary-600">
+              {typeof route.badge === "string" ? route.badge : "Add-on"}
+            </span>
+          )}
+        </div>
+
+        {route.description && (
+          <div className="text-sm leading-6 text-secondary-500"
+            dangerouslySetInnerHTML={{ __html: route.description }}
+          />
+        )}
+
+        {chips.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {chips.map((item) => {
+              const Icon = typeof item.icon === "string"
+                ? (ROUTE_ICON_MAP[item.icon] || MapPin)
+                : (item.icon || MapPin);
+              return (
+                <span key={item.label} className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-secondary-600">
+                  <Icon className="h-3 w-3 text-primary-600" />
+                  {item.label}
+                </span>
+              );
+            })}
+          </div>
+        )}
+
+        <a
+          href={detailHref}
+          className="mt-auto inline-flex items-center gap-2 self-end text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline"
+        >
+          View details <ArrowRight className="h-4 w-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
 
 function TourOptions({ activeTourId, onSelectTour }) {
   const { loading } = useTours();
@@ -670,14 +907,14 @@ function TourOptions({ activeTourId, onSelectTour }) {
   const tourById = new Map(TOUR_OPTIONS.map((tour) => [tour.id, tour]));
   const groups = [
     {
-      id: "shared-group",
+      id: "shared-book",
       kicker: "Shared tours",
       title: "A shared tour that feels premium",
       subtitle: "Shared boats, small groups (max 13 guests), and a smooth, curated path.",
       tourIds: ["shared", "premium-shared"],
     },
     {
-      id: "private-group",
+      id: "private-book",
       kicker: "Private tours",
       title: "Private yachts with elevated service",
       subtitle: "Fully private days for your group, flexible timing, and extra touches.",
@@ -690,6 +927,7 @@ function TourOptions({ activeTourId, onSelectTour }) {
       {groups.map((group, index) => (
         <Section
           key={group.id}
+          id={group.id}
           kicker={group.kicker}
           title={group.title}
           subtitle={group.subtitle}
@@ -836,6 +1074,7 @@ function OverviewSection({ activeTourId, onSelectTour }) {
 }
 
 function CompareTable() {
+  const TOUR_OPTIONS = useTourOptions();
   const compareTones = {
     shared: "border-neutral-200 bg-gradient-to-br from-[#f7fafc] via-[#f2f7fb] to-[#eaf2f7]",
     premium: "border-neutral-200 bg-gradient-to-br from-[#eef3f7] via-[#e2ebf3] to-[#d5e1ec]",
@@ -895,7 +1134,7 @@ function CompareTable() {
         <div className="overflow-x-auto">
           <div className="min-w-[960px]">
             <div className="grid grid-cols-[180px_repeat(4,1fr)] border-b border-neutral-200 px-4 py-4">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-secondary-500">Tour</div>
+              <div className="text-xs font-black uppercase tracking-widest text-primary-600">Tour</div>
               {TOUR_OPTIONS.map((tour) => (
                 <div key={tour.id} className="px-3">
                   <div
@@ -938,99 +1177,14 @@ function CompareTable() {
 }
 
 function SocialProof() {
-  const reviews = [
-    {
-      name: "Sophie - UK",
-      text: "Smooth boarding from the pier, great crew, and Crystal Bay was unreal. The lounge made the morning so easy.",
-    },
-    {
-      name: "Max - Germany",
-      text: "Mantas were the highlight. Loved the post-tour showers and snacks - felt premium even on a shared tour.",
-    },
-    {
-      name: "Aisha - UAE",
-      text: "No chaos, well organized, and the snorkeling spots were perfect. Would book again.",
-    },
-  ];
-
-  const sources = [
-    { label: "TripAdvisor", href: "https://www.tripadvisor.com/" },
-    { label: "Google", href: "https://www.google.com/search" },
-    { label: "Airbnb", href: "https://www.airbnb.com/" },
-  ];
-
-  const StarsRow = ({ size = 4 }) => (
-    <div className="flex items-center gap-1">
-      {Array.from({ length: 5 }).map((_, idx) => (
-        <Star key={idx} className={cn("text-primary-600", size === 5 ? "h-5 w-5" : "h-4 w-4")} fill="currentColor" />
-      ))}
-    </div>
-  );
-
   return (
     <Section
       id="social"
       kicker="Trusted by travelers"
       title="A premium tour with seamless flow"
-      subtitle="Real guest quotes that highlight comfort, crew, and smooth logistics - the things that matter on the day."
     >
-      <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-sm">
-        <div className="p-5 sm:p-6">
-          <div className="flex flex-col gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <Star className="h-5 w-5 text-primary-600" fill="currentColor" />
-                <div className="text-lg font-semibold text-secondary-900">{BRAND.reviewCount}</div>
-                <div className="text-sm text-secondary-600">{BRAND.reviewLabel}</div>
-              </div>
-              <div className="mt-3 max-w-xl text-sm leading-6 text-secondary-600">
-                Top mentions in reviews: it feels premium for a shared tour, the group stays small, and the team runs the
-                day smoothly from start to finish.
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {reviews.map((r, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border border-neutral-200 bg-gradient-to-r from-[#eef6ff] to-[#f7fbff] p-5 shadow-sm"
-              >
-                <StarsRow />
-                <div className="mt-3 text-sm leading-6 text-secondary-600">"{r.text}"</div>
-                <div className="mt-4 text-xs font-semibold text-secondary-500">{r.name}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-neutral-200 bg-gradient-to-r from-[#eef6ff] to-[#f7fbff] p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="text-sm font-semibold text-secondary-900">More reviews from real guests</div>
-                <div className="mt-1 text-sm text-secondary-600">
-                  See what travelers say about comfort, group size, and the overall flow of the day.
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-secondary-600">
-                  <span className="text-secondary-500">Review sources:</span>
-                  {sources.map((s) => (
-                    <a
-                      key={s.label}
-                      href={s.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 hover:text-secondary-900"
-                    >
-                      {s.label} <ExternalLink className="h-3.5 w-3.5 text-secondary-500" />
-                    </a>
-                  ))}
-                </div>
-              </div>
-              <SecondaryLink href="https://www.tripadvisor.com/" targetBlank className="px-4 py-2 text-sm">
-                See all reviews <ArrowRight className="h-4 w-4 text-secondary-500" />
-              </SecondaryLink>
-            </div>
-          </div>
-        </div>
+      <div className="overflow-hidden rounded-3xl bg-white p-4 sm:p-6">
+        <div className="elfsight-app-dc207859-e523-4551-bf17-1b6df3428bae" data-elfsight-app-lazy />
       </div>
     </Section>
   );
@@ -1068,6 +1222,7 @@ function WhyBluuu() {
       kicker="Why book this tour"
       title="The premium way to do Nusa Penida in one day"
       subtitle="Comfort-first day trips with clear logistics and a flexible pace across every tour option."
+      className=""
     >
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 auto-rows-fr">
         {cards.map((c, i) => (
@@ -1090,8 +1245,8 @@ function WhyBluuu() {
             </div>
           </div>
           <div className="lg:col-span-4">
-            <PrimaryLink href="#book" className="w-full">
-              Check availability
+            <PrimaryLink href="#tours" className="w-full">
+              Choose your tour
             </PrimaryLink>
           </div>
         </div>
@@ -1167,36 +1322,26 @@ function DayPlan() {
       kicker="What to expect"
       title="Your day plan"
       subtitle="A smooth full-day flow with snorkeling, lunch, land highlights, and manta time (conditions permitting)."
+      className=""
     >
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
           <div className="space-y-3">
             {groups.map((g) => (
-              <div
-                key={g.label}
-                className={cn("rounded-2xl border border-neutral-200 p-4 shadow-sm", BLOCK_BACKGROUND)}
-              >
-                <div className="text-sm font-semibold text-secondary-900">{g.label}</div>
-                <div
-                  className={cn(
-                    "mt-3",
-                    "space-y-3"
-                  )}
-                >
+              <div key={g.label}>
+                <div className="mb-2 text-xs font-black uppercase tracking-widest text-secondary-400">{g.label}</div>
+                <div className="space-y-2">
                   {g.items.map((s) => (
                     <div
                       key={`${g.label}-${s.title}`}
-                      className={cn(
-                        "flex items-start gap-4 rounded-2xl border border-neutral-200 bg-gradient-to-r px-3 py-3 first:mt-0 last:mb-0",
-                        s.tint
-                      )}
+                      className="flex items-start gap-4 rounded-2xl border border-neutral-200 bg-white p-5"
                     >
-                      <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl", s.iconTone)}>
-                        <s.icon className="h-4.5 w-4.5" />
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50">
+                        <s.icon className="h-5 w-5 text-primary-600" />
                       </div>
                       <div className="flex-1">
                         <div className="text-sm font-semibold text-secondary-900">{s.title}</div>
-                        <div className="mt-1 text-sm leading-6 text-secondary-600">{s.text}</div>
+                        <div className="mt-1 text-sm text-secondary-600">{s.text}</div>
                       </div>
                     </div>
                   ))}
@@ -1208,27 +1353,13 @@ function DayPlan() {
 
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-24">
-            <Card className="overflow-hidden bg-white p-0">
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-normal text-secondary-500">Route overview</div>
-                    <div className="text-lg font-semibold text-secondary-900">Bali - Nusa Penida</div>
-                  </div>
-                  <div />
-                </div>
-              </div>
-
-              <div className="bg-transparent">
-                <img
-                  src="https://bluuu.tours/themes/bluuu/assets/images/map.webp"
-                  alt="Route overview map"
-                  loading="lazy"
-                  decoding="async"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-            </Card>
+            <img
+              src="https://bluuu.tours/themes/bluuu/assets/images/map.webp"
+              alt="Route overview map"
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-contain"
+            />
           </div>
         </div>
       </div>
@@ -1270,8 +1401,6 @@ function Included() {
     },
   ];
 
-  const extras = ["Drinking water", "Certified guides", "Basic insurance", "Towels"];
-
   return (
     <Section
       id="included"
@@ -1279,36 +1408,23 @@ function Included() {
       title="Everything you want is already covered"
       subtitle="Simple, transparent inclusions — so you can focus on the day, not the fine print."
     >
-      <Card className="rounded-3xl p-6 sm:p-8">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {highlights.map((h) => (
-            <div
-              key={h.title}
-              className="flex items-start gap-4 rounded-2xl border border-neutral-200 bg-neutral-50 p-4 shadow-[0_10px_24px_rgba(31,38,48,0.06)]"
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-transparent bg-transparent">
-                <h.icon className="h-5 w-5 text-primary-600" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold text-secondary-900">{h.title}</div>
-                <div className="mt-1 text-sm text-secondary-600">{h.text}</div>
-              </div>
+      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {highlights.map((h) => (
+          <div
+            key={h.title}
+            className="flex items-start gap-4 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50">
+              <h.icon className="h-5 w-5 text-primary-600" />
             </div>
-          ))}
-        </div>
+            <div>
+              <div className="text-sm font-semibold text-secondary-900">{h.title}</div>
+              <div className="mt-1 text-sm text-secondary-600">{h.text}</div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-        <div className="mt-6 flex flex-wrap gap-2">
-          {extras.map((x) => (
-            <span
-              key={x}
-              className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-secondary-600"
-            >
-              <Check className="h-3.5 w-3.5 text-primary-600" />
-              {x}
-            </span>
-          ))}
-        </div>
-      </Card>
     </Section>
   );
 }
@@ -1342,9 +1458,10 @@ function FAQItem({ q, a }) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500">
-              {a}
-            </div>
+            <div
+              className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: a }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1353,15 +1470,23 @@ function FAQItem({ q, a }) {
 }
 
 function FAQ() {
+  const { faqs: apiFaqs, loading: faqLoading } = useTours();
+  const contacts = useSiteContacts();
   const [showAll, setShowAll] = useState(false);
-  const primaryFaqs = faqs.slice(0, 5);
+
+  // API returns { id, question, answer }; normalize to { q, a } expected by FAQItem
+  const normalizedFaqs = apiFaqs?.length
+    ? apiFaqs.map(f => ({ q: f.question, a: f.answer }))
+    : [];
+
+  const primaryFaqs = normalizedFaqs.slice(0, 5);
 
   return (
     <Section
       id="faq"
       backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
     >
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-[1280px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
           <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
@@ -1370,13 +1495,23 @@ function FAQ() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-          {(showAll ? faqs : primaryFaqs).map((faq, i) => (
-            <FAQItem key={i} q={faq.q} a={faq.a} />
-          ))}
+          {faqLoading ? (
+            <div className="space-y-0">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="border-b border-neutral-100 px-6 py-5 last:border-0">
+                  <div className="h-4 w-3/4 animate-pulse rounded-lg bg-neutral-100" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            (showAll ? normalizedFaqs : primaryFaqs).map((faq, i) => (
+              <FAQItem key={faq.id ?? i} q={faq.q} a={faq.a} />
+            ))
+          )}
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-6">
-          {!showAll && (
+          {!showAll && !faqLoading && normalizedFaqs.length > 5 && (
             <button
               onClick={() => setShowAll(true)}
               className="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:underline"
@@ -1385,18 +1520,34 @@ function FAQ() {
             </button>
           )}
 
-          <div className="relative flex w-full flex-col items-center justify-between gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:flex-row">
-            <div className="text-center sm:text-left">
-              <div className="text-sm font-semibold text-secondary-900">Have a special request?</div>
-              <div className="mt-1 text-sm text-secondary-500">Everything else is covered above. For unusual requests, message us.</div>
+          <div className="relative flex w-full items-center gap-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
+              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
             </div>
-            <button
-              onClick={() => alert("WhatsApp demo action")}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp us
-            </button>
+            <div className="flex-1">
+              <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-1">Ask an Expert</div>
+              <div className="text-sm text-secondary-500 mb-3">Our team is ready to help you plan the perfect trip.</div>
+              <div className="flex flex-wrap gap-4">
+                {contacts.phone?.link && (
+                  <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <Phone className="h-3.5 w-3.5 text-primary-500" />
+                    {contacts.phone.number}
+                  </a>
+                )}
+                {contacts.email && (
+                  <a href={`mailto:${contacts.email}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <Mail className="h-3.5 w-3.5 text-primary-500" />
+                    {contacts.email}
+                  </a>
+                )}
+                {contacts.whatsapp?.link && (
+                  <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -1494,144 +1645,7 @@ function BookingMini({ activeTourId, onSelectTour }) {
   );
 }
 
-function FinalCTA({ activeTourId, onSelectTour }) {
-  const TOUR_OPTIONS = useTourOptions();
-  return (
-    <section className="py-14 sm:py-16" id="book">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-gradient-to-br from-[#f1f6fb] via-[#f7fbff] to-[var(--accent)]/15 p-8 shadow-sm">
-          <div className="pointer-events-none absolute -right-28 -top-28 h-80 w-80 rounded-full bg-primary-600/10 blur-3xl" />
-          <div className="pointer-events-none absolute -left-28 -bottom-28 h-80 w-80 rounded-full bg-primary-600/20 blur-3xl" />
 
-          <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center">
-            <div className="lg:col-span-7">
-              <div className="text-xs font-semibold uppercase tracking-wider text-secondary-500">Ready to book</div>
-              <h3 className="mt-2 text-2xl font-semibold text-secondary-900 sm:text-3xl">
-                Reserve your Nusa Penida day - organized, comfortable, and memorable
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-secondary-600 sm:text-base">
-                Choose your tour, date, and group size. Free cancellation up to 24 hours and a weather guarantee mean you
-                can book early without risk.
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {BRAND.badges.map((b, i) => (
-                  <Pill key={i} icon={b.icon}>
-                    {b.label}
-                  </Pill>
-                ))}
-              </div>
-            </div>
-
-            <div className="lg:col-span-5">
-              <BookingMini activeTourId={activeTourId} onSelectTour={onSelectTour} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function Footer() {
-  const { selectedCurrency } = useCurrency();
-  return (
-    <footer className="border-t border-neutral-100 bg-white pt-20 pb-0 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-24">
-          <div className="flex flex-col gap-6">
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase">
-              BLUUU INC. /
-            </div>
-            <div className="space-y-4">
-              <a href="mailto:support@bluuu.tours" className="block text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                support@bluuu.tours
-              </a>
-              <div className="text-sm text-secondary-500 leading-relaxed">
-                Jl. Tukad Punggawa No.238, Serangan,<br />
-                Denpasar Selatan, Bali 80228
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-4">
-                DISCLAIMER /
-              </div>
-              <p className="text-xs leading-relaxed text-secondary-400 max-w-xs">
-                Some images on this website are digitally enhanced to illustrate potential experiences. Your actual tour may vary depending on weather and sea conditions.
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-6">
-              COMPANY /
-            </div>
-            <ul className="space-y-4">
-              <li><a href="#tours" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Tours</a></li>
-              <li><a href="#why" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">About</a></li>
-              <li><a href="#gallery" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Gallery</a></li>
-              <li><a href="#social" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Reviews</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-6">
-              OTHERS /
-            </div>
-            <ul className="space-y-4">
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Cancellation Policy</a></li>
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Sustainability</a></li>
-            </ul>
-          </div>
-
-          <div>
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-6">
-              CONNECT /
-            </div>
-            <ul className="space-y-4">
-              <li>
-                <a href="#" className="group flex items-center justify-between text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                  <span>Instagram</span>
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-transform duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                </a>
-              </li>
-              <li>
-                <a href="#" className="group flex items-center justify-between text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                  <span>WhatsApp</span>
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-transform duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                </a>
-              </li>
-              <li>
-                <a href="#" className="group flex items-center justify-between text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                  <span>YouTube</span>
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-transform duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="w-full overflow-hidden leading-[0.75] select-none pt-0 pb-0 flex justify-center mt-[-40px] pointer-events-none relative z-0">
-        <div className="text-[25vw] font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-secondary-400 via-secondary-200 to-secondary-400 opacity-10 transform scale-y-110 translate-y-[10%] animate-gradient-flow">
-          BLUUU
-        </div>
-      </div>
-
-      <div className="border-t border-neutral-100 py-6 bg-white relative z-10">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 flex flex-col items-center justify-between md:flex-row gap-4">
-          <span className="text-xs text-secondary-400">© 2026 Bluuu Inc. All rights reserved.</span>
-          <button onClick={() => window.dispatchEvent(new CustomEvent("open-settings"))} className="flex items-center gap-2 text-xs font-semibold text-secondary-900 transition hover:text-primary-600">
-            <Globe className="h-3 w-3" />
-            {selectedCurrency?.toUpperCase()}
-          </button>
-        </div>
-      </div>
-    </footer>
-  );
-}
 
 function MobileStickyCTA() {
   return (
@@ -1708,7 +1722,7 @@ function Card({ children, className }) {
   return (
     <div
       className={cn(
-        "rounded-[24px] border border-neutral-200 bg-white p-5 shadow-[0_10px_24px_rgba(31,38,48,0.06)] transition-all hover:border-primary-100",
+        "rounded-[24px] border border-neutral-200 bg-white p-5 transition-all hover:border-primary-300",
         className
       )}
     >
@@ -1721,22 +1735,22 @@ function Section({ id, kicker, title, subtitle, children, titleAddon, className 
   return (
     <section id={id} className={cn("scroll-mt-24 py-16 sm:py-24", className)}>
       <div className="mx-auto max-w-[1280px] px-4">
-        <div className="mb-8">
+        <div className="mb-10 text-center">
           {kicker ? (
-            <div className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-secondary-500">
+            <div className="text-xs font-black uppercase tracking-widest text-primary-600">
               {kicker}
             </div>
           ) : null}
           {title ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <h2 className="break-words font-sans text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
+            <>
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
                 {title}
               </h2>
               {titleAddon ? titleAddon : null}
-            </div>
+            </>
           ) : null}
           {subtitle ? (
-            <p className="mt-2 max-w-3xl break-words text-lg leading-relaxed text-secondary-600">
+            <p className="mx-auto mt-3 max-w-2xl text-lg leading-relaxed text-secondary-600">
               {subtitle}
             </p>
           ) : null}
@@ -1747,13 +1761,74 @@ function Section({ id, kicker, title, subtitle, children, titleAddon, className 
   );
 }
 
+function RoutesBlock({ id, kicker, title, subtitle, routes, bookHref, bookLabel, loading }) {
+  return (
+    <Section id={id} kicker={kicker} title={title} subtitle={subtitle}>
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-2xl bg-neutral-200" />
+          ))}
+        </div>
+      ) : routes.length > 0 ? (
+        <>
+          <div className="flex flex-wrap justify-center gap-4">
+            {routes.map((route) => (
+              <div key={route.id} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]">
+                <RouteCard route={route} bookHref={bookHref} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-6 flex justify-center">
+            <a href={bookHref} className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700">
+              {bookLabel} <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </>
+      ) : null}
+    </Section>
+  );
+}
+
+function RouteBlocks() {
+  const { privateRoutes, sharedRoutes, loading } = useExtras();
+  return (
+    <>
+      <RoutesBlock
+        id="private-group"
+        kicker="Private routes"
+        title="Pick your private tour route"
+        subtitle="Your own yacht, your own pace — select the route for your group."
+        routes={privateRoutes}
+        bookHref="/private"
+        bookLabel="Book Private Tour"
+        loading={loading}
+      />
+      <RoutesBlock
+        id="shared-group"
+        kicker="Shared routes"
+        title="Pick your shared tour option"
+        subtitle="Small groups, same boat — choose the itinerary that fits your day."
+        routes={sharedRoutes}
+        bookHref="/shared"
+        bookLabel="Book Shared Tour"
+        loading={loading}
+      />
+    </>
+  );
+}
+
 export default function MainTest01() {
+  useSEO({
+    title: "Nusa Penida Day Tours from Bali | Bluuu Tours",
+    description: "Award-winning private yacht & shared speedboat tours from Bali to Nusa Penida. Manta rays, snorkeling, diving & land tour — all-inclusive from IDR 1,300,000.",
+  });
   const TOUR_OPTIONS = useTourOptions();
   const [activeTourId, setActiveTourId] = useState(TOUR_OPTIONS[1]?.id ?? TOUR_OPTIONS[0].id);
 
   return (
     <div
-      className="min-h-screen bg-white tracking-tight font-bold text-secondary-900"
+      className="min-h-screen bg-neutral-100 text-secondary-900"
       style={{
         "--accent": ACCENT,
         "--accent-dark": ACCENT_DARK,
@@ -1770,18 +1845,22 @@ export default function MainTest01() {
       }}
     >
       <CurrencyBridge />
-      <Navbar />
+      <Navbar
+        variant="fullbar"
+        links={PRIVATE_STATIC_NAV_LINKS}
+        cta={{ label: "Check availability", href: "#book" }}
+      />
       <Hero />
-      <TourOptions activeTourId={activeTourId} onSelectTour={setActiveTourId} />
+      <TourTypeCards />
+      <RouteBlocks />
       <GalleryBlock />
       <Included />
-      <OverviewSection activeTourId={activeTourId} onSelectTour={setActiveTourId} />
       <DayPlan />
       <SocialProof />
+      <LogoSlider title="Trusted on top travel platforms" />
       <WhyBluuu />
       <FAQ />
-      <FinalCTA activeTourId={activeTourId} onSelectTour={setActiveTourId} />
-      <Footer />
+      <PrivateStyleFooter />
       <MobileStickyCTA />
       <div className="h-24 sm:hidden" />
     </div>

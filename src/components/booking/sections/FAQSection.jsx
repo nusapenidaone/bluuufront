@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Plus, MessageCircle } from "lucide-react";
+import { Plus, Phone, Mail, MessageCircle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PremiumSection as Section } from "../ui/Section";
 import { cn } from "../../../lib/utils";
-import { faqs } from "../../../data/shared.json";
+import { useTours } from "../../../ToursContext";
+import { useSiteContacts } from "../../../hooks/useSiteContacts";
 
 function FAQItem({ q, a }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -32,9 +33,10 @@ function FAQItem({ q, a }) {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden"
                     >
-                        <div className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500">
-                            {a}
-                        </div>
+                        <div
+                            className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
+                            dangerouslySetInnerHTML={{ __html: a }}
+                        />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -43,15 +45,22 @@ function FAQItem({ q, a }) {
 }
 
 export function FAQSection() {
+    const { faqs: dynamicFaqs } = useTours();
+    const contacts = useSiteContacts();
     const [showAll, setShowAll] = useState(false);
-    const primaryFaqs = faqs.slice(0, 5);
+
+    const displayFaqs = dynamicFaqs && dynamicFaqs.length > 0
+        ? dynamicFaqs.map(f => ({ q: f.question, a: f.answer }))
+        : [];
+
+    const primaryFaqs = displayFaqs.slice(0, 5);
 
     return (
         <Section
             id="faq"
             backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
         >
-            <div className="mx-auto w-full max-w-4xl">
+            <div className="mx-auto w-full max-w-[1280px]">
                 <div className="mb-8 flex flex-col items-center text-center">
                     <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
                     <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
@@ -60,13 +69,13 @@ export function FAQSection() {
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-                    {(showAll ? faqs : primaryFaqs).map((faq, i) => (
+                    {(showAll ? displayFaqs : primaryFaqs).map((faq, i) => (
                         <FAQItem key={i} q={faq.q} a={faq.a} />
                     ))}
                 </div>
 
                 <div className="mt-8 flex flex-col items-center gap-6">
-                    {!showAll && (
+                    {!showAll && displayFaqs.length > 5 && (
                         <button
                             onClick={() => setShowAll(true)}
                             className="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:underline"
@@ -75,18 +84,34 @@ export function FAQSection() {
                         </button>
                     )}
 
-                    <div className="relative flex w-full flex-col items-center justify-between gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:flex-row">
-                        <div className="text-center sm:text-left">
-                            <div className="text-sm font-semibold text-secondary-900">Have a special request?</div>
-                            <div className="mt-1 text-sm text-secondary-500">Everything else is covered above. For unusual requests, message us.</div>
+                    <div className="relative flex w-full items-center gap-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+                        <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
+                            <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
                         </div>
-                        <button
-                            onClick={() => alert("WhatsApp demo action")}
-                            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800"
-                        >
-                            <MessageCircle className="h-4 w-4" />
-                            WhatsApp us
-                        </button>
+                        <div className="flex-1">
+                            <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-1">Ask an Expert</div>
+                            <div className="text-sm text-secondary-500 mb-3">Our team is ready to help you plan the perfect trip.</div>
+                            <div className="flex flex-wrap gap-4">
+                                {contacts.phone?.link && (
+                                    <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                                        <Phone className="h-3.5 w-3.5 text-primary-500" />
+                                        {contacts.phone.number}
+                                    </a>
+                                )}
+                                {contacts.email && (
+                                    <a href={`mailto:${contacts.email}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                                        <Mail className="h-3.5 w-3.5 text-primary-500" />
+                                        {contacts.email}
+                                    </a>
+                                )}
+                                {contacts.whatsapp?.link && (
+                                    <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                                        <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
+                                        WhatsApp
+                                    </a>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

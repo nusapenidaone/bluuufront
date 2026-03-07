@@ -2,7 +2,9 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import {
     fetchSharedTours as apiFetchSharedTours,
     fetchTransfers as apiFetchTransfers,
-    fetchCovers as apiFetchCovers
+    fetchCovers as apiFetchCovers,
+    fetchFaq as apiFetchFaq,
+    fetchGallery as apiFetchGallery,
 } from "./api/shared";
 import {
     fetchPrivateTours as apiFetchPrivateTours,
@@ -14,61 +16,43 @@ const ToursContext = createContext();
 export const useTours = () => useContext(ToursContext);
 
 export const ToursProvider = ({ children }) => {
-    const [tours, setTours] = useState([]);
     const [sharedTours, setSharedTours] = useState([]);
     const [privateTours, setPrivateTours] = useState([]);
     const [transfers, setTransfers] = useState([]);
     const [covers, setCovers] = useState([]);
+    const [faqs, setFaqs] = useState([]);
+    const [gallery, setGallery] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                let privateFromTours = [];
-                // Fetch shared tours (generic endpoint) and private tours (dedicated endpoint) in parallel
-                const [toursRes, privateRes, transfersRes, coversRes] = await Promise.allSettled([
+                const [sharedRes, privateRes, transfersRes, coversRes, faqRes, galleryRes] = await Promise.allSettled([
                     apiFetchSharedTours(),
                     apiFetchPrivateTours(),
                     apiFetchTransfers(),
                     apiFetchCovers(),
+                    apiFetchFaq(),
+                    apiFetchGallery(),
                 ]);
 
-                // Handle generic tours (for shared)
-                if (toursRes.status === "fulfilled") {
-                    const data = toursRes.value;
-                    const uniqueData = Array.from(new Map(data.map(item => [String(item.id), item])).values());
-                    setTours(uniqueData);
-
-                    const shared = uniqueData.filter(t => Number(t.classes_id) === 9);
-                    console.log("Shared boats (classes_id=9):", shared.length, shared);
-                    setSharedTours(shared);
-                    privateFromTours = uniqueData.filter(t => Number(t.classes_id) === 8);
+                // Handle shared tours (classes_id=9)
+                if (sharedRes.status === "fulfilled") {
+                    const data = sharedRes.value;
+                    const unique = Array.from(new Map(data.map(item => [String(item.id), item])).values());
+                    setSharedTours(unique);
                 } else {
-                    console.warn("Failed to fetch tours:", toursRes.reason);
+                    console.warn("Failed to fetch shared tours:", sharedRes.reason);
                 }
 
-                // Handle private tours
+                // Handle private tours (classes_id=8)
                 if (privateRes.status === "fulfilled") {
-                    const privateData = privateRes.value;
-                    const uniquePrivate = Array.from(new Map(privateData.map(item => [String(item.id), item])).values());
-                    const mergedPrivate = uniquePrivate.map((item) => {
-                        const fromTours = privateFromTours.find((tour) => String(tour.id) === String(item.id));
-                        if (!fromTours) return item;
-                        return {
-                            ...fromTours,
-                            ...item,
-                            list: fromTours.list ?? item.list ?? null,
-                            json: fromTours.json ?? item.json ?? null,
-                            route: fromTours.route ?? item.route ?? null,
-                        };
-                    });
-                    setPrivateTours(mergedPrivate);
+                    const data = privateRes.value;
+                    const unique = Array.from(new Map(data.map(item => [String(item.id), item])).values());
+                    setPrivateTours(unique);
                 } else {
                     console.warn("Failed to fetch private tours:", privateRes.reason);
-                    if (privateFromTours.length) {
-                        setPrivateTours(privateFromTours);
-                    }
                 }
 
                 // Handle transfers
@@ -83,6 +67,20 @@ export const ToursProvider = ({ children }) => {
                     setCovers(coversRes.value);
                 } else {
                     console.warn("Failed to fetch covers:", coversRes.reason);
+                }
+
+                // Handle FAQs
+                if (faqRes.status === "fulfilled") {
+                    setFaqs(faqRes.value);
+                } else {
+                    console.warn("Failed to fetch FAQs:", faqRes.reason);
+                }
+
+                // Handle Gallery
+                if (galleryRes.status === "fulfilled") {
+                    setGallery(galleryRes.value);
+                } else {
+                    console.warn("Failed to fetch gallery:", galleryRes.reason);
                 }
 
             } catch (err) {
@@ -108,11 +106,12 @@ export const ToursProvider = ({ children }) => {
 
     return (
         <ToursContext.Provider value={{
-            tours,
             sharedTours,
             privateTours,
             transfers,
             covers,
+            faqs,
+            gallery,
             loading,
             error,
             fetchTourDetail,

@@ -12,16 +12,19 @@ export default function CustomDatePicker({
   mode = "single", // "single" | "range"
   selected, // Date for single, { from, to } for range
   onSelect,
-  minDate = new Date(),
+  minDate = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; })(),
   filterDate, // optional: (date: Date) => boolean — return false to disable
+  onMonthChange, // optional: (date: Date) => void — called when month is navigated
+  renderDayContents, // optional: (dayOfMonth: number, date: Date) => ReactNode
   className,
+  inline = false, // when true, renders calendar directly (no input field)
 }) {
   const isRange = mode === "range";
 
   // Track if mobile view
   const [isMobile, setIsMobile] = useState(false);
 
-  // Track if calendar is open
+  // Track if calendar is open (only used in dropdown mode)
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -39,14 +42,16 @@ export default function CustomDatePicker({
     if (isRange) {
       const [from, to] = dates;
       onSelect({ from, to });
-      // Close calendar after selecting end date
-      if (to) {
+      // Close calendar after selecting end date (dropdown mode only)
+      if (to && !inline) {
         setTimeout(() => setIsOpen(false), 100);
       }
     } else {
       onSelect(dates);
-      // Close calendar immediately for single date
-      setTimeout(() => setIsOpen(false), 100);
+      // Close calendar immediately for single date (dropdown mode only)
+      if (!inline) {
+        setTimeout(() => setIsOpen(false), 100);
+      }
     }
   };
 
@@ -73,7 +78,7 @@ export default function CustomDatePicker({
   const monthsToShow = isMobile ? 1 : (isRange ? 2 : 1);
 
   return (
-    <div className="premium-datepicker-wrapper">
+    <div className={`premium-datepicker-wrapper${renderDayContents ? " has-custom-days" : ""}`}>
       <style>{`
         .premium-datepicker-wrapper {
           position: relative;
@@ -184,6 +189,30 @@ export default function CustomDatePicker({
           transition: all 0.2s;
         }
 
+        .premium-datepicker-wrapper.has-custom-days .react-datepicker__day {
+          height: 54px;
+          line-height: normal;
+          display: inline-flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 4px 0;
+          gap: 1px;
+        }
+
+        .premium-datepicker-wrapper .day-number {
+          line-height: 1;
+          font-size: 0.9375rem;
+          font-weight: 600;
+        }
+
+        .premium-datepicker-wrapper .day-sub {
+          font-size: 0.5625rem;
+          font-weight: 700;
+          line-height: 1;
+          opacity: 0.65;
+        }
+
         .premium-datepicker-wrapper .react-datepicker__day:hover {
           background-color: var(--primary-50) !important;
           color: var(--primary-600) !important;
@@ -274,6 +303,19 @@ export default function CustomDatePicker({
             font-size: 0.75rem;
             margin: 1px;
           }
+
+          .premium-datepicker-wrapper.has-custom-days .react-datepicker__day {
+            height: 42px;
+            line-height: normal;
+          }
+
+          .premium-datepicker-wrapper .day-number {
+            font-size: 0.75rem;
+          }
+
+          .premium-datepicker-wrapper .day-sub {
+            font-size: 0.5rem;
+          }
         }
 
         /* Desktop: side by side */
@@ -284,7 +326,7 @@ export default function CustomDatePicker({
           }
         }
       `}</style>
-      <CalendarIcon className="date-icon h-5 w-5 text-[color:var(--secondary-300)]" />
+      {!inline && <CalendarIcon className="date-icon h-5 w-5 text-[color:var(--secondary-300)]" />}
       <DatePicker
         selected={selectedDate}
         startDate={selectedDate}
@@ -292,16 +334,20 @@ export default function CustomDatePicker({
         onChange={handleChange}
         minDate={minDate}
         filterDate={filterDate}
+        onMonthChange={onMonthChange}
+        renderDayContents={renderDayContents}
         selectsRange={isRange}
         monthsShown={monthsToShow}
-        dateFormat={isRange ? "dd.MM.yyyy" : "dd.MM.yyyy"}
+        dateFormat={isRange ? "MMM d, yyyy" : "MMM d, yyyy"}
         placeholderText={isRange ? "Select date range..." : "Select a date..."}
         showPopperArrow={false}
         popperPlacement="bottom-start"
-        open={isOpen}
-        onInputClick={() => setIsOpen(true)}
-        onClickOutside={() => setIsOpen(false)}
-        onCalendarClose={() => setIsOpen(false)}
+        inline={inline}
+        open={inline ? undefined : isOpen}
+        openToDate={selectedDate || new Date()}
+        onInputClick={inline ? undefined : () => setIsOpen(true)}
+        onClickOutside={inline ? undefined : () => setIsOpen(false)}
+        onCalendarClose={inline ? undefined : () => setIsOpen(false)}
         renderCustomHeader={({
           monthDate,
           decreaseMonth,

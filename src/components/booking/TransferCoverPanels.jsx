@@ -210,7 +210,7 @@ export function TransfersCompact({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActiveTransferDetails({ title: finalName, description: transferDescription, image: transfer.image || null });
+                              setActiveTransferDetails({ title: finalName, description: transfer.description || transfer.short_description || transferDescription, image: transfer.image || null });
                             }}
                             className="text-secondary-400 hover:text-primary-600 transition-colors"
                           >
@@ -306,9 +306,12 @@ export function TransfersCompact({
               />
             </div>
           )}
-          <div className="text-sm leading-relaxed text-secondary-600 whitespace-pre-line">
-            {activeTransferDetails?.description}
-          </div>
+          {activeTransferDetails?.description ? (
+            <div
+              className="text-sm"
+              dangerouslySetInnerHTML={{ __html: activeTransferDetails.description }}
+            />
+          ) : null}
         </div>
       </Modal>
     </div>
@@ -321,6 +324,8 @@ export function CoversCompact({
   covers,
   selectedCoverId,
   onSelectCoverId,
+  priceLabel = "per person",
+  formatPrice = (v) => `IDR ${Number(v).toLocaleString()}`,
 }) {
   const selectedCover = covers?.find(c => String(c.id) === String(selectedCoverId));
   const [activeCoverDetails, setActiveCoverDetails] = useState(null);
@@ -400,9 +405,9 @@ export function CoversCompact({
                     <div className="text-sm font-bold text-secondary-900 sm:text-base">{cover.name}</div>
                     <div className="mt-1 flex items-center gap-2">
                       <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                        {formatIDR(price)}
+                        {formatPrice(price)}
                       </span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">per person</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">{priceLabel}</span>
                     </div>
                     {hasCoverDetails && (
                       <button
@@ -412,7 +417,7 @@ export function CoversCompact({
                           e.stopPropagation();
                           setActiveCoverDetails({
                             title: cover.name,
-                            description: coverDetails.description,
+                            description: cover.description || cover.short_description || coverDetails.description,
                             image: coverDetails.image,
                           });
                         }}
@@ -447,9 +452,12 @@ export function CoversCompact({
         maxWidth="max-w-3xl"
         bodyClassName="px-6 py-4 sm:py-5"
       >
-        <p className="whitespace-pre-line text-sm leading-relaxed text-secondary-600">
-          {activeCoverDetails?.description}
-        </p>
+        {activeCoverDetails?.description ? (
+          <div
+            className="text-sm"
+            dangerouslySetInnerHTML={{ __html: activeCoverDetails.description }}
+          />
+        ) : null}
       </Modal>
     </div>
   );

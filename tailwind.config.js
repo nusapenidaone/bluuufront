@@ -1,6 +1,28 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
+  safelist: [
+    // Classes used inside backend HTML strings (dangerouslySetInnerHTML)
+    "rounded-full", "rounded-xl", "rounded-lg",
+    "border", "border-neutral-200", "border-primary-200",
+    "bg-white", "bg-neutral-50", "bg-neutral-100", "bg-primary-50", "bg-primary-600",
+    "px-2", "px-3", "px-4", "px-5", "px-6", "px-8",
+    "py-1", "py-1.5", "py-2", "py-3", "py-4", "py-5", "py-6",
+    "mt-2", "mt-3", "mt-4", "mt-6", "mb-2", "mb-3", "mb-4",
+    "text-xs", "text-sm", "text-base", "text-lg",
+    "font-medium", "font-semibold", "font-bold", "font-black",
+    "text-white", "text-secondary-400", "text-secondary-500", "text-secondary-600", "text-secondary-700", "text-secondary-800", "text-secondary-900",
+    "text-primary-600", "text-primary-700",
+    "uppercase", "tracking-widest", "tracking-wider",
+    "flex", "flex-col", "flex-wrap", "items-center", "items-start", "justify-center",
+    "gap-1", "gap-2", "gap-3", "gap-4",
+    "space-y-1", "space-y-2", "space-y-3",
+    "pl-4", "pl-5",
+    "list-disc", "list-decimal",
+    "w-6", "h-6", "w-full", "shrink-0",
+    "leading-relaxed", "leading-6",
+    "shadow-sm", "overflow-hidden",
+  ],
   theme: {
     extend: {
       backgroundImage: {
@@ -20,8 +42,8 @@ export default {
         "2xl": "none",
         inner: "none",
         none: "none",
-        card: "var(--shadow-card)",
-        floating: "var(--shadow-floating)",
+        card: "none",
+        floating: "none",
       },
       colors: {
         primary: {
@@ -108,6 +130,15 @@ export default {
         "wide-2xl": "0.24em",
         "wide-3xl": "0.26em",
         "wide-4xl": "0.3em",
+      },
+      keyframes: {
+        marquee: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
+      },
+      animation: {
+        marquee: "marquee 28s linear infinite",
       },
       maxWidth: {
         "screen-xl": "1280px",

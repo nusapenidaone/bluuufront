@@ -4,28 +4,69 @@ import Private from "./private.jsx";
 import Shared from "./shared.jsx";
 import Checkout from "./Checkout.jsx";
 import Payment from "./Payment.jsx";
+import PolicyPage from "./PolicyPage.jsx";
+import ReviewsPage from "./ReviewsPage.jsx";
+import GalleryPage from "./GalleryPage.jsx";
+import AboutPage from "./AboutPage.jsx";
+import FaqPage from "./FaqPage.jsx";
+import BlogPage from "./BlogPage.jsx";
+import BlogPostPage from "./BlogPostPage.jsx";
+import GlobalImagePreloader from "./components/common/GlobalImagePreloader.jsx";
 
 import { CurrencyProvider } from "./CurrencyContext.jsx";
 import { ToursProvider } from "./ToursContext.jsx";
-import { ExtrasProvider } from "./ExtrasContext.jsx";
+import { ExtrasProvider } from "./contexts/ExtrasContext.jsx";
+import { RulesProvider } from "./contexts/RulesContext.jsx";
 import UnifiedSwitcher from "./components/UnifiedSwitcher.jsx";
 
+const POLICY_PATH_MAP = {
+  privacy: "privacy",
+  cancellation: "cancellation",
+  cancelation: "cancellation",
+  "cancellation-policy": "cancellation",
+  "cancelation-policy": "cancellation",
+  payment: "payment",
+  "payment-policy": "payment",
+  health: "health",
+  "health-safety": "health",
+  "health-and-safety": "health",
+  sustainability: "health",
+  liability: "liability",
+  release: "liability",
+  "release-from-liability": "liability",
+};
 
+const BASE_PATH = "/test";
 
+if (typeof window !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("a[href]");
+    if (!a) return;
+    const href = a.getAttribute("href");
+    if (href && href.startsWith("/") && !href.startsWith(BASE_PATH)) {
+      e.preventDefault();
+      window.location.href = BASE_PATH + href;
+    }
+  }, true);
+}
 
 export default function App() {
   const rawPath = typeof window !== "undefined" ? window.location.pathname : "/";
-  const path = rawPath.replace(/\/+$/, "") || "/";
-
+  // Strip any subfolder prefix (e.g. /test, /staging) so routing works regardless of deploy path
+  const path = rawPath.replace(/\/+$/, "").replace(/^\/[^/]+(?=\/)/, "") || "/";
+  const policyMatch = path.match(/^\/policy\/([^/]+)$/i);
+  const policyKeyFromPath = policyMatch?.[1] ? POLICY_PATH_MAP[policyMatch[1].toLowerCase()] : null;
 
   const content = (() => {
-    if (path === "/private" || path === "/test/private") {
+    if (policyKeyFromPath) {
+      return <PolicyPage policyKey={policyKeyFromPath} />;
+    }
+
+    if (path === "/private") {
       return <Private />;
     }
 
-
-
-    if (path === "/shared" || path === "/test/shared") {
+    if (path === "/shared") {
       return <Shared />;
     }
 
@@ -37,6 +78,35 @@ export default function App() {
       return <Payment />;
     }
 
+    if (path === "/reviews") {
+      return <ReviewsPage />;
+    }
+
+    if (path === "/gallery") {
+      return <GalleryPage />;
+    }
+
+    if (path === "/about") {
+      return <AboutPage />;
+    }
+
+    if (path === "/faq") {
+      return <FaqPage />;
+    }
+
+    if (path === "/blog") {
+      return <BlogPage />;
+    }
+
+    const blogPostMatch = path.match(/^\/blog\/([^/]+)$/);
+    if (blogPostMatch) {
+      return <BlogPostPage slug={blogPostMatch[1]} />;
+    }
+
+    if (path === "/old-home") {
+      return <Home />;
+    }
+
     return <Home />;
   })();
 
@@ -44,14 +114,13 @@ export default function App() {
     <CurrencyProvider>
       <ToursProvider>
         <ExtrasProvider>
-          <UnifiedSwitcher showFloatingButton={false} />
-          {content}
+          <RulesProvider>
+            <GlobalImagePreloader />
+            <UnifiedSwitcher showFloatingButton={false} />
+            {content}
+          </RulesProvider>
         </ExtrasProvider>
       </ToursProvider>
     </CurrencyProvider>
-
   );
 }
-
-
-

@@ -78,13 +78,23 @@ class PrivateOrderController extends Controller
      */
     public function createOrder(Request $request)
     {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
         // CSRF check (same as OrderController)
         // TODO: re-enable before production
         // if (Session::token() != $request->header('X-CSRF-TOKEN')) {
         //     return response('Unauthorized.', 401);
         // }
 
+        try {
+
         $data = $request->all();
+
+        if (empty($data['tourId'])) {
+            return response()->json(['error' => 'tourId is required'], 422);
+        }
 
         $order = new Order;
 
@@ -197,5 +207,10 @@ class PrivateOrderController extends Controller
         }
 
         return response()->json($url);
+
+        } catch (\Throwable $e) {
+            \Log::error('PrivateOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

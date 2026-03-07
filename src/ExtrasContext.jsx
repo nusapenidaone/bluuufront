@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { apiUrl } from "./api/base";
 
 const ExtrasContext = createContext();
 
@@ -37,10 +38,10 @@ export const ExtrasProvider = ({ children }) => {
             try {
                 // Parallel fetch for all endpoints using retry helper
                 const [extrasRes, transfersRes, categoriesRes, routesRes] = await Promise.allSettled([
-                    fetchWithRetry("https://bluuu.tours/api/new/extras"),
-                    fetchWithRetry("https://bluuu.tours/api/new/transfers"),
-                    fetchWithRetry("https://bluuu.tours/api/new/extras-categories"),
-                    fetchWithRetry("https://bluuu.tours/api/new/routes")
+                    fetchWithRetry(apiUrl("extras")),
+                    fetchWithRetry(apiUrl("transfers")),
+                    fetchWithRetry(apiUrl("extras-categories")),
+                    fetchWithRetry(apiUrl("routes"))
                 ]);
 
                 // Handle Extras

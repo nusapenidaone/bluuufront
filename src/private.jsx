@@ -3,29 +3,27 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCurrency } from "./CurrencyContext";
 import { useTours } from "./ToursContext";
-import { useExtras } from "./ExtrasContext";
+import { useExtras } from "./contexts/ExtrasContext";
+import { useRules } from "./contexts/RulesContext";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
+import { apiUrl } from "./api/base";
 import { CoversCompact } from "./components/booking/TransferCoverPanels";
-// --------------- Skeleton helpers ---------------
-function useImagePreload(urls, minDelay = 600) {
-  const [ready, setReady] = useState(false);
-  const key = Array.isArray(urls) ? urls.join(",") : "";
-  useEffect(() => {
-    if (!urls || !urls.length) { setReady(true); return; }
-    let cancelled = false;
-    const unique = [...new Set(urls.filter(Boolean))];
-    let count = 0;
-    let imagesLoaded = false;
-    let delayPassed = false;
-    const tryFinish = () => { if (!cancelled && imagesLoaded && delayPassed) setReady(true); };
-    const check = () => { count += 1; if (count >= unique.length) { imagesLoaded = true; tryFinish(); } };
-    unique.forEach((src) => { const img = new Image(); img.onload = check; img.onerror = check; img.src = src; });
-    const minTimer = setTimeout(() => { delayPassed = true; tryFinish(); }, minDelay);
-    const maxTimer = setTimeout(() => { if (!cancelled) setReady(true); }, 5000);
-    return () => { cancelled = true; clearTimeout(minTimer); clearTimeout(maxTimer); };
-  }, [key, minDelay]);
-  return ready;
-}
+import {
+  formatIDR,
+  formatIDRShort,
+  formatUSD,
+  formatYachtPrice,
+  formatShortDate,
+  formatRangeShort,
+  isDateAvailableForBoat,
+  getAvailableDatesForRange,
+  useImagePreload,
+  setGlobalFormatPrice,
+  calculateBoatPrice,
+  useBoatPricing,
+  usePricing
+} from "./components/booking/utils";
+
 
 function SkeletonCard() {
   return (
@@ -61,11 +59,9 @@ function SkeletonBoatCard() {
   );
 }
 
-// Global formatters to bridge legacy utility functions with React Context
-let _globalFormatPrice = (val, opts) => `IDR ${Number(val).toLocaleString()}`;
 const CurrencyBridge = () => {
   const { formatPrice } = useCurrency();
-  _globalFormatPrice = formatPrice; // Synchronous update to avoid stale prices during first render
+  setGlobalFormatPrice(formatPrice); // Synchronous update to avoid stale prices during first render
   return null;
 };
 import {
@@ -117,6 +113,7 @@ import {
   Trash2,
   CheckCircle2,
   Ruler,
+  Maximize,
 } from "lucide-react";
 import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
@@ -148,20 +145,26 @@ const ICON_MAP = {
   Car,
   MessageCircle,
 };
-import { faqs, tourInfo } from "./data/private.json";
+import { tourInfo } from "./data/private.json";
 // Shared Components
 import CustomDatePicker from "./components/common/CustomDatePicker";
+import PhoneInput from "./components/common/PhoneInput";
+import PolicyModal, { usePolicyModal } from "./components/common/PolicyModal";
 import Button from "./components/common/Button";
 import Card from "./components/common/Card";
 import Section from "./components/common/Section";
 import Navbar from "./components/common/Navbar";
+import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
+import { useSiteContacts } from "./hooks/useSiteContacts";
+import { useSEO } from "./hooks/useSEO";
+import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
 import {
   EXTRAS_CATEGORY_BY_VIBE,
-  EXTRAS_FILTERS,
   LINKS,
   REVIEW_SOURCES,
+  REVIEW_SOURCE_ICON_MAP,
   INFO_REVIEWS,
   TRUST_INCLUDED_SHORT,
   INFO_DRAWER_TABS,
@@ -215,7 +218,7 @@ const Q_THEME = {
     h1: "md:text-6xl text-4xl font-bold tracking-tight text-slate-900 leading-tight md:leading-tight",
     h2: "text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl",
     h3: "text-xl font-bold tracking-tight text-secondary-900 sm:text-2xl",
-    body: "mt-2 text-lg text-secondary-600",
+    body: "mt-3 max-w-2xl mx-auto text-lg leading-relaxed text-secondary-600",
     caption: "text-sm text-slate-500 font-medium",
     label: "text-xs font-black uppercase tracking-widest text-primary-600",
   },
@@ -393,131 +396,7 @@ try {
 } catch (_) { }
 const INPUT_BASE =
   "h-11 w-full rounded-full border border-neutral-200 bg-white text-base text-secondary-900 shadow-none outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-50";
-function formatIDR(value) {
-  return _globalFormatPrice(value, { fromCurrency: "IDR" });
-}
-function formatIDRShort(value) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return `IDR ${value}`;
-  return _globalFormatPrice(number, { fromCurrency: "IDR", short: true });
-}
-function formatShortDate(dateStr) {
-  if (!dateStr) return "";
-  const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return dateStr;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-function formatRangeShort(start, end) {
-  if (!start || !end) return "";
-  return `${formatShortDate(start)}${formatShortDate(end)}`;
-}
-function isDateAvailableForBoat(boatId, dateStr) {
-  if (!dateStr) return false;
-  const key = `${boatId}-${dateStr}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i += 1) {
-    hash = (hash * 31 + key.charCodeAt(i)) % 997;
-  }
-  return hash % 5 !== 0;
-}
-function getAvailableDatesForRange(boatId, start, end) {
-  if (!start || !end) return [];
-  const startDate = new Date(start);
-  const endDate = new Date(end);
-  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return [];
-  if (endDate < startDate) return [];
-  const dates = [];
-  const cursor = new Date(startDate);
-  while (cursor <= endDate && dates.length < 6) {
-    const iso = cursor.toISOString().slice(0, 10);
-    if (isDateAvailableForBoat(boatId, iso)) {
-      dates.push(iso);
-    }
-    cursor.setDate(cursor.getDate() + 1);
-  }
-  return dates;
-}
-function formatUSD(value) {
-  return _globalFormatPrice(value, { fromCurrency: "USD" });
-}
-function formatYachtPrice(yacht) {
-  return yacht?.priceDisplayShort ? yacht.priceDisplayShort : formatIDR(yacht.priceValue);
-}
-// Utility hooks for pricing and availability
-function calculateBoatPrice(tourId, date, membersCount, privateTours) {
-  if (!tourId || !privateTours?.length) return null;
-  const tour = privateTours.find((t) => Number(t.id) === Number(tourId));
-  if (!tour) return null;
-  let pricelist = tour.packages?.pricelist || [];
-  let boatPriceToAdd = Number(tour.boat_price) || 0;
-  // Check for date-specific pricing
-  if (date && tour.pricesbydates?.length) {
-    const specificPricing = tour.pricesbydates.find((p) => {
-      const start = p.date_start;
-      const end = p.date_end;
-      return date >= start && date <= end;
-    });
-    if (specificPricing) {
-      if (specificPricing.packages?.pricelist) {
-        pricelist = specificPricing.packages.pricelist;
-      }
-      if (specificPricing.boat_price !== undefined && specificPricing.boat_price !== null) {
-        boatPriceToAdd = Number(specificPricing.boat_price);
-      }
-    }
-  }
-  if (!pricelist.length) return null;
-  // Find price for membersCount
-  const countStr = String(membersCount);
-  let priceEntry = pricelist.find((p) => String(p.members_count) === countStr);
-  // Fallback: if not found, use the closest one or the highest one
-  if (!priceEntry) {
-    const sorted = [...pricelist].sort((a, b) => Number(a.members_count) - Number(b.members_count));
-    priceEntry = sorted.reverse().find((p) => Number(p.members_count) <= membersCount) || sorted[0];
-  }
-  return priceEntry ? Number(priceEntry.price) + boatPriceToAdd : null;
-}
 
-function useBoatPricing(tourId, date, membersCount, privateTours) {
-  return useMemo(() => calculateBoatPrice(tourId, date, membersCount, privateTours), [tourId, date, membersCount, privateTours]);
-}
-function usePricing(date, initialPrice = 0) {
-  const [state, setState] = useState({
-    price: initialPrice,
-    remainingSeats: null,
-    loading: false,
-  });
-  useEffect(() => {
-    if (!date) return;
-    let active = true;
-    const controller = new AbortController();
-    const load = async () => {
-      setState((prev) => ({ ...prev, loading: true }));
-      try {
-        const res = await fetch(`https://bluuu.tours/api/new/pricing?date=${date}`, { signal: controller.signal });
-        if (!res.ok) throw new Error("pricing fetch failed");
-        const data = await res.json();
-        if (!active) return;
-        const nextPrice = Number(data?.price);
-        const nextSeats = Number(data?.remainingSeats);
-        setState({
-          price: Number.isFinite(nextPrice) ? nextPrice : initialPrice,
-          remainingSeats: Number.isFinite(nextSeats) ? Math.max(0, nextSeats) : null,
-          loading: false,
-        });
-      } catch (_) {
-        if (!active) return;
-        setState((prev) => ({ ...prev, loading: false }));
-      }
-    };
-    load();
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [date]);
-  return state;
-}
 function Pill({ icon: Icon, children, className, iconClassName }) {
   return (
     <span
@@ -531,6 +410,211 @@ function Pill({ icon: Icon, children, className, iconClassName }) {
     </span>
   );
 }
+function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, kids, rangeStart, rangeEnd, dateMode }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
+  const [pickedDate, setPickedDate] = useState("");
+
+  const needsDatePick = dateMode === "flex" && rangeStart && rangeEnd && !date;
+  const effectiveDate = date || pickedDate;
+
+  const rangeDates = useMemo(() => {
+    if (!needsDatePick) return [];
+    const start = new Date(rangeStart);
+    const end = new Date(rangeEnd);
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    const dates = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      dates.push(cursor.toISOString().slice(0, 10));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return dates;
+  }, [needsDatePick, rangeStart, rangeEnd]);
+
+  const totalGuests = adults + kids;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!effectiveDate) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(apiUrl("order/private"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tourId,
+          travelDate: effectiveDate,
+          adults,
+          kids,
+          children: 0,
+          members: totalGuests,
+          cars: 0,
+          boatPrice: 0,
+          tourPrice: 0,
+          transferPrice: 0,
+          coverPrice: 0,
+          programPrice: 0,
+          extrasTotal: 0,
+          totalPrice: 0,
+          fullPrice: 0,
+          discountPrice: 0,
+          discount: 0,
+          selectedTransferId: null,
+          selectedCoverId: null,
+          selectedProgramId: null,
+          selectedRestaurantId: null,
+          selectedExtras: [],
+          deposite: 0,
+          method: 0,
+          name,
+          email,
+          whatsapp: phone,
+          requests: null,
+        }),
+      });
+      if (!res.ok) throw new Error("Request failed");
+      setSuccess(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setSuccess(false);
+    setError(null);
+    setName("");
+    setEmail("");
+    setPhone("");
+    setPickedDate("");
+    onClose();
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Send request" subTitle={tourName} maxWidth="max-w-md">
+      {success ? (
+        <div className="flex flex-col items-center gap-4 py-6 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
+            <Check className="h-7 w-7 text-emerald-500" />
+          </div>
+          <div>
+            <div className="text-lg font-bold text-secondary-900">Request sent!</div>
+            <div className="mt-1 text-sm text-secondary-500">We'll contact you within 1–2 hours to confirm.</div>
+          </div>
+          <Button onClick={handleClose} className="mt-2 w-full rounded-full">Close</Button>
+        </div>
+      ) : needsDatePick && !pickedDate ? (
+        <div className="flex flex-col gap-4">
+          <div className="text-sm font-semibold text-secondary-600">Pick a date</div>
+          <div className="grid grid-cols-5 gap-2">
+            {rangeDates.map((d) => {
+              const parsed = new Date(`${d}T00:00:00`);
+              const monthLabel = parsed.toLocaleString("en-US", { month: "short" });
+              const dayLabel = String(parsed.getDate());
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setPickedDate(d)}
+                  className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white px-2 py-1 text-secondary-600 transition-all duration-200 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wide text-secondary-400">{monthLabel}</span>
+                  <span className="mt-0.5 text-xl font-extrabold leading-none text-secondary-900">{dayLabel}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-secondary-600">
+            <div className="flex justify-between">
+              <span>Tour</span>
+              <span className="font-semibold text-secondary-900">{tourName}</span>
+            </div>
+            <div className="mt-1 flex justify-between">
+              <span>Date</span>
+              <span className="font-semibold text-secondary-900">{effectiveDate}</span>
+            </div>
+            <div className="mt-1 flex justify-between">
+              <span>Guests</span>
+              <span className="font-semibold text-secondary-900">
+                {adults} adult{adults !== 1 ? "s" : ""}
+                {kids > 0 ? `, ${kids} kid${kids !== 1 ? "s" : ""}` : ""}
+              </span>
+            </div>
+          </div>
+
+          {needsDatePick && pickedDate ? (
+            <button
+              type="button"
+              onClick={() => setPickedDate("")}
+              className="self-start text-sm font-semibold text-primary-600 hover:text-primary-700 transition"
+            >
+              Change date
+            </button>
+          ) : null}
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-secondary-600">Full name</span>
+            <div className="relative">
+              <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
+              <input
+                required
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                className={cn(INPUT_BASE, "pl-10 pr-3")}
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-secondary-600">Email</span>
+            <div className="relative">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
+              <input
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className={cn(INPUT_BASE, "pl-10 pr-3")}
+              />
+            </div>
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-secondary-600">Phone / WhatsApp</span>
+            <PhoneInput value={phone} onChange={setPhone} />
+          </label>
+
+          {error ? (
+            <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+          ) : null}
+
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="mt-1 w-full rounded-full h-12 text-sm font-black"
+          >
+            {submitting ? "Sending…" : <><span>Send request</span><ArrowRight className="h-4 w-4" /></>}
+          </Button>
+          <div className="text-center text-sm text-secondary-500">We'll respond within 1–2 hours</div>
+        </form>
+      )}
+    </Modal>
+  );
+}
+
 function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD, selectedVibe }) {
   const todayISO = useMemo(() => {
     const d = new Date();
@@ -543,6 +627,7 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
   const isSoldOut = remainingSeats !== null && remainingSeats <= 0;
   const [adults, setAdults] = useState(1);
   const [kids, setKids] = useState(0);
+  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
   useEffect(() => {
     if (remainingSeats === null || maxGuests <= 0) return;
     if (adults > maxGuests) {
@@ -577,6 +662,10 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
   const extrasTotal = Math.round(extrasTotalUSD ?? 0);
   const onReserve = () => {
     if (reserveDisabled) return;
+    if (selectedYacht?.isPartner) {
+      setPartnerModalOpen(true);
+      return;
+    }
     const params = new URLSearchParams({ date, adults: String(adults), kids: String(kids) });
     if (safeCartItems.length) {
       params.set(
@@ -627,7 +716,12 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
             <Users className="h-3.5 w-3.5 text-secondary-500" /> Small group (max 13)
           </span>
           <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2 py-1">
-            <BadgeCheck className="h-3.5 w-3.5 text-secondary-500" /> Instant confirmation
+            {selectedYacht?.isPartner ? (
+              <Clock className="h-4 w-4 text-amber-500" />
+            ) : (
+              <BadgeCheck className="h-4 w-4 text-emerald-500" />
+            )}
+            {selectedYacht?.isPartner ? "On Request" : "Instant confirmation"}
           </span>
         </div>
         <div className={cn("mt-4 grid gap-3", compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
@@ -784,6 +878,15 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
           </span>
         </div>
       </div>
+      <PartnerRequestModal
+        isOpen={partnerModalOpen}
+        onClose={() => setPartnerModalOpen(false)}
+        tourId={selectedYacht?.tourId}
+        tourName={selectedYacht?.name}
+        date={date}
+        adults={adults}
+        kids={kids}
+      />
     </Card>
   );
 }
@@ -1074,6 +1177,34 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       ),
     [vibes]
   );
+  const formatCategoryLabel = useCallback((value) => {
+    const raw = String(value || "").trim();
+    if (!raw || raw === "all") return "All";
+    return raw
+      .split(/[-_\s]+/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(" ");
+  }, []);
+  const extrasFilterOptions = useMemo(() => {
+    if (!activeVibe) return [{ id: "all", label: "All" }];
+    const uniqueCategories = Array.from(
+      new Set(
+        extrasCatalogInternal
+          .map((extra) => String(extra.category || "").trim())
+          .filter(Boolean)
+      )
+    );
+    return [
+      { id: "all", label: "All" },
+      ...uniqueCategories
+        .filter((categoryId) => categoryId !== "all")
+        .map((categoryId) => ({
+          id: categoryId,
+          label: formatCategoryLabel(categoryId),
+        })),
+    ];
+  }, [activeVibe, extrasCatalogInternal, formatCategoryLabel]);
   const filteredExtras = useMemo(() => {
     if (!activeVibe) return [];
     return extrasCatalogInternal.filter((extra) => {
@@ -1083,9 +1214,14 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       return true;
     });
   }, [activeVibe, extrasFilter, extrasCatalogInternal]);
+  useEffect(() => {
+    if (!extrasFilterOptions.some((filter) => filter.id === extrasFilter)) {
+      setExtrasFilter("all");
+    }
+  }, [extrasFilter, extrasFilterOptions]);
   const extrasCounts = useMemo(() => {
     if (!activeVibe) return {};
-    return EXTRAS_FILTERS.reduce((acc, filter) => {
+    return extrasFilterOptions.reduce((acc, filter) => {
       if (filter.id === "all") {
         acc[filter.id] = extrasCatalogInternal.length;
       } else {
@@ -1093,7 +1229,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       }
       return acc;
     }, {});
-  }, [activeVibe, extrasCatalogInternal]);
+  }, [activeVibe, extrasCatalogInternal, extrasFilterOptions]);
   const selectedExtrasTotal = useMemo(() => {
     if (!cartItems?.length) return 0;
     return cartItems.reduce((sum, item) => sum + (item.priceUSD || 0) * (item.quantity || 1), 0);
@@ -1594,7 +1730,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
           <div className="space-y-4">
             <div className="border-b border-neutral-200 pb-4">
               <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto pb-1 text-sm font-semibold snap-x snap-mandatory">
-                {EXTRAS_FILTERS.map((filter) => (
+                {extrasFilterOptions.map((filter) => (
                   <button
                     key={filter.id}
                     type="button"
@@ -1959,99 +2095,114 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
   );
 }
 function Hero() {
-  const [videoOpen, setVideoOpen] = useState(false);
+  const videoRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
   const [ctaPulse, setCtaPulse] = useState(false);
   useEffect(() => {
     if (!ctaPulse) return undefined;
     const timer = setTimeout(() => setCtaPulse(false), 2600);
     return () => clearTimeout(timer);
   }, [ctaPulse]);
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const rect = el.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight && rect.bottom > 0;
+      if (inView) {
+        if (el.paused) { el.play().catch(() => {}); }
+        setPlaying(true);
+      } else {
+        if (!el.paused) { el.pause(); }
+        setPlaying(false);
+      }
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("wheel", onScroll, { passive: true });
+    window.addEventListener("touchmove", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("wheel", onScroll);
+      window.removeEventListener("touchmove", onScroll);
+    };
+  }, []);
+  const handlePlay = () => {
+    videoRef.current?.play().catch(() => {});
+    setPlaying(true);
+  };
   return (
-    <section className={cn("relative", SECTION_BACKGROUNDS.white)}>
-
-      <div className="mx-auto max-w-7xl px-0 py-0 sm:px-0 sm:py-6 md:px-6 md:py-16 lg:px-8">
-        <div className="relative min-h-[600px] overflow-hidden rounded-none bg-secondary-900 shadow-[0_40px_120px_rgba(10,18,32,0.18),0_0_60px_rgba(80,170,255,0.12)] sm:min-h-0 sm:h-[500px] sm:rounded-none md:rounded-2xl lg:h-[560px]">
-          <img
-            src="https://bluuu.tours/storage/app/media/image-30-1.jpg"
-            alt="Premium Private Tour yacht"
-            className="absolute inset-0 h-full w-full scale-[1.08] object-cover object-[72%_70%] sm:translate-x-[20%] sm:translate-y-[15%] sm:scale-[1.45] sm:object-[70%_60%] md:object-[80%_50%]"
-            loading="lazy"
-            decoding="async"
-          />
-          <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-r from-[rgba(4,14,30,0.62)] via-[rgba(6,20,40,0.36)] to-[rgba(6,20,40,0.08)]" />
-          <div className="pointer-events-none absolute inset-0 z-0 opacity-[0.02] mix-blend-soft-light bg-[repeating-linear-gradient(0deg,rgba(255,255,255,0.4),rgba(255,255,255,0.4)_1px,transparent_1px,transparent_2px),repeating-linear-gradient(90deg,rgba(255,255,255,0.2),rgba(255,255,255,0.2)_1px,transparent_1px,transparent_2px)]" />
-          <div className="absolute inset-0 z-10 flex items-start p-6 pt-[calc(24px+env(safe-area-inset-top))] sm:items-stretch sm:p-10 sm:pt-8 lg:p-12 lg:pt-10">
-            <div className="mx-auto w-full max-w-[360px] sm:ml-0 sm:mr-auto sm:flex sm:h-full sm:max-w-[700px] sm:flex-col sm:justify-between">
-              <div className="flex flex-col items-center text-center sm:items-start sm:text-left">
-                <span className="inline-flex self-center items-center gap-1.5 rounded-full border border-[color:rgba(255,255,255,0.24)] bg-[color:rgba(255,255,255,0.14)] px-3 py-1 text-sm font-semibold text-white backdrop-blur-md sm:self-start">
-                  <Star className="h-4 w-4 text-amber-300" fill="currentColor" />
-                  4.9 / {BRAND.reviewCount} reviews
-                </span>
-                <p className="mt-3 text-xs font-medium leading-tight text-white/70 sm:mt-4 sm:text-xl">
-                  Full day tour. Your boat. Your schedule. Pure comfort. Total safety.
-                </p>
-                <h1 className="my-0 mt-2 text-5xl font-medium leading-[0.98] tracking-tight text-white sm:mt-3 sm:text-5xl">
-                  Private tour to Nusa Penida
-                </h1>
-                <div className="mt-2 max-w-2xl text-base leading-[1.35] text-white/80 sm:mt-3 sm:text-lg">
-                  Escape the crowds and cross to Nusa Penida on your own private boat  designed for comfort,
-                  operated with safety-first routing and a fully professional crew.
-                </div>
-              </div>
-              <div className="py-16"></div>
-              <div className="space-y-3 pt-4 text-center sm:space-y-4 sm:pt-8 sm:text-left">
-                <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-                  <a
-                    href="#step-1"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      document.getElementById("step-1")?.scrollIntoView({ behavior: "smooth" });
-                    }}
-                    className="relative z-20 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[color:rgba(255,255,255,0.45)] bg-white px-5 text-base font-semibold text-secondary-900 shadow-card transition-transform transition-shadow hover:-translate-y-[1px] hover:shadow-[0_16px_36px_rgba(12,20,35,0.18)] focus:outline-none focus:ring-2 focus:ring-[color:rgba(255,255,255,0.6)] sm:h-12 sm:w-auto sm:px-7"
-                  >
-                    Pick date & group size <ArrowRight className="h-4 w-4" strokeWidth={1.6} />
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => setVideoOpen(true)}
-                    className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[color:rgba(255,255,255,0.24)] bg-[color:rgba(255,255,255,0.14)] px-5 text-base font-semibold text-white/95 backdrop-blur-lg transition hover:bg-[color:rgba(255,255,255,0.2)] sm:h-12 sm:w-auto sm:px-7"
-                  >
-                    <Play className="h-4 w-4" />
-                    Watch 45s video
-                  </button>
-                </div>
-                <p className="text-base font-medium leading-tight text-white/90">
-                  From {formatIDR(19990000)} / boat &middot; Up to {MAX_GUESTS} guests &middot; Free cancellation 24h
-                </p>
-              </div>
+    <section className={cn("relative overflow-hidden pt-12 sm:pt-20", SECTION_BACKGROUNDS.white)}>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center"
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-semibold text-secondary-600 shadow-sm">
+              <Star className="h-4 w-4 text-amber-400" fill="currentColor" />
+              4.9 / {BRAND.reviewCount} reviews
+            </span>
+            <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-600 sm:text-sm">
+              Full day tour · Your boat · Your schedule · Pure comfort
+            </p>
+            <h1 className="mt-3 text-4xl font-bold tracking-tight text-secondary-900 sm:text-6xl lg:text-7xl">
+              Private tour to <span className="text-primary-600">Nusa Penida</span>
+            </h1>
+            <p className="mt-6 max-w-2xl text-sm text-secondary-600 sm:text-xl">
+              Escape the crowds and cross to Nusa Penida on your own private boat designed for comfort,
+              operated with safety-first routing and a fully professional crew.
+            </p>
+            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+              <a
+                href="#step-1"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("step-1")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-secondary-900 px-8 text-base font-bold text-white shadow-xl transition hover:bg-secondary-800 hover:scale-105 active:scale-95 sm:h-14"
+              >
+                Pick date & group size <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
-          </div>
+            <p className="mt-4 text-sm font-medium text-secondary-500">
+              From {formatIDR(1999000)} / boat &middot; Up to {MAX_GUESTS} guests &middot; Free cancellation 24h
+            </p>
+          </motion.div>
         </div>
-        <Modal
-          isOpen={videoOpen}
-          onClose={() => setVideoOpen(false)}
-          maxWidth="max-w-4xl"
-          bodyClassName="p-0"
-          showClose={false}
+
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative mt-12 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-3xl"
         >
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
-            <button
-              type="button"
-              onClick={() => setVideoOpen(false)}
-              className="absolute right-3 top-3 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-600 shadow-sm transition-all hover:bg-neutral-50 hover:text-secondary-700"
-              aria-label="Close video"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            <iframe
-              className="h-full w-full"
-              src={LINKS.video.embedUrl}
-              title="Bluuu tour video"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowFullScreen
+          <div className="aspect-[16/9] sm:aspect-[21/9]">
+            <video
+              ref={videoRef}
+              src="https://bluuu.tours/storage/app/media/video-xl.webm"
+              poster="https://bluuu.tours/storage/app/media/image-30-1.jpg"
+              muted
+              loop
+              playsInline
+              className="h-full w-full object-cover"
             />
+            {!playing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <button
+                  type="button"
+                  onClick={handlePlay}
+                  className="relative flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-secondary-900 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:bg-white sm:h-24 sm:w-24"
+                >
+                  <Play className="ml-1 h-6 w-6 fill-current sm:h-10 sm:w-10" />
+                  <span className="sr-only">Play video</span>
+                  <div className="absolute inset-0 animate-ping rounded-full bg-white/40" />
+                </button>
+              </div>
+            )}
           </div>
-        </Modal>
+        </motion.div>
       </div>
     </section>
   );
@@ -2228,6 +2379,7 @@ function StepOne({
     return diff > 0 ? diff : 0;
   }, [rangeStart, rangeEnd]);
   const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
+  const contacts = useSiteContacts();
   return (
     <PremiumSection
       id="step-1"
@@ -2433,7 +2585,7 @@ function StepOne({
                     <Info className="h-4 w-4" />
                   </div>
                   <p className="text-xs font-bold leading-relaxed text-secondary-500">
-                    Total depends on boat + group size. You'll see the full total before payment. <span className="text-secondary-900 cursor-pointer" onClick={() => window.open("https://wa.me/6281234567890", "_blank")}>Under 3  on request.</span>
+                    Total depends on boat + group size. You'll see the full total before payment. <span className="text-secondary-900 cursor-pointer" onClick={() => window.open(contacts.whatsapp?.link || "#", "_blank")}>Under 3  on request.</span>
                   </p>
                 </div>
               </div>
@@ -2542,16 +2694,32 @@ function PhotoCarousel({ images, alt, isLocked = false, onOpenGallery, className
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/5 to-transparent" />
       {!isLocked ? (
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenGallery?.(index);
-          }}
-          className="absolute left-3 top-3 z-20 inline-flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card backdrop-blur transition hover:bg-white/90 backdrop-blur-md"
-        >
-          {total} photos
-        </button>
+        <>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenGallery?.(index);
+            }}
+            className="absolute left-3 top-3 z-20 inline-flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card backdrop-blur transition hover:bg-white/90 backdrop-blur-md"
+          >
+            {total} photos
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenGallery?.(index);
+            }}
+            className={cn(
+              "absolute right-3 top-3 z-20 inline-flex items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-1.5 text-secondary-600 shadow-card backdrop-blur transition hover:bg-white/90 backdrop-blur-md sm:inline-flex",
+              "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+            )}
+            aria-label="Expand gallery"
+          >
+            <Maximize className="h-4 w-4" />
+          </button>
+        </>
       ) : null}
       {total > 1 && !isLocked ? (
         <>
@@ -2614,68 +2782,32 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
       )}
     </span>
   );
-  const modalReviewSources = [
-    { id: "tripadvisor", label: "TripAdvisor", href: LINKS.reviews[1].href, iconSrc: "https://cdn.simpleicons.org/tripadvisor/34e0a1" },
-    { id: "airbnb", label: "Airbnb", href: "https://www.airbnb.com/", iconSrc: "https://cdn.simpleicons.org/airbnb/FF5A5F" },
-    { id: "google", label: "Google Maps", href: LINKS.reviews[2].href, iconSrc: "https://cdn.simpleicons.org/googlemaps/1a73e8" },
-  ];
-  const modalReviews = tourInfo.reviews || [
-    {
-      id: "ta-soanar",
-      platformId: "tripadvisor",
-      name: "Soanar",
-      date: "Jul 27, 2026 | Family",
-      rating: 5,
-      title: "A must-do Bali experience",
-      text: "Our guides (Nyoman, Leo & crew) were fantastic - knowledgeable, experienced, and friendly. The trip was well organized, from hotel transfers to lunch stop and overland visit to Klingking Cliff.",
-    },
-    {
-      id: "gm-guide19115817637",
-      platformId: "google",
-      name: "Jack Wilson",
-      date: "Feb 2, 2026 | Family",
-      rating: 5,
-      title: "Unbelievable",
-      text: "The snorkeling was the best experience I have had - we saw many manta rays, a few turtles, coral, and tropical fish. I felt extremely safe and confident in their capable hands.",
-    },
-    {
-      id: "ab-michael-d",
-      platformId: "airbnb",
-      name: "Michael D",
-      date: "Nov 9, 2025 | Family",
-      rating: 5,
-      title: "Legends Roby and Aldo take us to the beautiful Manta Rays!",
-      text: "We saw so many Manta Rays, turtles, all sorts of fish and topped it off with some music and champagne at the end. Highly recommend a trip with them and ask for Roby and Aldo if you get the chance.",
-    },
-    {
-      id: "ab-charlotte-l",
-      platformId: "airbnb",
-      name: "Charlotte L",
-      date: "Sep 18, 2025 | Friends",
-      rating: 5,
-      title: "Amazing day",
-      text: "Nemo and Ceco were amazing, so kind, funny and gentle. I was terrified to go snorkeling in the ocean but they both took turns staying with me and reminding me I was safe and okay.",
-    },
-    {
-      id: "ta-linda-l",
-      platformId: "tripadvisor",
-      name: "Linda L",
-      date: "Apr 6, 2025 | Solo",
-      rating: 5,
-      title: "A wonderful day!",
-      text: "I felt well taken care of by the guides Olog and Gede. The tour is well organized with just the right amount of time at each stop.",
-    },
-    {
-      id: "gm-daniel-k",
-      platformId: "google",
-      name: "Daniel K",
-      date: "Dec 26, 2025 | Family",
-      rating: 5,
-      title: "Private boat tour was perfect",
-      text: "Excellent day out - Roby and Eric were fantastic guides. They made us feel welcome and comfortable and took heaps of great photos and videos above and below the water. The boat was well maintained with modern engines and navigation systems, and we felt very safe with a capable captain.",
-    },
-  ];
-  const includedHighlights = tourInfo.highlights;
+  const modalReviewSources = useMemo(
+    () =>
+      REVIEW_SOURCES.map((source) => ({
+        ...source,
+        iconSrc: REVIEW_SOURCE_ICON_MAP[source.id] || "",
+      })),
+    []
+  );
+  const modalReviews = useMemo(() => {
+    const sourceIds = modalReviewSources.map((source) => source.id);
+    const fallbackReviews = INFO_REVIEWS;
+    const rawReviews = Array.isArray(tourInfo.reviews) && tourInfo.reviews.length
+      ? tourInfo.reviews
+      : fallbackReviews;
+
+    return rawReviews.map((review, index) => ({
+      id: review.id || `review-${index + 1}`,
+      platformId: review.platformId || sourceIds[index % Math.max(sourceIds.length, 1)] || "tripadvisor",
+      name: review.name || "",
+      date: review.date || review.meta || "",
+      rating: Number.isFinite(Number(review.rating)) && Number(review.rating) > 0 ? Number(review.rating) : 5,
+      title: review.title || "",
+      text: review.text || review.quote || "",
+      screenshotSrc: review.screenshotSrc || "",
+    }));
+  }, [modalReviewSources]);
   const [policyExpanded, setPolicyExpanded] = useState(false);
   const policyItems = tourInfo.policyItems;
   const visiblePolicyItems = policyExpanded ? policyItems : policyItems.slice(0, 4);
@@ -2691,13 +2823,6 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
     icon: ICON_MAP[card.icon]
   }));
   const includedSections = tourInfo.includedSections.map(section => ({
-    ...section,
-    items: section.items.map(item => ({
-      ...item,
-      icon: ICON_MAP[item.icon]
-    }))
-  }));
-  const pickupSections = tourInfo.pickupSections.map(section => ({
     ...section,
     items: section.items.map(item => ({
       ...item,
@@ -2735,7 +2860,7 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
         <div>
           <div className="text-base font-semibold text-secondary-900">Tour details</div>
           <div className="mt-1 truncate text-sm text-secondary-500">
-            Whats included, pickup, reviews, and safety  all in one place.
+            Whats included, pickup, and safety all in one place.
           </div>
         </div>
         <button
@@ -2935,13 +3060,32 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
             </div>
           ) : null}
           {internalTab === "safety" ? (
-            <div className="space-y-3">
-              <div className="text-base font-semibold text-secondary-900">Safety-first policy</div>
-              <ul className="space-y-2 text-sm text-secondary-600">
-                <li>Safety-first routing policy (route may change based on sea conditions).</li>
-                <li>Free cancellation 24h.</li>
-                <li>Certified guides + safety briefing.</li>
-              </ul>
+            <div className="space-y-4">
+              <div>
+                <div className="text-base font-semibold text-secondary-900">Safety-first policy</div>
+                <div className="mt-1 text-sm text-secondary-500">Your wellbeing is our top priority on every tour.</div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-3">
+                {[
+                  { icon: Shield, title: "Route safety", text: "Safety-first routing policy. Route may change based on sea and weather conditions on the day.", color: "border-emerald-100 bg-emerald-50", iconColor: "text-emerald-600" },
+                  { icon: BadgeCheck, title: "Certified guides", text: "All guides are licensed and trained. A full safety briefing is given before every departure.", color: "border-sky-100 bg-sky-50", iconColor: "text-sky-600" },
+                  { icon: CheckCircle2, title: "Free cancellation 24h", text: "Cancel up to 24 hours before departure and receive a full refund. No questions asked.", color: "border-primary-100 bg-primary-50", iconColor: "text-primary-600" },
+                ].map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <div key={card.title} className="rounded-xl border border-neutral-200 bg-white p-4">
+                      <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl border", card.color)}>
+                        <Icon className={cn("h-4 w-4", card.iconColor)} />
+                      </span>
+                      <div className="mt-3 text-sm font-semibold text-secondary-900">{card.title}</div>
+                      <div className="mt-1.5 text-sm leading-6 text-secondary-600">{card.text}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-secondary-600">
+                Final go/no-go decisions are made on the morning of the tour based on Port Authority guidance and captain safety checks.
+              </div>
             </div>
           ) : null}
           {internalTab === "cancellation" ? (
@@ -3064,6 +3208,14 @@ function InfoLinksRow({ onOpenTourInfo, className, tone = "default", variant = "
         Reviews
         <ExternalLink className="h-3.5 w-3.5" />
       </button>
+      <button type="button" onClick={() => openFancybox("cancellation")} className={cn(pillClassName, "gap-1.5")}>
+        Cancellation
+        <ExternalLink className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" onClick={() => openFancybox("weather")} className={cn(pillClassName, "gap-1.5")}>
+        Weather
+        <ExternalLink className="h-3.5 w-3.5" />
+      </button>
     </div>
   );
 }
@@ -3090,10 +3242,11 @@ function StepTwo({
   privateTours,
   selectedStyleTitle,
 }) {
-  const [fitsOnly, setFitsOnly] = useState(true);
+  const [fitsOnly, setFitsOnly] = useState(false);
   const [showSoldOut, setShowSoldOut] = useState(false);
   const [sort, setSort] = useState(dateMode === "exact" ? "recommended" : "soonest");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [partnerBoat, setPartnerBoat] = useState(null);
   const carouselRef = useRef(null);
   const boatSelectGuardRef = useRef(0);
   const hasAutoOpenedPickDayRef = useRef(false);
@@ -3203,6 +3356,7 @@ function StepTwo({
   const list = useMemo(() => {
     const source = boats || [];
     const baseList = [...source];
+    // "All boats" shows everything; "Show available boats" filters by capacity
     const base = fitsOnly ? baseList.filter((y) => groupSize <= y.people) : baseList;
 
     // Add dynamic pricing to each boat in the list
@@ -3218,7 +3372,10 @@ function StepTwo({
     if (!hasDateCriteria) return listWithPrices;
     return listWithPrices.filter((y) => {
       const availability = availabilityByBoat?.[y.id];
-      return availability?.available;
+      // When fitsOnly ("Show available"), hide unavailable boats
+      // When showing all boats, only hide if we know it's explicitly unavailable
+      if (fitsOnly) return availability?.available;
+      return availability?.available !== false;
     });
   }, [fitsOnly, dateMode, groupSize, availabilityByBoat, hasDateCriteria, exactDate, selectedFlexDate, rangeStart, privateTours, boats]);
   const sorted = useMemo(() => {
@@ -3265,6 +3422,10 @@ function StepTwo({
     const now = Date.now();
     if (now - boatSelectGuardRef.current < 250) return;
     boatSelectGuardRef.current = now;
+    if (boat.isPartner) {
+      setPartnerBoat(boat);
+      return;
+    }
     if (dateMode === "flex" && hasRange) {
       // Don't select yet - open pick-day panel first, selection happens on confirm
       openPickDayMode(boat.id);
@@ -3307,6 +3468,7 @@ function StepTwo({
     const needsExactDateSelection = dateMode === "exact" && !exactDate;
     const availableDates = availability?.availableDates ?? [];
     const selectedDateForBoat = selectedBoatId === boat.id ? selectedFlexDate : "";
+    const showFrom = !((dateMode === "exact" && !!exactDate) || !!selectedDateForBoat);
     const perks = (Array.isArray(boat.listItems) ? boat.listItems : [])
       .map((item) => sanitizeDisplayText(item, { stripTrailingOne: true }))
       .filter(Boolean);
@@ -3332,8 +3494,8 @@ function StepTwo({
       <div
         className={cn(
           "group relative flex h-full w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left shadow-none transition-all duration-300",
-          "hover:border-neutral-300",
-          isSelected && "border-neutral-200 bg-white shadow-2xl z-10",
+          "hover:border-primary-300",
+          isSelected && "border-primary-500 ring-1 ring-primary-500 bg-white shadow-2xl z-10",
           isSoldOut && "opacity-70",
           isLocked && "cursor-pointer"
         )}
@@ -3365,11 +3527,11 @@ function StepTwo({
           <div className="flex flex-1 flex-col p-6 pt-5">
             <div className="flex items-center gap-2 min-h-9">
               <span className="inline-flex h-5 w-5 items-center justify-center">
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100">
+                <span className={cn("flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 transition-colors", isSelected && "bg-primary-100")}>
                   <span
                     className={cn(
                       "h-1.5 w-1.5 rounded-xl bg-secondary-300 transition-colors",
-                      isSelected && "bg-primary-50"
+                      isSelected && "bg-primary-600 h-2 w-2"
                     )}
                   />
                 </span>
@@ -3411,7 +3573,7 @@ function StepTwo({
             <ul className="space-y-1.5">
               {displayPerks.map((item) => (
                 <li key={item} className="flex items-center gap-2 text-sm text-secondary-600">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-secondary-300" />
+                  <svg className="h-3.5 w-3.5 shrink-0 text-primary-500" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   {item}
                 </li>
               ))}
@@ -3425,7 +3587,7 @@ function StepTwo({
                     (isSoldOut || isLocked) && "opacity-60"
                   )}
                 >
-                  <span className="text-xs font-semibold text-secondary-400">From</span>
+                  {showFrom && <span className="text-xs font-semibold text-secondary-400">From</span>}
                   <span className="text-2xl font-black text-secondary-900 tracking-tight">
                     {boat.id === "angels"
                       ? formatIDR(33000000)
@@ -3494,14 +3656,17 @@ function StepTwo({
                 </Button>
               ) : (
                 isSelected ? (
-                  <div className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-600 px-3 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-700">
+                  <Button
+                    className="h-12 w-full rounded-full"
+                    disabled
+                  >
                     <Check className="h-4 w-4" />
                     Selected
-                  </div>
+                  </Button>
                 ) : (
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="primary"
                     className="h-12 w-full rounded-full"
                     onClick={() => {
                       if (!hasDateCriteria) {
@@ -3512,7 +3677,7 @@ function StepTwo({
                     }}
                     disabled={isDisabled}
                   >
-                    {!hasDateCriteria ? "Pick a date first" : "Select boat"}
+                    {!hasDateCriteria ? "Pick a date first" : "Select tour"}
                   </Button>
                 )
               )}
@@ -3601,10 +3766,12 @@ function StepTwo({
                     <span className="text-xs font-semibold text-secondary-500">
                       {new Date(`${draftDate}T00:00:00`).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-secondary-400">From</span>
+                    <div className="flex items-baseline gap-1.5">
                       <span className="text-lg font-black text-secondary-900 tracking-tight">
                         {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-secondary-300">
+                        {boat.id === "angels" ? "/ 2 boats" : "/ boat"}
                       </span>
                     </div>
                   </div>
@@ -3645,6 +3812,35 @@ function StepTwo({
             <p className={cn(Q_THEME.text.body, "mx-auto max-w-[800px]")}>
               Your boat sets the base price for the Classic route.
             </p>
+          </div>
+
+          <div className="mb-6 flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFitsOnly(false)}
+                className={cn(
+                  "rounded-full border px-4 py-2 text-sm font-semibold transition-all",
+                  !fitsOnly
+                    ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                    : "border-neutral-200 bg-white text-secondary-600 hover:border-neutral-300"
+                )}
+              >
+                All boats
+              </button>
+              <button
+                type="button"
+                onClick={() => setFitsOnly(true)}
+                className={cn(
+                  "rounded-full border px-4 py-2 text-sm font-semibold transition-all",
+                  fitsOnly
+                    ? "border-primary-600 bg-primary-600 text-white shadow-sm"
+                    : "border-neutral-200 bg-white text-secondary-600 hover:border-neutral-300"
+                )}
+              >
+                Show available boats
+              </button>
+            </div>
           </div>
 
           <div className="hidden sm:grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">
@@ -3728,18 +3924,6 @@ function StepTwo({
               </div>
             )}
           </div>
-          {hasDateCriteria && showSoldOut && soldOutList.length ? (
-            <div className="mt-6">
-              <div className="mb-3 text-sm font-semibold text-secondary-900">
-                Sold out for your dates ({soldOutList.length})
-              </div>
-              <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {soldOutList.map((boat) => (
-                  <div key={boat.id}>{renderBoatCard(boat, { isSoldOut: true })}</div>
-                ))}
-              </div>
-            </div>
-          ) : null}
         </PremiumContainer>
       </PremiumSection>
       <Modal
@@ -3786,7 +3970,6 @@ function StepTwo({
               </div>
 
               <div className="mt-4 flex items-baseline gap-1.5">
-                <span className="text-xs font-semibold text-secondary-400">From</span>
                 <span className="text-2xl font-black tracking-tight text-secondary-900">
                   {formatIDR(confirmModalData.boat.priceValue)}
                 </span>
@@ -3818,6 +4001,18 @@ function StepTwo({
           </div>
         ) : null}
       </Modal>
+      <PartnerRequestModal
+        isOpen={!!partnerBoat}
+        onClose={() => setPartnerBoat(null)}
+        tourId={partnerBoat?.tourId}
+        tourName={partnerBoat?.name}
+        date={exactDate || selectedFlexDate || ""}
+        adults={adults}
+        kids={kids}
+        rangeStart={rangeStart}
+        rangeEnd={rangeEnd}
+        dateMode={dateMode}
+      />
     </>
   );
 }
@@ -3902,6 +4097,20 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
         className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-sm font-semibold text-secondary-600 opacity-100 shadow-card backdrop-blur transition sm:opacity-0 sm:group-hover:opacity-100"
       >
         {total} photos
+      </button>
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpenGallery?.();
+        }}
+        className={cn(
+          "absolute right-3 top-3 inline-flex items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-1.5 text-secondary-600 shadow-card backdrop-blur transition sm:inline-flex",
+          "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+        )}
+        aria-label="Expand gallery"
+      >
+        <Maximize className="h-4 w-4" />
       </button>
       {total > 1 ? (
         <>
@@ -4068,6 +4277,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
   const fetchRestaurantForStyle = useCallback((style, setter) => {
     if (!style) { setter(null); return () => { }; }
     let cancelled = false;
+    if (style.restaurant) {
+      setter(style.restaurant);
+      return () => { cancelled = true; };
+    }
     const restaurantId = style.restaurant_id;
     if (restaurantId) {
       fetchRestaurant(restaurantId).then((data) => {
@@ -4193,8 +4406,8 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                       "group relative flex min-h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left transition-all duration-300 sm:min-h-[470px] sm:w-auto sm:snap-start",
                       !showAllStyles && "snap-center snap-always",
                       showAllStyles && "mb-4 sm:mb-0",
-                      "hover:border-neutral-300 hover:shadow-md",
-                      isSelected && "border-neutral-200 bg-white shadow-2xl z-10"
+                      "hover:border-primary-300 hover:shadow-md",
+                      isSelected && "border-primary-500 ring-1 ring-primary-500 bg-white shadow-2xl z-10"
                     )}
                   >
                     <div onClick={(event) => event.stopPropagation()} role="presentation" className="relative">
@@ -4217,20 +4430,28 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                     >
                       <div className="flex items-center gap-2 min-h-9">
                         <span className="inline-flex h-5 w-5 items-center justify-center">
-                          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100">
+                          <span className={cn("flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 transition-colors", isSelected && "bg-primary-100")}>
                             <span
                               className={cn(
                                 "h-1.5 w-1.5 rounded-xl bg-secondary-300 transition-colors",
-                                isSelected && "bg-primary-50"
+                                isSelected && "bg-primary-600 h-2 w-2"
                               )}
                             />
                           </span>
                         </span>
                         <div className="text-xl font-semibold text-secondary-900">{style.title}</div>
                         {addOnBadge ? (
-                          <span className="ml-auto inline-flex items-center rounded-full border border-primary-200 bg-neutral-100 px-2 py-0.5 text-sm font-semibold text-primary-600">
-                            {typeof addOnBadge === 'string' ? addOnBadge : "Add-on"}
-                          </span>
+                          <div className="group/tooltip relative ml-auto flex items-center">
+                            <span className="inline-flex cursor-help items-center rounded-full border border-primary-200 bg-neutral-100 px-2 py-0.5 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-50">
+                              {typeof addOnBadge === 'string' ? addOnBadge : "Add-on"}
+                            </span>
+                            <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-64 opacity-0 transition-opacity duration-200 group-hover/tooltip:opacity-100 z-50">
+                              <div className="rounded-xl bg-secondary-900 px-3 py-2.5 text-xs font-medium leading-relaxed text-white shadow-xl">
+                                This route is built around add-ons — we’ll suggest extras in the next steps.
+                                <div className="absolute -bottom-1 right-4 h-3 w-3 rotate-45 rounded-sm bg-secondary-900"></div>
+                              </div>
+                            </div>
+                          </div>
                         ) : null}
                       </div>
                       <div className="line-clamp-2 text-sm font-medium text-secondary-500 min-h-10">
@@ -4275,7 +4496,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         ) : (
                           <Button
                             type="button"
-                            variant="secondary"
+                            variant="primary"
                             className="w-full"
                             onClick={(event) => {
                               event.stopPropagation();
@@ -4402,7 +4623,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                       </div>
                     </div>
                     <div className="mt-0.5 text-xs leading-relaxed text-secondary-600">
-                      {item.title === "Lunch" ? (
+                      {/lunch/i.test(item.title) && selectedRestaurantData ? (
                         <>
                           {(() => {
                             const r = selectedRestaurantData;
@@ -4520,102 +4741,6 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                     </div>
                   </div>
                 </div>
-                <div className="mt-10 rounded-xl border border-neutral-200 bg-[radial-gradient(120%_120%_at_15%_0%,#ffffff_0%,transparent_55%),linear-gradient(180deg,#ffffff_0%,var(--neutral-50)_100%)] p-6">
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    <div>
-                      <div className="text-lg font-semibold text-secondary-900">Why Bluuu</div>
-                      <ul className="mt-3 space-y-2 text-sm leading-6 text-secondary-600">
-                        {[
-                          "Direct operator  own boats",
-                          "Safety-first routing policy",
-                          "Check-in at Bluuu lounge at Serangan Harbor",
-                          "WhatsApp support before and after booking",
-                          "Transparent total before confirming",
-                        ].map((item) => (
-                          <li key={item} className="flex items-start gap-2">
-                            <Check className="mt-1 h-4 w-4 text-primary-600" />
-                            <span className="max-w-[34ch]">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div>
-                      <div className="text-lg font-semibold text-secondary-900">Included in your tour</div>
-                      <div className="mt-3 grid gap-2 text-sm leading-6 text-secondary-600">
-                        {TRUST_INCLUDED_SHORT.map((item) => (
-                          <div key={item} className="flex items-start gap-2">
-                            <Check className="mt-1 h-4 w-4 text-primary-600" />
-                            <span className="max-w-[34ch]">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => onOpenTourInfo?.("included")}
-                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700"
-                      >
-                        View all included
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="mt-6 border-t border-neutral-200 pt-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="text-lg font-semibold text-secondary-900">Guest reviews</div>
-                      <button
-                        type="button"
-                        onClick={() => onOpenTourInfo?.("reviews")}
-                        className="text-sm font-semibold text-primary-600 hover:text-primary-700"
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          Read more
-                          <ArrowRight className="h-3.5 w-3.5" />
-                        </span>
-                      </button>
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-secondary-600">
-                      <span className="font-bold text-secondary-900">{BRAND.rating} | {REVIEW_COUNT_SHORT} reviews</span>
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        {REVIEW_SOURCES.map((source) => (
-                          <a
-                            key={source.id}
-                            href={source.href}
-                            target="_blank"
-                            rel="noreferrer noopener"
-                            className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-100 px-3 py-1 text-xs font-bold text-secondary-600 transition hover:border-neutral-300 hover:text-primary-600"
-                          >
-                            {source.label}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="no-scrollbar -mx-5 mt-8 flex snap-x snap-mandatory gap-0 overflow-x-auto px-5 sm:mx-0 sm:grid sm:gap-0 sm:divide-y sm:divide-neutral-200 sm:px-0 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-                      {["review-1", "review-4", "review-5"].map((id) => {
-                        const review = INFO_REVIEWS.find((item) => item.id === id);
-                        if (!review) return null;
-                        return (
-                          <div
-                            key={review.id}
-                            className="flex h-full w-[280px] shrink-0 snap-center snap-always flex-col bg-transparent px-8 py-2 text-sm text-secondary-600 transition sm:w-auto sm:first:pl-0 sm:last:pr-0"
-                          >
-                            <div className="text-sm font-semibold text-secondary-900">{review.name}</div>
-                            <div className="mt-0.5 flex min-h-[18px] items-baseline justify-between gap-3 text-sm text-secondary-500">
-                              <span>{review.meta}</span>
-                              <span className="text-sm text-primary-600 font-bold opacity-90 transition hover:opacity-95 text-xs tracking-widest">*****</span>
-                            </div>
-                            {review.title ? (
-                              <div className="mt-2 text-sm font-semibold text-secondary-900">{review.title}</div>
-                            ) : null}
-                            <div className="mt-2 text-sm leading-relaxed text-secondary-600 line-clamp-4 italic">
-                              &quot;{review.quote}&quot;
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
               </div>
             );
           })()}
@@ -4682,7 +4807,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             )}
                             <div className="text-sm font-bold text-secondary-900">{item.title}</div>
                             <div className="mt-1 text-sm text-secondary-600 leading-relaxed">
-                              {item.title === "Lunch" ? (
+                              {/lunch/i.test(item.title) && (activeRestaurantData || activeItineraryStyle?.restaurant) ? (
                                 <>
                                   {(() => {
                                     const r = activeRestaurantData || activeItineraryStyle?.restaurant;
@@ -5017,7 +5142,7 @@ function StepTransfers({
                             event.stopPropagation();
                             setActiveTransferDetails({
                               title: finalName,
-                              description: transferDetails.description,
+                              description: transfer.description || transfer.short_description || transferDetails.description,
                               image: transferDetails.image,
                             });
                           }}
@@ -5073,10 +5198,12 @@ function StepTransfers({
           </div>
           {/* Description right */}
           <div className="flex-1">
-            <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">Full description</div>
-            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-secondary-600">
-              {activeTransferDetails?.description}
-            </p>
+            {activeTransferDetails?.description ? (
+              <div
+                className="mt-2 text-sm"
+                dangerouslySetInnerHTML={{ __html: activeTransferDetails.description }}
+              />
+            ) : null}
           </div>
         </div>
       </Modal>
@@ -5084,6 +5211,8 @@ function StepTransfers({
         covers={covers}
         selectedCoverId={selectedCoverId}
         onSelectCoverId={onSelectCoverId}
+        priceLabel="per boat"
+        formatPrice={formatIDR}
       />
       {
         showContinue && (
@@ -5138,15 +5267,8 @@ function StepExtras({
   onReview,
   onSkip,
 }) {
-  const { categories, routes } = useExtras();
-  const privateRoutes = useMemo(
-    () =>
-      (routes || []).filter((route) => {
-        const cls = route?.classes_id ?? route?.class_id;
-        return Number(cls) === 8;
-      }),
-    [routes]
-  );
+  const { categories, privateRoutes } = useExtras();
+  const contacts = useSiteContacts();
   const styleKeyById = {
     "classic-route": "classic",
     "family-first": "family_easygoing",
@@ -5467,8 +5589,8 @@ function StepExtras({
       kind: "cover",
       name: cover.name,
       price: Number(cover.price || 0),
-      pricingType: "per_person",
-      quantity: totalGuests,
+      pricingType: "per_booking",
+      quantity: 1,
     };
   }, [selectedCoverId, covers, totalGuests]);
   const selectedAddonsList = useMemo(() => {
@@ -5709,7 +5831,7 @@ function StepExtras({
                     <div className="border-t border-neutral-200 px-6 py-4 text-center">
                       <p className="text-sm text-secondary-500">
                         Need help choosing?{" "}
-                        <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer" className="font-bold text-primary-600 hover:underline">
+                        <a href={contacts.whatsapp?.link || "#"} target="_blank" rel="noopener noreferrer" className="font-bold text-primary-600 hover:underline">
                           WhatsApp our team
                         </a>
                       </p>
@@ -5978,6 +6100,56 @@ function StepExtras({
     </>
   );
 }
+function WhyBookNow() {
+  const trustItems = [
+    {
+      icon: Ticket,
+      title: "Lock today's rate",
+      description: "Prices can rise — secure the current rate.",
+    },
+    {
+      icon: Calendar,
+      title: "Stay flexible",
+      description: "Cancel anytime or reschedule with ease.",
+    },
+    {
+      icon: Clock,
+      title: "Smart decision",
+      description: "Reserve now and keep full flexibility.",
+    },
+  ];
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-6 py-3">
+        <span className="text-xs font-black uppercase tracking-widest text-secondary-400">Why book now</span>
+      </div>
+      <div className="grid sm:grid-cols-3">
+        {trustItems.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={idx}
+              className={cn(
+                "flex items-start gap-4 p-6",
+                idx !== trustItems.length - 1 && "border-b border-neutral-100 sm:border-b-0 sm:border-r"
+              )}
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+                <Icon className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-secondary-900">{item.title}</div>
+                <div className="mt-1 text-xs leading-relaxed text-secondary-500">{item.description}</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function StepFive({
   dateLabel,
   dateMode,
@@ -6008,6 +6180,7 @@ function StepFive({
   selectedBoatId,
 }) {
   const [activeEditor, setActiveEditor] = useState(null);
+  const contacts = useSiteContacts();
   const isDateSelected = dateLabel && dateLabel !== "Date not selected";
   const isBoatSelected = Boolean(selectedBoat);
   const extrasCount = selectedExtrasSummary?.reduce((sum, extra) => sum + (extra.quantity || 0), 0) || 0;
@@ -6071,8 +6244,8 @@ function StepFive({
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
-      ? "Select boat to continue"
-      : "reserve now";
+      ? "Select tour to continue"
+      : "Reserve Now";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -6158,7 +6331,8 @@ function StepFive({
           <h2 className={Q_THEME.text.h2}>Review your tour</h2>
           <p className={Q_THEME.text.body}>Confirm details before reserving.</p>
         </div>
-        <InfoLinksRow onOpenTourInfo={onOpenTourInfo} className="mb-6" />
+        <WhyBookNow />
+        <InfoLinksRow onOpenTourInfo={onOpenTourInfo} className="mb-6 mt-6" />
         <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.7fr]">
           <div className="space-y-5">
             <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
@@ -6344,36 +6518,6 @@ function StepFive({
                 </div>
               </div>
             </div>
-            <div className="rounded-xl border border-neutral-200 bg-white p-5">
-              <div className="text-base font-semibold text-secondary-900">Pickup & meeting</div>
-              <ul className="mt-2 space-y-2 text-sm text-secondary-600">
-                <li className="flex items-start gap-2">
-                  <MessageCircle className="mt-0.5 h-3.5 w-3.5 text-secondary-500" />
-                  Pickup details confirmed on WhatsApp after booking.
-                </li>
-                <li className="flex items-start gap-2">
-                  <MapPin className="mt-0.5 h-3.5 w-3.5 text-secondary-500" />
-                  Nearest pickup stop + exact time shared.
-                </li>
-              </ul>
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-semibold text-primary-600">
-                <button type="button" onClick={() => onOpenTourInfo?.("pickup", "review")} className="hover:text-primary-700">
-                  See details
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onHighlightExtra?.("private-transfer");
-                    const target = document.getElementById("step-6");
-                    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-primary-50 bg-neutral-100 px-3 py-1 text-sm font-semibold text-primary-700 hover:border-primary-200"
-                >
-                  Upgrade to private transfer
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
           </div>
           <div className="sticky top-6 self-start rounded-xl border border-neutral-200 bg-white p-5">
             <div className="text-base font-semibold text-secondary-900">Price summary</div>
@@ -6397,7 +6541,9 @@ function StepFive({
                 <span>Total</span>
                 <span>{formatIDR(basePrice + guestFeeTotal + extrasSubtotalIDR)}</span>
               </div>
-              <div className="text-sm text-secondary-500">Secure checkout - Instant confirmation</div>
+              <div className="text-sm text-secondary-500">
+                Secure checkout - {selectedBoat?.isPartner ? "On Request" : "Instant confirmation"}
+              </div>
             </div>
             <div className="mt-5 space-y-3">
               <Button type="button" onClick={handleReserve} size="md" className="w-full" disabled={!isReserveEnabled}>
@@ -6407,45 +6553,29 @@ function StepFive({
                 You'll see the full total before confirming.
               </div>
             </div>
-            <div className="mt-4 rounded-xl bg-neutral-50 p-3">
-              <div className="flex items-center justify-between gap-3">
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
                 <div>
-                  <div className="text-sm font-semibold text-secondary-900">Need help?</div>
+                  <div className="font-semibold text-secondary-900">Questions?</div>
                   <div className="text-sm text-secondary-500">Avg response time: 5 min</div>
                 </div>
                 <a
-                  href="https://wa.me/6281234567890"
+                  href={contacts.whatsapp?.link || "#"}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-neutral-200 bg-white px-3 text-sm font-semibold text-secondary-900 transition hover:border-neutral-300"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-secondary-900 shadow-sm transition hover:border-neutral-300"
                 >
-                  <MessageCircle className="h-3.5 w-3.5" />
+                  <MessageCircle className="h-4 w-4" />
                   WhatsApp
                 </a>
               </div>
-              {!isDateSelected ? (
-                <div className="mt-3 flex items-start gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-secondary-600">
-                  <Calendar className="mt-0.5 h-3.5 w-3.5 text-secondary-500" />
-                  <div>
-                    <span className="font-semibold text-secondary-900">Not sure about the date?</span> Reserve now and change it up to 24h before the tour.
-                  </div>
-                </div>
-              ) : null}
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => onOpenTourInfo?.("cancellation", "review")}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-secondary-500 transition hover:border-neutral-300"
-                >
-                  <Shield className="h-4 w-4" />
+              <div className="flex items-center justify-between text-sm text-secondary-500">
+                <button type="button" onClick={() => onOpenTourInfo?.("cancellation", "review")} className="inline-flex items-center gap-1.5 hover:text-secondary-700 transition">
+                  <Shield className="h-3.5 w-3.5" />
                   Free cancellation 24h
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onOpenTourInfo?.("weather", "review")}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-secondary-500 transition hover:border-neutral-300"
-                >
-                  <CloudRain className="h-4 w-4" />
+                <button type="button" onClick={() => onOpenTourInfo?.("weather", "review")} className="inline-flex items-center gap-1.5 hover:text-secondary-700 transition">
+                  <CloudRain className="h-3.5 w-3.5" />
                   Weather guarantee
                 </button>
               </div>
@@ -6576,11 +6706,14 @@ function GallerySection() {
   );
 }
 function SocialProof() {
-  const reviewSources = [
-    { id: "tripadvisor", label: "TripAdvisor", href: LINKS.reviews[1].href, iconSrc: "https://cdn.simpleicons.org/tripadvisor/34e0a1" },
-    { id: "airbnb", label: "Airbnb", href: "https://www.airbnb.com/", iconSrc: "https://cdn.simpleicons.org/airbnb/FF5A5F" },
-    { id: "google", label: "Google Maps", href: LINKS.reviews[2].href, iconSrc: "https://cdn.simpleicons.org/googlemaps/1a73e8" },
-  ];
+  const reviewSources = useMemo(
+    () =>
+      REVIEW_SOURCES.map((source) => ({
+        ...source,
+        iconSrc: REVIEW_SOURCE_ICON_MAP[source.id] || "",
+      })),
+    []
+  );
   const guestPhotos = [
     "https://bluuu.tours/resize/3dbd5b63d137007364cbd61f35a12728-1",
     "https://bluuu.tours/resize/ce66ae66894677d7792f666bf1905677-1",
@@ -6592,108 +6725,20 @@ function SocialProof() {
     "https://bluuu.tours/resize/eded3fe3ad3d3feb79caeff2bbc2b255-1",
     "https://bluuu.tours/resize/d11e1c9884a10ab723cae4ab29bb2589-1",
   ];
-  const featuredReviews = [
-    {
-      id: "ta-soanar",
-      platformId: "tripadvisor",
-      name: "Soanar",
-      date: "Jul 27, 2026 | Family",
-      rating: 5,
-      title: "A must-do Bali experience",
-      text: "Our guides (Nyoman, Leo & crew) were fantastic - knowledgeable, experienced, and friendly. The trip was well organized, from hotel transfers to lunch stop and overland visit to Klingking Cliff.",
-      screenshotSrc: "",
-    },
-    {
-      id: "gm-guide19115817637",
-      platformId: "google",
-      name: "Jack Wilson",
-      date: "Feb 2, 2026 | Family",
-      rating: 5,
-      title: "Unbelievable",
-      text: "The snorkeling was the best experience I have had - we saw many manta rays, a few turtles, coral, and tropical fish. I felt extremely safe and confident in their capable hands.",
-      screenshotSrc: "",
-    },
-    {
-      id: "ab-michael-d",
-      platformId: "airbnb",
-      name: "Michael D",
-      date: "Nov 9, 2025 | Family",
-      rating: 5,
-      title: "Legends Roby and Aldo take us to the beautiful Manta Rays!",
-      text: "We saw so many Manta Rays, turtles, all sorts of fish and topped it off with some music and champagne at the end. Highly recommend a trip with them and ask for Roby and Aldo if you get the chance.",
-      screenshotSrc: "",
-    },
-    {
-      id: "ab-charlotte-l",
-      platformId: "airbnb",
-      name: "Charlotte L",
-      date: "Sep 18, 2025 | Friends",
-      rating: 5,
-      title: "Amazing day",
-      text: "Nemo and Ceco were amazing, so kind, funny and gentle. I was terrified to go snorkeling in the ocean but they both took turns staying with me and reminding me I was safe and okay.",
-      screenshotSrc: "",
-    },
-    {
-      id: "ta-linda-l",
-      platformId: "tripadvisor",
-      name: "Linda L",
-      date: "Apr 6, 2025 | Solo",
-      rating: 5,
-      title: "A wonderful day!",
-      text: "I felt well taken care of by the guides Olog and Gede. The tour is well organized with just the right amount of time at each stop.",
-      screenshotSrc: "",
-    },
-    {
-      id: "gm-daniel-k",
-      platformId: "google",
-      name: "Daniel K",
-      date: "Dec 26, 2025 | Family",
-      rating: 5,
-      title: "Private boat tour was perfect",
-      text: "Excellent day out - Roby and Eric were fantastic guides. They made us feel welcome and comfortable and took heaps of great photos and videos above and below the water. The boat was well maintained with modern engines and navigation systems, and we felt very safe with a capable captain.",
-      screenshotSrc: "",
-    },
-    {
-      id: "gm-brett-n",
-      platformId: "google",
-      name: "Brett N",
-      date: "Dec 21, 2025 | Family",
-      rating: 5,
-      title: "Incredible experience!",
-      text: "We did the Manta Ray and snorkeling trip twice this year. The private boat for our family was well worth it - we saw manta rays both times. The crew on Honey Milk were awesome, professional, and fun. Thank you Tim, Gede, and the rest of the crew!",
-      screenshotSrc: "",
-    },
-    {
-      id: "gm-kevin-t",
-      platformId: "google",
-      name: "Kevin T",
-      date: "Dec 9, 2025 | Family",
-      rating: 5,
-      title: "A great fun family day",
-      text: "Our guides were excellent - friendly, knowledgeable, and patient. We saw fish, sea turtles, and manta rays, and had plenty of time at each stop. Overall I'd highly recommend this day trip.",
-      screenshotSrc: "",
-    },
-    {
-      id: "gm-tao-w",
-      platformId: "google",
-      name: "Tao W",
-      date: "Dec 1, 2025 | Family",
-      rating: 5,
-      title: "Best day ever on boat",
-      text: "Our group rented a private boat for fishing, snorkeling, and a day tour. The crew were professional and genuinely friendly, and they made the whole day feel special. We saw multiple manta rays and the boat was beautiful and well maintained.",
-      screenshotSrc: "",
-    },
-    {
-      id: "ta-conrad-c",
-      platformId: "tripadvisor",
-      name: "Conrad C",
-      date: "Dec 3, 2025 | Family",
-      rating: 4,
-      title: "Beautiful reefs with great guides",
-      text: "Waters off Nusa Penida were clear with beautiful reefs and many fish. We couldn't go to Manta Point due to weather, but guides Olog and Ceco took great care of us and kept everyone feeling safe.",
-      screenshotSrc: "",
-    },
-  ];
+  const featuredReviews = useMemo(
+    () =>
+      INFO_REVIEWS.map((review, index) => ({
+        id: review.id || `review-${index + 1}`,
+        platformId: reviewSources[index % Math.max(reviewSources.length, 1)]?.id || "tripadvisor",
+        name: review.name || "",
+        date: review.meta || "",
+        rating: 5,
+        title: review.title || "",
+        text: review.quote || "",
+        screenshotSrc: "",
+      })),
+    [reviewSources]
+  );
   const StarsRow = ({ size = 4, rating = 5 }) => (
     <div className="flex items-center gap-1.5" aria-label={`${rating} out of 5`}>
       {Array.from({ length: 5 }).map((_, idx) => {
@@ -6761,11 +6806,7 @@ function SocialProof() {
             <div className="flex flex-wrap items-center gap-3">
               <div className="text-xl font-bold text-secondary-900">4.9 | 8500+ reviews</div>
               <div className="flex flex-wrap gap-2">
-                {[
-                  { ...reviewSources[0], label: "TripAdvisor" },
-                  { ...reviewSources[1], label: "Airbnb" },
-                  { id: "klook", label: "Klook", href: "#", iconSrc: "https://cdn.simpleicons.org/klook/FF5B00" }
-                ].map((source) => (
+                {reviewSources.map((source) => (
                   <PlatformChipLink key={source.id} source={source} />
                 ))}
               </div>
@@ -8650,9 +8691,10 @@ function FAQItem({ q, a }) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500">
-              {a}
-            </div>
+            <div
+              className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
+              dangerouslySetInnerHTML={{ __html: a }}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -8661,15 +8703,22 @@ function FAQItem({ q, a }) {
 }
 
 function FAQ() {
+  const { faqs: dynamicFaqs } = useTours();
+  const contacts = useSiteContacts();
   const [showAll, setShowAll] = useState(false);
-  const primaryFaqs = faqs.slice(0, 5);
+
+  const displayFaqs = dynamicFaqs && dynamicFaqs.length > 0
+    ? dynamicFaqs.map(f => ({ q: f.question, a: f.answer }))
+    : [];
+
+  const primaryFaqs = displayFaqs.slice(0, 5);
 
   return (
     <Section
       id="faq"
       backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
     >
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-[1280px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
           <h2 className={Q_THEME.text.h2}>
@@ -8678,13 +8727,13 @@ function FAQ() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-          {(showAll ? faqs : primaryFaqs).map((faq, i) => (
+          {(showAll ? displayFaqs : primaryFaqs).map((faq, i) => (
             <FAQItem key={i} q={faq.q} a={faq.a} />
           ))}
         </div>
 
         <div className="mt-8 flex flex-col items-center gap-6">
-          {!showAll && (
+          {!showAll && displayFaqs.length > 5 && (
             <button
               onClick={() => setShowAll(true)}
               className="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:underline"
@@ -8693,18 +8742,34 @@ function FAQ() {
             </button>
           )}
 
-          <div className="relative flex w-full flex-col items-center justify-between gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:flex-row">
-            <div className="text-center sm:text-left">
-              <div className="text-sm font-semibold text-secondary-900">Have a special request?</div>
-              <div className="mt-1 text-sm text-secondary-500">Everything else is covered above. For unusual requests, message us.</div>
+          <div className="relative flex w-full items-center gap-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
+              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
             </div>
-            <button
-              onClick={() => alert("WhatsApp demo action")}
-              className="inline-flex shrink-0 items-center gap-2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800"
-            >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp us
-            </button>
+            <div className="flex-1">
+              <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-1">Ask an Expert</div>
+              <div className="text-sm text-secondary-500 mb-3">Our team is ready to help you plan the perfect trip.</div>
+              <div className="flex flex-wrap gap-4">
+                {contacts.phone?.link && (
+                  <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <Phone className="h-3.5 w-3.5 text-primary-500" />
+                    {contacts.phone.number}
+                  </a>
+                )}
+                {contacts.email && (
+                  <a href={`mailto:${contacts.email}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <Mail className="h-3.5 w-3.5 text-primary-500" />
+                    {contacts.email}
+                  </a>
+                )}
+                {contacts.whatsapp?.link && (
+                  <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -8785,16 +8850,7 @@ function BookingMini() {
         </label>
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-secondary-600">WhatsApp</span>
-          <div className="relative">
-            <MessageCircle className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-            <input
-              type="tel"
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="+62 812 3456 7890"
-              className={cn(INPUT_BASE, "pl-10 pr-3")}
-            />
-          </div>
+          <PhoneInput value={contact} onChange={setContact} />
         </label>
       </div>
       <div className="mt-4 grid gap-2">
@@ -8944,128 +9000,19 @@ function FinalCTA({
     </section>
   );
 }
-function Footer() {
-  const { selectedCurrency } = useCurrency();
-  return (
-    <footer className="border-t border-neutral-100 bg-white pt-20 pb-0 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-8 mb-24">
-          {/* Column 1: Brand/Address */}
-          <div className="flex flex-col gap-6">
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase">
-              BLUUU INC. /
-            </div>
-            <div className="space-y-4">
-              <a href="mailto:support@bluuu.tours" className="block text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                support@bluuu.tours
-              </a>
-              <div className="text-sm text-secondary-500 leading-relaxed">
-                Jl. Tukad Punggawa No.238, Serangan,<br />
-                Denpasar Selatan, Bali 80228
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-4">
-                DISCLAIMER /
-              </div>
-              <p className="text-xs leading-relaxed text-secondary-400 max-w-xs">
-                Some images on this website are digitally enhanced to illustrate potential experiences. Your actual tour may vary depending on weather and sea conditions.
-              </p>
-            </div>
-          </div>
-
-          {/* Column 2: Company */}
-          <div>
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-6">
-              COMPANY /
-            </div>
-            <ul className="space-y-4">
-              <li><a href="#tours" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Tours</a></li>
-              <li><a href="#why" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">About</a></li>
-              <li><a href="#gallery" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Gallery</a></li>
-              <li><a href="#reviews" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Reviews</a></li>
-            </ul>
-          </div>
-
-          {/* Column 3: Others */}
-          <div>
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-6">
-              OTHERS /
-            </div>
-            <ul className="space-y-4">
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Cancellation Policy</a></li>
-              <li><a href="#" className="text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">Sustainability</a></li>
-            </ul>
-          </div>
-
-          {/* Column 4: Connect */}
-          <div>
-            <div className="text-xs font-semibold tracking-widest text-secondary-400 uppercase mb-6">
-              CONNECT /
-            </div>
-            <ul className="space-y-4">
-              <li>
-                <a href="#" className="group flex items-center justify-between text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                  <span>Instagram</span>
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-transform duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                </a>
-              </li>
-              <li>
-                <a href="#" className="group flex items-center justify-between text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                  <span>WhatsApp</span>
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-transform duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                </a>
-              </li>
-              <li>
-                <a href="#" className="group flex items-center justify-between text-sm font-medium text-secondary-900 hover:text-primary-600 transition-colors">
-                  <span>YouTube</span>
-                  <ArrowRight className="h-3 w-3 opacity-0 -translate-x-2 transition-transform duration-300 group-hover:opacity-100 group-hover:translate-x-0" />
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Big Text */}
-      <div className="w-full overflow-hidden leading-[0.75] select-none pt-0 pb-0 flex justify-center mt-[-40px] pointer-events-none relative z-0">
-        <div className="text-[25vw] font-bold tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-secondary-400 via-secondary-200 to-secondary-400 opacity-10 transform scale-y-110 translate-y-[10%] animate-gradient-flow">
-          BLUUU
-        </div>
-      </div>
-
-      <div className="border-t border-neutral-100 py-6 bg-white relative z-10">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8 flex flex-col items-center justify-between md:flex-row gap-4">
-          <span className="text-xs text-secondary-400">© 2026 Bluuu Inc. All rights reserved.</span>
-          <button onClick={() => window.dispatchEvent(new CustomEvent("open-settings"))} className="flex items-center gap-2 text-xs font-semibold text-secondary-900 transition hover:text-primary-600">
-            <Globe className="h-3 w-3" />
-            {selectedCurrency?.toUpperCase()}
-          </button>
-        </div>
-      </div>
-    </footer>
-  );
-}
 function getBoatLength(tour) {
   if (tour.size) return tour.size;
   if (tour.length) return tour.length;
   return "";
 }
 export default function Premium_Private_With_Vibe() {
+  useSEO({
+    title: "Private Yacht Tour to Nusa Penida | Bluuu Tours",
+    description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",
+  });
   const { selectedCurrency } = useCurrency();
   const { privateTours, transfers, covers: allCovers } = useTours();
-  const { extras, routes } = useExtras();
-  const privateRoutes = useMemo(
-    () =>
-      (routes || []).filter((route) => {
-        const cls = route?.classes_id ?? route?.class_id;
-        return Number(cls) === 8;
-      }),
-    [routes]
-  );
+  const { extras, privateRoutes } = useExtras();
   const covers = useMemo(
     () =>
       (allCovers || []).filter((cover) => {
@@ -9160,6 +9107,7 @@ export default function Premium_Private_With_Vibe() {
         name: tour.name || "Private Boat",
         slug: tour.slug || "",
         priceValue: defaultPrice,
+        isPartner: !!tour.partner,
         people: tour.capacity || 1,
         lengthMeters: getBoatLength(tour),
         cover: tour.images_with_thumbs?.[0]?.thumb1 || tour.images_with_thumbs?.[0]?.original || "",
@@ -9192,7 +9140,7 @@ export default function Premium_Private_With_Vibe() {
             if (!yacht.tourId) return;
             try {
               const res = await fetch(
-                `/api/new/availability/${yacht.tourId}${queryParams}`
+                apiUrl(`availability/private/${yacht.tourId}${queryParams}`)
               );
               if (res.ok) {
                 const data = await res.json();
@@ -9307,7 +9255,7 @@ export default function Premium_Private_With_Vibe() {
     return dates;
   }, [isDateAvailable]);
   const selectedStyle = useMemo(
-    () => privateRoutes.find((style) => String(style.id) === String(selectedStyleId) || style.slug === selectedStyleId) || null,
+    () => (privateRoutes || []).find((style) => String(style.id) === String(selectedStyleId) || style.slug === selectedStyleId) || null,
     [selectedStyleId, privateRoutes]
   );
   const selectedStyleTitle = selectedStyle
@@ -9462,17 +9410,18 @@ export default function Premium_Private_With_Vibe() {
     return yachtOptions.reduce((acc, yacht) => {
       const capacityOk = totalGuests <= yacht.people;
       let availableDates = [];
-      let available = capacityOk;
+      // available = date availability only (not capacity)
+      let dateAvailable = true;
       if (dateMode === "exact") {
         if (exactDate) {
-          available = capacityOk && isDateAvailable(yacht.id, exactDate);
+          dateAvailable = isDateAvailable(yacht.id, exactDate);
         }
       } else if (rangeStart && rangeEnd) {
         availableDates = getAvailableDates(yacht.id, rangeStart, rangeEnd);
-        available = capacityOk && availableDates.length > 0;
+        dateAvailable = availableDates.length > 0;
       }
       acc[yacht.id] = {
-        available,
+        available: dateAvailable,
         capacityOk,
         availableDates,
         nextAvailable: availableDates[0] ?? null,
@@ -9489,7 +9438,7 @@ export default function Premium_Private_With_Vibe() {
       date: dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart || ""),
       adults: String(adults),
       kids: String(kids),
-      boat: selectedYacht?.id ?? "",
+      boat: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
       style: selectedStyleId ?? "",
       restaurantId: String(selectedStyle?.restaurant_id ?? ""),
       payMode,
@@ -9620,7 +9569,7 @@ export default function Premium_Private_With_Vibe() {
   }, [selectedCoverId, covers]);
   useEffect(() => {
     if (!selectedStyleId) return;
-    if (!privateRoutes.some((style) => String(style.id) === String(selectedStyleId) || style.slug === selectedStyleId)) {
+    if (!(privateRoutes || []).some((style) => String(style.id) === String(selectedStyleId) || style.slug === selectedStyleId)) {
       setSelectedStyleId(null);
     }
   }, [selectedStyleId, privateRoutes]);
@@ -9701,6 +9650,7 @@ export default function Premium_Private_With_Vibe() {
       </div>
     );
   };
+  const { activePolicyKey: globalPolicyKey, activePolicy: globalPolicy, closePolicy: closeGlobalPolicy } = usePolicyModal();
   return (
     <>
       <CurrencyBridge />
@@ -9709,7 +9659,7 @@ export default function Premium_Private_With_Vibe() {
       >
         <Navbar
           variant="fullbar"
-          links={SECTIONS.filter(s => !["why", "compare", "faq", "book"].includes(s.id)).map(s => ({ id: s.id, label: s.label, href: `#${s.id}` }))}
+          links={PRIVATE_STATIC_NAV_LINKS}
           cta={{ label: "Check availability", href: "#booking" }}
         />
         <Hero />
@@ -9828,7 +9778,7 @@ export default function Premium_Private_With_Vibe() {
                         closeSelectionModal();
                       }
                     }}
-                    className="w-full rounded-xl border-0 shadow-none"
+                    inline
                   />
                 ) : (
                   <CustomDatePicker
@@ -9847,12 +9797,11 @@ export default function Premium_Private_With_Vibe() {
                       if (range?.to) {
                         const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                         setRangeEnd(toIso);
-                        // Close on end selection? Maybe let user close manually or confirm
                       } else {
                         setRangeEnd("");
                       }
                     }}
-                    className="w-full rounded-xl border-0 shadow-none"
+                    inline
                   />
                 )}
                 <div className="mt-4 flex justify-end">
@@ -9912,6 +9861,57 @@ export default function Premium_Private_With_Vibe() {
           </div>
           {renderInlineDateHint(stepExtrasInlineHint)}
         </div>
+        <PremiumSection backgroundClassName={SECTION_BACKGROUNDS.white}>
+          <PremiumContainer>
+            <div className="rounded-xl border border-neutral-200 bg-white p-6">
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div>
+                  <div className="text-lg font-semibold text-secondary-900">Why Bluuu</div>
+                  <ul className="mt-3 space-y-2 text-sm leading-6 text-secondary-600">
+                    {[
+                      "Direct operator own boats",
+                      "Safety-first routing policy",
+                      "Check-in at Bluuu lounge at Serangan Harbor",
+                      "WhatsApp support before and after booking",
+                      "Transparent total before confirming",
+                    ].map((item) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <Check className="mt-1 h-4 w-4 text-primary-600" />
+                        <span className="max-w-[34ch]">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <div className="text-lg font-semibold text-secondary-900">Included in your tour</div>
+                  <div className="mt-3 grid gap-2 text-sm leading-6 text-secondary-600">
+                    {TRUST_INCLUDED_SHORT.map((item) => (
+                      <div key={item} className="flex items-start gap-2">
+                        <Check className="mt-1 h-4 w-4 text-primary-600" />
+                        <span className="max-w-[34ch]">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openTourInfo("included")}
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700"
+                  >
+                    View all included
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </PremiumContainer>
+        </PremiumSection>
+        <PremiumSection backgroundClassName={SECTION_BACKGROUNDS.white}>
+          <PremiumContainer>
+            <div className="rounded-xl border border-neutral-200 bg-white p-6">
+              <div className="elfsight-app-dc207859-e523-4551-bf17-1b6df3428bae" data-elfsight-app-lazy></div>
+            </div>
+          </PremiumContainer>
+        </PremiumSection>
         <div className="relative">
           <div className={cn(stepFiveLocked && "pointer-events-none select-none opacity-45")}>
             <StepFive
@@ -9989,10 +9989,11 @@ export default function Premium_Private_With_Vibe() {
           {renderInlineDateHint(stepFiveInlineHint)}
         </div>
         <FAQ />
-        <Footer />
+        <PrivateStyleFooter />
 
         <div className="h-24 sm:hidden" />
       </div>
+      <PolicyModal activePolicyKey={globalPolicyKey} activePolicy={globalPolicy} onClose={closeGlobalPolicy} />
     </>
   );
 }
@@ -10045,9 +10046,7 @@ function StepCheckout({
     } else if (!validateEmail(contactEmail)) {
       newErrors.contactEmail = "Invalid email format";
     }
-    if (!contactPhone?.trim()) {
-      newErrors.contactPhone = "WhatsApp number is required";
-    } else if (!validatePhone(contactPhone)) {
+    if (contactPhone?.trim() && !validatePhone(contactPhone)) {
       newErrors.contactPhone = "Invalid phone format";
     }
 
@@ -10072,53 +10071,7 @@ function StepCheckout({
     { num: 2, label: "Payment method" },
     { num: 3, label: "Your details" },
   ];
-  const [activePolicyKey, setActivePolicyKey] = useState(null);
-  const policyContentByType = {
-    privacy: {
-      title: "Privacy Policy",
-      subtitle: "How we collect and use your contact details",
-      paragraphs: [
-        "We use your name, email, and WhatsApp number to confirm your booking, send updates, and coordinate pickup details.",
-        "Your details are used for tour operations and customer support only, and are not sold to third parties.",
-        "By completing checkout, you consent to receiving booking-related communication through email and WhatsApp.",
-      ],
-    },
-    cancellation: {
-      title: "Cancelation Policy",
-      subtitle: "Booking and refund terms",
-      paragraphs: [
-        "Cancelation terms depend on timing before departure and on whether service providers have already been confirmed.",
-        "In case of unsafe weather or sea conditions, we offer reschedule options and support according to operational policy.",
-        "Exact refund handling follows the payment method used during checkout.",
-      ],
-    },
-    liability: {
-      title: "Release from Liability",
-      subtitle: "Guest acknowledgment",
-      paragraphs: [
-        "Ocean activities include inherent risk. Guests must follow crew instructions and safety procedures throughout the trip.",
-        "Guests are responsible for sharing relevant health conditions in advance and for using provided safety equipment correctly.",
-        "By agreeing, you acknowledge these risks and confirm participation under the operator safety rules.",
-      ],
-    },
-    health: {
-      title: "Health, Safety & Sustainability Policy",
-      subtitle: "Operational standards",
-      paragraphs: [
-        "Our tours operate under safety-first routing and weather-based decision making by the captain and crew.",
-        "We maintain hygiene, equipment checks, and onboard safety briefings before water activities.",
-        "We follow responsible tourism practices to reduce environmental impact and protect local marine ecosystems.",
-      ],
-    },
-  };
-  const openPolicyModal = (type) => {
-    if (!policyContentByType[type]) return;
-    setActivePolicyKey(type);
-  };
-  const closePolicyModal = () => {
-    setActivePolicyKey(null);
-  };
-  const activePolicy = activePolicyKey ? policyContentByType[activePolicyKey] : null;
+  const { activePolicyKey, activePolicy, openPolicy: openPolicyModal, closePolicy: closePolicyModal } = usePolicyModal();
 
   return (
     <>
@@ -10306,19 +10259,13 @@ function StepCheckout({
                     {errors.contactEmail && <p className="mt-1 text-xs text-red-500">{errors.contactEmail}</p>}
                   </div>
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">WhatsApp Number*</label>
-                    <input
-                      type="tel"
-                      value={contactPhone}
-                      onChange={(e) => handleChange("contactPhone", e.target.value, onSetPhone)}
-                      placeholder="WhatsApp Number with Country Code"
-                      className={cn(
-                        "mt-1 w-full rounded-lg border bg-neutral-50 px-3 py-2.5 text-sm focus:ring-1",
-                        errors.contactPhone
-                          ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                          : "border-neutral-200 focus:border-primary-600 focus:ring-primary-600"
-                      )}
-                    />
+                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">WhatsApp Number</label>
+                    <div className="mt-1">
+                      <PhoneInput
+                        value={contactPhone}
+                        onChange={(val) => handleChange("contactPhone", val, onSetPhone)}
+                      />
+                    </div>
                     {errors.contactPhone && <p className="mt-1 text-xs text-red-500">{errors.contactPhone}</p>}
                   </div>
                 </div>
@@ -10407,42 +10354,7 @@ function StepCheckout({
           </div>
         </div>
       </Section>
-      <Modal
-        isOpen={!!activePolicy}
-        onClose={closePolicyModal}
-        maxWidth="max-w-3xl"
-        bodyClassName="p-0"
-        showClose={false}
-      >
-        {activePolicy ? (
-          <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0">
-            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-neutral-50/60 px-4 py-3 sm:px-5 sm:py-4">
-              <div className="min-w-0">
-                <div className="text-lg font-semibold text-secondary-900">{activePolicy.title}</div>
-                <div className="mt-1 text-sm text-secondary-500">{activePolicy.subtitle}</div>
-              </div>
-              <button
-                type="button"
-                onClick={closePolicyModal}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-secondary-500 transition-all hover:border-neutral-200 hover:bg-white hover:text-secondary-700"
-                aria-label="Close policy modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 text-sm leading-relaxed text-secondary-600 sm:px-5 sm:py-5">
-              <div className="space-y-3">
-                {activePolicy.paragraphs.map((paragraph, idx) => (
-                  <p key={`${activePolicyKey}-${idx}`}>{paragraph}</p>
-                ))}
-              </div>
-              <div className="mt-4 rounded-lg bg-neutral-50 p-3 text-xs text-secondary-500">
-                This policy preview is shown during checkout for quick review.
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
+      <PolicyModal activePolicyKey={activePolicyKey} activePolicy={activePolicy} onClose={closePolicyModal} />
     </>
   );
 }
@@ -10619,19 +10531,13 @@ function CheckoutModal({
               {errors.contactEmail && <p className="mt-1 text-xs text-red-500">{errors.contactEmail}</p>}
             </div>
             <div>
-              <label className="block text-sm font-bold text-secondary-900">WhatsApp Number*</label>
-              <input
-                type="tel"
-                value={contactPhone}
-                onChange={(e) => handleChange('contactPhone', e.target.value, onSetPhone)}
-                placeholder="WhatsApp Number with Country Code"
-                className={cn(
-                  "mt-1.5 w-full rounded-xl border-neutral-200 bg-neutral-50 px-4 py-3 text-sm focus:ring-1",
-                  errors.contactPhone
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                    : "focus:border-primary-600 focus:ring-primary-600"
-                )}
-              />
+              <label className="block text-sm font-bold text-secondary-900">WhatsApp Number</label>
+              <div className="mt-1.5">
+                <PhoneInput
+                  value={contactPhone}
+                  onChange={(val) => handleChange('contactPhone', val, onSetPhone)}
+                />
+              </div>
               {errors.contactPhone && <p className="mt-1 text-xs text-red-500">{errors.contactPhone}</p>}
             </div>
             <div>

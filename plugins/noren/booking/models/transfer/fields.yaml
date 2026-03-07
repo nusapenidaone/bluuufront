@@ -25,4 +25,5 @@ fields:
         label: Description
         size: large
         span: right
-        type: richeditor
+        type: codeeditor
+        language: html

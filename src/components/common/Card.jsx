@@ -8,10 +8,10 @@ const Card = ({
     ...props
 }) => {
     const variants = {
-        default: "bg-white border border-neutral-200 shadow-card",
-        glass: "bg-white/70 backdrop-blur border border-neutral-100 shadow-card",
-        muted: "bg-neutral-100 border border-neutral-100",
-        premium: "bg-primary-50 border border-primary-200 shadow-card",
+        default: "bg-white border border-neutral-200",
+        glass: "bg-white/70 backdrop-blur border border-neutral-200",
+        muted: "bg-neutral-100 border border-neutral-200",
+        premium: "bg-primary-50 border border-primary-200",
         outline: "bg-transparent border border-neutral-200"
     };
 

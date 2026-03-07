@@ -1,6 +1,6 @@
 // API client for extras and categories
 
-const API_BASE_URL = 'https://bluuu.tours/api';
+import { apiUrl } from './base';
 
 /**
  * Fetch all extras with categories and images
@@ -8,7 +8,7 @@ const API_BASE_URL = 'https://bluuu.tours/api';
  */
 export async function fetchExtras() {
     try {
-        const response = await fetch(`${API_BASE_URL}/new/extras`);
+        const response = await fetch(apiUrl('extras'));
         if (!response.ok) {
             throw new Error(`Failed to fetch extras: ${response.statusText}`);
         }
@@ -25,7 +25,7 @@ export async function fetchExtras() {
  */
 export async function fetchExtraCategories() {
     try {
-        const response = await fetch(`${API_BASE_URL}/new/extras-categories`);
+        const response = await fetch(apiUrl('extras-categories'));
         if (!response.ok) {
             throw new Error(`Failed to fetch extra categories: ${response.statusText}`);
         }
@@ -43,7 +43,7 @@ export async function fetchExtraCategories() {
  */
 export async function fetchRestaurants() {
     try {
-        const response = await fetch(`${API_BASE_URL}/new/restaurants`);
+        const response = await fetch(apiUrl('restaurants'));
         if (!response.ok) return [];
         return await response.json();
     } catch (error) {
@@ -54,7 +54,7 @@ export async function fetchRestaurants() {
 
 export async function fetchRestaurant(id) {
     try {
-        const response = await fetch(`${API_BASE_URL}/new/restaurants/${id}`);
+        const response = await fetch(apiUrl(`restaurants/${id}`));
         if (!response.ok) return null;
         return await response.json();
     } catch (error) {
@@ -69,13 +69,39 @@ export async function fetchRestaurant(id) {
  */
 export async function fetchRoutes() {
     try {
-        const response = await fetch(`${API_BASE_URL}/new/routes`);
+        const response = await fetch(apiUrl('routes'));
         if (!response.ok) {
             throw new Error(`Failed to fetch routes: ${response.statusText}`);
         }
         return await response.json();
     } catch (error) {
         console.error('Error fetching routes:', error);
+        return [];
+    }
+}
+
+export async function fetchPrivateRoutes() {
+    try {
+        const response = await fetch(apiUrl('routes/private'));
+        if (!response.ok) {
+            throw new Error(`Failed to fetch private routes: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching private routes:', error);
+        return [];
+    }
+}
+
+export async function fetchSharedRoutes() {
+    try {
+        const response = await fetch(apiUrl('routes/shared'));
+        if (!response.ok) {
+            throw new Error(`Failed to fetch shared routes: ${response.statusText}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching shared routes:', error);
         return [];
     }
 }

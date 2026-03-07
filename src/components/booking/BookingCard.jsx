@@ -146,7 +146,12 @@ export default function BookingCard({
                         <Users className="h-3.5 w-3.5 text-secondary-500" /> Small group (max 13)
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2 py-1">
-                        <BadgeCheck className="h-3.5 w-3.5 text-secondary-500" /> Instant confirmation
+                        {selectedYacht?.isPartner ? (
+                            <Clock className="h-4 w-4 text-amber-500" />
+                        ) : (
+                            <BadgeCheck className="h-4 w-4 text-emerald-500" />
+                        )}
+                        {selectedYacht?.isPartner ? "On Request" : "Instant confirmation"}
                     </span>
                 </div>
 

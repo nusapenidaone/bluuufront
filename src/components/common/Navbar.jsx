@@ -35,7 +35,20 @@ const Navbar = ({
                         />
                     </div>
 
-                    {/* Spacer/Links removed */}
+                    {/* Nav links */}
+                    {links.length > 0 && (
+                        <div className="hidden items-center gap-1 lg:flex">
+                            {links.map((link) => (
+                                <a
+                                    key={link.id ?? link.href ?? link.label}
+                                    href={link.href ?? `#${link.id}`}
+                                    className="rounded-full px-3 py-2 text-sm font-semibold text-secondary-600 transition hover:bg-neutral-100 hover:text-secondary-900"
+                                >
+                                    {link.label}
+                                </a>
+                            ))}
+                        </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">

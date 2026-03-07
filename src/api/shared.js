@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://bluuu.tours/api/new';
+import { apiUrl } from './base';
 
 /**
  * Shared fetch utility with retry logic
@@ -24,16 +24,26 @@ export async function fetchWithRetry(url, options = {}, retries = 3, backoff = 1
 }
 
 export async function fetchSharedTours() {
-    const res = await fetchWithRetry(`${API_BASE_URL}/tours`);
+    const res = await fetchWithRetry(apiUrl('tours/shared'));
     return await res.json();
 }
 
 export async function fetchTransfers() {
-    const res = await fetchWithRetry(`${API_BASE_URL}/transfers`);
+    const res = await fetchWithRetry(apiUrl('transfers'));
     return await res.json();
 }
 
 export async function fetchCovers() {
-    const res = await fetchWithRetry(`${API_BASE_URL}/covers`);
+    const res = await fetchWithRetry(apiUrl('covers'));
+    return await res.json();
+}
+
+export async function fetchFaq() {
+    const res = await fetchWithRetry(apiUrl('faq'));
+    return await res.json();
+}
+
+export async function fetchGallery() {
+    const res = await fetchWithRetry(apiUrl('gallery'));
     return await res.json();
 }

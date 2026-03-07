@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { apiUrl } from "../../api/base";
 
 // Global formatter bridge
 let _globalFormatPrice = (val, opts) => `IDR ${Number(val).toLocaleString()}`;
@@ -69,31 +70,53 @@ export function calculateBoatPrice(tourId, date, membersCount, privateTours) {
     if (!tourId || !privateTours?.length) return null;
     const tour = privateTours.find((t) => Number(t.id) === Number(tourId));
     if (!tour) return null;
-    let pricelist = tour.packages?.pricelist || [];
+
+    // Robust date comparison: convert date object to YYYY-MM-DD string
+    let dateStr = date;
+    if (date instanceof Date) {
+        dateStr = date.toISOString().split('T')[0];
+    } else if (date && typeof date === 'object' && date.startDate) {
+        dateStr = new Date(date.startDate).toISOString().split('T')[0];
+    }
+
+    // Flexibility for 'package' vs 'packages'
+    let pricelist = tour.packages?.pricelist || tour.package?.pricelist || tour.pricelist || [];
     let boatPriceToAdd = Number(tour.boat_price) || 0;
-    if (date && tour.pricesbydates?.length) {
+
+    // Check for date-specific pricing
+    if (dateStr && tour.pricesbydates?.length) {
         const specificPricing = tour.pricesbydates.find((p) => {
             const start = p.date_start;
             const end = p.date_end;
-            return date >= start && date <= end;
+            return dateStr >= start && dateStr <= end;
         });
         if (specificPricing) {
-            if (specificPricing.packages?.pricelist) {
-                pricelist = specificPricing.packages.pricelist;
+            const pkg = specificPricing.packages || specificPricing.package;
+            if (pkg?.pricelist) {
+                pricelist = pkg.pricelist;
             }
             if (specificPricing.boat_price !== undefined && specificPricing.boat_price !== null) {
                 boatPriceToAdd = Number(specificPricing.boat_price);
             }
         }
     }
+
     if (!pricelist.length) return null;
+
+    // Find price for membersCount
     const countStr = String(membersCount);
     let priceEntry = pricelist.find((p) => String(p.members_count) === countStr);
+
+    // Fallback: if not found, use the closest one or the highest one
     if (!priceEntry) {
         const sorted = [...pricelist].sort((a, b) => Number(a.members_count) - Number(b.members_count));
         priceEntry = sorted.reverse().find((p) => Number(p.members_count) <= membersCount) || sorted[0];
     }
-    return priceEntry ? Number(priceEntry.price) + boatPriceToAdd : null;
+
+    // Shared tours (classes_id 9 or 10)
+    const isShared = Number(tour.classes_id) === 9 || Number(tour.classes_id) === 10;
+
+    return priceEntry ? Number(priceEntry.price) + (isShared ? 0 : boatPriceToAdd) : null;
 }
 
 export function useBoatPricing(tourId, date, membersCount, privateTours) {
@@ -113,7 +136,7 @@ export function usePricing(date, initialPrice = 0) {
         const load = async () => {
             setState((prev) => ({ ...prev, loading: true }));
             try {
-                const res = await fetch(`https://bluuu.tours/api/new/pricing?date=${date}`, { signal: controller.signal });
+                const res = await fetch(apiUrl(`pricing?date=${date}`), { signal: controller.signal });
                 if (!res.ok) throw new Error("pricing fetch failed");
                 const data = await res.json();
                 if (!active) return;

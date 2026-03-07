@@ -1,0 +1,26 @@
+fields:
+    payment:
+        label: Payment Policy
+        type: richeditor
+        size: large
+        span: full
+    return:
+        label: Cancelation Policy
+        type: richeditor
+        size: large
+        span: full
+    privacy:
+        label: Privacy Policy
+        type: richeditor
+        size: large
+        span: full
+    health:
+        label: Health & Safety Procedures
+        type: richeditor
+        size: large
+        span: full
+    release:
+        label: Release from Liability
+        type: richeditor
+        size: large
+        span: full

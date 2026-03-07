@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { apiUrl } from "./api/base";
 import {
   ArrowLeft,
   Calendar,
@@ -146,7 +147,7 @@ export default function Checkout() {
       const headers = { "Content-Type": "application/json" };
       if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
 
-      const res = await fetch("/api/new/order/shared", {
+      const res = await fetch(apiUrl("order/shared"), {
         method: "POST",
         headers,
         credentials: "include",

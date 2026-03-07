@@ -74,11 +74,17 @@ class SharedOrderController extends Controller
      */
     public function createOrder(Request $request)
     {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
         // CSRF check (same as OrderController)
         // TODO: re-enable before production
         // if (Session::token() != $request->header('X-CSRF-TOKEN')) {
         //     return response('Unauthorized.', 401);
         // }
+
+        try {
 
         $data = $request->all();
 
@@ -193,5 +199,10 @@ class SharedOrderController extends Controller
         }
 
         return response()->json($url);
+
+        } catch (\Throwable $e) {
+            \Log::error('SharedOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

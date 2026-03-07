@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { apiUrl } from "./api/base";
 
 export default function PricingAdmin() {
   const [loading, setLoading] = useState(true);
@@ -14,7 +15,7 @@ export default function PricingAdmin() {
     setError("");
     setStatus("");
     try {
-      const res = await fetch("/api/new/pricing?all=1");
+      const res = await fetch(apiUrl("pricing?all=1"));
       if (!res.ok) throw new Error("Failed to load pricing");
       const data = await res.json();
       setDefaultPrice(Number(data?.defaultPrice) || 110);
@@ -90,7 +91,7 @@ export default function PricingAdmin() {
     };
 
     try {
-      const res = await fetch("/api/new/pricing", {
+      const res = await fetch(apiUrl("pricing"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

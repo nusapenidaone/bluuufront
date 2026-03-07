@@ -1,175 +1,5 @@
 {
-  "brand": {
-    "name": "Bluuu",
-    "product": "Nusa Penida private boat tour",
-    "reviewCount": "8,595",
-    "reviewLabel": "reviews",
-    "rating": "4.9",
-    "ratingLabel": "avg rating",
-    "badges": [
-      { "icon": "Star", "label": "Customer choice" },
-      { "icon": "MapPin", "label": "Private boat, your group only" },
-      { "icon": "BadgeCheck", "label": "Safety first" },
-      { "icon": "LifeBuoy", "label": "24/7 support" }
-    ],
-    "accents": {
-      "primary": "from-primary-600 to-primary-700",
-      "soft": "from-neutral-100 via-white to-neutral-50"
-    }
-  },
-  "links": {
-    "video": {
-      "url": "https://www.youtube.com/watch?v=RjWmhq1JRwc",
-      "embedUrl": "https://www.youtube.com/embed/RjWmhq1JRwc?autoplay=1&rel=0"
-    },
-    "reviews": [
-      { "label": "Klook", "href": "https://www.klook.com/en-US/activity/100799-nusa-penida-private-boat-tour/" },
-      { "label": "TripAdvisor", "href": "https://www.tripadvisor.com/AttractionProductReview-g297694-d17829580-Premium_All_Inclusive_Full_Day_Tour_from_Bali_to_Nusa_Penida-Denpasar_Bali.html" },
-      { "label": "Google Maps", "href": "https://maps.app.goo.gl/28HbZV1PnfWKVoNNA" }
-    ]
-  },
-  "reviewSources": [
-    {
-      "id": "tripadvisor",
-      "label": "TripAdvisor",
-      "href": "https://www.tripadvisor.com/AttractionProductReview-g297694-d17829580-Premium_All_Inclusive_Full_Day_Tour_from_Bali_to_Nusa_Penida-Denpasar_Bali.html"
-    },
-    {
-      "id": "airbnb",
-      "label": "Airbnb",
-      "href": "https://www.airbnb.com/experiences/2278925"
-    },
-    {
-      "id": "klook",
-      "label": "Klook",
-      "href": "https://www.klook.com/en-US/activity/100799-nusa-penida-private-boat-tour/"
-    }
-  ],
-  "reviews": [
-    {
-      "id": "review-1",
-      "name": "Soanar",
-      "meta": "Jul 27, 2026 | Family",
-      "title": "A must-do Bali experience",
-      "quote": "Our guides (Nyoman, Leo & crew) were fantastic - knowledgeable, experienced, and friendly. The trip was well organized, from hotel transfers to lunch stop and overland visit to Klingking Cliff."
-    },
-    {
-      "id": "review-2",
-      "name": "Jack Wilson",
-      "meta": "Feb 2, 2026 | Family",
-      "title": "Unbelievable",
-      "quote": "The snorkeling was the best experience I have had - we saw many manta rays, a few turtles, coral, and tropical fish. I felt extremely safe and confident in their capable hands."
-    },
-    {
-      "id": "review-3",
-      "name": "Michael D",
-      "meta": "Nov 9, 2025 | Friends",
-      "title": "Legends Roby and Aldo take us to the beautiful Manta Rays!",
-      "quote": "We saw so many Manta Rays, turtles, all sorts of fish and topped it off with some music and champagne at the end. Highly recommend a trip with them and ask for Roby and Aldo if you get the chance."
-    },
-    {
-      "id": "review-4",
-      "name": "Charlotte L",
-      "meta": "Sep 15, 2025 | Couple",
-      "title": "Incredible day with the crew",
-      "quote": "From start to finish everything was seamless. The boat was clean, lunch was great and we saw everything we wanted to see. The crew were so helpful with photos too!"
-    },
-    {
-      "id": "review-5",
-      "name": "Linda L",
-      "meta": "Apr 6, 2025 | Solo",
-      "title": "A wonderful day!",
-      "quote": "I felt well taken care of by the guides Olog and Gede. The tour is well organized with just the right amount of time at each stop."
-    }
-  ],
-  "trustIncludedShort": [
-    "Private boat",
-    "Certified guides",
-    "Snorkeling equipment",
-    "All entrance tickets",
-    "Lunch",
-    "Health insurance"
-  ],
-  "trustIncluded": [
-    { "icon": "Ship", "label": "Private boat", "helper": "Your group only, no shared seats." },
-    { "icon": "BadgeCheck", "label": "Certified guides", "helper": "Experienced crew on every tour." },
-    { "icon": "Fish", "label": "Snorkeling equipment", "helper": "Masks, fins, and safety gear." },
-    { "icon": "Coffee", "label": "Drinking water", "helper": "Cold bottled water onboard." },
-    { "icon": "Waves", "label": "Towels", "helper": "Fresh towels for each guest." },
-    { "icon": "UtensilsCrossed", "label": "Lunch", "helper": "Lunch served at La Rossa." },
-    { "icon": "Ticket", "label": "All entrance tickets", "helper": "No extra fees on the day." },
-    { "icon": "Shield", "label": "Health insurance", "helper": "Coverage for on-trip activities." }
-  ],
-  "bookingSteps": [
-    { "title": "Choose your boat", "subline": "Pick the yacht that fits your group and budget." },
-    { "title": "Pick date + group size", "subline": "See the total price instantly." },
-    { "title": "Pay securely in 60 seconds", "subline": "Card checkout with instant confirmation." },
-    { "title": "Get pickup details", "subline": "We send the closest stop and a short time window." }
-  ],
-  "styleRecommendations": {
-    "classic": ["Photographer", "GoPro rental", "Private transfer", "Underwater photo", "Extra towels", "Snack box"],
-    "relaxed_scenic": ["Floating breakfast", "Photographer", "Private transfer", "Snack box", "Extra towels", "Decorations"],
-    "manta_first": ["Pro photographer", "GoPro rental", "Wetsuit", "Underwater photo", "Extra snorkel guide", "Private transfer"],
-    "snorkel_focused": ["Underwater photo", "Extra snorkel guide", "Towel kit", "GoPro rental", "Wetsuit", "Private transfer"],
-    "celebration": ["Champagne setup", "Decorations", "Photographer", "Drone", "Private transfer", "Snack box"],
-    "family_easygoing": ["Private transfer", "Extra towels", "Snack box", "Towel kit", "GoPro rental", "Wetsuit"]
-  },
-  "extrasFilters": [
-    { "id": "all", "label": "All" },
-    { "id": "kids", "label": "For kids" },
-    { "id": "diving", "label": "Diving" },
-    { "id": "watersport", "label": "Watersport" },
-    { "id": "chill", "label": "Chill" },
-    { "id": "birthday", "label": "Birthday" }
-  ],
-  "extrasCategoryByVibe": {
-    "kids": "kids",
-    "diving": "diving",
-    "watersport": "watersport",
-    "chill": "chill",
-    "birthday": "birthday"
-  },
-  "infoDrawerTabs": [
-    { "id": "included", "label": "Included" },
-    { "id": "pickup", "label": "Pickup" },
-    { "id": "reviews", "label": "Reviews" },
-    { "id": "safety", "label": "Safety" },
-    { "id": "cancellation", "label": "Cancelation" },
-    { "id": "weather", "label": "Weather guarantee" },
-    { "id": "faq", "label": "FAQ" }
-  ],
-  "sections": [
-    { "id": "yachts", "label": "Choose boat" },
-    { "id": "plan", "label": "Day plan" },
-    { "id": "social", "label": "Reviews" },
-    { "id": "included", "label": "Included" },
-    { "id": "extras", "label": "Add extras" },
-    { "id": "compare", "label": "Compare" },
-    { "id": "faq", "label": "FAQ" },
-    { "id": "booking", "label": "Book" }
-  ],
-  "faqs": [
-    { "q": "How does booking work?", "a": "Pick a date, choose your group size, pay securely, and get instant confirmation plus pickup details. No need to message us unless you have a special request." },
-    { "q": "Is the price all-inclusive?", "a": "Yes, taxes, tickets, and lunch are included. Optional upgrades (like private transfer) are clearly marked." },
-    { "q": "Can I book now and change the date later?", "a": "Yes. You can change your tour date anytime up to 24 hours before your tour." },
-    { "q": "When will I get my pickup time?", "a": "After booking, we send your closest pickup stop and a short time window based on your area." },
-    { "q": "What if the weather changes?", "a": "If we cancel due to unsafe sea conditions, you can reschedule or receive a full refund. Light rain may not affect the tour." },
-    { "q": "Can I cancel?", "a": "Yes. Cancel up to 24 hours in advance for a full refund." },
-    { "q": "Will I definitely see manta rays?", "a": "Manta encounters depend on ocean conditions and wildlife activity. We plan the stop when conditions allow." },
-    { "q": "Do I need to be a strong swimmer?", "a": "You should be comfortable in the water. We provide snorkeling gear and guidance; flotation options are available upon request." },
-    { "q": "Is the tour suitable for kids?", "a": "Private tours are perfect for families with children of all ages — you set the pace." },
-    { "q": "What should I bring?", "a": "Swimwear, sunscreen, a light cover-up, and a phone/camera. We provide towels and post-tour facilities." },
-    { "q": "Where is the meeting point?", "a": "Serangan Harbor (Bluuu lounge). We confirm pickup point and exact timing after booking." },
-    { "q": "Do you provide pickup?", "a": "Yes, private transfer from anywhere in Bali is available as an add-on." }
-  ],
   "tourInfo": {
-    "highlights": [
-      "All tickets included",
-      "Insurance included",
-      "Lunch + towels",
-      "Flexible start time",
-      "Private boat — your group only"
-    ],
     "policyItems": [
       "It is possible to cancel a reservation and receive a full refund, provided that the cancellation occurs at least 24 hours prior to the scheduled start time of the experience.",
       "The Cars Transportation service is non-refundable if guests have already utilized it and the tour is canceled due to inclement weather conditions.",
@@ -212,70 +42,88 @@
       }
     ],
     "weatherGuarantee": [
-      { "icon": "Calendar", "title": "Free reschedule", "text": "Move your trip to the next available safe date with no additional fee." },
-      { "icon": "CheckCircle2", "title": "Full refund option", "text": "Choose a full refund if you prefer not to reschedule." },
-      { "icon": "MessageCircle", "title": "Fast notification", "text": "We contact you quickly on WhatsApp when weather affects operations." }
+      {
+        "icon": "Calendar",
+        "title": "Free reschedule",
+        "text": "Move your trip to the next available safe date with no additional fee."
+      },
+      {
+        "icon": "CheckCircle2",
+        "title": "Full refund option",
+        "text": "Choose a full refund if you prefer not to reschedule."
+      },
+      {
+        "icon": "MessageCircle",
+        "title": "Fast notification",
+        "text": "We contact you quickly on WhatsApp when weather affects operations."
+      }
     ],
     "includedSections": [
       {
         "title": "Essentials",
         "items": [
-          { "icon": "Ship", "label": "Private boat", "helper": "Your group only, no shared seats." },
-          { "icon": "BadgeCheck", "label": "Certified guides", "helper": "Experienced crew on every tour." },
-          { "icon": "Fish", "label": "Snorkeling equipment", "helper": "Masks, fins, and safety gear." },
-          { "icon": "Coffee", "label": "Drinking water", "helper": "Cold bottled water onboard." }
+          {
+            "icon": "Ship",
+            "label": "Private boat",
+            "helper": "Your group only, no shared seats."
+          },
+          {
+            "icon": "BadgeCheck",
+            "label": "Certified guides",
+            "helper": "Experienced crew on every tour."
+          },
+          {
+            "icon": "Fish",
+            "label": "Snorkeling equipment",
+            "helper": "Masks, fins, and safety gear."
+          },
+          {
+            "icon": "Coffee",
+            "label": "Drinking water",
+            "helper": "Cold bottled water onboard."
+          }
         ]
       },
       {
         "title": "Comfort",
         "items": [
-          { "icon": "Waves", "label": "Towels", "helper": "Fresh towels for each guest." },
-          { "icon": "UtensilsCrossed", "label": "Lunch", "helper": "Lunch served at La Rossa." }
+          {
+            "icon": "Waves",
+            "label": "Towels",
+            "helper": "Fresh towels for each guest."
+          },
+          {
+            "icon": "UtensilsCrossed",
+            "label": "Lunch",
+            "helper": "Lunch served at La Rossa."
+          }
         ]
       },
       {
         "title": "Tickets & coverage",
         "items": [
-          { "icon": "Ticket", "label": "All entrance tickets", "helper": "No extra fees on the day." },
-          { "icon": "Shield", "label": "Health insurance", "helper": "Coverage for on-trip activities." }
+          {
+            "icon": "Ticket",
+            "label": "All entrance tickets",
+            "helper": "No extra fees on the day."
+          },
+          {
+            "icon": "Shield",
+            "label": "Health insurance",
+            "helper": "Coverage for on-trip activities."
+          }
         ]
       },
       {
         "title": "Media",
         "items": [
-          { "icon": "Camera", "label": "Underwater GoPro footage", "helper": "Crew captures your highlights." }
+          {
+            "icon": "Camera",
+            "label": "Underwater GoPro footage",
+            "helper": "Crew captures your highlights."
+          }
         ]
       }
-    ],
-    "pickupSections": [
-      {
-        "title": "Essentials",
-        "items": [
-          { "icon": "Car", "label": "Private vehicle", "helper": "Dedicated car for your group." },
-          { "icon": "Clock", "label": "Timed pickup", "helper": "Aligned with your boat schedule." },
-          { "icon": "MessageCircle", "label": "Meeting point", "helper": "Confirmed on WhatsApp." }
-        ]
-      },
-      {
-        "title": "Coverage",
-        "items": [
-          { "icon": "MapPin", "label": "Across Bali", "helper": "We confirm feasibility after booking." },
-          { "icon": "Shield", "label": "Traffic buffer", "helper": "We plan extra time for boarding." }
-        ]
-      },
-      {
-        "title": "Options",
-        "items": [
-          { "icon": "ArrowRight", "label": "Round trip", "helper": "Pickup + drop-off available." },
-          { "icon": "Users", "label": "Large groups", "helper": "Minivan can be arranged." }
-        ]
-      }
-    ],
-    "tabs": [
-      { "id": "included", "label": "Included" },
-      { "id": "pickup", "label": "Transfer" },
-      { "id": "reviews", "label": "Reviews" },
-      { "id": "policies", "label": "Policies" }
     ]
   }
 }
