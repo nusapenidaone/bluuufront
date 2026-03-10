@@ -7,6 +7,7 @@ import { useExtras } from "./contexts/ExtrasContext";
 import { useRules } from "./contexts/RulesContext";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
+import { buildTourAnalyticsItem, trackAddToCart } from "./lib/analytics";
 import { CoversCompact } from "./components/booking/TransferCoverPanels";
 import {
   formatIDR,
@@ -681,7 +682,27 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
       setPartnerModalOpen(true);
       return;
     }
+    const analyticsCurrency = selectedYacht?.priceValue ? "IDR" : "USD";
+    const analyticsTotal = price + extrasTotal;
+    trackAddToCart({
+      value: analyticsTotal,
+      currency: analyticsCurrency,
+      items: [
+        buildTourAnalyticsItem({
+          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+          itemName: selectedYacht?.name || "Private Tour",
+          itemCategory: "Private Tour",
+          price: analyticsTotal,
+          currency: analyticsCurrency,
+        }),
+      ],
+    });
     const params = new URLSearchParams({ date, adults: String(adults), kids: String(kids) });
+    params.set("tourId", String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""));
+    params.set("tourName", selectedYacht?.name || "Private Tour");
+    params.set("tourCategory", "Private Tour");
+    params.set("analyticsCurrency", analyticsCurrency);
+    params.set("analyticsTotal", String(analyticsTotal));
     if (safeCartItems.length) {
       params.set(
         "extras",
@@ -9095,6 +9116,22 @@ export default function Premium_Private_With_Vibe() {
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
+  const handleOpenCheckout = () => {
+    trackAddToCart({
+      value: totalPrice,
+      currency: "IDR",
+      items: [
+        buildTourAnalyticsItem({
+          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+          itemName: selectedYacht?.name || "Private Tour",
+          itemCategory: "Private Tour",
+          price: totalPrice,
+        }),
+      ],
+    });
+    setIsCheckoutOpen(true);
+    setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  };
 
   const handleApplyCheckout = () => {
     const params = new URLSearchParams({
@@ -9102,6 +9139,9 @@ export default function Premium_Private_With_Vibe() {
       adults: String(adults),
       kids: String(kids),
       boat: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
+      tourId: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
+      tourName: selectedYacht?.name ?? "Private Tour",
+      tourCategory: "Private Tour",
       style: selectedStyleId ?? "",
       restaurantId: String(selectedStyle?.restaurant_id ?? ""),
       payMode,
@@ -9112,6 +9152,8 @@ export default function Premium_Private_With_Vibe() {
       requests: specialRequests,
       boatPrice: String(mainBasePrice ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
+      analyticsCurrency: "IDR",
+      analyticsTotal: String(totalPrice),
     });
     if (selectedExtrasSummary.length) {
       params.set("extras", JSON.stringify(selectedExtrasSummary.map(i => ({
@@ -9558,10 +9600,7 @@ export default function Premium_Private_With_Vibe() {
               availabilityMap={availabilityMap}
               selectedBoatId={selectedBoatId}
               onOpenManageExtras={() => setIsManageExtrasOpen(true)}
-              onReserve={() => {
-                setIsCheckoutOpen(true);
-                setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-              }}
+              onReserve={handleOpenCheckout}
             />
             <AnimatePresence>
               {isCheckoutOpen && (

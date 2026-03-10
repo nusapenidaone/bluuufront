@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
+import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout } from "./lib/analytics";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -97,6 +98,28 @@ export default function Payment() {
   // Total without discount = all price components summed
   const fullTotal = boatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
   const depositAmount = Math.round((fullTotal * deposite) / 100);
+  const analyticsCurrency = params.get("analyticsCurrency") || "IDR";
+  const analyticsTotal = parseFloat(params.get("analyticsTotal") || String(fullTotal));
+  const analyticsItemId = params.get("tourId") || boatId || `${tourType}-tour`;
+  const analyticsItemName = params.get("tourName") || (tourType === "shared" ? "Shared Tour" : "Private Tour");
+  const analyticsItemCategory = params.get("tourCategory") || (tourType === "shared" ? "Shared Tour" : "Private Tour");
+
+  useEffect(() => {
+    trackBeginCheckout({
+      value: analyticsTotal,
+      currency: analyticsCurrency,
+      items: [
+        buildTourAnalyticsItem({
+          itemId: analyticsItemId,
+          itemName: analyticsItemName,
+          itemCategory: analyticsItemCategory,
+          price: analyticsTotal,
+          currency: analyticsCurrency,
+        }),
+      ],
+      dedupeKey: `ga4:begin_checkout:${window.location.pathname}:${window.location.search}`,
+    });
+  }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -160,7 +183,7 @@ export default function Payment() {
       pickupAddress: null,
       dropoffAddress: null,
 
-      ga_client_id: null,
+      ga_client_id: getGaClientId(),
       leadId: null,
     };
 

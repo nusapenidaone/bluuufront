@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
+import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout } from "./lib/analytics";
 import {
   ArrowLeft,
   Calendar,
@@ -73,6 +74,28 @@ export default function Checkout() {
   const totalGuests = adults + kids;
   const tourPrice = pricePerPerson * totalGuests;
   const fullTotal = tourPrice + extrasTotal + pickupPrice;
+  const analyticsCurrency = params.get("analyticsCurrency") || "IDR";
+  const analyticsTotal = parseFloat(params.get("analyticsTotal") || String(fullTotal));
+  const analyticsItemId = params.get("tourId") || tourId || "shared-tour";
+  const analyticsItemName = params.get("tourName") || "Shared Tour";
+  const analyticsItemCategory = params.get("tourCategory") || "Shared Tour";
+
+  useEffect(() => {
+    trackBeginCheckout({
+      value: analyticsTotal,
+      currency: analyticsCurrency,
+      items: [
+        buildTourAnalyticsItem({
+          itemId: analyticsItemId,
+          itemName: analyticsItemName,
+          itemCategory: analyticsItemCategory,
+          price: analyticsTotal,
+          currency: analyticsCurrency,
+        }),
+      ],
+      dedupeKey: `ga4:begin_checkout:${window.location.pathname}:${window.location.search}`,
+    });
+  }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
 
   // ── Form state ───────────────────────────────────────────────────────────
   const [name, setName] = useState("");
@@ -141,7 +164,7 @@ export default function Checkout() {
       requests: requests.trim() || null,
       pickupAddress: null,
       dropoffAddress: null,
-      ga_client_id: null,
+      ga_client_id: getGaClientId(),
       leadId: null,
     };
 

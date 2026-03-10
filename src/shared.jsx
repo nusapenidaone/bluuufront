@@ -8,6 +8,7 @@ import { useRules } from "./contexts/RulesContext";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
+import { buildTourAnalyticsItem, trackAddToCart } from "./lib/analytics";
 
 // Shared Components & Utils
 import {
@@ -387,7 +388,27 @@ function BookingCard({
   const extrasTotal = Math.round(extrasTotalUSD ?? 0);
   const onReserve = () => {
     if (reserveDisabled) return;
+    const analyticsCurrency = selectedYacht?.priceValue ? "IDR" : "USD";
+    const analyticsTotal = price + extrasTotal;
+    trackAddToCart({
+      value: analyticsTotal,
+      currency: analyticsCurrency,
+      items: [
+        buildTourAnalyticsItem({
+          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+          itemName: selectedYacht?.name || "Shared Tour",
+          itemCategory: "Shared Tour",
+          price: analyticsTotal,
+          currency: analyticsCurrency,
+        }),
+      ],
+    });
     const params = new URLSearchParams({ date, adults: String(adults), kids: String(kids) });
+    params.set("tourId", String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""));
+    params.set("tourName", selectedYacht?.name || "Shared Tour");
+    params.set("tourCategory", "Shared Tour");
+    params.set("analyticsCurrency", analyticsCurrency);
+    params.set("analyticsTotal", String(analyticsTotal));
     if (safeCartItems.length) {
       params.set(
         "extras",
@@ -8339,6 +8360,22 @@ export default function Shared_tour_01() {
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
+  const handleOpenCheckout = () => {
+    trackAddToCart({
+      value: totalPrice,
+      currency: "IDR",
+      items: [
+        buildTourAnalyticsItem({
+          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+          itemName: selectedYacht?.name || "Shared Tour",
+          itemCategory: "Shared Tour",
+          price: totalPrice,
+        }),
+      ],
+    });
+    setIsCheckoutOpen(true);
+    setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  };
 
   const handleApplyCheckout = () => {
     const params = new URLSearchParams({
@@ -8346,6 +8383,9 @@ export default function Shared_tour_01() {
       adults: String(adults),
       kids: String(kids),
       boat: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
+      tourId: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
+      tourName: selectedYacht?.name ?? "Shared Tour",
+      tourCategory: "Shared Tour",
       tourType: "shared",
       style: selectedStyleId ?? "",
       restaurantId: String(selectedStyle?.restaurant_id ?? ""),
@@ -8357,6 +8397,8 @@ export default function Shared_tour_01() {
       requests: specialRequests,
       boatPrice: String(mainBasePrice ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
+      analyticsCurrency: "IDR",
+      analyticsTotal: String(totalPrice),
     });
     if (selectedExtrasSummary.length) {
       params.set("extras", JSON.stringify(selectedExtrasSummary.map(i => ({
@@ -8998,10 +9040,7 @@ export default function Shared_tour_01() {
               }}
               selectedBoatId={selectedBoatId}
               onOpenManageExtras={() => setIsManageExtrasOpen(true)}
-              onReserve={() => {
-                setIsCheckoutOpen(true);
-                setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
-              }}
+              onReserve={handleOpenCheckout}
             />
             <AnimatePresence>
               {isCheckoutOpen && (
@@ -9673,4 +9712,3 @@ function CheckoutModal({
     </Modal>
   );
 }
-
