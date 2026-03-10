@@ -1,0 +1,104 @@
+fields:
+    # status:
+    #     label: Status
+    #     span: auto
+    #     default: 1
+    #     type: switch
+    selected:
+        label: Selected
+        span: auto
+        default: 0
+        type: switch
+    popular:
+        label: Popular
+        span: auto
+        default: 1
+        type: switch
+    title:
+        label: Title
+        span: auto
+        type: text
+    slug:
+        label: Slug
+        span: auto
+        preset:
+            field: title
+            type: slug
+        type: text
+    tourspage:
+        label: Tour
+        nameFrom: title
+        descriptionFrom: description
+        span: auto
+        type: relation
+
+        
+    parent:
+        label: Parent
+        nameFrom: title
+        descriptionFrom: description
+        span: auto
+        type: relation
+        emptyOption: --
+    price:
+        label: Price
+        span: auto
+        type: number
+    link:
+        label: Link
+        span: auto
+        type: text
+    description:
+        label: Description
+        size: small
+        span: full
+        type: textarea
+
+        
+    props:
+        label: Props
+        prompt: 'Add Props'
+        displayMode: accordion
+        span: full
+        type: repeater
+        form:
+            fields:
+                icon:
+                    label: Icon
+                    mode: image
+                    imageWidth: '100'
+                    imageHeight: '100'
+                    thumbOptions:
+                        mode: crop
+                        extension: auto
+                    span: auto
+                    type: mediafinder
+                text:
+                    label: Text
+                    span: auto
+                    type: text
+                    
+    details:
+        label: Details
+        prompt: 'Add Details'
+        displayMode: accordion
+        span: full
+        type: repeater
+        form:
+            fields:
+                text:
+                    label: Text
+                    span: full
+                    type: textarea
+                    size: small
+    images:
+        label: Images
+        mode: image
+        imageWidth: '100'
+        imageHeight: '100'
+        useCaption: true
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: full
+        type: fileupload

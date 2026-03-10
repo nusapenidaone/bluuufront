@@ -28,76 +28,8 @@
   "links": {
     "video": {
       "embedUrl": "https://www.youtube.com/embed/RjWmhq1JRwc?autoplay=1&rel=0"
-    },
-    "reviews": [
-      {
-        "label": "Klook",
-        "href": "https://www.klook.com/en-US/activity/100799-nusa-penida-private-boat-tour/"
-      },
-      {
-        "label": "TripAdvisor",
-        "href": "https://www.tripadvisor.com/AttractionProductReview-g297694-d17829580-Premium_All_Inclusive_Full_Day_Tour_from_Bali_to_Nusa_Penida-Denpasar_Bali.html"
-      },
-      {
-        "label": "Google Maps",
-        "href": "https://maps.app.goo.gl/28HbZV1PnfWKVoNNA"
-      }
-    ]
+    }
   },
-  "reviewSources": [
-    {
-      "id": "tripadvisor",
-      "label": "TripAdvisor",
-      "href": "https://www.tripadvisor.com/AttractionProductReview-g297694-d17829580-Premium_All_Inclusive_Full_Day_Tour_from_Bali_to_Nusa_Penida-Denpasar_Bali.html"
-    },
-    {
-      "id": "airbnb",
-      "label": "Airbnb",
-      "href": "https://www.airbnb.com/experiences/2278925"
-    },
-    {
-      "id": "klook",
-      "label": "Klook",
-      "href": "https://www.klook.com/en-US/activity/100799-nusa-penida-private-boat-tour/"
-    }
-  ],
-  "reviews": [
-    {
-      "id": "review-1",
-      "name": "Soanar",
-      "meta": "Jul 27, 2026 | Family",
-      "title": "A must-do Bali experience",
-      "quote": "Our guides (Nyoman, Leo & crew) were fantastic - knowledgeable, experienced, and friendly. The trip was well organized, from hotel transfers to lunch stop and overland visit to Klingking Cliff."
-    },
-    {
-      "id": "review-2",
-      "name": "Jack Wilson",
-      "meta": "Feb 2, 2026 | Family",
-      "title": "Unbelievable",
-      "quote": "The snorkeling was the best experience I have had - we saw many manta rays, a few turtles, coral, and tropical fish. I felt extremely safe and confident in their capable hands."
-    },
-    {
-      "id": "review-3",
-      "name": "Michael D",
-      "meta": "Nov 9, 2025 | Friends",
-      "title": "Legends Roby and Aldo take us to the beautiful Manta Rays!",
-      "quote": "We saw so many Manta Rays, turtles, all sorts of fish and topped it off with some music and champagne at the end. Highly recommend a trip with them and ask for Roby and Aldo if you get the chance."
-    },
-    {
-      "id": "review-4",
-      "name": "Charlotte L",
-      "meta": "Sep 15, 2025 | Couple",
-      "title": "Incredible day with the crew",
-      "quote": "From start to finish everything was seamless. The boat was clean, lunch was great and we saw everything we wanted to see. The crew were so helpful with photos too!"
-    },
-    {
-      "id": "review-5",
-      "name": "Linda L",
-      "meta": "Apr 6, 2025 | Solo",
-      "title": "A wonderful day!",
-      "quote": "I felt well taken care of by the guides Olog and Gede. The tour is well organized with just the right amount of time at each stop."
-    }
-  ],
   "trustIncludedShort": [
     "Private boat",
     "Certified guides",
@@ -106,13 +38,6 @@
     "Lunch",
     "Health insurance"
   ],
-  "extrasCategoryByVibe": {
-    "kids": "kids",
-    "diving": "diving",
-    "watersport": "watersport",
-    "chill": "chill",
-    "birthday": "birthday"
-  },
   "infoDrawerTabs": [
     {
       "id": "included",
@@ -267,7 +192,8 @@
           {
             "icon": "UtensilsCrossed",
             "label": "Lunch",
-            "helper": "Lunch served at La Rossa."
+            "helper": "Lunch served at",
+            "restaurant": { "name": "La Rossa" }
           }
         ]
       },
@@ -297,5 +223,13 @@
         ]
       }
     ]
-  }
+  },
+  "bookingMiniFAQ": [
+    { "icon": "BadgeCheck", "q": "Whats included", "a": "Premium boat, lunch, land tour, snorkel gear, tickets, photographer + Prosecco moment." },
+    { "icon": "Users", "q": "Kids?", "a": "Private tours are perfect for families with children, including younger kids." },
+    { "icon": "CloudRain", "q": "Rain?", "a": "Weather guarantee: if we cancel due to unsafe conditions, reschedule or receive a full refund." },
+    { "icon": "Clock", "q": "Start/finish time", "a": "Private tours let guests choose the start time  any time between 08:00 and 11:00. Exact timing confirmed after booking." },
+    { "icon": "Sparkles", "q": "Showers", "a": "Post-tour showers are available." },
+    { "icon": "Waves", "q": "Seasickness?", "a": "Upgraded comfort yacht for a smoother ride. If youre prone, bring motion-sickness tablets." }
+  ]
 }

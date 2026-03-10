@@ -1,0 +1,57 @@
+# config_relation.yaml
+promoslider:
+    label: Slider
+    view:
+        list: $/noren/bluuu/models/promoslider/columns.yaml
+        toolbarButtons: create|add|remove
+        structure:
+            showTree: false
+            showReorder: true
+            showSorting: true
+            maxDepth: 1
+    manage:
+        list: $/noren/bluuu/models/promoslider/columns.yaml
+        form: $/noren/bluuu/models/promoslider/fields.yaml
+
+reviews:
+    label: Reviews
+    view:
+        list: $/noren/bluuu/models/reviews/columns.yaml
+        toolbarButtons: add|remove
+        recordsPerPage: 20
+    manage:
+        list: $/noren/bluuu/models/reviews/columns.yaml
+        form: $/noren/bluuu/models/reviews/fields.yaml
+        recordsPerPage: 20
+        
+faq:
+    label: FAQ
+    view:
+        list: $/noren/bluuu/models/faq/columns.yaml
+        toolbarButtons: add|remove
+    manage:
+        list: $/noren/bluuu/models/faq/columns.yaml
+        form: $/noren/bluuu/models/faq/fields.yaml
+        
+programm:
+    label: Program
+    view:
+        list: $/noren/bluuu/models/programm/columns.yaml
+        toolbarButtons: add|remove
+    manage:
+        list: $/noren/bluuu/models/programm/columns.yaml
+        form: $/noren/bluuu/models/programm/fields.yaml
+        
+classpage:
+    label: Class
+    view:
+        structure:
+            showTree: true
+            showReorder: true
+            showSorting: false
+            maxDepth: 2
+        list: $/noren/bluuu/models/classpage/columns.yaml
+        toolbarButtons: add|remove|create|delete
+    manage:
+        list: $/noren/bluuu/models/classpage/columns.yaml
+        form: $/noren/bluuu/models/classpage/fields.yaml

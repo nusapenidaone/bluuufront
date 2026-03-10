@@ -1,0 +1,10 @@
+name: Vacancy
+form: $/noren/bluuu/models/vacancy/fields.yaml
+modelClass: Noren\Bluuu\Models\Vacancy
+defaultRedirect: noren/bluuu/vacancy
+create:
+    redirect: 'noren/bluuu/vacancy/update/:id'
+    redirectClose: noren/bluuu/vacancy
+update:
+    redirect: noren/bluuu/vacancy
+    redirectClose: noren/bluuu/vacancy

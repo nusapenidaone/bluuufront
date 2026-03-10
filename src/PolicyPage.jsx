@@ -2,9 +2,8 @@ import React from "react";
 import { useSEO } from "./hooks/useSEO";
 import { useRules } from "./contexts/RulesContext";
 import { ChevronLeft } from "lucide-react";
-import Navbar from "./components/common/Navbar";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Footer from "./components/common/Footer";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 
 const POLICY_SEO = {
   privacy: { title: "Privacy Policy | Bluuu Tours", description: "Learn how Bluuu Tours collects, uses, and protects your personal data when you book a tour with us." },
@@ -25,7 +24,7 @@ export default function PolicyPage({ policyKey }) {
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private#booking" }}
       />
       <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8 lg:px-8 sm:py-12">
@@ -70,7 +69,7 @@ export default function PolicyPage({ policyKey }) {
           </div>
         )}
       </main>
-      <PrivateStyleFooter />
+      <Footer />
     </div>
   );
 }

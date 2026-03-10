@@ -1,0 +1,68 @@
+plugin:
+    name: 'noren.bluuu::lang.plugin.name'
+    description: 'noren.bluuu::lang.plugin.description'
+    author: Noren
+    icon: oc-icon-adjust
+    homepage: ''
+navigation:
+    main-menu-item:
+        label: CMS
+        url: /
+        icon: icon-files-o
+        permissions:
+            - all
+        order: '1'
+        sideMenu:
+            side-menu-item:
+                label: Tours
+                url: noren/bluuu/tourspage
+                icon: icon-file
+            side-menu-item2:
+                label: Reviews
+                url: noren/bluuu/reviews
+                icon: icon-thumbs-up
+            side-menu-item3:
+                label: FAQ
+                url: noren/bluuu/faq
+                icon: icon-question
+            side-menu-item4:
+                label: Program
+                url: noren/bluuu/programm
+                icon: icon-list
+            side-menu-item5:
+                label: Team
+                url: noren/bluuu/team
+                icon: icon-users
+            side-menu-item6:
+                label: Gallery
+                url: noren/bluuu/gallery
+                icon: icon-image
+            side-menu-item7:
+                label: Source
+                url: noren/bluuu/source
+                icon: icon-tag
+            side-menu-item8:
+                label: Vacancy
+                url: noren/bluuu/vacancy
+                icon: icon-group
+            side-menu-item9:
+                label: PromoSlider
+                url: noren/bluuu/promoslider
+                icon: icon-image
+            side-menu-item10:
+                label: Blog
+                url: noren/bluuu/blog
+                icon: icon-newspaper-o
+    main-menu-item2:
+        label: Reviews
+        url: noren/bluuu/reviews
+        icon: icon-thumbs-up
+        permissions:
+            - reviews
+permissions:
+    all:
+        tab: CMS
+        label: All
+    reviews:
+        tab: CMS
+        label: Reviews

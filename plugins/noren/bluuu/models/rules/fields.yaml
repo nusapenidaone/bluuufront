@@ -1,26 +1,60 @@
-fields:
-    payment:
-        label: Payment Policy
-        type: richeditor
-        size: large
-        span: full
-    return:
-        label: Cancelation Policy
-        type: richeditor
-        size: large
-        span: full
-    privacy:
-        label: Privacy Policy
-        type: richeditor
-        size: large
-        span: full
-    health:
-        label: Health & Safety Procedures
-        type: richeditor
-        size: large
-        span: full
-    release:
-        label: Release from Liability
-        type: richeditor
-        size: large
-        span: full
+tabs:
+    fields:
+        'payment[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Payment
+        'payment[text]':
+            label: Text
+            size: giant
+            span: full
+            type: richeditor
+            tab: Payment
+        'return[title]':
+            label: Title
+            span: full
+            type: text
+            tab: 'Return & Refund policy'
+        'return[text]':
+            label: Text
+            size: giant
+            span: full
+            type: richeditor
+            tab: 'Return & Refund policy'
+        'privacy[title]':
+            label: Title
+            span: full
+            type: text
+            tab: 'Privacy policy'
+        'privacy[text]':
+            label: Text
+            size: giant
+            span: full
+            type: richeditor
+            tab: 'Privacy policy'
+            
+        'release[title]':
+            label: Title
+            span: full
+            type: text
+            tab: 'Release'
+            
+        'release[text]':
+            label: Text
+            size: giant
+            span: full
+            type: richeditor
+            tab: 'Release'
+            
+        'health[title]':
+            label: Health
+            span: full
+            type: text
+            tab: Health
+        'health[text]':
+            label: Text
+            size: giant
+            span: full
+            type: richeditor
+            tab: Health

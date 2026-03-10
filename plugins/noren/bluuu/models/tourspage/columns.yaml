@@ -1,0 +1,17 @@
+columns:
+    title:
+        label: Tour
+        type: text
+    slug:
+        label: Link
+        type: linkage
+        attributes:
+            target: _blank
+        select: concat('/tours/', slug)
+    # class:
+    #     label: Link
+    #     type: linkage
+    #     attributes:
+    #         target: _blank
+    #     select: concat('/tours/', slug,'/class')
+        

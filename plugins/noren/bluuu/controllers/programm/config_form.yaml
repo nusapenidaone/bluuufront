@@ -1,0 +1,11 @@
+name: Programm
+modelClass: Noren\Bluuu\Models\Programm
+form: $/noren/bluuu/models/programm/fields.yaml
+defaultRedirect: noren/bluuu/programm
+create:
+    redirect: 'noren/bluuu/programm/update/:id'
+    redirectClose: noren/bluuu/programm
+update:
+    redirect: noren/bluuu/programm
+    redirectClose: noren/bluuu/programm
+preview: {  }

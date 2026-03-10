@@ -62,7 +62,6 @@ export default function PhoneInput({ value, onChange }) {
 
   return (
     <IntlPhoneInput
-      defaultCountry="id"
       value={value}
       onChange={onChange}
     />

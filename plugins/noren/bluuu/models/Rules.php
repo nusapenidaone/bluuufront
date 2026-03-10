@@ -1,17 +1,10 @@
 <?php
+
 namespace Noren\Bluuu\Models;
 
-use Model;
-
-class Rules extends Model
+class Rules extends \System\Models\SettingModel
 {
-    use \October\Rain\Database\Traits\Validation;
-
-    public $implement = ['System.Behaviors.SettingsModel'];
-
-    public $settingsCode = 'noren_bluuu_rules';
+    public $settingsCode = 'noren_bluuu_rules_settings';
 
     public $settingsFields = 'fields.yaml';
-
-    public $rules = [];
 }

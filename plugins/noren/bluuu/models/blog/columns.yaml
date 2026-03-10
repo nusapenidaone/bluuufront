@@ -1,0 +1,19 @@
+columns:
+    id:
+        label: id
+        type: number
+    created_at:
+        label: Created
+        type: datetime
+    updated_at:
+        label: Updated
+        type: datetime
+    title:
+        label: Title
+        type: text
+    slug:
+        label: Link
+        type: linkage
+        attributes:
+            target: _blank
+        select: concat('/blog/', slug)

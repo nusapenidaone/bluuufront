@@ -71,10 +71,8 @@ export default function Payment() {
 
   // ── Derived values ───────────────────────────────────────────────────────
   const totalGuests = adults + kids;
-  const fullTotal = boatPrice + extrasTotal;
   const deposite = payMode === "part" ? 50 : 100;
   const method = payMethod === "paypal" ? 2 : 1;             // 1=Xendit, 2=PayPal
-  const depositAmount = Math.round((fullTotal * deposite) / 100);
 
   // Extract transfer/cover IDs from extras (they use "transfer-{id}", "cover-{id}" prefixes)
   const transferExtra = extras.find((e) => String(e.id).startsWith("transfer-"));
@@ -89,14 +87,25 @@ export default function Payment() {
     ? parseInt(styleId, 10)
     : null;
 
+  // Pricing breakdown — transfer/cover are separate from pure extras
+  const transferTotalPrice = transferExtra ? (transferExtra.price ?? 0) * (transferExtra.quantity ?? 1) : 0;
+  const coverTotalPrice    = coverExtra    ? (coverExtra.price    ?? 0) * (coverExtra.quantity    ?? 1) : 0;
+  const pureExtrasTotal    = extras
+    .filter((e) => !String(e.id).startsWith("transfer-") && !String(e.id).startsWith("cover-"))
+    .reduce((sum, e) => sum + (e.price ?? 0) * (e.quantity ?? 1), 0);
+
+  // Total without discount = all price components summed
+  const fullTotal = boatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
+  const depositAmount = Math.round((fullTotal * deposite) / 100);
+
   // ── UI state ─────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!name.trim() || !email.trim() || !phone.trim()) {
-      setError("Missing contact details. Please go back and fill in your name, email and phone.");
+    if (!name.trim() || !email.trim()) {
+      setError("Missing contact details. Please go back and fill in your name and email.");
       return;
     }
 
@@ -116,14 +125,15 @@ export default function Payment() {
 
       boatPrice,
       tourPrice: boatPrice,
-      transferPrice: transferExtra ? (transferExtra.price ?? 0) : 0,
-      coverPrice: coverExtra ? (coverExtra.price ?? 0) * (coverExtra.quantity ?? 1) : 0,
       programPrice: 0,
-      extrasTotal,
-      totalPrice: fullTotal,
-      fullPrice: fullTotal,
-      discountPrice: 0,
+      transferPrice: transferTotalPrice,
+      coverPrice: coverTotalPrice,
+      extrasTotal: pureExtrasTotal,
+      deposite,
       discount: 0,
+      totalPrice: fullTotal,
+      discountPrice: 0,
+      fullPrice: fullTotal,
 
       selectedTransferId,
       selectedCoverId,
@@ -137,7 +147,6 @@ export default function Payment() {
         name: e.name ?? "",
       })),
 
-      deposite,
       method,
 
       promocode: null,

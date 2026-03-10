@@ -1,0 +1,41 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    languages:
+        label: Languages
+        mode: array
+        separator: comma
+        options:
+            - English
+            - Chinese
+        customTags: true
+        useKey: false
+        span: auto
+        type: taglist
+    text:
+        label: Text
+        size: large
+        span: auto
+        type: richeditor
+    type:
+        label: Type
+        options:
+            1: Guide
+            2: Capitan
+            3: Diver
+        showSearch: true
+        span: auto
+        type: dropdown
+    img:
+        label: Img
+        mode: image
+        imageWidth: '100'
+        imageHeight: '100'
+        useCaption: 0
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: fileupload

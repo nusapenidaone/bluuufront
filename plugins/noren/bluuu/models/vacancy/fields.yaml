@@ -1,0 +1,27 @@
+fields:
+    job_title:
+        label: 'Job title'
+        span: auto
+        type: text
+    requirements:
+        label: Requirements
+        size: large
+        span: left
+        type: richeditor
+    terms:
+        label: Terms
+        size: large
+        span: auto
+        type: richeditor
+    questions:
+        label: Questions
+        prompt: 'Add new item'
+        displayMode: accordion
+        span: full
+        type: repeater
+        form:
+            fields:
+                text:
+                    label: Text
+                    span: full
+                    type: text

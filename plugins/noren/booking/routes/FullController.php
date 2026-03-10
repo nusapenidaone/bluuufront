@@ -74,7 +74,7 @@ class FullController extends Controller
 
         $tours = Tours::with(['packages', 'pricesbydates.packages'])
             ->whereIn('classes_id', [8])
-            ->orderBy('id')
+            ->orderBy('sort_order')
             ->get();
 
         return $tours->map(function ($tour) {
@@ -90,6 +90,7 @@ class FullController extends Controller
                 'packages' => $tour->packages,
                 'boat_price' => $tour->boat_price,
                 'pricesbydates' => $tour->pricesbydates,
+                'status' => $tour->status ?: 'ready',
             ];
         });
     }
@@ -288,6 +289,7 @@ class FullController extends Controller
 
         $tours = Tours::with(['packages', 'pricesbydates.packages', 'route'])
             ->whereIn('classes_id', [9])
+            ->orderBy('sort_order')
             ->get();
 
         return $tours->map(function ($tour) {
@@ -309,6 +311,7 @@ class FullController extends Controller
                 'packages' => $tour->packages,
                 'boat_price' => 0,
                 'pricesbydates' => $tour->pricesbydates,
+                'status' => $tour->status ?: 'ready',
                 'route' => $route ? [
                     'id' => $route->id,
                     'title' => $route->title,
@@ -505,10 +508,20 @@ class FullController extends Controller
             'ecategories.extras.images',
             'photos',
             'restaurant.images',
+            'tours.images',
         ])->where('classes_id', $classesId)->get();
 
         return $routes->map(function ($route) {
             $payload = $route->toArray();
+
+            $payload['photos'] = $route->photos->map(fn($p) => [
+                'path' => $p->getPath(),
+                'thumb' => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp']),
+            ])->toArray();
+
+            $firstTour = $route->tours->first();
+            $payload['tour_images'] = $firstTour ? $firstTour->images_with_thumbs : [];
+
             $restaurant = $route->restaurant;
             if (!$restaurant) {
                 $payload['restaurant'] = null;
@@ -765,4 +778,5 @@ class FullController extends Controller
             'release' => $rules->release,
         ]);
     }
+
 }

@@ -1,19 +1,14 @@
-<?php
-namespace Noren\Bluuu\Models;
+<?php namespace Noren\Bluuu\Models;
 
 use Model;
 
 /**
- * Gallery Model
+ * Model
  */
 class Gallery extends Model
 {
-    use \October\Rain\Database\Traits\Sortable;
+    use \October\Rain\Database\Traits\Validation;
 
-    /**
-     * @var bool timestamps are disabled.
-     */
-    public $timestamps = false;
 
     /**
      * @var string table in the database used by the model.
@@ -21,14 +16,13 @@ class Gallery extends Model
     public $table = 'noren_bluuu_gallery';
 
     /**
-     * @var array fillable fields.
+     * @var array rules for validation.
      */
-    protected $fillable = ['title', 'sort_order'];
-
-    /**
-     * @var array attachMany relations — each gallery record can have many images
-     */
-    public $attachMany = [
-        'images' => \System\Models\File::class,
+    public $rules = [
     ];
+    
+    public $attachMany = [
+        'images' => \System\Models\File::class
+    ];
+
 }

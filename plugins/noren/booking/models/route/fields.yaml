@@ -10,13 +10,20 @@ tabs:
             span: auto
             type: text
             tab: Main
+        classes:
+            label: Class
+            nameFrom: name
+            descriptionFrom: description
+            span: auto
+            type: relation
+            tab: Main
         restaurant:
             label: Restaurant
             nameFrom: name
             descriptionFrom: description
-            span: full
+            span: auto
             type: relation
-            tab: Popup
+            tab: Main
         badge:
             label: Badge
             span: auto

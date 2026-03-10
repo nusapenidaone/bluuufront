@@ -1,0 +1,8 @@
+columns:
+    name:
+        label: Name
+        type: text
+    type:
+        label: Type
+        type: partial
+        path: type

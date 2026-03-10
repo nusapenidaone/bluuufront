@@ -2,7 +2,6 @@
 
 use Model;
 use System\Models\File;
-
 /**
  * Model
  */
@@ -26,7 +25,6 @@ class Transfer extends Model
      */
     public $rules = [
     ];
-
     protected $appends = ['image_url'];
 
     public $attachOne = [
@@ -41,5 +39,4 @@ class Transfer extends Model
             'extension' => 'webp',
         ]);
     }
-
 }

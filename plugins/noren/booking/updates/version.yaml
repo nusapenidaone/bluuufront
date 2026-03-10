@@ -593,23 +593,35 @@ v1.0.198:
     - 'Created table noren_booking_route_ecategories'
     - builder_table_create_noren_booking_route_ecategories.php
 v1.0.199:
-    - 'Updated table noren_booking_route'
+    - builder_table_update_noren_booking_route.php
     - builder_table_update_noren_booking_route.php
 v1.0.200:
-    - 'Seed noren_booking_route table'
+    - seed_routes_table
     - seed_routes_table.php
 v1.0.201:
-    - 'Add parent_id to noren_booking_extras'
+    - 'Updated table noren_booking_extras'
     - builder_table_update_noren_booking_extras_10.php
 v1.0.202:
-    - 'Add bus_price to noren_booking_transfer'
+    - 'Updated table noren_booking_transfer'
     - builder_table_update_noren_booking_transfer_4.php
 v1.0.203:
     - 'Updated table noren_booking_route'
     - builder_table_update_noren_booking_route_2.php
 v1.0.204:
-    - 'Re-seed noren_booking_route with shared tour routes'
-    - seed_routes_table_update.php
+    - 'Updated table noren_booking_route'
+    - builder_table_update_noren_booking_route_3.php
 v1.0.205:
-    - 'Update schedule sections for shared tour routes'
-    - seed_routes_schedule_shared.php
+    - seed_routes_table_update
+    - seed_routes_table_update.php
+v1.0.206:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_33.php
+v1.0.207:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_34.php
+v1.0.208:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_35.php
+v1.0.209:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_36.php

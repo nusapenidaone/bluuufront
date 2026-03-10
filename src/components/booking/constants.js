@@ -22,10 +22,9 @@ export const GROUP_TRANSFER_THRESHOLD = 4;
 export const REVIEW_COUNT_VALUE = parseInt(String(BRAND.reviewCount).replace(/[^0-9]/g, ""), 10) || 0;
 export const REVIEW_COUNT_SHORT = REVIEW_COUNT_VALUE ? `${Math.floor(REVIEW_COUNT_VALUE / 500) * 500}+` : BRAND.reviewCount;
 
-export const EXTRAS_CATEGORY_BY_VIBE = sharedData.extrasCategoryByVibe;
 export const LINKS = sharedData.links;
-export const REVIEW_SOURCES = sharedData.reviewSources;
-export const INFO_REVIEWS = sharedData.reviews;
+export const REVIEW_SOURCES = [];
+export const INFO_REVIEWS = [];
 export const REVIEW_SOURCE_ICON_MAP = {
     tripadvisor: "https://cdn.simpleicons.org/tripadvisor/34e0a1",
     airbnb: "https://cdn.simpleicons.org/airbnb/FF5A5F",

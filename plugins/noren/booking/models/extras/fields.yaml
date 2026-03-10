@@ -42,13 +42,6 @@ tabs:
             span: auto
             type: number
             tab: Main
-        parent:
-            label: 'Parent Extra'
-            span: auto
-            type: relation
-            nameFrom: name
-            emptyOption: '— None (this is a parent) —'
-            tab: Main
         description:
             label: Description
             size: large

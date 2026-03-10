@@ -1,0 +1,201 @@
+tabs:
+    fields:
+        title:
+            label: Title
+            span: auto
+            type: text
+            tab: Main
+        slug:
+            label: Slug
+            span: auto
+            preset:
+                field: title
+                type: slug
+            type: text
+            tab: Main
+        description:
+            label: Description
+            size: small
+            span: full
+            type: textarea
+            tab: Main
+        link:
+            label: Link
+            span: auto
+            type: text
+            tab: Main
+        video:
+            label: 'Youtube link'
+            span: auto
+            type: text
+            tab: Main
+        img1:
+            label: IMG1
+            mode: image
+            useCaption: true
+            thumbOptions:
+                mode: crop
+                extension: auto
+            span: auto
+            type: fileupload
+            tab: Main
+        img2:
+            label: IMG2
+            mode: image
+            imageWidth: '100'
+            imageHeight: '100'
+            useCaption: 0
+            thumbOptions:
+                mode: crop
+                extension: auto
+            span: auto
+            type: fileupload
+            tab: Main
+        'section1[list]':
+            label: ''
+            prompt: 'Add option'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: 'What’s Included'
+            form:
+                fields:
+                    selected:
+                        type: switch
+                        label: Selected
+                    title:
+                        label: Title
+                        span: full
+                        type: text
+                    text:
+                        label: Text
+                        size: small
+                        span: full
+                        type: richeditor
+        promoslider:
+            label: Slider
+            span: full
+            path: promoslider
+            type: partial
+            tab: 'Promo slider'
+        'section2[list]':
+            label: ''
+            prompt: 'Add option'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: 'Itinerary Overview'
+            form:
+                fields:
+                    title:
+                        label: Title
+                        span: full
+                        type: text
+                    text:
+                        label: Text
+                        size: small
+                        span: full
+                        type: richeditor
+                    img:
+                        label: Image
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: auto
+                        type: mediafinder
+        'section3[list]':
+            label: ''
+            prompt: 'Add option'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: 'Key Highlights'
+            form:
+                fields:
+                    selected:
+                        type: switch
+                        label: Selected
+                    title:
+                        label: Title
+                        span: full
+                        type: text
+                    text:
+                        label: Text
+                        size: small
+                        span: full
+                        type: richeditor
+                    img:
+                        label: Image
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: auto
+                        type: mediafinder
+                        
+        programm:
+            label: Program
+            span: full
+            path: programm
+            type: partial
+            tab: Program
+                        
+                        
+        'section4[list]':
+            label: ''
+            prompt: 'Add option'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: Advantages
+            form:
+                fields:
+                    selected:
+                        label: Selected
+                        span: full
+                        type: switch
+                    title:
+                        label: Title
+                        span: full
+                        type: text
+                    text:
+                        label: Text
+                        size: small
+                        span: full
+                        type: richeditor
+        reviews:
+            label: Reviews
+            span: full
+            path: reviews
+            type: partial
+            tab: Reviews
+        faq:
+            label: FAQ
+            span: full
+            path: faq
+            type: partial
+            tab: FAQ
+        classpage:
+            label: Class
+            span: full
+            path: classpage
+            type: partial
+            tab: Class
+            
+            
+        meta_title:
+            label: Title
+            span: auto
+            type: text
+            tab: SEO
+        meta_description:
+            label: Description
+            size: small
+            span: full
+            type: textarea
+            tab: SEO

@@ -1,0 +1,10 @@
+name: Blog
+form: $/noren/bluuu/models/blog/fields.yaml
+modelClass: Noren\Bluuu\Models\Blog
+defaultRedirect: noren/bluuu/blog
+create:
+    redirect: 'noren/bluuu/blog/update/:id'
+    redirectClose: noren/bluuu/blog
+update:
+    redirect: noren/bluuu/blog
+    redirectClose: noren/bluuu/blog

@@ -1,0 +1,33 @@
+tabs:
+    fields:
+        title:
+            label: Title
+            span: auto
+            type: text
+            tab: 'Tab 1'
+        slug:
+            label: Slug
+            span: auto
+            preset:
+                field: title
+                type: slug
+            type: text
+            tab: 'Tab 1'
+        description:
+            label: Description
+            size: small
+            span: left
+            type: richeditor
+            tab: 'Tab 1'
+        images:
+            label: Images
+            mode: image
+            imageWidth: '100'
+            imageHeight: '100'
+            useCaption: true
+            thumbOptions:
+                mode: crop
+                extension: auto
+            span: auto
+            type: fileupload
+            tab: 'Tab 1'

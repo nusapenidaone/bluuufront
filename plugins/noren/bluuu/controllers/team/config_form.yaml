@@ -1,0 +1,10 @@
+name: Team
+form: $/noren/bluuu/models/team/fields.yaml
+modelClass: Noren\Bluuu\Models\Team
+defaultRedirect: noren/bluuu/team
+create:
+    redirect: 'noren/bluuu/team/update/:id'
+    redirectClose: noren/bluuu/team
+update:
+    redirect: noren/bluuu/team
+    redirectClose: noren/bluuu/team

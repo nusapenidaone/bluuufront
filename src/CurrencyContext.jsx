@@ -99,7 +99,7 @@ export const CurrencyProvider = ({ children }) => {
         const {
             fromCurrency = "IDR",
             includeSymbol = true,
-            decimals = selectedCurrency.toUpperCase() === "IDR" ? 0 : 2,
+            decimals = 0,
             short = false
         } = options;
 

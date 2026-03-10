@@ -4,9 +4,8 @@ import { ChevronLeft, Images } from "lucide-react";
 import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
 import { useTours } from "./ToursContext";
-import Navbar from "./components/common/Navbar";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Footer from "./components/common/Footer";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 
 function normalizeGalleryItems(apiGallery, privateTours) {
   const fromApi = (apiGallery || [])
@@ -66,7 +65,7 @@ export default function GalleryPage() {
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private#booking" }}
       />
 
@@ -126,7 +125,7 @@ export default function GalleryPage() {
         )}
       </main>
 
-      <PrivateStyleFooter />
+      <Footer />
     </div>
   );
 }

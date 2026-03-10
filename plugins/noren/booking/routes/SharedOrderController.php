@@ -123,10 +123,10 @@ class SharedOrderController extends Controller
         $order->cars     = 0;   // not applicable for shared tours
 
         // ── Selected options ──────────────────────────────────────────
-        $order->transfer_id  = $data['selectedTransferId'] ?? null;
-        $order->cover_id     = $data['selectedCoverId']    ?? null;
-        $order->program_id   = $data['selectedRouteId']    ?? null;  // route stored as program
-        $order->restaurant_id = null;   // shared tours handle restaurant via route
+        $order->transfer_id   = $data['selectedTransferId']  ?? null;
+        $order->cover_id      = $data['selectedCoverId']     ?? null;
+        $order->program_id    = $data['selectedProgramId']   ?? $data['selectedRouteId'] ?? null;
+        $order->restaurant_id = $data['selectedRestaurantId'] ?? null;
 
         // ── Pricing ───────────────────────────────────────────────────
         $order->boat_price     = 0;   // shared tours price per person, not per boat
@@ -150,7 +150,7 @@ class SharedOrderController extends Controller
         $order->deposite = $data['deposite'] ?? 0;
         if ($order->deposite > 0) {
             $order->method_id      = $data['method'];
-            $order->deposite_summ  = $order->total_price * $order->deposite / 100;
+            $order->deposite_summ  = $order->full_price * $order->deposite / 100;
         }
 
         // ── Extras ────────────────────────────────────────────────────

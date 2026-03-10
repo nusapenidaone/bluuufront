@@ -1,0 +1,10 @@
+name: Reviews
+form: $/noren/bluuu/models/reviews/fields.yaml
+modelClass: Noren\Bluuu\Models\Reviews
+defaultRedirect: noren/bluuu/reviews
+create:
+    redirect: 'noren/bluuu/reviews/update/:id'
+    redirectClose: noren/bluuu/reviews
+update:
+    redirect: noren/bluuu/reviews
+    redirectClose: noren/bluuu/reviews

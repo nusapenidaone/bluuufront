@@ -7,10 +7,10 @@ recordsPerPage: 20
 showSetup: true
 showCheckboxes: true
 structure:
-    showTree: false
+    showTree: true
     showReorder: true
     showSorting: true
-    maxDepth: 1
+    maxDepth: 2
 toolbar:
     buttons: list_toolbar
     search:

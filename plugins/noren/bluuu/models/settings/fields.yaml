@@ -1,0 +1,57 @@
+tabs:
+    fields:
+        contacts:
+            label: Contacts
+            showPanel: 1
+            defaultCreate: 1
+            span: full
+            type: nestedform
+            tab: Contacts
+            form:
+                fields:
+                    address:
+                        label: Address
+                        span: full
+                        type: text
+                    location:
+                        label: Location
+                        span: full
+                        type: text
+                    'phone[number]':
+                        label: 'Phone Number'
+                        span: auto
+                        type: text
+                    'phone[link]':
+                        label: 'Phone Link'
+                        span: auto
+                        type: text
+                    'whatsapp[number]':
+                        label: 'Whatsapp Number'
+                        span: auto
+                        type: text
+                    'whatsapp[link]':
+                        label: 'Whatsapp Link'
+                        span: auto
+                        type: text
+                    email:
+                        label: Email
+                        span: full
+                        type: email
+                    facebook:
+                        label: Facebook
+                        span: full
+                        type: text
+                    youtube:
+                        label: Youtube
+                        span: full
+                        type: text
+                    instagram:
+                        label: Instagram
+                        span: full
+                        type: text
+                    map:
+                        label: 'Map code'
+                        size: small
+                        language: html
+                        span: full
+                        type: codeeditor

@@ -1,0 +1,30 @@
+columns:
+    name:
+        label: Name
+        type: text
+        searchable: false
+    date:
+        label: Date
+        type: date
+        searchable: true
+        sortable: true
+    rating:
+        label: Rating
+        type: number
+        searchable: true
+        sortable: true
+    created_at:
+        label: Created
+        type: date
+        searchable: true
+        sortable: true
+    id:
+        label: ID
+        type: number
+        searchable: true
+        sortable: true
+    updated_at:
+        label: Updated
+        type: date
+        searchable: true
+        sortable: true

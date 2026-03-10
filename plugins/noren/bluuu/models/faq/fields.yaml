@@ -1,0 +1,10 @@
+fields:
+    question:
+        label: Question
+        span: auto
+        type: text
+    answer:
+        label: Answer
+        size: large
+        span: left
+        type: richeditor

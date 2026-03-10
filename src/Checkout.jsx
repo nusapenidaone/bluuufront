@@ -94,8 +94,8 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim() || !whatsapp.trim()) {
-      setError("Please fill in Name, Email and WhatsApp.");
+    if (!name.trim() || !email.trim()) {
+      setError("Please fill in Name and Email.");
       return;
     }
 
@@ -111,14 +111,17 @@ export default function Checkout() {
       kids,
       children: 0,
       pricePerPerson,
+      boatPrice: 0,
       tourPrice,
+      programPrice: 0,
       transferPrice: pickupPrice,
       coverPrice: 0,
       extrasTotal,
-      totalPrice: fullTotal,
-      fullPrice: fullTotal,
-      discountPrice: 0,
+      deposite: depositPct,
       discount: 0,
+      totalPrice: fullTotal,
+      discountPrice: 0,
+      fullPrice: fullTotal,
       selectedTransferId: null,
       selectedCoverId: null,
       selectedRouteId: null,
@@ -128,7 +131,6 @@ export default function Checkout() {
         price: e.price ?? 0,
         name: e.name ?? "",
       })),
-      deposite: depositPct,
       method,
       promocode: null,
       agent_fee: 0,
@@ -241,7 +243,7 @@ export default function Checkout() {
 
                   <label className="flex flex-col gap-1.5">
                     <span className="text-xs font-semibold text-secondary-600">
-                      WhatsApp <span className="text-danger">*</span>
+                      WhatsApp <span className="text-secondary-400">(optional)</span>
                     </span>
                     <input
                       type="tel"

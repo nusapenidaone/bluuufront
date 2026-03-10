@@ -1,0 +1,44 @@
+fields:
+    title:
+        label: Title
+        span: auto
+        type: text
+    description:
+        label: Description
+        size: small
+        span: auto
+        type: textarea
+    list:
+        label: List
+        prompt: 'Add new'
+        displayMode: accordion
+        span: full
+        type: repeater
+        form:
+            fields:
+                time:
+                    label: Time
+                    span: auto
+                    type: text
+                duration:
+                    label: Duration
+                    span: auto
+                    type: text
+                title:
+                    label: Title
+                    span: auto
+                    type: text
+                description:
+                    label: Description
+                    span: auto
+                    type: text
+                icon:
+                    label: Icon
+                    mode: image
+                    imageWidth: '100'
+                    imageHeight: '100'
+                    thumbOptions:
+                        mode: crop
+                        extension: auto
+                    span: auto
+                    type: mediafinder

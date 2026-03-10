@@ -1,4 +1,87 @@
 {
+  "brand": {
+    "name": "Bluuu",
+    "product": "Nusa Penida private boat tour",
+    "reviewCount": "8,595",
+    "reviewLabel": "reviews",
+    "rating": "4.9",
+    "ratingLabel": "avg rating",
+    "badges": [
+      { "icon": "Star", "label": "Customer choice" },
+      { "icon": "MapPin", "label": "Free Bluuu Bus shuttle" },
+      { "icon": "BadgeCheck", "label": "Safety first" },
+      { "icon": "LifeBuoy", "label": "24/7 support" }
+    ]
+  },
+  "links": {
+    "video": {
+      "embedUrl": "https://www.youtube.com/embed/RjWmhq1JRwc?autoplay=1&rel=0"
+    }
+  },
+  "trustIncludedShort": [
+    "Private boat",
+    "Certified guides",
+    "Snorkeling equipment",
+    "All entrance tickets",
+    "Lunch",
+    "Health insurance"
+  ],
+  "infoDrawerTabs": [
+    {
+      "id": "included",
+      "label": "Included"
+    },
+    {
+      "id": "pickup",
+      "label": "Pickup"
+    },
+    {
+      "id": "safety",
+      "label": "Safety"
+    },
+    {
+      "id": "cancellation",
+      "label": "Cancelation"
+    },
+    {
+      "id": "weather",
+      "label": "Weather guarantee"
+    },
+    {
+      "id": "faq",
+      "label": "FAQ"
+    }
+  ],
+  "sections": [
+    {
+      "id": "hero",
+      "label": "Home"
+    },
+    {
+      "id": "social",
+      "label": "Reviews"
+    },
+    {
+      "id": "included",
+      "label": "Included"
+    },
+    {
+      "id": "gallery",
+      "label": "Gallery"
+    },
+    {
+      "id": "extras",
+      "label": "Add extras"
+    },
+    {
+      "id": "faq",
+      "label": "FAQ"
+    },
+    {
+      "id": "booking",
+      "label": "Book"
+    }
+  ],
   "tourInfo": {
     "policyItems": [
       "It is possible to cancel a reservation and receive a full refund, provided that the cancellation occurs at least 24 hours prior to the scheduled start time of the experience.",
@@ -95,7 +178,8 @@
           {
             "icon": "UtensilsCrossed",
             "label": "Lunch",
-            "helper": "Lunch served at La Rossa."
+            "helper": "Lunch served at",
+            "restaurant": { "name": "La Rossa" }
           }
         ]
       },
@@ -125,5 +209,13 @@
         ]
       }
     ]
-  }
+  },
+  "bookingMiniFAQ": [
+    { "icon": "BadgeCheck", "q": "Whats included", "a": "Premium boat, lunch, land tour, snorkel gear, tickets, photographer + Prosecco moment." },
+    { "icon": "Users", "q": "Kids?", "a": "Private tours are perfect for families with children, including younger kids." },
+    { "icon": "CloudRain", "q": "Rain?", "a": "Weather guarantee: if we cancel due to unsafe conditions, reschedule or receive a full refund." },
+    { "icon": "Clock", "q": "Start/finish time", "a": "Private tours let guests choose the start time  any time between 08:00 and 11:00. Exact timing confirmed after booking." },
+    { "icon": "Sparkles", "q": "Showers", "a": "Post-tour showers are available." },
+    { "icon": "Waves", "q": "Seasickness?", "a": "Upgraded comfort yacht for a smoother ride. If youre prone, bring motion-sickness tablets." }
+  ]
 }

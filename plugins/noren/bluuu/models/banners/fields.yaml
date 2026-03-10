@@ -1,0 +1,15 @@
+fields:
+    status:
+        label: Status
+        span: full
+        type: switch
+    banner:
+        label: Banner
+        mode: image
+        imageHeight: '100'
+        maxItems: '100'
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: mediafinder

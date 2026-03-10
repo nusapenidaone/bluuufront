@@ -1,0 +1,268 @@
+tabs:
+    fields:
+        'step1[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step1
+        'step1[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step1
+        'step1[img]':
+            label: Image
+            mode: image
+            imageWidth: '100'
+            imageHeight: '100'
+            thumbOptions:
+                mode: crop
+                extension: auto
+            span: full
+            type: mediafinder
+            tab: Step1
+            
+            
+        'step2[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step2
+        'step2[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step2
+        'step2[video]':
+            label: Video
+            span: full
+            type: text
+            tab: Step2
+            
+        'step3[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step3
+        'step3[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step3
+        'step3[map]':
+            label: Map
+            size: small
+            span: full
+            type: codeeditor
+            tab: Step3
+        'step3[text]':
+            label: Address
+            size: small
+            span: full
+            type: textarea
+            tab: Step3
+            
+    
+        'step4[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step4
+        'step4[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step4
+        'step4[list]':
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: Step4
+            form:
+                fields:
+                    text:
+                        label: Text
+                        span: full
+                        type: richeditor
+                        size: small
+                    icon:
+                        label: Icon
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: full
+                        type: mediafinder
+
+        'step5[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step5
+        'step5[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step5
+        'step5[list]':
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: Step5
+            form:
+                fields:
+                    text:
+                        label: Text
+                        span: full
+                        type: richeditor
+                        size: small
+                    icon:
+                        label: Icon
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: full
+                        type: mediafinder
+                        
+                        
+                        
+        'step6[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step6
+        'step6[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step6
+        'step6[list]':
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: Step6
+            form:
+                fields:
+                    title:
+                        label: Title
+                        span: full
+                        type: text
+                        size: small
+                    text:
+                        label: Text
+                        span: full
+                        type: richeditor
+                        size: small
+                    icon:
+                        label: Icon
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: full
+                        type: mediafinder
+        'step6[text]':
+            label: Text
+            span: full
+            type: text
+            tab: Step6
+            
+                        
+        'step7[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step7
+        'step7[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step7
+        'step7[list]':
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: Step7
+            form:
+                fields:
+                    text:
+                        label: Text
+                        span: full
+                        type: richeditor
+                        size: small
+                    icon:
+                        label: Icon
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: full
+                        type: mediafinder
+                        
+                        
+                        
+        'step8[title]':
+            label: Title
+            span: full
+            type: text
+            tab: Step8
+        'step8[description]':
+            label: Description
+            size: small
+            span: full
+            type: richeditor
+            tab: Step8
+        'step8[list]':
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: full
+            type: repeater
+            tab: Step8
+            form:
+                fields:
+                    text:
+                        label: Text
+                        span: full
+                        type: richeditor
+                        size: small
+                    icon:
+                        label: Icon
+                        mode: image
+                        imageWidth: '100'
+                        imageHeight: '100'
+                        thumbOptions:
+                            mode: crop
+                            extension: auto
+                        span: full
+                        type: mediafinder
+                        
+        'step8[text]':
+            label: Text
+            span: full
+            type: text
+            tab: Step8

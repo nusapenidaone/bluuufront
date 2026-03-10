@@ -1,0 +1,17 @@
+list: $/noren/bluuu/models/promoslider/columns.yaml
+modelClass: Noren\Bluuu\Models\Promoslider
+title: Promoslider
+noRecordsMessage: 'backend::lang.list.no_records'
+showSetup: true
+showCheckboxes: true
+recordsPerPage: 20
+structure:
+    showTree: false
+    showReorder: true
+    showSorting: true
+    maxDepth: 1
+toolbar:
+    buttons: list_toolbar
+    search:
+        prompt: 'backend::lang.list.search_prompt'
+recordUrl: 'noren/bluuu/promoslider/update/:id'

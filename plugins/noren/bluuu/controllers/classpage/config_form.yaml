@@ -1,0 +1,10 @@
+name: Classpage
+form: $/noren/bluuu/models/classpage/fields.yaml
+modelClass: Noren\Bluuu\Models\Classpage
+defaultRedirect: noren/bluuu/classpage
+create:
+    redirect: 'noren/bluuu/classpage/update/:id'
+    redirectClose: noren/bluuu/classpage
+update:
+    redirect: noren/bluuu/classpage
+    redirectClose: noren/bluuu/classpage

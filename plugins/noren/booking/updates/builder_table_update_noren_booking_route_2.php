@@ -12,7 +12,7 @@ class BuilderTableUpdateNorenBookingRoute2 extends Migration
             $table->integer('restaurant_id')->nullable();
         });
     }
-
+    
     public function down()
     {
         Schema::table('noren_booking_route', function($table)

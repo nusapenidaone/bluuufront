@@ -1,0 +1,10 @@
+name: Tourspage
+form: $/noren/bluuu/models/tourspage/fields.yaml
+modelClass: Noren\Bluuu\Models\Tourspage
+defaultRedirect: noren/bluuu/tourspage
+create:
+    redirect: 'noren/bluuu/tourspage/update/:id'
+    redirectClose: noren/bluuu/tourspage
+update:
+    redirect: noren/bluuu/tourspage
+    redirectClose: noren/bluuu/tourspage

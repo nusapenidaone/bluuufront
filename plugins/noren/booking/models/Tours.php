@@ -30,7 +30,8 @@ class Tours extends Model
         'cancelation' => Cancelation::class,
         'meeting' => Meeting::class,
         'additional' => Additional::class,
-        'route' => Route::class,
+        'route'=> Route::class,
+
     ];
     public $hasMany = [
         'pricesbydates' => PricesByDates::class,

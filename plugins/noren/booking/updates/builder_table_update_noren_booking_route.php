@@ -37,9 +37,6 @@ class BuilderTableUpdateNorenBookingRoute extends Migration
             $table->dropColumn('popup_title');
             $table->dropColumn('popup_afternoon');
             $table->dropColumn('highlights');
-            $table->dropColumn('add_on_note');
-            $table->dropColumn('schedule_before_lunch');
-            $table->dropColumn('schedule_after_lunch');
             $table->dropColumn('slug');
         });
     }

@@ -1,20 +1,14 @@
-<?php
-namespace Noren\Bluuu\Models;
+<?php namespace Noren\Bluuu\Models;
 
 use Model;
 
 /**
- * Faq Model
+ * Model
  */
 class Faq extends Model
 {
     use \October\Rain\Database\Traits\Validation;
-    use \October\Rain\Database\Traits\Sortable;
 
-    /**
-     * @var bool timestamps are disabled.
-     */
-    public $timestamps = false;
 
     /**
      * @var string table in the database used by the model.
@@ -24,10 +18,7 @@ class Faq extends Model
     /**
      * @var array rules for validation.
      */
-    public $rules = [];
+    public $rules = [
+    ];
 
-    /**
-     * @var array fillable fields.
-     */
-    protected $fillable = ['question', 'answer', 'sort_order'];
 }

@@ -3,9 +3,8 @@ import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
 import { useSEO } from "./hooks/useSEO";
 import { ArrowLeft, BookOpen, Calendar, Clock, ArrowRight } from "lucide-react";
-import Navbar from "./components/common/Navbar";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Footer from "./components/common/Footer";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import { fetchBlogPost, fetchBlogPosts } from "./api/blog";
 
 const HTML_FIELDS = ["content", "content1", "content2", "content3", "content4"];
@@ -241,7 +240,7 @@ export default function BlogPostPage({ slug }) {
       <ReadingProgress />
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private#booking" }}
       />
 
@@ -358,7 +357,7 @@ export default function BlogPostPage({ slug }) {
         </div>
       )}
 
-      <PrivateStyleFooter />
+      <Footer />
     </div>
   );
 }

@@ -1,5 +1,17 @@
 tabs:
     fields:
+    
+    
+        status:
+            label: Status
+            options:
+                ready: 'Ready'
+                soon: 'Soon'
+                disabled: 'Disabled'
+            type: dropdown
+            showSearch: true
+            tab: Main
+    
         static:
             label: 'Static Position'
             span: auto
@@ -38,6 +50,14 @@ tabs:
             span: auto
             type: relation
             tab: Main
+            
+        route:
+            label: Route
+            span: auto
+            type: relation
+            tab: Main
+            nameFrom: title
+            emptyOption: --
         capacity:
             label: Capacity
             span: auto

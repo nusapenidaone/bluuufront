@@ -1,0 +1,41 @@
+fields:
+    name:
+        label: Name
+        span: auto
+        type: text
+    date:
+        label: Date
+        mode: date
+        format: d.m.Y
+        span: auto
+        type: datepicker
+    rating:
+        label: Rating
+        options:
+            1: '1'
+            2: '2'
+            3: '3'
+            4: '4'
+            5: '5'
+        showSearch: true
+        span: auto
+        type: dropdown
+    source:
+        label: Source
+        nameFrom: name
+        descriptionFrom: description
+        span: auto
+        type: relation
+    img:
+        label: Image
+        mode: image
+        useCaption: true
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: auto
+        type: fileupload
+    text:
+        label: Text
+        span: auto
+        type: richeditor

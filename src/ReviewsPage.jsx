@@ -1,9 +1,8 @@
 import React from "react";
 import { useSEO } from "./hooks/useSEO";
 import { ChevronLeft, Star } from "lucide-react";
-import Navbar from "./components/common/Navbar";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Footer from "./components/common/Footer";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 
 export default function ReviewsPage() {
   useSEO({
@@ -14,7 +13,7 @@ export default function ReviewsPage() {
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private#booking" }}
       />
 
@@ -45,7 +44,7 @@ export default function ReviewsPage() {
         </section>
       </main>
 
-      <PrivateStyleFooter />
+      <Footer />
     </div>
   );
 }

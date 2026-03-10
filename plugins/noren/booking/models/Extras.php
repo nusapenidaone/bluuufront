@@ -1,5 +1,4 @@
-<?php
-namespace Noren\Booking\Models;
+<?php namespace Noren\Booking\Models;
 
 use Model;
 use System\Models\File;
@@ -10,7 +9,7 @@ class Extras extends Model
 {
     use \October\Rain\Database\Traits\Validation;
     use \October\Rain\Database\Traits\Sortable;
-
+    use \October\Rain\Database\Traits\SimpleTree;
 
     /**
      * @var string table in the database used by the model.
@@ -22,15 +21,7 @@ class Extras extends Model
      */
     public $rules = [
     ];
-
-    public $belongsTo = [
-        'parent' => [Extras::class, 'key' => 'parent_id'],
-    ];
-
-    public $hasMany = [
-        'children' => [Extras::class, 'key' => 'parent_id'],
-    ];
-
+    
     public $belongsToMany = [
         'ecategories' => [Ecategories::class, 'table' => 'noren_booking_ecategories_extras']
     ];
@@ -61,12 +52,8 @@ class Extras extends Model
 
         return $this->images->map(function ($image) {
             return [
-                'original' => $image->getPath(),
+                //'original' => $image->getPath(),
                 'thumb' => $image->getThumb(400, 400, [
-                    'mode' => 'crop',
-                    'extension' => 'webp',
-                ]),
-                'thumb1' => $image->getThumb(600, 400, [
                     'mode' => 'crop',
                     'extension' => 'webp',
                 ]),
@@ -76,22 +63,22 @@ class Extras extends Model
 
 
 
-    public function beforeDelete()
-    {
-        foreach ($this->images as $image) {
-            $this->deleteThumbsFor($image);
-        }
+public function beforeDelete()
+{
+    foreach ($this->images as $image) {
+        $this->deleteThumbsFor($image);
     }
+}
 
-    protected function deleteThumbsFor(File $file)
-    {
-        $path = dirname($file->getLocalPath()); // путь к директории файла
-        $pattern = $path . '/thumb_' . $file->id . '_*';
+protected function deleteThumbsFor(File $file)
+{
+    $path = dirname($file->getLocalPath()); // путь к директории файла
+    $pattern = $path . '/thumb_' . $file->id . '_*';
 
-        foreach (glob($pattern) as $thumbPath) {
-            @unlink($thumbPath);
-        }
+    foreach (glob($pattern) as $thumbPath) {
+        @unlink($thumbPath);
     }
+}
 
 
 

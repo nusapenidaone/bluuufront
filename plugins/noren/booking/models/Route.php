@@ -30,6 +30,10 @@ class Route extends Model
         'classes' => [Classes::class],
     ];
 
+    public $hasMany = [
+        'tours' => [Tours::class],
+    ];
+
     public $jsonable = [
         'highlights',
         'schedule_before_lunch',

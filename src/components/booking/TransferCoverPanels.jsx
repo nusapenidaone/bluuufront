@@ -113,7 +113,7 @@ export function TransfersCompact({
             <Car className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-base font-semibold text-secondary-900">Transfer</div>
+            <div className="text-xl font-semibold text-secondary-900">Transfer</div>
             <div className="text-sm text-secondary-500">
               {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
             </div>
@@ -334,7 +334,7 @@ export function CoversCompact({
     <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
       <div className="flex items-center justify-between px-6 py-5">
         <div>
-          <div className="text-base font-semibold text-secondary-900">Insurance</div>
+          <div className="text-xl font-semibold text-secondary-900">Insurance</div>
           <div className="text-sm text-secondary-500">
             {selectedCover ? selectedCover.name : "Optional protect your trip"}
           </div>

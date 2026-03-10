@@ -1,0 +1,10 @@
+name: Promoslider
+form: $/noren/bluuu/models/promoslider/fields.yaml
+modelClass: Noren\Bluuu\Models\Promoslider
+defaultRedirect: noren/bluuu/promoslider
+create:
+    redirect: 'noren/bluuu/promoslider/update/:id'
+    redirectClose: noren/bluuu/promoslider
+update:
+    redirect: noren/bluuu/promoslider
+    redirectClose: noren/bluuu/promoslider

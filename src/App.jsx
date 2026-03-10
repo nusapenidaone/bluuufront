@@ -18,6 +18,7 @@ import { ToursProvider } from "./ToursContext.jsx";
 import { ExtrasProvider } from "./contexts/ExtrasContext.jsx";
 import { RulesProvider } from "./contexts/RulesContext.jsx";
 import UnifiedSwitcher from "./components/UnifiedSwitcher.jsx";
+import WelcomeModal from "./components/WelcomeModal.jsx";
 
 const POLICY_PATH_MAP = {
   privacy: "privacy",
@@ -42,8 +43,15 @@ if (typeof window !== "undefined") {
   document.addEventListener("click", (e) => {
     const a = e.target.closest("a[href]");
     if (!a) return;
-    const href = a.getAttribute("href");
-    if (href && href.startsWith("/") && !href.startsWith(BASE_PATH)) {
+    const href = a.getAttribute("href") || "";
+
+    // GA: whatsapp_clicked
+    if (href.includes("wa.me") || href.includes("whatsapp.com")) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({ event: "whatsapp_clicked" });
+    }
+
+    if (href.startsWith("/") && !href.startsWith(BASE_PATH)) {
       e.preventDefault();
       window.location.href = BASE_PATH + href;
     }
@@ -103,9 +111,6 @@ export default function App() {
       return <BlogPostPage slug={blogPostMatch[1]} />;
     }
 
-    if (path === "/old-home") {
-      return <Home />;
-    }
 
     return <Home />;
   })();

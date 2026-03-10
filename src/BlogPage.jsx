@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useSEO } from "./hooks/useSEO";
 import { ArrowRight, BookOpen, Calendar, Clock, ChevronLeft } from "lucide-react";
-import Navbar from "./components/common/Navbar";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Footer from "./components/common/Footer";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import { fetchBlogPosts } from "./api/blog";
 
 const CARD_COLORS = [
@@ -186,7 +185,7 @@ export default function BlogPage() {
     <div className="min-h-screen bg-neutral-50 text-secondary-900">
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private#booking" }}
       />
 
@@ -261,7 +260,7 @@ export default function BlogPage() {
         )}
       </main>
 
-      <PrivateStyleFooter />
+      <Footer />
     </div>
   );
 }

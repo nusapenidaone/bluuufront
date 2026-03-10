@@ -12,7 +12,7 @@ fields:
         span: auto
         type: number
     bus_price:
-        label: 'Bus Price (> 5 pax)'
+        label: Bus Price
         span: auto
         type: number
     short_description:
@@ -25,5 +25,16 @@ fields:
         label: Description
         size: large
         span: right
-        type: codeeditor
-        language: html
+        type: richeditor
+    image:
+        label: Images
+        mode: image
+        imageWidth: 400
+        imageHeight: 400
+        useCaption: true
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: full
+        type: fileupload
+        tab: Images

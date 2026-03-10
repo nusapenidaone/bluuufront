@@ -1,0 +1,10 @@
+name: Faq
+form: $/noren/bluuu/models/faq/fields.yaml
+modelClass: Noren\Bluuu\Models\Faq
+defaultRedirect: noren/bluuu/faq
+create:
+    redirect: 'noren/bluuu/faq/update/:id'
+    redirectClose: noren/bluuu/faq
+update:
+    redirect: noren/bluuu/faq
+    redirectClose: noren/bluuu/faq

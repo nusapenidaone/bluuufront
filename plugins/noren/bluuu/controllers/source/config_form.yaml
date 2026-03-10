@@ -1,0 +1,10 @@
+name: Source
+form: $/noren/bluuu/models/source/fields.yaml
+modelClass: Noren\Bluuu\Models\Source
+defaultRedirect: noren/bluuu/source
+create:
+    redirect: 'noren/bluuu/source/update/:id'
+    redirectClose: noren/bluuu/source
+update:
+    redirect: noren/bluuu/source
+    redirectClose: noren/bluuu/source

@@ -20,7 +20,7 @@ class Restaurant extends Model
      */
     public $rules = [
     ];
-    protected $appends = ['images_with_thumbs', 'image'];
+    protected $appends = ['images_with_thumbs'];
 
     protected $hidden = ['images'];
 
@@ -46,16 +46,6 @@ class Restaurant extends Model
                 ]),
             ];
         })->toArray();
-    }
-
-    public function getImageAttribute()
-    {
-        $images = $this->images_with_thumbs;
-        if (!$images || !is_array($images)) {
-            return null;
-        }
-
-        return $images[0]['thumb'] ?? null;
     }
 
     /**

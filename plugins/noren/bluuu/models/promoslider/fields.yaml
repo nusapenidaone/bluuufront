@@ -1,0 +1,29 @@
+fields:
+    title:
+        label: Title
+        span: auto
+        type: text
+    button_text:
+        label: 'Button text'
+        span: auto
+        type: text
+    link:
+        label: Link
+        span: full
+        type: text
+    description:
+        label: Description
+        size: large
+        span: full
+        type: richeditor
+    img:
+        label: Image
+        mode: image
+        imageWidth: '100'
+        imageHeight: '100'
+        useCaption: 0
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: full
+        type: fileupload

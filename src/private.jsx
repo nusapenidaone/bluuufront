@@ -27,16 +27,49 @@ import {
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-xl border border-neutral-100 bg-white overflow-hidden">
-      <div className="h-[250px] bg-neutral-100" />
-      <div className="p-4 space-y-3">
-        <div className="h-5 w-3/5 rounded-lg bg-neutral-100" />
-        <div className="h-4 w-4/5 rounded-lg bg-neutral-100" />
-        <div className="flex gap-2">
-          <div className="h-6 w-24 rounded-xl bg-neutral-100" />
-          <div className="h-6 w-24 rounded-xl bg-neutral-100" />
+    <div className="rounded-xl border border-neutral-100 bg-white overflow-hidden flex flex-col sm:min-h-[470px]">
+      {/* Image area */}
+      <div className="relative h-[250px] shrink-0 overflow-hidden bg-neutral-100">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+          animate={{ x: ["-100%", "100%"] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "linear", repeatDelay: 0.3 }}
+        />
+        {/* Dot indicators */}
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`rounded-full bg-white/60 transition-all ${i === 0 ? "w-4 h-1.5" : "w-1.5 h-1.5"}`} />
+          ))}
         </div>
-        <div className="h-3 w-2/5 rounded-lg bg-neutral-100" />
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-1 flex-col gap-2 p-4 pt-5">
+        {/* Radio dot + title */}
+        <div className="flex items-center gap-2 min-h-9">
+          <div className="h-4 w-4 rounded-full bg-neutral-100 shrink-0" />
+          <div className="h-5 w-2/5 rounded-lg bg-neutral-100 animate-pulse" />
+        </div>
+        {/* Description 2 lines */}
+        <div className="space-y-1.5 min-h-10">
+          <div className="h-3.5 w-full rounded-lg bg-neutral-100 animate-pulse" />
+          <div className="h-3.5 w-4/5 rounded-lg bg-neutral-100 animate-pulse" />
+        </div>
+        {/* Schedule link */}
+        <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
+        {/* Chips */}
+        <div className="flex items-center gap-2 min-h-10">
+          <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
+          <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
+        </div>
+        {/* Best for */}
+        <div className="h-3.5 w-3/5 rounded-lg bg-neutral-100 animate-pulse" />
+        {/* Best with */}
+        <div className="h-3.5 w-2/5 rounded-lg bg-neutral-100 animate-pulse" />
+        {/* Button */}
+        <div className="mt-auto pt-2">
+          <div className="h-10 w-full rounded-xl bg-neutral-100 animate-pulse" />
+        </div>
       </div>
     </div>
   );
@@ -108,15 +141,17 @@ import {
   Wine,
   Waves,
   X,
+  Maximize,
   Youtube,
   AlertTriangle,
   Trash2,
   CheckCircle2,
   Ruler,
-  Maximize,
 } from "lucide-react";
 import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
+import PhotoCarousel from "./components/common/PhotoCarousel";
+
 const ICON_MAP = {
   MapPin,
   Fish,
@@ -145,7 +180,9 @@ const ICON_MAP = {
   Car,
   MessageCircle,
 };
-import { tourInfo } from "./data/private.json";
+import { brand as brandData, tourInfo, links as LINKS, trustIncludedShort as TRUST_INCLUDED_SHORT, infoDrawerTabs as INFO_DRAWER_TABS, sections as SECTIONS, bookingMiniFAQ as bookingMiniFAQData } from "./data/private.json";
+const REVIEW_SOURCES = [];
+const INFO_REVIEWS = [];
 // Shared Components
 import CustomDatePicker from "./components/common/CustomDatePicker";
 import PhoneInput from "./components/common/PhoneInput";
@@ -153,44 +190,21 @@ import PolicyModal, { usePolicyModal } from "./components/common/PolicyModal";
 import Button from "./components/common/Button";
 import Card from "./components/common/Card";
 import Section from "./components/common/Section";
-import Navbar from "./components/common/Navbar";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { useSEO } from "./hooks/useSEO";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
+import Footer from "./components/common/Footer";
 import {
-  EXTRAS_CATEGORY_BY_VIBE,
-  LINKS,
-  REVIEW_SOURCES,
   REVIEW_SOURCE_ICON_MAP,
-  INFO_REVIEWS,
-  TRUST_INCLUDED_SHORT,
-  INFO_DRAWER_TABS,
-  SECTIONS,
   SECTION_BACKGROUNDS,
 } from "./components/booking/constants";
 
-// Combined landing page: Part 1 + Part 2 merged into a single long-form page.
-// Demo-only booking actions. Replace alert()/links with your real routing.
+const PRIVATE_ICON_MAP = { Star, MapPin, BadgeCheck, LifeBuoy };
 const BRAND = {
-  name: "Bluuu",
-  product: "Nusa Penida private boat tour",
-  reviewCount: "8,595",
-  reviewLabel: "reviews",
-  rating: "4.9",
-  ratingLabel: "avg rating",
-  badges: [
-    { icon: Star, label: "Customer choice" },
-    { icon: MapPin, label: "Free Bluuu Bus shuttle" },
-    { icon: BadgeCheck, label: "Safety first" },
-    { icon: LifeBuoy, label: "24/7 support" },
-  ],
-  accents: {
-    primary: "from-primary-600 to-primary-700",
-    soft: "from-neutral-100 via-white to-neutral-50",
-  },
+  ...brandData,
+  badges: brandData.badges.map((b) => ({ ...b, icon: PRIVATE_ICON_MAP[b.icon] })),
 };
 const GUEST_FEE_IDR = 350000;
 const MAX_GUESTS = 13;
@@ -401,7 +415,7 @@ function Pill({ icon: Icon, children, className, iconClassName }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-white/20 bg-white-glass px-2 py-1 text-sm text-secondary-600 backdrop-blur",
+        "inline-flex items-center gap-2 text-sm text-secondary-600",
         className
       )}
     >
@@ -457,20 +471,20 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
           cars: 0,
           boatPrice: 0,
           tourPrice: 0,
+          programPrice: 0,
           transferPrice: 0,
           coverPrice: 0,
-          programPrice: 0,
           extrasTotal: 0,
-          totalPrice: 0,
-          fullPrice: 0,
-          discountPrice: 0,
+          deposite: 0,
           discount: 0,
+          totalPrice: 0,
+          discountPrice: 0,
+          fullPrice: 0,
           selectedTransferId: null,
           selectedCoverId: null,
           selectedProgramId: null,
           selectedRestaurantId: null,
           selectedExtras: [],
-          deposite: 0,
           method: 0,
           name,
           email,
@@ -615,7 +629,7 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
   );
 }
 
-function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD, selectedVibe }) {
+function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD, selectedVibe, onOpenTourInfo }) {
   const todayISO = useMemo(() => {
     const d = new Date();
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -658,6 +672,7 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
   const reserveDisabled = isSoldOut || overCapacity;
   const priceLabel = "/ person";
   const priceDisplay = selectedYacht?.priceValue ? formatIDR(perGuest) : formatUSD(perGuest);
+  const contacts = useSiteContacts();
   const safeCartItems = cartItems ?? [];
   const extrasTotal = Math.round(extrasTotalUSD ?? 0);
   const onReserve = () => {
@@ -847,17 +862,30 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
             Reserve now <ArrowRight className="h-4 w-4" />
           </Button>
           <div className="text-center text-sm text-secondary-500">
-            Secure booking in 60s  confirmation email in 1015 min
+            Secure booking in 60s · confirmation email in 10–15 min
           </div>
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-secondary-600">
-            <div className="min-w-0">
-              <div className="font-semibold text-secondary-900">Questions?</div>
-              <div className="text-sm text-secondary-500">Avg response time: 5 min</div>
+          <div className="relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
+              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
             </div>
-            <Button variant="secondary" onClick={() => alert("WhatsApp demo action")} size="sm" className="rounded-full">
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp
-            </Button>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-0.5">Ask an Expert</div>
+              <div className="text-xs text-secondary-500 mb-2">Our team is ready to help you plan the perfect trip.</div>
+              <div className="flex flex-wrap gap-3">
+                {contacts.phone?.link && (
+                  <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <Phone className="h-3.5 w-3.5 text-primary-500" />
+                    {contacts.phone.number}
+                  </a>
+                )}
+                {contacts.whatsapp?.link && (
+                  <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                    <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+            </div>
           </div>
         </div>
         <div className="mt-3 rounded-full border border-neutral-200 bg-white/70 backdrop-blur-sm p-3 text-sm text-secondary-600">
@@ -870,12 +898,12 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
           </div>
         </div>
         <div className="mt-3 flex items-center justify-between text-sm text-secondary-600">
-          <span className="inline-flex items-center gap-1">
-            <Shield className="h-3.5 w-3.5 text-secondary-600" /> Free cancellation 24h
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <CloudRain className="h-3.5 w-3.5 text-secondary-600" /> Weather guarantee
-          </span>
+          <button type="button" onClick={() => onOpenTourInfo?.("cancellation")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
+            <Shield className="h-3.5 w-3.5" /> Free cancellation 24h <ExternalLink className="h-3 w-3" />
+          </button>
+          <button type="button" onClick={() => onOpenTourInfo?.("weather")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
+            <CloudRain className="h-3.5 w-3.5" /> Weather guarantee <ExternalLink className="h-3 w-3" />
+          </button>
         </div>
       </div>
       <PartnerRequestModal
@@ -890,42 +918,9 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
     </Card>
   );
 }
+const MINI_FAQ_ICON_MAP = { BadgeCheck, Users, CloudRain, Clock, Sparkles, Waves };
 function BookingMiniFAQ({ className }) {
-  const [expanded, setExpanded] = useState(false);
-  const items = [
-    {
-      icon: BadgeCheck,
-      q: "Whats included",
-      a: "Premium boat, lunch, land tour, snorkel gear, tickets, photographer + Prosecco moment.",
-    },
-    {
-      icon: Users,
-      q: "Kids?",
-      a: "Private tours are perfect for families with children, including younger kids.",
-    },
-    {
-      icon: CloudRain,
-      q: "Rain?",
-      a: "Weather guarantee: if we cancel due to unsafe conditions, reschedule or receive a full refund.",
-    },
-    {
-      icon: Clock,
-      q: "Start/finish time",
-      a: "Private tours let guests choose the start time  any time between 08:00 and 11:00. Exact timing confirmed after booking.",
-    },
-    {
-      icon: Sparkles,
-      q: "Showers",
-      a: "Post-tour showers are available.",
-    },
-    {
-      icon: Waves,
-      q: "Seasickness?",
-      a: "Upgraded comfort yacht for a smoother ride. If youre prone, bring motion-sickness tablets.",
-    },
-  ];
-  const primaryItems = items.slice(0, 3);
-  const extraItems = items.slice(3);
+  const items = bookingMiniFAQData.map((it) => ({ ...it, icon: MINI_FAQ_ICON_MAP[it.icon] }));
   return (
     <div className={cn("grid gap-3 sm:gap-4 sm:grid-cols-2", className)}>
       {items.map((it) => (
@@ -1066,12 +1061,11 @@ function GalleryHeroGrid({ onOpenGallery }) {
             className="group flex min-w-[72%] snap-start flex-col overflow-hidden rounded-full border border-neutral-200 bg-white text-left shadow-none transition hover:border-neutral-300 sm:min-w-[46%] lg:min-w-[30%]"
           >
             <div className="relative aspect-[4/3] overflow-hidden">
-              <img
-                src={vibe.hero}
+              <PhotoCarousel
+                images={vibe.photos?.length ? vibe.photos : [vibe.hero]}
                 alt={vibe.title}
-                loading="lazy"
-                decoding="async"
-                className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                onOpenGallery={() => onOpenGallery(vibe.id)}
+                className="aspect-[4/3]"
               />
               <div className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/70 backdrop-blur-sm px-2 py-0.5 text-sm font-semibold text-secondary-600 backdrop-blur">
                 {vibe.id === "classic" ? (
@@ -1170,7 +1164,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       vibes.flatMap((vibe) =>
         (vibe.extras || []).map((extra) => ({
           ...extra,
-          category: EXTRAS_CATEGORY_BY_VIBE[vibe.id] ?? "all",
+          category: vibe.id ?? "all",
           vibeId: vibe.id,
           vibeTitle: vibe.title,
         }))
@@ -1729,23 +1723,21 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
         <div className="no-scrollbar max-h-[70vh] overflow-y-auto px-1">
           <div className="space-y-4">
             <div className="border-b border-neutral-200 pb-4">
-              <div className="no-scrollbar flex w-full items-center gap-2 overflow-x-auto pb-1 text-sm font-semibold snap-x snap-mandatory">
+              <div className="no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 text-sm text-secondary-500">
                 {extrasFilterOptions.map((filter) => (
                   <button
                     key={filter.id}
                     type="button"
                     onClick={() => setExtrasFilter(filter.id)}
                     className={cn(
-                      "shrink-0 snap-start rounded-full border px-4 py-2 transition",
+                      "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-semibold transition duration-200 ease-out",
                       extrasFilter === filter.id
-                        ? "border-secondary-900 bg-secondary-900 text-white shadow-card"
-                        : "border-neutral-200 bg-white text-secondary-600 hover:bg-neutral-100"
+                        ? "bg-white text-primary-700"
+                        : "text-secondary-500 hover:text-secondary-700"
                     )}
                   >
                     {filter.label}
-                    <span className="ml-1 text-sm font-semibold text-secondary-400">
-                      {extrasCounts[filter.id] ?? 0}
-                    </span>
+                    <span className="text-sm text-secondary-500">{extrasCounts[filter.id] ?? 0}</span>
                   </button>
                 ))}
               </div>
@@ -1760,7 +1752,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                         alt={extra.title}
                         loading="lazy"
                         decoding="async"
-                        className="h-14 w-14 rounded-xl object-cover ring-1 ring-neutral-200 md:h-18 md:w-18"
+                        className="h-14 w-14 rounded-xl object-cover ring-1 ring-neutral-200"
                       />
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium leading-tight text-secondary-900">
@@ -1892,36 +1884,14 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       >
         {activeVibe && lightboxIndex !== null ? (
           <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-secondary-900">
-            <img
-              src={activeVibe.photos[lightboxIndex]}
-              alt={`${activeVibe.title} large ${lightboxIndex + 1}`}
-              className="max-h-[70vh] w-full object-contain"
-              loading="lazy"
-              decoding="async"
+            <PhotoCarousel
+              images={activeVibe.photos}
+              alt={activeVibe.title}
+              className="w-full"
+              onOpenGallery={() => { }}
+              isLocked={false}
+              startIndex={lightboxIndex}
             />
-            <button
-              type="button"
-              onClick={() =>
-                setLightboxIndex((prev) => (prev - 1 + activeVibe.photos.length) % activeVibe.photos.length)
-              }
-              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/10 p-2 text-white backdrop-blur transition hover:bg-black/10"
-              aria-label="Previous photo"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setLightboxIndex((prev) => (prev + 1) % activeVibe.photos.length)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/10 p-2 text-white backdrop-blur transition hover:bg-black/10"
-              aria-label="Next photo"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-black/20 via-black/5 to-transparent px-4 pb-4 pt-10 text-white">
-              <div className="text-sm font-semibold uppercase tracking-wide-xl">
-                {lightboxIndex + 1} / {activeVibe.photos.length}
-              </div>
-            </div>
           </div>
         ) : null}
       </Modal>
@@ -1936,44 +1906,17 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
             {/* Image left */}
             <div className="w-full shrink-0 sm:w-2/5">
-              <div className="relative overflow-hidden rounded-xl">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveExtraIndex((prev) => {
-                      const total = (activeExtra.gallery || [activeExtra.image]).length;
-                      return (prev - 1 + total) % total;
-                    })
-                  }
-                  className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/90 bg-white/90 backdrop-blur-md p-1.5 text-secondary-600 shadow-card"
-                  aria-label="Previous image"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <img
-                  src={(activeExtra.gallery || [activeExtra.image])[activeExtraIndex]}
-                  alt={activeExtra.title}
-                  className="aspect-[4/3] w-full object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveExtraIndex((prev) => {
-                      const total = (activeExtra.gallery || [activeExtra.image]).length;
-                      return (prev + 1) % total;
-                    })
-                  }
-                  className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-white/90 bg-white/90 backdrop-blur-md p-1.5 text-secondary-600 shadow-card"
-                  aria-label="Next image"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-              {(activeExtra.gallery || [activeExtra.image]).length > 1 ? (
-                <div className="mt-2 text-center text-xs font-semibold text-secondary-400">
-                  {activeExtraIndex + 1} / {(activeExtra.gallery || [activeExtra.image]).length}
-                </div>
-              ) : null}
+              <PhotoCarousel
+                images={activeExtra.gallery?.length ? activeExtra.gallery : [activeExtra.image]}
+                alt={activeExtra.title}
+                className="aspect-[4/3]"
+                onOpenGallery={(idx) => {
+                  const slides = activeExtra.gallery?.length ? activeExtra.gallery : [activeExtra.image];
+                  Fancybox.show(slides.map(src => ({ src, type: "image" })), {
+                    startIndex: idx || 0,
+                  });
+                }}
+              />
             </div>
 
             {/* Content right */}
@@ -2110,7 +2053,7 @@ function Hero() {
       const rect = el.getBoundingClientRect();
       const inView = rect.top < window.innerHeight && rect.bottom > 0;
       if (inView) {
-        if (el.paused) { el.play().catch(() => {}); }
+        if (el.paused) { el.play().catch(() => { }); }
         setPlaying(true);
       } else {
         if (!el.paused) { el.pause(); }
@@ -2127,7 +2070,7 @@ function Hero() {
     };
   }, []);
   const handlePlay = () => {
-    videoRef.current?.play().catch(() => {});
+    videoRef.current?.play().catch(() => { });
     setPlaying(true);
   };
   return (
@@ -2140,10 +2083,7 @@ function Hero() {
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center"
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-semibold text-secondary-600 shadow-sm">
-              <Star className="h-4 w-4 text-amber-400" fill="currentColor" />
-              4.9 / {BRAND.reviewCount} reviews
-            </span>
+            <div style={{ height: 40, overflow: 'hidden' }}><div className="elfsight-app-59bf9aa3-92ce-4654-aa87-9f5050b2af3a" /></div>
             <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-600 sm:text-sm">
               Full day tour · Your boat · Your schedule · Pure comfort
             </p>
@@ -2167,7 +2107,7 @@ function Hero() {
               </a>
             </div>
             <p className="mt-4 text-sm font-medium text-secondary-500">
-              From {formatIDR(1999000)} / boat &middot; Up to {MAX_GUESTS} guests &middot; Free cancellation 24h
+              From $750 / boat &middot; Up to 40 guests &middot; Free cancellation 24h
             </p>
           </motion.div>
         </div>
@@ -2284,9 +2224,9 @@ function HowItWorks() {
       backgroundClassName="bg-transparent"
     >
       <PremiumContainer className="max-w-none px-0 md:max-w-7xl md:px-6 lg:px-8">
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 sm:gap-3 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-2">
           {/* Master "How It Works" Intro Card */}
-          <div className="relative flex flex-col items-start overflow-hidden rounded-xl bg-gradient-to-br from-primary-700 via-primary-600 to-[#0b79e5] p-6 pt-7 col-span-2 sm:col-span-2 sm:p-6 sm:pt-7 md:p-10 md:pt-12 transition-all duration-300 lg:col-span-4 lg:row-span-2">
+          <div className="relative flex flex-col items-start overflow-hidden rounded-xl bg-gradient-to-br from-primary-700 via-primary-600 to-[#0b79e5] p-6 pt-7 sm:col-span-2 sm:p-6 sm:pt-7 md:p-10 md:pt-12 transition-all duration-300 lg:col-span-4 lg:row-span-2">
             <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
             <div className="pointer-events-none absolute -left-16 bottom-12 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" />
             <div className="pointer-events-none absolute inset-0 z-0">
@@ -2322,19 +2262,19 @@ function HowItWorks() {
             return (
               <div
                 key={step.number}
-                className="relative flex flex-col items-center justify-center overflow-hidden rounded-xl border border-neutral-200 bg-white p-5 text-center transition-all duration-300 hover:shadow-xl sm:p-5 md:p-6 lg:col-span-4"
+                className="relative flex flex-row items-center gap-3 overflow-hidden rounded-xl border border-neutral-200 bg-white px-4 py-3 transition-all duration-300 hover:shadow-xl sm:flex-col sm:items-center sm:justify-center sm:p-5 sm:text-center md:p-6 lg:col-span-4"
               >
                 <div className="absolute right-4 top-4 text-xs font-black uppercase tracking-wide-xl text-secondary-300">
                   STEP {step.number}
                 </div>
-                <div className="mb-4 flex h-12 w-12 items-center justify-center">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center sm:mb-4">
                   <Icon className="h-7 w-7 text-secondary-400" />
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-bold text-secondary-900">
+                <div className="space-y-1 sm:space-y-2">
+                  <h3 className="text-base font-bold text-secondary-900 sm:text-lg">
                     {step.title}
                   </h3>
-                  <p className="mx-auto max-w-[200px] text-xs leading-relaxed text-secondary-500">
+                  <p className="text-xs leading-relaxed text-secondary-500 sm:mx-auto sm:max-w-[200px]">
                     {step.text}
                   </p>
                 </div>
@@ -2593,7 +2533,7 @@ function StepOne({
 
             {/* Action Section */}
             <div className="flex flex-col gap-4 p-8">
-              <div className="flex-1 flex flex-col items-start justify-center gap-4">
+              <div className="hidden sm:flex flex-1 flex-col items-start justify-center gap-4">
                 <div className="flex items-center gap-3 text-sm font-medium text-secondary-700">
                   <ShieldCheck className="h-5 w-5 text-primary-600 shrink-0" />
                   <span>No payment yet</span>
@@ -2625,200 +2565,132 @@ function StepOne({
     </PremiumSection>
   );
 }
-function PhotoCarousel({ images, alt, isLocked = false, onOpenGallery, className }) {
-  const slides = images?.length ? images : [];
-  const [index, setIndex] = useState(0);
-  const startRef = useRef(null);
-  const movedRef = useRef(false);
-  const total = slides.length;
-  const clampIndex = (next) => {
-    if (!total) return 0;
-    if (next < 0) return total - 1;
-    if (next >= total) return 0;
-    return next;
-  };
-  const go = (delta) => {
-    if (!total) return;
-    setIndex((prev) => clampIndex(prev + delta));
-  };
-  const onPointerDown = (event) => {
-    startRef.current = { x: event.clientX, y: event.clientY };
-    movedRef.current = false;
-  };
-  const onPointerMove = (event) => {
-    if (!startRef.current) return;
-    const dx = Math.abs(event.clientX - startRef.current.x);
-    const dy = Math.abs(event.clientY - startRef.current.y);
-    if (dx > 10 || dy > 10) movedRef.current = true;
-  };
-  const onPointerUp = (event) => {
-    if (!startRef.current) return;
-    const dx = event.clientX - startRef.current.x;
-    const dy = event.clientY - startRef.current.y;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-      go(dx < 0 ? 1 : -1);
-    }
-    startRef.current = null;
-  };
-  if (!total) {
-    return (
-      <div
-        className={cn(
-          "aspect-video w-full rounded-xl border border-neutral-200 bg-white",
-          className
-        )}
-      />
-    );
-  }
-  return (
-    <div
-      className={cn("group relative w-full overflow-hidden rounded-xl", className, !isLocked && "cursor-pointer")}
-      style={{ touchAction: "pan-y" }}
-      onPointerDown={isLocked ? undefined : onPointerDown}
-      onPointerUp={isLocked ? undefined : onPointerUp}
-      onPointerLeave={isLocked ? undefined : onPointerUp}
-      onPointerMove={isLocked ? undefined : onPointerMove}
-      onClick={() => {
-        if (!isLocked && !movedRef.current) {
-          onOpenGallery?.(index);
-        }
-      }}
-    >
-      <img
-        src={slides[index]}
-        alt={alt}
-        className="absolute inset-0 h-full w-full object-cover"
-        loading="lazy"
-        decoding="async"
-      />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/5 to-transparent" />
-      {!isLocked ? (
-        <>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenGallery?.(index);
-            }}
-            className="absolute left-3 top-3 z-20 inline-flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card backdrop-blur transition hover:bg-white/90 backdrop-blur-md"
-          >
-            {total} photos
-          </button>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpenGallery?.(index);
-            }}
-            className={cn(
-              "absolute right-3 top-3 z-20 inline-flex items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-1.5 text-secondary-600 shadow-card backdrop-blur transition hover:bg-white/90 backdrop-blur-md sm:inline-flex",
-              "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-            )}
-            aria-label="Expand gallery"
-          >
-            <Maximize className="h-4 w-4" />
-          </button>
-        </>
-      ) : null}
-      {total > 1 && !isLocked ? (
-        <>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              go(-1);
-            }}
-            className={cn(
-              "absolute left-3 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-2 text-secondary-600 shadow-card backdrop-blur transition sm:inline-flex",
-              "opacity-0 group-hover:opacity-100"
-            )}
-            aria-label="Previous photo"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              go(1);
-            }}
-            className={cn(
-              "absolute right-3 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-2 text-secondary-600 shadow-card backdrop-blur transition sm:inline-flex",
-              "opacity-0 group-hover:opacity-100"
-            )}
-            aria-label="Next photo"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          <div className="hidden" aria-hidden="true" />
-        </>
-      ) : null}
-    </div>
-  );
-}
-function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
-  const [expandedReviewId, setExpandedReviewId] = useState(null);
-  const StarsRow = ({ size = 4, rating = 5 }) => (
-    <div className="flex items-center gap-1.5" aria-label={`${rating} out of 5`}>
-      {Array.from({ length: 5 }).map((_, idx) => {
-        const filled = idx < rating;
+const TOUR_PICKUP_ITEMS = [
+  { icon: Car, label: "Private vehicle", helper: "Dedicated car for your group." },
+  { icon: Clock, label: "Timed pickup", helper: "Aligned with your boat schedule." },
+  { icon: MessageCircle, label: "Meeting point", helper: "Confirmed on WhatsApp." },
+  { icon: MapPin, label: "Across Bali", helper: "We confirm feasibility after booking." },
+  { icon: Shield, label: "Traffic buffer", helper: "We plan extra time for boarding." },
+  { icon: ArrowRight, label: "Round trip", helper: "Pickup + drop-off available." },
+  { icon: Users, label: "Large groups", helper: "Minivan can be arranged." },
+];
+const TOUR_SAFETY_ITEMS = [
+  { icon: Shield, label: "Route safety", helper: "Safety-first routing policy. Route may change based on sea and weather conditions on the day." },
+  { icon: BadgeCheck, label: "Certified guides", helper: "All guides are licensed and trained. A full safety briefing is given before every departure." },
+  { icon: CheckCircle2, label: "Free cancellation 24h", helper: "Cancel up to 24 hours before departure and receive a full refund. No questions asked." },
+  { icon: AlertTriangle, label: "Port Authority", helper: "Final go/no-go decisions are made on the morning of the tour based on Port Authority guidance and captain safety checks." },
+];
+function TourTabContent({ activeTab, includedSections, cancellationSummaryCards, weatherGuaranteeCards }) {
+  const row = "flex items-center gap-3 border-b border-neutral-100 py-3";
+  const iconBlue = "flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600";
+  const grid = "grid grid-cols-1 sm:grid-cols-2 gap-x-6";
+  if (activeTab === "included") return (
+    <div className={grid}>
+      {includedSections.flatMap((s) => s.items).map((item) => {
+        const Icon = item.icon;
         return (
-          <Star
-            key={idx}
-            className={cn(filled ? "text-orange-500" : "text-orange-200", size === 5 ? "h-6 w-6" : "h-5 w-5")}
-            fill={filled ? "currentColor" : "none"}
-          />
+          <div key={item.label} className={row}>
+            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-secondary-900">{item.label}</div>
+              {item.helper ? <div className="text-xs leading-normal text-secondary-500">{item.helper}</div> : null}
+            </div>
+          </div>
         );
       })}
     </div>
   );
-  const PlatformIcon = ({ source, sizeClassName = "h-6 w-6", iconClassName = "h-4 w-4" }) => (
-    <span className={cn("flex items-center justify-center rounded-xl bg-white ring-1 ring-neutral-200", sizeClassName)}>
-      {source.iconSrc ? (
-        <img src={source.iconSrc} alt="" className={iconClassName} loading="lazy" decoding="async" />
-      ) : (
-        <span className="text-sm font-extrabold text-secondary-600">*</span>
-      )}
-    </span>
+  if (activeTab === "pickup") return (
+    <div className={grid}>
+      {TOUR_PICKUP_ITEMS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div key={item.label} className={row}>
+            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-secondary-900">{item.label}</div>
+              <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
-  const modalReviewSources = useMemo(
-    () =>
-      REVIEW_SOURCES.map((source) => ({
-        ...source,
-        iconSrc: REVIEW_SOURCE_ICON_MAP[source.id] || "",
-      })),
-    []
+  if (activeTab === "safety") return (
+    <div className={grid}>
+      {TOUR_SAFETY_ITEMS.map((item) => {
+        const Icon = item.icon;
+        return (
+          <div key={item.label} className={row}>
+            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-secondary-900">{item.label}</div>
+              <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
-  const modalReviews = useMemo(() => {
-    const sourceIds = modalReviewSources.map((source) => source.id);
-    const fallbackReviews = INFO_REVIEWS;
-    const rawReviews = Array.isArray(tourInfo.reviews) && tourInfo.reviews.length
-      ? tourInfo.reviews
-      : fallbackReviews;
-
-    return rawReviews.map((review, index) => ({
-      id: review.id || `review-${index + 1}`,
-      platformId: review.platformId || sourceIds[index % Math.max(sourceIds.length, 1)] || "tripadvisor",
-      name: review.name || "",
-      date: review.date || review.meta || "",
-      rating: Number.isFinite(Number(review.rating)) && Number(review.rating) > 0 ? Number(review.rating) : 5,
-      title: review.title || "",
-      text: review.text || review.quote || "",
-      screenshotSrc: review.screenshotSrc || "",
-    }));
-  }, [modalReviewSources]);
-  const [policyExpanded, setPolicyExpanded] = useState(false);
-  const policyItems = tourInfo.policyItems;
-  const visiblePolicyItems = policyExpanded ? policyItems : policyItems.slice(0, 4);
-  const cancellationSummaryCards = tourInfo.cancellationCards.map(card => ({
+  if (activeTab === "cancellation") return (
+    <div className={grid}>
+      {cancellationSummaryCards.map((card) => {
+        const Icon = card.icon;
+        return (
+          <div key={card.title} className={row}>
+            <div className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-full border", card.iconWrapClassName)}><Icon className={cn("h-6 w-6", card.iconClassName)} /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-secondary-900">{card.title}</div>
+              <div className="text-xs leading-normal text-secondary-500">{card.text}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+  if (activeTab === "faq") return (
+    <div className={grid}>
+      {bookingMiniFAQData.map((it) => {
+        const Icon = MINI_FAQ_ICON_MAP[it.icon];
+        return (
+          <div key={it.q} className={row}>
+            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-secondary-900">{it.q}</div>
+              <div className="text-xs leading-normal text-secondary-500">{it.a}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+  if (activeTab === "weather") return (
+    <div className={grid}>
+      {[...weatherGuaranteeCards, { icon: AlertTriangle, title: "Port Authority", text: "Final go/no-go decision is based on Port Authority guidance and captain safety checks on the tour morning." }].map((card) => {
+        const Icon = card.icon;
+        return (
+          <div key={card.title} className={row}>
+            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className="min-w-0 flex-1">
+              <div className="text-base font-semibold text-secondary-900">{card.title}</div>
+              <div className="text-xs leading-normal text-secondary-500">{card.text}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+  return null;
+}
+function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
+  const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({
     ...card,
     icon: ICON_MAP[card.icon],
     accentClassName: card.accent,
     iconClassName: card.iconColor,
     iconWrapClassName: card.bg
   }));
-  const weatherGuaranteeCards = tourInfo.weatherGuarantee.map(card => ({
+  const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({
     ...card,
     icon: ICON_MAP[card.icon]
   }));
@@ -2851,14 +2723,11 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
     container.addEventListener('click', handleClick);
     return () => container.removeEventListener('click', handleClick);
   }, []);
-  useEffect(() => {
-    setPolicyExpanded(false);
-  }, [activeTab]);
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0 md:h-[80vh]">
       <div className="sticky top-0 z-20 flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 py-6">
         <div>
-          <div className="text-base font-semibold text-secondary-900">Tour details</div>
+          <div className="text-xl font-semibold text-secondary-900">Tour details</div>
           <div className="mt-1 truncate text-sm text-secondary-500">
             Whats included, pickup, and safety all in one place.
           </div>
@@ -2895,280 +2764,70 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
             ))}
           </div>
         </div>
-        <div className="flex-1 space-y-4 overflow-y-auto overflow-x-hidden py-6 text-sm text-secondary-600 sm:py-6">
-          {internalTab === "included" ? (
-            <div className="space-y-3">
-              <div className="grid gap-3 lg:grid-cols-2 lg:auto-rows-fr">
-                {includedSections.map((section) => (
-                  <div key={section.title} className="h-full rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-                    <div className="text-xs font-bold uppercase tracking-wide-xs text-secondary-400">{section.title}</div>
-                    <div className="mt-3 space-y-4">
-                      {section.items.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={item.label} className="flex items-start gap-3">
-                            <Icon className="mt-0.5 h-4 w-4 text-secondary-500" />
-                            <div>
-                              <div className="text-sm font-semibold text-secondary-900">{item.label}</div>
-                              {item.helper ? (
-                                <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {internalTab === "pickup" ? (
-            <div className="space-y-3">
-              <div className="grid gap-3 lg:grid-cols-2 lg:auto-rows-fr">
-                {[
-                  {
-                    title: "Essentials",
-                    items: [
-                      { icon: Car, label: "Private vehicle", helper: "Dedicated car for your group." },
-                      { icon: Clock, label: "Timed pickup", helper: "Aligned with your boat schedule." },
-                      { icon: MessageCircle, label: "Meeting point", helper: "Confirmed on WhatsApp." },
-                    ],
-                  },
-                  {
-                    title: "Coverage",
-                    items: [
-                      { icon: MapPin, label: "Across Bali", helper: "We confirm feasibility after booking." },
-                      { icon: Shield, label: "Traffic buffer", helper: "We plan extra time for boarding." },
-                    ],
-                  },
-                  {
-                    title: "Options",
-                    items: [
-                      { icon: ArrowRight, label: "Round trip", helper: "Pickup + drop-off available." },
-                      { icon: Users, label: "Large groups", helper: "Minivan can be arranged." },
-                    ],
-                  },
-                ].map((section) => (
-                  <div key={section.title} className="h-full rounded-xl border border-neutral-200 bg-neutral-50 p-4">
-                    <div className="text-xs font-bold uppercase tracking-wide-xs text-secondary-400">{section.title}</div>
-                    <div className="mt-3 space-y-4">
-                      {section.items.map((item) => {
-                        const Icon = item.icon;
-                        return (
-                          <div key={item.label} className="flex items-start gap-3">
-                            <Icon className="mt-0.5 h-4 w-4 text-secondary-500" />
-                            <div>
-                              <div className="text-sm font-semibold text-secondary-900">{item.label}</div>
-                              {item.helper ? (
-                                <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
-                              ) : null}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {internalTab === "reviews" ? (
-            <div className="space-y-6 pb-8">
-              <div>
-                <div className="text-base font-semibold text-secondary-900">Guest reviews</div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-secondary-500">
-                  <span>{BRAND.rating} | {REVIEW_COUNT_SHORT} reviews</span>
-                  <span className="text-secondary-300">|</span>
-                  {modalReviewSources.map((source, idx) => (
-                    <span key={source.id} className="inline-flex items-center gap-1 text-secondary-500">
-                      <a
-                        href={source.href}
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="text-sm font-medium text-secondary-500 transition hover:text-secondary-500 hover:underline underline-offset-4"
-                      >
-                        {source.label}
-                      </a>
-                      <span className="text-sm text-secondary-500">-</span>
-                      {idx < modalReviewSources.length - 1 ? <span className="text-secondary-300">|</span> : null}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-1 text-sm text-secondary-500">Reviews are shown as excerpts for readability.</div>
-              </div>
-              <div className="grid gap-3">
-                {modalReviews.map((r) => {
-                  const platform = modalReviewSources.find((s) => s.id === r.platformId);
-                  const isExpanded = expandedReviewId === r.id;
-                  const canExpand = String(r.text ?? "").length > 190;
-                  return (
-                    <div
-                      key={r.id}
-                      className="rounded-xl border border-neutral-200 bg-white p-4 shadow-card"
-                    >
-                      <div className="flex items-start gap-3">
-                        <PlatformIcon source={platform ?? {}} sizeClassName="h-10 w-10 shrink-0" iconClassName="h-5 w-5" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="truncate text-sm font-semibold text-secondary-900">{r.name}</div>
-                              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm text-secondary-500">
-                                <span className="whitespace-nowrap">{r.date}</span>
-                              </div>
-                            </div>
-                            <div className="shrink-0">
-                              <StarsRow size={4} rating={r.rating} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      {r.title ? (
-                        <div className="mt-3 text-sm font-semibold leading-5 text-secondary-900">
-                          {r.title}
-                        </div>
-                      ) : null}
-                      <div className="mt-1.5 text-sm leading-6 text-secondary-600">
-                        <div
-                          style={
-                            canExpand && !isExpanded
-                              ? {
-                                display: "-webkit-box",
-                                WebkitBoxOrient: "vertical",
-                                WebkitLineClamp: 4,
-                                overflow: "hidden",
-                              }
-                              : undefined
-                          }
-                        >
-                          &quot;{r.text}&quot;
-                        </div>
-                        {canExpand ? (
-                          <button
-                            type="button"
-                            onClick={() => setExpandedReviewId((prev) => (prev === r.id ? null : r.id))}
-                            className="mt-2 text-sm font-semibold text-secondary-500 hover:text-primary-600"
-                          >
-                            {isExpanded ? "Show less" : "Read more"}
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-          {internalTab === "safety" ? (
-            <div className="space-y-4">
-              <div>
-                <div className="text-base font-semibold text-secondary-900">Safety-first policy</div>
-                <div className="mt-1 text-sm text-secondary-500">Your wellbeing is our top priority on every tour.</div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {[
-                  { icon: Shield, title: "Route safety", text: "Safety-first routing policy. Route may change based on sea and weather conditions on the day.", color: "border-emerald-100 bg-emerald-50", iconColor: "text-emerald-600" },
-                  { icon: BadgeCheck, title: "Certified guides", text: "All guides are licensed and trained. A full safety briefing is given before every departure.", color: "border-sky-100 bg-sky-50", iconColor: "text-sky-600" },
-                  { icon: CheckCircle2, title: "Free cancellation 24h", text: "Cancel up to 24 hours before departure and receive a full refund. No questions asked.", color: "border-primary-100 bg-primary-50", iconColor: "text-primary-600" },
-                ].map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <div key={card.title} className="rounded-xl border border-neutral-200 bg-white p-4">
-                      <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl border", card.color)}>
-                        <Icon className={cn("h-4 w-4", card.iconColor)} />
-                      </span>
-                      <div className="mt-3 text-sm font-semibold text-secondary-900">{card.title}</div>
-                      <div className="mt-1.5 text-sm leading-6 text-secondary-600">{card.text}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-secondary-600">
-                Final go/no-go decisions are made on the morning of the tour based on Port Authority guidance and captain safety checks.
-              </div>
-            </div>
-          ) : null}
-          {internalTab === "cancellation" ? (
-            <div className="space-y-4">
-              <div>
-                <div className="text-base font-semibold text-secondary-900">Cancelation policy</div>
-                <div className="mt-1 text-sm text-secondary-500">Simple, fair, and transparent booking protection.</div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {cancellationSummaryCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <div
-                      key={card.title}
-                      className={cn("rounded-xl border border-neutral-200 border-l-4 bg-white p-4", card.accentClassName)}
-                    >
-                      <span className={cn("inline-flex h-8 w-8 items-center justify-center rounded-xl border", card.iconWrapClassName)}>
-                        <Icon className={cn("h-4 w-4", card.iconClassName)} />
-                      </span>
-                      <div className="mt-3 text-sm font-semibold leading-5 text-secondary-900">{card.title}</div>
-                      <div className="mt-1.5 text-sm leading-6 text-secondary-600">{card.text}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-secondary-500">Detailed terms</div>
-                <div className="mt-2 grid gap-2">
-                  {visiblePolicyItems.map((item, idx) => (
-                    <div key={`${idx}-${item.slice(0, 12)}`} className="rounded-xl border border-neutral-200 bg-neutral-50 p-3 text-sm text-secondary-600">
-                      <span className="mr-1 font-semibold text-secondary-900">{idx + 1}.</span>
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="mt-1 flex items-center justify-between">
-                <div className="text-sm text-secondary-500">Compact view</div>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setPolicyExpanded((prev) => !prev)}
-                  size="sm"
-                >
-                  {policyExpanded ? "See less" : "See more"}
-                  <ChevronDown className={cn("h-3.5 w-3.5 transition", policyExpanded ? "rotate-180" : "rotate-0")} />
-                </Button>
-              </div>
-            </div>
-          ) : null}
-          {internalTab === "faq" ? (
-            <div className="pb-4">
-              <BookingMiniFAQ className="shadow-none border-0 bg-transparent p-0" />
-            </div>
-          ) : null}
-          {internalTab === "weather" ? (
-            <div className="space-y-4">
-              <div>
-                <div className="text-base font-semibold text-secondary-900">Weather guarantee</div>
-                <div className="mt-1 text-sm text-secondary-500">If we cancel for safety, your booking is fully protected.</div>
-              </div>
-              <div className="grid gap-3 md:grid-cols-3">
-                {weatherGuaranteeCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <div key={card.title} className="rounded-xl border border-neutral-200 bg-white p-4">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-sky-100 bg-sky-50">
-                        <Icon className="h-4 w-4 text-sky-600" />
-                      </span>
-                      <div className="mt-3 text-sm font-semibold text-secondary-900">{card.title}</div>
-                      <div className="mt-1.5 text-sm leading-6 text-secondary-600">{card.text}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-secondary-600">
-                Final go/no-go decision is based on Port Authority guidance and captain safety checks on the tour morning.
-              </div>
-            </div>
-          ) : null}
-        </div>
+          <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 text-sm text-secondary-600 sm:py-6">
+            <TourTabContent
+              activeTab={internalTab}
+              includedSections={includedSections}
+              cancellationSummaryCards={cancellationSummaryCards}
+              weatherGuaranteeCards={weatherGuaranteeCards}
+            />
+          </div>
       </div>
     </div >
+  );
+}
+function TourInfoInline() {
+  const [activeTab, setActiveTab] = useState("included");
+  const [includedRestaurantPopup, setIncludedRestaurantPopup] = useState(null);
+  const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], iconClassName: card.iconColor, iconWrapClassName: card.bg }));
+  const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
+  const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
+  const tabsContainerRef = useRef(null);
+  useEffect(() => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+    const handleClick = (e) => {
+      const btn = e.target.closest('button[data-tab-id]');
+      if (btn) setActiveTab(btn.getAttribute('data-tab-id'));
+    };
+    container.addEventListener('click', handleClick);
+    return () => container.removeEventListener('click', handleClick);
+  }, []);
+  return (
+    <>
+      <div className="rounded-xl bg-white">
+        <div className="px-4 pt-4">
+          <div className="mb-3">
+            <div className="text-xl font-semibold text-secondary-900">Included</div>
+            <div className="text-sm text-secondary-500">Whats included, pickup, and safety all in one place.</div>
+          </div>
+          <div ref={tabsContainerRef} className="no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 text-sm text-secondary-500">
+            {INFO_DRAWER_TABS.map((tab) => (
+              <button key={tab.id} type="button" data-tab-id={tab.id} className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-semibold transition duration-200 ease-out", activeTab === tab.id ? "bg-white text-primary-700" : "text-secondary-500 hover:text-secondary-700")}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="px-5 py-4 text-sm text-secondary-600">
+          <TourTabContent
+            activeTab={activeTab}
+            includedSections={includedSections}
+            cancellationSummaryCards={cancellationSummaryCards}
+            weatherGuaranteeCards={weatherGuaranteeCards}
+          />
+        </div>
+      </div>
+      {includedRestaurantPopup && (
+        <Modal open={!!includedRestaurantPopup} onClose={() => setIncludedRestaurantPopup(null)} title={includedRestaurantPopup.name || "Restaurant"} subtitle="Included lunch" maxWidth="max-w-xl">
+          <div className="pb-4">
+            {includedRestaurantPopup.image && <div className="mb-4 aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200"><img src={includedRestaurantPopup.image} alt={includedRestaurantPopup.name} className="h-full w-full object-cover" /></div>}
+            {includedRestaurantPopup.description ? <div className="text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.description }} /> : <p className="text-sm text-secondary-500">Lunch is included and served at {includedRestaurantPopup.name}.</p>}
+            {includedRestaurantPopup.menu && <div className="mt-4 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.menu }} />}
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
 function InfoLinksRow({ onOpenTourInfo, className, tone = "default", variant = "full" }) {
@@ -3202,10 +2861,6 @@ function InfoLinksRow({ onOpenTourInfo, className, tone = "default", variant = "
       </button>
       <button type="button" onClick={() => openFancybox("pickup")} className={cn(pillClassName, "gap-1.5")}>
         Pickup
-        <ExternalLink className="h-3.5 w-3.5" />
-      </button>
-      <button type="button" onClick={() => openFancybox("reviews")} className={cn(pillClassName, "gap-1.5")}>
-        Reviews
         <ExternalLink className="h-3.5 w-3.5" />
       </button>
       <button type="button" onClick={() => openFancybox("cancellation")} className={cn(pillClassName, "gap-1.5")}>
@@ -3244,7 +2899,7 @@ function StepTwo({
 }) {
   const [fitsOnly, setFitsOnly] = useState(false);
   const [showSoldOut, setShowSoldOut] = useState(false);
-  const [sort, setSort] = useState(dateMode === "exact" ? "recommended" : "soonest");
+  const [sort, setSort] = useState("recommended");
   const [activeIndex, setActiveIndex] = useState(0);
   const [partnerBoat, setPartnerBoat] = useState(null);
   const carouselRef = useRef(null);
@@ -3305,7 +2960,7 @@ function StepTwo({
     [inlineDatesFor, closePickDayMode, onDateSelectionPreference, onSelectFlexDate, onSelectBoatId, boats, groupSize, privateTours]
   );
   useEffect(() => {
-    setSort(dateMode === "exact" ? "recommended" : "soonest");
+    setSort("recommended");
   }, [dateMode]);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 639px)");
@@ -3355,7 +3010,7 @@ function StepTwo({
   }, [selectedBoatId, closePickDayMode]);
   const list = useMemo(() => {
     const source = boats || [];
-    const baseList = [...source];
+    const baseList = source.filter((y) => y.status !== "disabled");
     // "All boats" shows everything; "Show available boats" filters by capacity
     const base = fitsOnly ? baseList.filter((y) => groupSize <= y.people) : baseList;
 
@@ -3490,6 +3145,7 @@ function StepTwo({
       if (p !== null) draftPriceValue = p;
     }
 
+    const isSoon = boat.status === "soon";
     return (
       <div
         className={cn(
@@ -3497,7 +3153,8 @@ function StepTwo({
           "hover:border-primary-300",
           isSelected && "border-primary-500 ring-1 ring-primary-500 bg-white shadow-2xl z-10",
           isSoldOut && "opacity-70",
-          isLocked && "cursor-pointer"
+          isLocked && "cursor-pointer",
+          isSoon && "pointer-events-none select-none"
         )}
         onClick={() => {
           if (!isLocked) return;
@@ -3505,6 +3162,11 @@ function StepTwo({
         }}
         role={isLocked ? "button" : undefined}
       >
+        {isSoon && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl bg-black/40 backdrop-blur-[2px]">
+            <span className="rounded-full bg-white/90 px-4 py-1.5 text-sm font-bold text-secondary-900 shadow">Coming soon</span>
+          </div>
+        )}
         <div
           className={cn("flex h-full flex-col", isPickDayMode && "invisible pointer-events-none")}
           aria-hidden={isPickDayMode}
@@ -3573,7 +3235,7 @@ function StepTwo({
             <ul className="space-y-1.5">
               {displayPerks.map((item) => (
                 <li key={item} className="flex items-center gap-2 text-sm text-secondary-600">
-                  <svg className="h-3.5 w-3.5 shrink-0 text-primary-500" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <svg className="h-3.5 w-3.5 shrink-0 text-primary-500" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   {item}
                 </li>
               ))}
@@ -3935,15 +3597,13 @@ function StepTwo({
       >
         {confirmModalData ? (
           <div className="flex flex-col">
-            {/* Image 4:3 with padding */}
-            <div className="px-4 pt-4">
-              <div className="aspect-[4/3] w-full overflow-hidden rounded-xl">
-                <img
-                  src={confirmModalData.boat.images?.[0] || confirmModalData.boat.cover}
-                  alt={confirmModalData.boat.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
+            {/* Image edge-to-edge */}
+            <div className="aspect-[4/3] w-full overflow-hidden rounded-3xl">
+              <img
+                src={confirmModalData.boat.images?.[0] || confirmModalData.boat.cover}
+                alt={confirmModalData.boat.name}
+                className="h-full w-full object-cover"
+              />
             </div>
 
             {/* Content below image */}
@@ -4017,134 +3677,133 @@ function StepTwo({
   );
 }
 function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
-  const startRef = useRef(null);
-  const movedRef = useRef(false);
   const total = images.length;
-  const clampIndex = (next) => {
-    if (!total) return 0;
-    if (next < 0) return total - 1;
-    if (next >= total) return 0;
-    return next;
-  };
+  const scrollRef = useRef(null);
+  const lastIdx = useRef(activeIndex);
+  const scrollTimer = useRef(null);
+  const pointerDown = useRef(null);
+  const hasDragged = useRef(false);
+
+  // Sync scroll when parent changes activeIndex externally
+  useEffect(() => {
+    if (activeIndex === lastIdx.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    lastIdx.current = activeIndex;
+    el.scrollTo({ left: activeIndex * el.offsetWidth, behavior: "smooth" });
+  }, [activeIndex]);
+
   const go = (delta) => {
-    if (!total) return;
-    onChange(clampIndex(activeIndex + delta));
+    const el = scrollRef.current;
+    if (!el || !total) return;
+    const target = Math.max(0, Math.min(total - 1, activeIndex + delta));
+    if (target === activeIndex) return;
+    lastIdx.current = target;
+    el.scrollTo({ left: target * el.offsetWidth, behavior: "smooth" });
+    onChange(target);
   };
-  const onPointerDown = (event) => {
-    startRef.current = { x: event.clientX, y: event.clientY };
-    movedRef.current = false;
+
+  // Debounced scroll handler to avoid firing during smooth animation
+  const handleScroll = () => {
+    clearTimeout(scrollTimer.current);
+    scrollTimer.current = setTimeout(() => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const newIdx = Math.round(el.scrollLeft / el.offsetWidth);
+      if (newIdx !== lastIdx.current && newIdx >= 0 && newIdx < total) {
+        lastIdx.current = newIdx;
+        onChange(newIdx);
+      }
+    }, 50);
   };
-  const onPointerMove = (event) => {
-    if (!startRef.current) return;
-    const dx = Math.abs(event.clientX - startRef.current.x);
-    const dy = Math.abs(event.clientY - startRef.current.y);
-    if (dx > 10 || dy > 10) movedRef.current = true;
-  };
-  const onPointerUp = (event) => {
-    if (!startRef.current) return;
-    const dx = event.clientX - startRef.current.x;
-    const dy = event.clientY - startRef.current.y;
-    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
-      go(dx < 0 ? 1 : -1);
-    }
-    startRef.current = null;
-  };
+
   if (!total) {
-    return <div className="aspect-video w-full rounded-xl border border-neutral-200 bg-white" />;
+    return (
+      <div className="flex h-[250px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-400">
+        <Camera className="h-8 w-8 opacity-40" />
+        <span className="text-sm font-medium">No photos yet</span>
+      </div>
+    );
   }
+
+  const indicator = total <= 1 ? null : total > 12 ? (
+    <div className="absolute bottom-3 left-1/2 z-20 -translate-x-1/2 w-20 h-0.5 rounded-full bg-white/30">
+      <div className="h-full rounded-full bg-white transition-all duration-300" style={{ width: `${((activeIndex + 1) / total) * 100}%` }} />
+    </div>
+  ) : (
+    <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
+      {images.map((_, i) => (
+        <div key={i} className={cn("h-1 rounded-full transition-all duration-300", i === activeIndex ? "w-4 bg-white" : "w-1.5 bg-white/40")} />
+      ))}
+    </div>
+  );
+
   return (
     <div
-      className="group relative h-[250px] w-full overflow-hidden rounded-xl"
-      style={{ touchAction: "pan-y" }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerLeave={onPointerUp}
-      onClick={(event) => {
-        event.stopPropagation();
-        if (movedRef.current) return;
-        onOpenGallery?.();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "ArrowLeft") {
-          event.preventDefault();
-          go(-1);
-        }
-        if (event.key === "ArrowRight") {
-          event.preventDefault();
-          go(1);
-        }
+      className="group relative w-full rounded-xl cursor-pointer"
+      onPointerDown={(e) => { pointerDown.current = { x: e.clientX }; hasDragged.current = false; }}
+      onPointerMove={(e) => { if (!pointerDown.current) return; if (Math.abs(e.clientX - pointerDown.current.x) > 8) hasDragged.current = true; }}
+      onClick={(e) => { e.stopPropagation(); if (!hasDragged.current) onOpenGallery?.(); }}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); }
+        if (e.key === "ArrowRight") { e.preventDefault(); go(1); }
       }}
       tabIndex={0}
       role="button"
       aria-label="Open gallery"
     >
-      <img
-        src={images[activeIndex]}
-        alt="Day style preview"
-        loading="lazy"
-        decoding="async"
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/5 to-transparent" />
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenGallery?.();
-        }}
-        className="absolute left-3 top-3 inline-flex items-center gap-2 rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm px-3 py-1 text-sm font-semibold text-secondary-600 opacity-100 shadow-card backdrop-blur transition sm:opacity-0 sm:group-hover:opacity-100"
+      <div
+        ref={scrollRef}
+        className="flex h-[250px] snap-x snap-mandatory rounded-xl"
+        style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" }}
+        onScroll={handleScroll}
       >
-        {total} photos
-      </button>
+        {images.map((src, i) => (
+          <div key={i} className="flex-[0_0_100%] snap-center relative shrink-0 h-[250px] overflow-hidden">
+            <img
+              src={src}
+              alt={i === activeIndex ? "Day style preview" : ""}
+              loading={Math.abs(i - activeIndex) <= 1 ? "eager" : "lazy"}
+              decoding="async"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent rounded-xl" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/5 to-transparent rounded-xl" />
+
       <button
         type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onOpenGallery?.();
-        }}
-        className={cn(
-          "absolute right-3 top-3 inline-flex items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-1.5 text-secondary-600 shadow-card backdrop-blur transition sm:inline-flex",
-          "opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-        )}
+        onClick={(e) => { e.stopPropagation(); onOpenGallery?.(); }}
+        className="absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md text-white shadow-sm transition hover:bg-black/60 opacity-0 group-hover:opacity-100"
         aria-label="Expand gallery"
       >
         <Maximize className="h-4 w-4" />
       </button>
-      {total > 1 ? (
+
+      {total > 1 && (
         <>
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              go(-1);
-            }}
-            className={cn(
-              "absolute left-3 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-2 text-secondary-600 shadow-card backdrop-blur transition sm:inline-flex",
-              "opacity-0 group-hover:opacity-100"
-            )}
+            onClick={(e) => { e.stopPropagation(); go(-1); }}
+            className="absolute left-2 top-1/2 z-20 hidden -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white shadow-sm transition hover:bg-white/30 sm:flex opacity-0 group-hover:opacity-100"
             aria-label="Previous image"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              go(1);
-            }}
-            className={cn(
-              "absolute right-3 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-xl border border-white/70 bg-white/70 backdrop-blur-sm p-2 text-secondary-600 shadow-card backdrop-blur transition sm:inline-flex",
-              "opacity-0 group-hover:opacity-100"
-            )}
+            onClick={(e) => { e.stopPropagation(); go(1); }}
+            className="absolute right-2 top-1/2 z-20 hidden -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white shadow-sm transition hover:bg-white/30 sm:flex opacity-0 group-hover:opacity-100"
             aria-label="Next image"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
-          <div className="hidden" aria-hidden="true" />
         </>
-      ) : null}
+      )}
+      {indicator}
     </div>
   );
 }
@@ -4179,7 +3838,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
   };
   const styleImages = useMemo(() => {
     return styles.reduce((acc, style) => {
-      const images = (style.photos || []).map(p => p.path);
+      const images = (style.photos || []).map(p => p.thumb || p.path);
       if (!images.length) {
         // Fallback to vibes if no photos
         const pool = vibes.flatMap((vibe) => [vibe.hero, ...(vibe.photos || [])]).filter(Boolean);
@@ -4418,7 +4077,8 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                           setActiveSlideByStyleId((prev) => ({ ...prev, [style.id || style.slug]: nextIndex }));
                         }}
                         onOpenGallery={() => {
-                          Fancybox.show(images.map(src => ({ src, type: "image" })), {
+                          const fullPaths = (style.photos || []).map(p => p.path || p.thumb).filter(Boolean);
+                          Fancybox.show((fullPaths.length ? fullPaths : images).map(src => ({ src, type: "image" })), {
                             startIndex: activeIndex,
                             hideScrollbar: false,
                           });
@@ -4478,10 +4138,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                           );
                         })}
                       </div>
-                      <div className="line-clamp-1 text-sm font-semibold text-secondary-300">
+                      <div className="line-clamp-1 text-sm font-semibold text-secondary-500">
                         Best for: {style.best_for || style.bestFor || ""}
                       </div>
-                      <div className="line-clamp-1 text-sm font-semibold text-secondary-300">
+                      <div className="line-clamp-1 text-sm font-semibold text-secondary-500">
                         Best with: {style.best_with || (Array.isArray(style.bestWith) ? style.bestWith.join("  ") : style.bestWith) || ""}
                       </div>
                       <div className="mt-auto pt-2">
@@ -5049,7 +4709,7 @@ function StepTransfers({
       <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
         <div className="flex items-center justify-between px-6 py-5">
           <div>
-            <div className="text-base font-semibold text-secondary-900">Transfer</div>
+            <div className="text-xl font-semibold text-secondary-900">Transfer</div>
             <div className="text-sm text-secondary-500">
               {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
             </div>
@@ -5349,8 +5009,7 @@ function StepExtras({
         activeExtraForPopup.children.forEach((child) => {
           const childSelectedQty = selectedExtras[child.id] || 0;
           const maxChildQty = child.available != null ? Math.max(1, Number(child.available)) : Infinity;
-          const baseQty = childSelectedQty > 0 ? childSelectedQty : 1;
-          next[child.id] = Math.max(1, Math.min(baseQty, maxChildQty));
+          next[child.id] = Math.min(childSelectedQty, maxChildQty);
         });
       } else {
         const selectedQty = selectedExtras[activeExtraForPopup.id] || 0;
@@ -5658,7 +5317,7 @@ function StepExtras({
           }}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 sm:gap-4"
         >
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-50 sm:h-18 sm:w-18 sm:rounded-xl">
+          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-50">
             <img
               src={
                 extra.images_with_thumbs?.[0]?.thumb ||
@@ -5937,12 +5596,32 @@ function StepExtras({
           const basePrice = hasChildren
             ? Math.min(...activeExtraForPopup.children.map(c => Number(c.price || 0)))
             : Number(activeExtraForPopup.price || 0);
+          const cartItemCount = hasChildren
+            ? activeExtraForPopup.children.reduce((sum, child) => sum + Math.max(0, draftQuantities[child.id] ?? 0), 0)
+            : qty;
+          const cartTotal = hasChildren
+            ? activeExtraForPopup.children.reduce((sum, child) => {
+                const childQty = Math.max(0, draftQuantities[child.id] ?? 0);
+                return sum + childQty * Number(child.price || 0);
+              }, 0)
+            : currentItem.price * qty;
           const addHandlerLocal = () => {
-            const existingQty = Number(selectedExtras[currentItem.id] || 0);
-            onChangeExtraQty(currentItem.id, existingQty + qty);
-            updateDraftQty(currentItem.id, getDefaultQty(currentItem), maxQty);
+            if (hasChildren) {
+              activeExtraForPopup.children.forEach(child => {
+                const draftQty = Math.max(0, draftQuantities[child.id] ?? 0);
+                if (draftQty > 0) {
+                  onChangeExtraQty(child.id, Number(selectedExtras[child.id] || 0) + draftQty);
+                }
+              });
+            } else {
+              onChangeExtraQty(currentItem.id, Number(selectedExtras[currentItem.id] || 0) + qty);
+              updateDraftQty(currentItem.id, getDefaultQty(currentItem), maxQty);
+            }
             setShowAddedToast(true);
-            setTimeout(() => setShowAddedToast(false), 2000);
+            setTimeout(() => {
+              setShowAddedToast(false);
+              setActiveExtraId(null);
+            }, 1200);
           };
 
           return (
@@ -5957,10 +5636,10 @@ function StepExtras({
                 </div>
                 <button
                   onClick={() => setActiveExtraId(null)}
-                  className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-transparent text-secondary-400 transition-all hover:border-neutral-200 hover:bg-neutral-50 hover:text-secondary-700"
+                  className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-secondary-600 transition-all hover:bg-neutral-100 hover:text-secondary-900"
                   type="button"
                 >
-                  <X className="h-5 w-5 transition-transform group-hover:rotate-90" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
 
@@ -6004,90 +5683,104 @@ function StepExtras({
                     )}
                     {hasChildren && (
                       <div className="space-y-2">
-                        <div className="text-xs font-semibold text-secondary-400">Choose option</div>
-                        <div className="space-y-2">
-                          {activeExtraForPopup.children.map((child) => {
-                            const isChosen = child.id === selectedChildId;
-                            const childSoldOut = child.available != null && Number(child.available) <= 0;
-                            return (
-                              <button
-                                key={child.id}
-                                type="button"
-                                onClick={() => setSelectedChildId(child.id)}
-                                disabled={childSoldOut}
-                                className={cn(
-                                  "flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-all",
-                                  isChosen
-                                    ? "border-primary-400 bg-primary-50 ring-1 ring-primary-300"
-                                    : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50",
-                                  childSoldOut && "opacity-50 cursor-not-allowed"
-                                )}
-                              >
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className={cn(
-                                    "h-4 w-4 shrink-0 rounded-full border-2 transition-colors",
-                                    isChosen ? "border-primary-600 bg-primary-600" : "border-neutral-300 bg-white"
-                                  )}>
-                                    {isChosen && <div className="h-full w-full rounded-full scale-[0.4] bg-white" />}
-                                  </div>
-                                  <span className={cn("text-sm font-semibold truncate", isChosen ? "text-secondary-900" : "text-secondary-700")}>
-                                    {child.name}
-                                  </span>
-                                </div>
-                                <span className={cn("shrink-0 text-sm font-bold tabular-nums", isChosen ? "text-primary-600" : "text-secondary-500")}>
+                        <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">Options</div>
+                        {activeExtraForPopup.children.map((child) => {
+                          const childMaxQty = child.available != null ? Math.max(1, Number(child.available)) : Infinity;
+                          const childQty = Math.max(0, Math.min(draftQuantities[child.id] ?? 0, childMaxQty));
+                          const childSoldOut = child.available != null && Number(child.available) <= 0;
+                          const isInCart = childQty > 0;
+                          return (
+                            <div key={child.id} className={cn(
+                              "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
+                              isInCart ? "border-primary-300 bg-primary-50" : "border-neutral-200 bg-white",
+                              childSoldOut && "opacity-50"
+                            )}>
+                              <div className="min-w-0 flex-1">
+                                <div className="text-sm font-semibold text-secondary-900 truncate">{child.name}</div>
+                                <div className={cn("text-xs font-bold", isInCart ? "text-primary-600" : "text-secondary-500")}>
                                   {childSoldOut ? "Sold out" : formatIDR(child.price)}
-                                </span>
-                              </button>
-                            );
-                          })}
+                                </div>
+                              </div>
+                              {childSoldOut ? (
+                                <span className="shrink-0 text-xs text-secondary-400">Sold out</span>
+                              ) : (
+                                <div className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-white px-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: Math.max(0, (prev[child.id] ?? 0) - 1) }))}
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
+                                    disabled={childQty <= 0}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </button>
+                                  <span className={cn("min-w-[1.5rem] text-center text-sm font-bold tabular-nums", isInCart ? "text-primary-600" : "text-secondary-400")}>{childQty}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: Math.min((prev[child.id] ?? 0) + 1, childMaxQty) }))}
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
+                                    disabled={childQty >= childMaxQty}
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {!hasChildren && (
+                      <div className={cn(
+                        "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
+                        isSoldOut ? "border-neutral-200 bg-white opacity-50" : "border-primary-300 bg-primary-50"
+                      )}>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400 mb-0.5">Quantity</div>
+                          <div className="text-xs font-bold text-primary-600">{isSoldOut ? "Sold out" : formatIDR(currentItem.price)}</div>
                         </div>
+                        {!isSoldOut && (
+                          <div className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-white px-1.5">
+                            <button
+                              type="button"
+                              onClick={() => updateDraftQty(currentItem.id, qty - 1, maxQty)}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
+                              disabled={qty <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums text-primary-600">{qty}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateDraftQty(currentItem.id, qty + 1, maxQty)}
+                              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
+                              disabled={qty >= maxQty}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
 
                   {/* Actions */}
                   <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="inline-flex h-11 shrink-0 items-center justify-between gap-2.5 rounded-full border border-primary-200 bg-primary-50/80 px-2">
-                        <button
-                          type="button"
-                          onClick={() => updateDraftQty(currentItem.id, qty - 1, maxQty)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary-200 bg-white text-primary-600 transition-all hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
-                          disabled={qty <= 1}
-                        >
-                          <Minus className="h-3.5 w-3.5" />
-                        </button>
-                        <span className="min-w-[1.75rem] text-center text-lg font-bold tabular-nums text-primary-600">{qty}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateDraftQty(currentItem.id, qty + 1, maxQty)}
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-primary-200 bg-white text-primary-600 transition-all hover:bg-primary-50 disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
-                          disabled={qty >= maxQty}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </button>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm">
+                        {cartItemCount > 0
+                          ? <span className="font-semibold text-secondary-900">{cartItemCount} item{cartItemCount > 1 ? "s" : ""} · {formatIDR(cartTotal)}</span>
+                          : isSoldOut ? <span className="text-red-500">Sold out</span> : <span className="text-secondary-400">Select options above</span>
+                        }
                       </div>
                       <button
                         type="button"
                         onClick={addHandlerLocal}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary-600 px-4 text-sm font-bold text-white shadow-md transition-all hover:bg-primary-700 active:scale-[0.98] disabled:bg-neutral-300"
-                        disabled={isSoldOut}
-                      >
-                        {showAddedToast ? (
-                          <>
-                            <CheckCircle2 className="h-5 w-5" />
-                            Added!
-                          </>
-                        ) : isSoldOut ? (
-                          "Sold Out"
-                        ) : (
-                          <>
-                            Add to tour
-                            <span className="rounded-lg bg-white/20 px-2 py-0.5 text-xs font-black tabular-nums">
-                              {formatIDR(currentItem.price * qty)}
-                            </span>
-                          </>
+                        className={cn("inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]",
+                          (cartItemCount > 0 && !isSoldOut) ? "bg-primary-600 hover:bg-primary-700" : "cursor-not-allowed bg-neutral-300"
                         )}
+                        disabled={cartItemCount === 0 || isSoldOut}
+                      >
+                        {showAddedToast ? <><CheckCircle2 className="h-5 w-5" /> Added!</> : "Add to tour"}
                       </button>
                     </div>
                   </div>
@@ -6495,7 +6188,7 @@ function StepFive({
               <div className="border-t border-neutral-200 px-5 py-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-base font-semibold text-secondary-900">Extras ({extrasCount})</div>
+                    <div className="text-xl font-semibold text-secondary-900">Extras ({extrasCount})</div>
                     <div className="mt-1 text-sm text-secondary-500">Optional add-ons for your day.</div>
                   </div>
 
@@ -6554,29 +6247,35 @@ function StepFive({
               </div>
             </div>
             <div className="mt-4 space-y-3">
-              <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
-                <div>
-                  <div className="font-semibold text-secondary-900">Questions?</div>
-                  <div className="text-sm text-secondary-500">Avg response time: 5 min</div>
+              <div className="relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
+                  <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
                 </div>
-                <a
-                  href={contacts.whatsapp?.link || "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex shrink-0 items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-2 text-sm font-semibold text-secondary-900 shadow-sm transition hover:border-neutral-300"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp
-                </a>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-0.5">Ask an Expert</div>
+                  <div className="text-xs text-secondary-500 mb-2">Our team is ready to help you plan the perfect trip.</div>
+                  <div className="flex flex-wrap gap-3">
+                    {contacts.phone?.link && (
+                      <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                        <Phone className="h-3.5 w-3.5 text-primary-500" />
+                        {contacts.phone.number}
+                      </a>
+                    )}
+                    {contacts.whatsapp?.link && (
+                      <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
+                        <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
+                        WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="flex items-center justify-between text-sm text-secondary-500">
-                <button type="button" onClick={() => onOpenTourInfo?.("cancellation", "review")} className="inline-flex items-center gap-1.5 hover:text-secondary-700 transition">
-                  <Shield className="h-3.5 w-3.5" />
-                  Free cancellation 24h
+                <button type="button" onClick={() => onOpenTourInfo?.("cancellation", "review")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
+                  <Shield className="h-3.5 w-3.5" /> Free cancellation 24h <ExternalLink className="h-3 w-3" />
                 </button>
-                <button type="button" onClick={() => onOpenTourInfo?.("weather", "review")} className="inline-flex items-center gap-1.5 hover:text-secondary-700 transition">
-                  <CloudRain className="h-3.5 w-3.5" />
-                  Weather guarantee
+                <button type="button" onClick={() => onOpenTourInfo?.("weather", "review")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
+                  <CloudRain className="h-3.5 w-3.5" /> Weather guarantee <ExternalLink className="h-3 w-3" />
                 </button>
               </div>
             </div>
@@ -7367,33 +7066,14 @@ function ChooseBoatSection({
             </div>
             <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
               <div>
-                <div className="overflow-hidden rounded-xl border border-neutral-200">
-                  <img
-                    src={activeYacht.images[activePhoto]}
-                    alt={`${activeYacht.name} photo`}
-                    loading="lazy"
-                    decoding="async"
-                    className="h-[200px] w-full object-cover sm:h-[260px]"
-                  />
-                </div>
-                <div className="mt-3 grid grid-cols-4 gap-2">
-                  {activeYacht.images.slice(0, 4).map((img, idx) => (
-                    <button
-                      key={`${activeYacht.id}-${idx}`}
-                      type="button"
-                      onClick={() => setActivePhoto(idx)}
-                      className={cn(
-                        "overflow-hidden rounded-xl border bg-white shadow-card transition",
-                        idx === activePhoto
-                          ? "border-neutral-300 ring-2 ring-border-soft"
-                          : "border-neutral-200 hover:border-neutral-300"
-                      )}
-                      aria-label={`View ${activeYacht.name} photo ${idx + 1}`}
-                    >
-                      <img src={img} alt="" loading="lazy" decoding="async" className="h-14 w-full object-cover" />
-                    </button>
-                  ))}
-                </div>
+                <PhotoCarousel
+                  images={activeYacht.images}
+                  alt={activeYacht.name}
+                  className="h-[200px] sm:h-[260px]"
+                  onOpenGallery={(idx) => {
+                    Fancybox.show(activeYacht.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
+                  }}
+                />
               </div>
               <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:hidden">
                 <button
@@ -7893,33 +7573,14 @@ function DayPlan() {
         {infoItem ? (
           <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
             <div>
-              <div className="overflow-hidden rounded-xl border border-neutral-200">
-                <img
-                  src={infoItem.images[infoPhoto]}
-                  alt={infoItem.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="h-[200px] w-full object-cover sm:h-60"
-                />
-              </div>
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {infoItem.images.map((img, index) => (
-                  <button
-                    key={`${infoItem.title}-${index}`}
-                    type="button"
-                    onClick={() => setInfoPhoto(index)}
-                    className={cn(
-                      "overflow-hidden rounded-xl border bg-white shadow-card transition",
-                      index === infoPhoto
-                        ? "border-neutral-300 ring-2 ring-border-soft"
-                        : "border-neutral-200 hover:border-neutral-300"
-                    )}
-                    aria-label={`View ${infoItem.title} photo ${index + 1}`}
-                  >
-                    <img src={img} alt="" loading="lazy" decoding="async" className="h-14 w-full object-cover" />
-                  </button>
-                ))}
-              </div>
+              <PhotoCarousel
+                images={infoItem.images}
+                alt={infoItem.title}
+                className="h-[200px] sm:h-60"
+                onOpenGallery={(idx) => {
+                  Fancybox.show(infoItem.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
+                }}
+              />
             </div>
             <div className="rounded-xl border border-neutral-200 bg-white p-4 sm:hidden">
               <button
@@ -8944,6 +8605,7 @@ function FinalCTA({
                 cartItems={cartItems}
                 extrasTotalUSD={extrasTotalUSD}
                 selectedVibe={selectedVibe}
+                onOpenTourInfo={openTourInfo}
               />
             </div>
           </div>
@@ -9115,6 +8777,7 @@ export default function Premium_Private_With_Vibe() {
         description: tour.description || "",
         listItems,
         packages: tour.packages,
+        status: tour.status || "ready",
       };
     });
     // Final uniqueness sweep to prevent React duplicate key errors
@@ -9636,17 +9299,14 @@ export default function Premium_Private_With_Vibe() {
     if (!hint) return null;
     return (
       <div className="pointer-events-none absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 justify-center">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-primary-200 bg-white/95 px-4 py-2 text-sm font-semibold text-secondary-700 shadow-sm">
-          <span>{hint.message}</span>
-          <Button
-            type="button"
-            variant="secondary"
-            className="h-8 rounded-full border-primary-200 bg-white px-3 text-xs font-semibold text-primary-700 hover:bg-primary-50"
-            onClick={() => scrollToSection(hint.targetId)}
-          >
-            {hint.actionLabel}
-          </Button>
-        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          className="pointer-events-auto h-9 shrink-0 whitespace-nowrap rounded-full border border-primary-200 bg-white/95 px-5 text-sm font-semibold text-primary-700 shadow-sm hover:bg-primary-50"
+          onClick={() => scrollToSection(hint.targetId)}
+        >
+          {hint.actionLabel}
+        </Button>
       </div>
     );
   };
@@ -9659,7 +9319,7 @@ export default function Premium_Private_With_Vibe() {
       >
         <Navbar
           variant="fullbar"
-          links={PRIVATE_STATIC_NAV_LINKS}
+          links={SITE_NAV_LINKS}
           cta={{ label: "Check availability", href: "#booking" }}
         />
         <Hero />
@@ -9863,51 +9523,8 @@ export default function Premium_Private_With_Vibe() {
         </div>
         <PremiumSection backgroundClassName={SECTION_BACKGROUNDS.white}>
           <PremiumContainer>
-            <div className="rounded-xl border border-neutral-200 bg-white p-6">
-              <div className="grid gap-6 lg:grid-cols-2">
-                <div>
-                  <div className="text-lg font-semibold text-secondary-900">Why Bluuu</div>
-                  <ul className="mt-3 space-y-2 text-sm leading-6 text-secondary-600">
-                    {[
-                      "Direct operator own boats",
-                      "Safety-first routing policy",
-                      "Check-in at Bluuu lounge at Serangan Harbor",
-                      "WhatsApp support before and after booking",
-                      "Transparent total before confirming",
-                    ].map((item) => (
-                      <li key={item} className="flex items-start gap-2">
-                        <Check className="mt-1 h-4 w-4 text-primary-600" />
-                        <span className="max-w-[34ch]">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <div className="text-lg font-semibold text-secondary-900">Included in your tour</div>
-                  <div className="mt-3 grid gap-2 text-sm leading-6 text-secondary-600">
-                    {TRUST_INCLUDED_SHORT.map((item) => (
-                      <div key={item} className="flex items-start gap-2">
-                        <Check className="mt-1 h-4 w-4 text-primary-600" />
-                        <span className="max-w-[34ch]">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => openTourInfo("included")}
-                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700"
-                  >
-                    View all included
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </PremiumContainer>
-        </PremiumSection>
-        <PremiumSection backgroundClassName={SECTION_BACKGROUNDS.white}>
-          <PremiumContainer>
-            <div className="rounded-xl border border-neutral-200 bg-white p-6">
+            <TourInfoInline />
+            <div className="mt-4 rounded-xl border border-neutral-200 bg-white p-6">
               <div className="elfsight-app-dc207859-e523-4551-bf17-1b6df3428bae" data-elfsight-app-lazy></div>
             </div>
           </PremiumContainer>
@@ -9989,7 +9606,7 @@ export default function Premium_Private_With_Vibe() {
           {renderInlineDateHint(stepFiveInlineHint)}
         </div>
         <FAQ />
-        <PrivateStyleFooter />
+        <Footer />
 
         <div className="h-24 sm:hidden" />
       </div>
@@ -10023,7 +9640,7 @@ function StepCheckout({
   onCancel,
 }) {
   const isLastStep = step === 3;
-  const canContinue = isLastStep ? (contactName && contactEmail && contactPhone && agreedTerms && agreedLiability) : true;
+  const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
   const [errors, setErrors] = useState({});
 
   const validateEmail = (email) => {
@@ -10385,7 +10002,7 @@ function CheckoutModal({
   onFinalize
 }) {
   const isLastStep = step === 3;
-  const canContinue = isLastStep ? (contactName && contactEmail && contactPhone && agreedTerms && agreedLiability) : true;
+  const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
 
   return (
     <Modal

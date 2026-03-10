@@ -1,46 +1,62 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, X, Check, Coins, Settings2 } from "lucide-react";
+import { Globe, X, Check, Coins } from "lucide-react";
 import { useCurrency } from "../CurrencyContext";
 
 const LANGUAGES = [
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "ru", name: "Русский", flag: "🇷🇺" },
-    { code: "id", name: "Bahasa Indonesia", flag: "🇮🇩" },
-    { code: "zh-CN", name: "简体中文", flag: "🇨🇳" },
-    { code: "ja", name: "日本語", flag: "🇯🇵" },
-    { code: "ko", name: "한국어", flag: "🇰🇷" },
-    { code: "fr", name: "Français", flag: "🇫🇷" },
-    { code: "de", name: "Deutsch", flag: "🇩🇪" },
-    { code: "es", name: "Español", flag: "🇪🇸" },
-    { code: "it", name: "Italiano", flag: "🇮🇹" },
-    { code: "nl", name: "Nederlands", flag: "🇳🇱" },
+    { code: "hy",    name: "Հայերեն",        region: "Հայաստան" },
+    { code: "en",    name: "English",          region: "United States" },
+    { code: "en-GB", name: "English",          region: "United Kingdom" },
+    { code: "ru",    name: "Русский",          region: "Россия" },
+    { code: "id",    name: "Bahasa Indonesia", region: "Indonesia" },
+    { code: "zh-CN", name: "中文",             region: "中国大陆" },
+    { code: "zh-TW", name: "中文",             region: "台灣" },
+    { code: "ja",    name: "日本語",           region: "日本" },
+    { code: "ko",    name: "한국어",           region: "대한민국" },
+    { code: "fr",    name: "Français",         region: "France" },
+    { code: "de",    name: "Deutsch",          region: "Deutschland" },
+    { code: "de-AT", name: "Deutsch",          region: "Österreich" },
+    { code: "es",    name: "Español",          region: "España" },
+    { code: "it",    name: "Italiano",         region: "Italia" },
+    { code: "nl",    name: "Nederlands",       region: "Nederland" },
+    { code: "pt",    name: "Português",        region: "Brasil" },
+    { code: "pt-PT", name: "Português",        region: "Portugal" },
+    { code: "pl",    name: "Polski",           region: "Polska" },
+    { code: "tr",    name: "Türkçe",           region: "Türkiye" },
+    { code: "ar",    name: "العربية",          region: "السعودية" },
+    { code: "th",    name: "ภาษาไทย",         region: "ประเทศไทย" },
+    { code: "vi",    name: "Tiếng Việt",       region: "Việt Nam" },
+    { code: "sv",    name: "Svenska",          region: "Sverige" },
+    { code: "da",    name: "Dansk",            region: "Danmark" },
+    { code: "fi",    name: "Suomi",            region: "Suomi" },
+    { code: "cs",    name: "Čeština",          region: "Česká republika" },
+    { code: "uk",    name: "Українська",       region: "Україна" },
+    { code: "he",    name: "עברית",            region: "ישראל" },
 ];
+
+const RECOMMENDED = ["en", "ru", "id"];
 
 const UnifiedSwitcher = ({ showFloatingButton = true }) => {
     const { rates, selectedCurrency, setSelectedCurrency, currency } = useCurrency();
     const [isOpen, setIsOpen] = useState(false);
-    const [activeTab, setActiveTab] = useState("language"); // "language" or "currency"
+    const [activeTab, setActiveTab] = useState("language");
     const [currentLang, setCurrentLang] = useState("en");
 
     useEffect(() => {
         const handleOpenSettings = () => setIsOpen(true);
         window.addEventListener("open-settings", handleOpenSettings);
 
-        // Sync current language from cookie on mount
         const getCookie = (name) => {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(';').shift();
+            if (parts.length === 2) return parts.pop().split(";").shift();
         };
-
         const googTrans = getCookie("googtrans");
         if (googTrans) {
             const lang = googTrans.split("/").pop();
-            setCurrentLang(lang);
+            if (lang) setCurrentLang(lang);
         }
 
-        // Aggressively hide the Google Translate banner
         const hideBanner = () => {
             const banner = document.querySelector(".goog-te-banner-frame");
             if (banner) {
@@ -50,7 +66,6 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
             }
             document.body.style.top = "0";
         };
-
         const interval = setInterval(hideBanner, 500);
         return () => {
             clearInterval(interval);
@@ -58,50 +73,63 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
         };
     }, []);
 
+    useEffect(() => {
+        if (!isOpen) return;
+        const onKey = (e) => { if (e.key === "Escape") setIsOpen(false); };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [isOpen]);
 
     const changeLanguage = (langCode) => {
-        const cookieValue = langCode === "en" ? "" : `/en/${langCode}`;
+        const code = langCode.split("-")[0];
+        const cookieValue = code === "en" ? "" : `/en/${code}`;
         document.cookie = `googtrans=${cookieValue}; path=/`;
         document.cookie = `googtrans=${cookieValue}; path=/; domain=.${window.location.hostname}`;
-
         setCurrentLang(langCode);
         setIsOpen(false);
         window.location.reload();
     };
 
-    const getActiveTabInfo = () => {
-        if (activeTab === "language") {
-            const lang = LANGUAGES.find(l => l.code === currentLang);
-            return `${lang?.flag} ${lang?.name}`;
-        }
-        return `${currency?.symbol} ${selectedCurrency}`;
+    const activeLang = LANGUAGES.find(l => l.code === currentLang) || LANGUAGES[1];
+    const recommendedLangs = LANGUAGES.filter(l => RECOMMENDED.includes(l.code));
+
+    const LangButton = ({ lang }) => {
+        const isActive = lang.code === currentLang;
+        return (
+            <button
+                onClick={() => changeLanguage(lang.code)}
+                className={`w-full text-left px-3 py-3 rounded-xl border transition-all ${
+                    isActive
+                        ? "border-primary-600 bg-primary-50"
+                        : "border-transparent hover:border-neutral-200 hover:bg-neutral-50"
+                }`}
+            >
+                <div className={`text-sm font-semibold leading-tight ${isActive ? "text-primary-700" : "text-secondary-900"}`}>
+                    {lang.name}
+                </div>
+                <div className="text-xs text-secondary-400 leading-tight mt-0.5">{lang.region}</div>
+            </button>
+        );
     };
 
     return (
         <>
-            {/* Hidden Google Element */}
-            <div id="google_translate_element" style={{ display: 'none' }}></div>
+            <div id="google_translate_element" style={{ display: "none" }} />
 
-            {/* Floating Toggle Button */}
+            {/* Floating Button */}
             {showFloatingButton && (
                 <motion.button
                     onClick={() => setIsOpen(true)}
                     initial={{ opacity: 0, scale: 0.8, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2.5 px-5 py-3 bg-white/90 backdrop-blur-md border border-neutral-200 shadow-xl rounded-full hover:bg-white hover:shadow-2xl transition-all group"
+                    className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-md border border-neutral-200 shadow-lg rounded-full hover:bg-white hover:shadow-xl transition-all"
                 >
-                    <div className="flex items-center -space-x-1">
-                        <Globe className="w-5 h-5 text-primary-500 transition-transform group-hover:rotate-12" />
-                        <Coins className="w-5 h-5 text-secondary-500 transition-transform group-hover:-rotate-12 translate-x-0.5" />
-                    </div>
-                    <div className="h-4 w-[1px] bg-neutral-200 mx-1" />
-                    <span className="text-sm font-semibold text-secondary-600">
-                        {currency?.symbol} · {LANGUAGES.find(l => l.code === currentLang)?.code.toUpperCase()}
+                    <Globe className="w-4 h-4 text-primary-500" />
+                    <span className="text-sm font-semibold text-secondary-700">
+                        {activeLang.name} · {currency?.symbol ?? "$"} {selectedCurrency}
                     </span>
                 </motion.button>
             )}
-
-            {/* Custom Unified Panel */}
 
             <AnimatePresence>
                 {isOpen && (
@@ -112,168 +140,125 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             onClick={() => setIsOpen(false)}
-                            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[10000]"
-                        />
-
-                        {/* Panel */}
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 40 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 40 }}
-                            className="fixed bottom-24 right-6 z-[10001] w-[340px] bg-white rounded-[32px] shadow-2xl border border-neutral-100 overflow-hidden flex flex-col"
+                            className="fixed inset-0 bg-black/40 z-[10000] flex items-center justify-center p-4"
                         >
-                            <div className="p-5 flex items-center justify-between bg-neutral-50/50">
-                                <div className="flex flex-col">
-                                    <h3 className="text-lg font-bold text-secondary-900 leading-tight">Preferences</h3>
-                                    <p className="text-base text-secondary-500 font-medium">Personalize your experience</p>
-                                </div>
-                                <button
-                                    onClick={() => setIsOpen(false)}
-                                    className="p-2 hover:bg-white shadow-sm border border-transparent hover:border-neutral-200 rounded-full transition-all"
-                                >
-                                    <X className="w-5 h-5 text-secondary-400" />
-                                </button>
-                            </div>
-
-                            {/* Tabs Wrapper */}
-                            <div className="px-4 py-2">
-                                <div className="flex p-1 bg-neutral-100 rounded-2xl relative">
-                                    <motion.div
-                                        className="absolute inset-y-1 bg-white rounded-xl shadow-sm z-0"
-                                        initial={false}
-                                        animate={{
-                                            left: activeTab === "language" ? "4px" : "calc(50% + 1px)",
-                                            right: activeTab === "language" ? "calc(50% + 1px)" : "4px"
-                                        }}
-                                        transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                                    />
+                            {/* Modal — notranslate prevents Google Translate from mangling the UI */}
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.97, y: 12 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.97, y: 12 }}
+                                transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="notranslate relative w-full max-w-3xl max-h-[90vh] bg-white rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+                                translate="no"
+                            >
+                                {/* Tabs + close on same line */}
+                                <div className="flex items-center justify-between border-b border-neutral-200 px-6 pt-5 shrink-0">
+                                    <div className="flex">
+                                        {[
+                                            { id: "language", label: "Language & Region" },
+                                            { id: "currency", label: "Currency" },
+                                        ].map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                onClick={() => setActiveTab(tab.id)}
+                                                className={`relative mr-8 pb-3 text-sm font-semibold transition-colors ${
+                                                    activeTab === tab.id
+                                                        ? "text-secondary-900"
+                                                        : "text-secondary-400 hover:text-secondary-700"
+                                                }`}
+                                            >
+                                                {tab.label}
+                                                {activeTab === tab.id && (
+                                                    <motion.div
+                                                        layoutId="tab-line"
+                                                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-secondary-900 rounded-full"
+                                                    />
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
                                     <button
-                                        onClick={() => setActiveTab("language")}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold relative z-10 transition-colors ${activeTab === "language" ? "text-primary-600" : "text-secondary-500"}`}
+                                        onClick={() => setIsOpen(false)}
+                                        className="p-2 -mr-2 mb-3 rounded-full hover:bg-neutral-100 transition-colors"
+                                        aria-label="Close"
                                     >
-                                        <Globe className="w-4 h-4" />
-                                        Language
-                                    </button>
-                                    <button
-                                        onClick={() => setActiveTab("currency")}
-                                        className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-bold relative z-10 transition-colors ${activeTab === "currency" ? "text-secondary-600" : "text-secondary-500"}`}
-                                    >
-                                        <Coins className="w-4 h-4" />
-                                        Currency
+                                        <X className="w-5 h-5 text-secondary-600" />
                                     </button>
                                 </div>
-                            </div>
 
-                            {/* Scrollable Content */}
-                            <div className="max-h-[420px] overflow-y-auto p-3 scrollbar-none min-h-[300px]">
-                                <AnimatePresence mode="wait">
-                                    {activeTab === "language" ? (
-                                        <motion.div
-                                            key="lang-list"
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: -10 }}
-                                            className="grid grid-cols-1 gap-1"
-                                        >
-                                            {LANGUAGES.map((lang) => (
-                                                <button
-                                                    key={lang.code}
-                                                    onClick={() => changeLanguage(lang.code)}
-                                                    className={`flex items-center justify-between w-full p-3.5 rounded-2xl transition-all ${currentLang === lang.code
-                                                        ? "bg-primary-50/80 text-primary-700"
-                                                        : "hover:bg-neutral-50 text-secondary-600 font-medium"
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center gap-3.5">
-                                                        <span className="text-2xl">{lang.flag}</span>
-                                                        <span className="font-bold text-base">{lang.name}</span>
-                                                    </div>
-                                                    {currentLang === lang.code && (
-                                                        <motion.div layoutId="check-l">
-                                                            <Check className="w-4 h-4" />
-                                                        </motion.div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    ) : (
-                                        <motion.div
-                                            key="curr-list"
-                                            initial={{ opacity: 0, x: 10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            exit={{ opacity: 0, x: 10 }}
-                                            className="grid grid-cols-1 gap-1"
-                                        >
-                                            {rates.map((r) => (
-                                                <button
-                                                    key={r.code}
-                                                    onClick={() => {
-                                                        setSelectedCurrency(r.code);
-                                                        setIsOpen(false);
-                                                    }}
-                                                    className={`flex items-center justify-between w-full p-3.5 rounded-2xl transition-all ${selectedCurrency === r.code
-                                                        ? "bg-secondary-50/80 text-secondary-700"
-                                                        : "hover:bg-neutral-50 text-secondary-600 font-medium"
-                                                        }`}
-                                                >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-black transition-colors ${selectedCurrency === r.code ? "bg-secondary-100 text-secondary-600" : "bg-neutral-100 text-secondary-400"}`}>
-                                                            {r.symbol}
-                                                        </div>
-                                                        <div className="text-left">
-                                                            <div className="font-bold text-base leading-tight">{r.code}</div>
-                                                            <div className="text-base opacity-60 font-medium">{r.name}</div>
-                                                        </div>
-                                                    </div>
-                                                    {selectedCurrency === r.code && (
-                                                        <motion.div layoutId="check-c">
-                                                            <Check className="w-4 h-4" />
-                                                        </motion.div>
-                                                    )}
-                                                </button>
-                                            ))}
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="p-4 bg-neutral-50/80 flex items-center justify-center gap-5 border-t border-neutral-100">
-                                <div className="flex items-center gap-1.5 opacity-40">
-                                    <Globe className="w-3 h-3" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Translation</span>
+                                {/* Scrollable content */}
+                                <div className="flex-1 overflow-y-auto px-6 py-5">
+                                    <AnimatePresence mode="wait">
+                                        {activeTab === "language" ? (
+                                            <motion.div
+                                                key="lang"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.12 }}
+                                            >
+                                                <h3 className="text-sm font-bold text-secondary-900 mb-3">
+                                                    All languages
+                                                </h3>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                                    {LANGUAGES.map(lang => (
+                                                        <LangButton key={lang.code} lang={lang} />
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        ) : (
+                                            <motion.div
+                                                key="curr"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.12 }}
+                                            >
+                                                <h3 className="text-sm font-bold text-secondary-900 mb-3">
+                                                    Choose a currency
+                                                </h3>
+                                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                                                    {rates.map((r) => {
+                                                        const isActive = selectedCurrency === r.code;
+                                                        return (
+                                                            <button
+                                                                key={r.code}
+                                                                onClick={() => { setSelectedCurrency(r.code); setIsOpen(false); }}
+                                                                className={`w-full text-left px-3 py-3 rounded-xl border transition-all ${
+                                                                    isActive
+                                                                        ? "border-primary-600 bg-primary-50"
+                                                                        : "border-transparent hover:border-neutral-200 hover:bg-neutral-50"
+                                                                }`}
+                                                            >
+                                                                <div className={`text-sm font-bold leading-tight ${isActive ? "text-primary-700" : "text-secondary-900"}`}>
+                                                                    {r.code} — {r.symbol}
+                                                                </div>
+                                                                <div className="text-xs text-secondary-400 leading-tight mt-0.5">
+                                                                    {r.name}
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
                                 </div>
-                                <div className="w-1 h-1 bg-neutral-300 rounded-full" />
-                                <div className="flex items-center gap-1.5 opacity-40">
-                                    <Coins className="w-3 h-3" />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Rates</span>
-                                </div>
-                            </div>
+                            </motion.div>
                         </motion.div>
                     </>
                 )}
             </AnimatePresence>
 
-            <style original="true">{`
-        /* Aggressive Google UI Hiding */
-        iframe.goog-te-banner-frame { display: none !important; }
-        html:not(.with-fancybox) body:not([style*="position: fixed"]) { top: 0px !important; }
-        .goog-te-menu-frame { display: none !important; }
-        .goog-tooltip { display: none !important; }
-        .goog-tooltip:hover { display: none !important; }
-        .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
-        .skiptranslate { display: none !important; }
-        
-        @media (max-width: 768px) {
-          .fixed.bottom-24.right-6 {
-            right: 0px;
-            bottom: 0px;
-            width: 100%;
-            border-radius: 32px 32px 0 0;
-            max-height: 80vh;
-          }
-        }
-      `}</style>
+            <style>{`
+                iframe.goog-te-banner-frame { display: none !important; }
+                html:not(.with-fancybox) body:not([style*="position: fixed"]) { top: 0px !important; }
+                .goog-te-menu-frame { display: none !important; }
+                .goog-tooltip, .goog-tooltip:hover { display: none !important; }
+                .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
+                .skiptranslate { display: none !important; }
+            `}</style>
         </>
     );
 };

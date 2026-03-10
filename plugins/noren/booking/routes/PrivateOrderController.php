@@ -88,13 +88,7 @@ class PrivateOrderController extends Controller
         //     return response('Unauthorized.', 401);
         // }
 
-        try {
-
         $data = $request->all();
-
-        if (empty($data['tourId'])) {
-            return response()->json(['error' => 'tourId is required'], 422);
-        }
 
         $order = new Order;
 
@@ -158,7 +152,7 @@ class PrivateOrderController extends Controller
         $order->deposite = $data['deposite'] ?? 0;
         if ($order->deposite > 0) {
             $order->method_id     = $data['method'];
-            $order->deposite_summ = $order->total_price * $order->deposite / 100;
+            $order->deposite_summ = $order->full_price * $order->deposite / 100;
         }
 
         // ── Extras ────────────────────────────────────────────────────
@@ -207,10 +201,5 @@ class PrivateOrderController extends Controller
         }
 
         return response()->json($url);
-
-        } catch (\Throwable $e) {
-            \Log::error('PrivateOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return response()->json(['error' => $e->getMessage()], 500);
-        }
     }
 }

@@ -1,0 +1,12 @@
+columns:
+    title:
+        label: Title
+        type: text
+    tourspage:
+        label: Tour
+        type: text
+        relation: tourspage
+        valueFrom: title
+    price:
+        label: Price
+        type: number

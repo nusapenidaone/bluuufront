@@ -1,18 +1,5 @@
 columns:
-    id:
-        label: id
-        type: number
+
     title:
-        label: Title
-        type: text
-        searchable: true
-    slug:
-        label: Slug
-        type: text
-        searchable: true
-    'restaurant[name]':
-        label: Restaurant
-        type: text
-    badge:
-        label: Badge
+        label: title
         type: text

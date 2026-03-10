@@ -2,6 +2,17 @@
 export default {
   content: ["./index.html", "./src/**/*.{js,jsx,ts,tsx}"],
   safelist: [
+    // Icon palette colors (cycling colors for tab items)
+    "bg-blue-100", "text-blue-600",
+    "bg-emerald-100", "text-emerald-600", "bg-emerald-50", "border-emerald-100",
+    "bg-amber-100", "text-amber-600",
+    "bg-violet-100", "text-violet-600",
+    "bg-rose-100", "text-rose-600", "bg-rose-50", "border-rose-100",
+    "bg-cyan-100", "text-cyan-600",
+    "bg-orange-100", "text-orange-600",
+    "bg-teal-100", "text-teal-600",
+    "bg-sky-50", "border-sky-100", "text-sky-600",
+    "border-l-emerald-500", "border-l-rose-500", "border-l-sky-500",
     // Classes used inside backend HTML strings (dangerouslySetInnerHTML)
     "rounded-full", "rounded-xl", "rounded-lg",
     "border", "border-neutral-200", "border-primary-200",
@@ -136,9 +147,14 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        shimmer: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         marquee: "marquee 28s linear infinite",
+        shimmer: "shimmer 1.4s infinite",
       },
       maxWidth: {
         "screen-xl": "1280px",

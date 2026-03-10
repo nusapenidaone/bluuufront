@@ -6,14 +6,14 @@ import { useCurrency } from "./CurrencyContext";
 import { useTours } from "./ToursContext";
 import { useExtras } from "./contexts/ExtrasContext";
 import Modal from "./components/common/Modal";
-import Navbar from "./components/common/Navbar";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { useSEO } from "./hooks/useSEO";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
+import Footer from "./components/common/Footer";
 import LogoSlider from "./components/common/LogoSlider";
+import PhotoCarousel from "./components/common/PhotoCarousel";
 
 // Global formatters to bridge legacy utility functions with React Context
 let _globalFormatPrice = (val, opts) => `IDR ${Number(val).toLocaleString()}`;
@@ -55,6 +55,9 @@ import {
   Users,
   UtensilsCrossed,
   Waves,
+  ChevronLeft,
+  ChevronRight,
+  Maximize,
   Wine,
 } from "lucide-react";
 
@@ -142,7 +145,7 @@ const TOUR_OPTIONS_BASE = [
     name: "Shared Tour",
     badge: "Best value",
     tone: "shared",
-    summary: "Classic shared speedboat day tour with all the highlights.",
+    summary: "Unique shared speedboat day tour with all the highlights.",
     highlights: [
       "Best snorkel spots",
       "Lunch at scenic restaurant",
@@ -381,21 +384,9 @@ function GalleryBlock() {
                         src={item.thumb}
                         alt={item.title || "Gallery"}
                         loading="lazy"
-                        className={cn(
-                          "h-full w-full object-cover transition duration-700",
-                          isLast ? "brightness-[0.55]" : "group-hover:scale-[1.04]"
-                        )}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
                       />
-                      {!isLast && (
-                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-                      )}
-                      {isLast && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-white">
-                          <Camera className="h-5 w-5 opacity-70" />
-                          <span className="text-2xl font-bold leading-none">+{remainingMob}</span>
-                          <span className="text-xs font-medium opacity-70">more photos</span>
-                        </div>
-                      )}
+                      <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
                     </button>
                   );
                 })}
@@ -435,21 +426,9 @@ function GalleryBlock() {
                         src={item.thumb}
                         alt={item.title || "Gallery"}
                         loading="lazy"
-                        className={cn(
-                          "h-full w-full object-cover transition duration-700",
-                          isLast ? "brightness-[0.55]" : "group-hover:scale-[1.04]"
-                        )}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
                       />
-                      {!isLast && (
-                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-                      )}
-                      {isLast && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-white">
-                          <Camera className="h-5 w-5 opacity-70" />
-                          <span className="text-2xl font-bold leading-none">+{remaining}</span>
-                          <span className="text-xs font-medium opacity-70">more photos</span>
-                        </div>
-                      )}
+                      <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
                     </button>
                   );
                 })}
@@ -503,7 +482,10 @@ function TourPicker({ activeTourId, onSelectTour }) {
 
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold text-secondary-900">Tour price</div>
-          <div className="text-lg font-semibold text-secondary-900">{formatIDR(selectedTour.priceValue)}</div>
+          <div className="text-lg font-semibold text-secondary-900">
+            <span className="text-sm font-medium text-secondary-500 mr-1">from</span>
+            {formatIDR(selectedTour.priceValue)}
+          </div>
         </div>
         {selectedTour.priceNote ? (
           <div className="mt-1 text-xs font-semibold text-secondary-500">{selectedTour.priceNote}</div>
@@ -554,7 +536,7 @@ function Hero() {
       const rect = el.getBoundingClientRect();
       const inView = rect.top < window.innerHeight && rect.bottom > 0;
       if (inView) {
-        if (el.paused) { el.play().catch(() => {}); }
+        if (el.paused) { el.play().catch(() => { }); }
         setPlaying(true);
       } else {
         if (!el.paused) { el.pause(); }
@@ -572,7 +554,7 @@ function Hero() {
   }, []);
 
   const handlePlay = () => {
-    videoRef.current?.play().catch(() => {});
+    videoRef.current?.play().catch(() => { });
     setPlaying(true);
   };
 
@@ -586,10 +568,7 @@ function Hero() {
             transition={{ duration: 0.6 }}
             className="flex flex-col items-center"
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm font-semibold text-secondary-600 shadow-sm">
-              <Star className="h-4 w-4 text-amber-400" fill="currentColor" />
-              4.9 / {BRAND.reviewCount} reviews
-            </span>
+            <div style={{ height: 40, overflow: 'hidden' }}><div className="elfsight-app-59bf9aa3-92ce-4654-aa87-9f5050b2af3a" /></div>
             <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-600 sm:text-sm">
               Full day tour · Bali to Nusa Penida · All-inclusive
             </p>
@@ -598,7 +577,7 @@ function Hero() {
               <span className="text-primary-600">Nusa Penida</span>
             </h1>
             <p className="mt-6 max-w-2xl text-sm text-secondary-600 sm:text-xl">
-              Manta rays, snorkeling, diving, and a land tour — shared speedboat or private yacht, all in one unforgettable day.
+              Manta rays, snorkeling, diving, and a land tour — all in one unforgettable day.
             </p>
             <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
               <a
@@ -613,7 +592,7 @@ function Hero() {
               </a>
             </div>
             <p className="mt-4 text-sm font-medium text-secondary-500">
-              From {formatIDR(1300000)} / person · Up to 13 guests · Free cancellation 24h
+              24/7 WhatsApp support · Full refund if bad weather · Free cancellation 24h
             </p>
           </motion.div>
         </div>
@@ -665,11 +644,11 @@ function TourTypeCards() {
     {
       id: "shared",
       tour: sharedTour,
-      label: "Shared tour",
+      label: "Shared",
       badge: "Best value",
       badgeIcon: Trophy,
-      title: "Shared speedboat tour",
-      description: "Classic shared tour, small groups (max 13 guests), all highlights in one smooth day.",
+      title: "Unique tour to Nusa Penida",
+      description: "Small groups, all highlights in one smooth day.",
       highlights: [
         "Best snorkel spots + swim with mantas",
         "Lunch at scenic restaurant",
@@ -687,7 +666,7 @@ function TourTypeCards() {
       label: "Private tour",
       badge: "For families & groups",
       badgeIcon: Users,
-      title: "Private yacht tour",
+      title: "Private boat tour to Nusa Penida",
       description: "Your own private yacht, only your group onboard. Choose your boat, add extras, set your pace.",
       highlights: [
         "Only your group onboard",
@@ -696,7 +675,7 @@ function TourTypeCards() {
       ],
       image: "https://bluuu.tours/storage/app/media/image-30-1.jpg",
       href: "/private",
-      cta: "View Routes",
+      cta: "View Options",
       priceNote: "/ boat",
       featured: true,
     },
@@ -720,7 +699,7 @@ function TourTypeCards() {
               key={card.id}
               href={card.href}
               className={cn(
-                "group flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1",
+                "group relative flex flex-col overflow-hidden rounded-3xl border transition-all duration-300 hover:-translate-y-1",
                 card.featured
                   ? "border-primary-300 bg-white shadow-[0_4px_24px_rgba(37,99,235,0.12)] hover:shadow-[0_8px_32px_rgba(37,99,235,0.2)]"
                   : "border-neutral-200 bg-white shadow-sm hover:shadow-lg"
@@ -728,7 +707,7 @@ function TourTypeCards() {
             >
               {/* Featured accent bar */}
               {card.featured && (
-                <div className="h-1 w-full bg-gradient-to-r from-primary-500 to-primary-700" />
+                <div className="absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-primary-500 to-primary-700" />
               )}
 
               {/* Image */}
@@ -747,11 +726,6 @@ function TourTypeCards() {
                   {card.badge}
                 </span>
                 {/* Featured label top-right */}
-                {card.featured && (
-                  <span className="absolute right-4 top-4 inline-flex items-center rounded-full bg-primary-600 px-3 py-1 text-xs font-bold text-white shadow">
-                    Premium
-                  </span>
-                )}
               </div>
 
               {/* Content */}
@@ -770,23 +744,26 @@ function TourTypeCards() {
                       <div className="h-6 w-28 animate-pulse rounded-lg bg-neutral-200" />
                     ) : (
                       <>
-                        <div className="text-lg font-bold text-secondary-900">{formatIDR(card.tour?.priceValue ?? 0)}</div>
+                        <div className="text-lg font-bold text-secondary-900">
+                          <span className="text-sm font-medium text-secondary-500 mr-1">from</span>
+                          {formatIDR(card.tour?.priceValue ?? 0)}
+                        </div>
                         <div className="text-xs text-secondary-400">{card.priceNote}</div>
                       </>
                     )}
                   </div>
                 </div>
 
-                <p className="mt-3 text-sm leading-6 text-secondary-500">{card.description}</p>
+                <p className="mt-3 text-sm leading-6 text-secondary-500 line-clamp-2 min-h-[3rem]">{card.description}</p>
 
                 <div className="mt-4 space-y-2.5">
                   {card.highlights.map((h) => (
                     <div key={h} className="flex items-center gap-2.5 text-sm text-secondary-700">
                       <span className={cn(
                         "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                        card.featured ? "bg-primary-100" : "bg-neutral-100"
+                        card.featured ? "bg-primary-100" : "bg-primary-50"
                       )}>
-                        <Check className={cn("h-3 w-3", card.featured ? "text-primary-600" : "text-secondary-400")} />
+                        <Check className={cn("h-3 w-3", card.featured ? "text-primary-600" : "text-primary-500")} />
                       </span>
                       {h}
                     </div>
@@ -812,21 +789,54 @@ function TourTypeCards() {
   );
 }
 
+
+function RouteCardSkeleton() {
+  return (
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-100 bg-white">
+      <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
+        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <div className="h-5 w-2/5 animate-pulse rounded-lg bg-neutral-100" />
+        <div className="space-y-1.5">
+          <div className="h-3.5 w-full animate-pulse rounded-lg bg-neutral-100" />
+          <div className="h-3.5 w-4/5 animate-pulse rounded-lg bg-neutral-100" />
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <div className="h-6 w-20 animate-pulse rounded-full bg-neutral-100" />
+          <div className="h-6 w-24 animate-pulse rounded-full bg-neutral-100" />
+        </div>
+        <div className="mt-auto flex justify-end">
+          <div className="h-4 w-24 animate-pulse rounded-lg bg-neutral-100" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RouteCard({ route, bookHref }) {
-  const img = route.photos?.[0]?.path;
   const chips = (route.highlights || []).slice(0, 4);
   const detailHref = bookHref;
 
-  return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-      {/* Image */}
-      <div className="aspect-[16/10] w-full overflow-hidden bg-neutral-200">
-        {img && (
-          <img src={img} alt={route.title} loading="lazy" className="h-full w-full object-cover transition duration-500 hover:scale-[1.03]" />
-        )}
-      </div>
+  const tourImages = (route.tour_images || []).map(img => img.thumb1 || img.original).filter(Boolean);
+  const displayImages = tourImages.length ? tourImages : (route.photos || []);
 
-      {/* Content */}
+  const openGallery = () => {
+    if (!displayImages.length) return;
+    const slides = typeof displayImages[0] === "string"
+      ? displayImages.map(src => ({ src, thumb: src, caption: route.title }))
+      : displayImages.map(p => ({ src: p.path, thumb: p.thumb || p.path, caption: route.title }));
+    Fancybox.show(slides);
+  };
+
+  return (
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white">
+      <PhotoCarousel
+        images={displayImages}
+        alt={route.title}
+        onOpenGallery={openGallery}
+        className="aspect-[16/10]"
+      />
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-base font-bold text-secondary-900">{route.title}</span>
@@ -836,13 +846,11 @@ function RouteCard({ route, bookHref }) {
             </span>
           )}
         </div>
-
         {route.description && (
           <div className="text-sm leading-6 text-secondary-500"
             dangerouslySetInnerHTML={{ __html: route.description }}
           />
         )}
-
         {chips.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {chips.map((item) => {
@@ -858,7 +866,6 @@ function RouteCard({ route, bookHref }) {
             })}
           </div>
         )}
-
         <a
           href={detailHref}
           className="mt-auto inline-flex items-center gap-2 self-end text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline"
@@ -958,6 +965,7 @@ function TourOptions({ activeTourId, onSelectTour }) {
                       <h3 className="text-xl font-semibold text-secondary-900">{tour.name}</h3>
                     </div>
                     <div className="text-xl font-semibold leading-tight text-secondary-900">
+                      <span className="text-sm font-medium text-secondary-500 mr-1">from</span>
                       {formatIDR(tour.priceValue)}
                     </div>
                     {tour.priceNote ? (
@@ -1321,7 +1329,7 @@ function DayPlan() {
       id="plan"
       kicker="What to expect"
       title="Your day plan"
-      subtitle="A smooth full-day flow with snorkeling, lunch, land highlights, and manta time (conditions permitting)."
+      subtitle="A smooth full-day flow with snorkeling, lunch, land highlights, and manta time."
       className=""
     >
       <div className="grid gap-4 lg:grid-cols-12">
@@ -1762,28 +1770,149 @@ function Section({ id, kicker, title, subtitle, children, titleAddon, className 
 }
 
 function RoutesBlock({ id, kicker, title, subtitle, routes, bookHref, bookLabel, loading }) {
+  const [isMobile, setIsMobile] = useState(false);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [hasSwiped, setHasSwiped] = useState(false);
+  const [showAllRoutes, setShowAllRoutes] = useState(false);
+  const carouselRef = useRef(null);
+  const hasSwipedRef = useRef(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile || !carouselRef.current) return;
+    const track = carouselRef.current;
+    const handleScroll = () => {
+      const card = track.querySelector("[data-route-card]");
+      if (!card) return;
+      const cardWidth = card.getBoundingClientRect().width;
+      if (!cardWidth) return;
+      const next = Math.round(track.scrollLeft / cardWidth);
+      setCarouselIndex(Math.min(Math.max(next, 0), routes.length - 1));
+      if (!hasSwipedRef.current && track.scrollLeft > 4) {
+        hasSwipedRef.current = true;
+        setHasSwiped(true);
+      }
+    };
+    handleScroll();
+    track.addEventListener("scroll", handleScroll, { passive: true });
+    return () => track.removeEventListener("scroll", handleScroll);
+  }, [isMobile, routes.length]);
+
+  useEffect(() => { hasSwipedRef.current = hasSwiped; }, [hasSwiped]);
+
+  const skeletonItems = Array.from({ length: 3 });
+
   return (
     <Section id={id} kicker={kicker} title={title} subtitle={subtitle}>
       {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 animate-pulse rounded-2xl bg-neutral-200" />
+        <div
+          className="no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {skeletonItems.map((_, i) => (
+            <div key={i} className="w-[calc(100vw-2rem)] shrink-0 snap-center pr-4 sm:w-auto sm:pr-0">
+              <RouteCardSkeleton />
+            </div>
           ))}
         </div>
       ) : routes.length > 0 ? (
         <>
-          <div className="flex flex-wrap justify-center gap-4">
+          <div
+            ref={carouselRef}
+            className={cn(
+              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+              "-mx-4 px-4 sm:mx-0 sm:px-0",
+              "sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3",
+              !showAllRoutes ? "snap-x snap-mandatory" : "flex-col overflow-visible"
+            )}
+          >
             {routes.map((route) => (
-              <div key={route.id} className="w-full sm:w-[calc(50%-8px)] lg:w-[calc(33.333%-11px)]">
+              <div
+                key={route.id}
+                data-route-card
+                className={cn(
+                  "w-[calc(100vw-2rem)] shrink-0 sm:w-auto",
+                  !showAllRoutes && "snap-center snap-always pr-4 sm:pr-0",
+                  showAllRoutes && "mb-4 sm:mb-0"
+                )}
+              >
                 <RouteCard route={route} bookHref={bookHref} />
               </div>
             ))}
           </div>
-          <div className="mt-6 flex justify-center">
-            <a href={bookHref} className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700">
-              {bookLabel} <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
+
+          {/* Dots */}
+          {isMobile && routes.length > 1 && !showAllRoutes && (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              {Array.from({ length: Math.min(7, routes.length) }, (_, i) => {
+                const maxDots = Math.min(7, routes.length);
+                const start = Math.max(0, Math.min(carouselIndex - Math.floor(maxDots / 2), routes.length - maxDots));
+                const dotIndex = start + i;
+                const isActive = dotIndex === carouselIndex;
+                return (
+                  <button
+                    key={dotIndex}
+                    type="button"
+                    onClick={() => {
+                      const track = carouselRef.current;
+                      const card = track?.querySelector("[data-route-card]");
+                      if (!track || !card) return;
+                      track.scrollTo({ left: dotIndex * card.getBoundingClientRect().width, behavior: "smooth" });
+                      setHasSwiped(true);
+                    }}
+                    className={cn("h-1.5 w-1.5 rounded-full transition", isActive ? "bg-secondary-900" : "bg-secondary-300")}
+                    aria-label={`Go to route ${dotIndex + 1}`}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {/* Swipe hint */}
+          {isMobile && !hasSwiped && routes.length > 1 && !showAllRoutes && (
+            <div className="mt-2 flex items-center justify-center gap-1 text-sm text-secondary-300">
+              <ChevronLeft className="h-3 w-3" /><span>Swipe</span><ChevronRight className="h-3 w-3" />
+            </div>
+          )}
+
+          {/* View all / Back */}
+          {isMobile && !showAllRoutes && (
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllRoutes(true)}
+                className="rounded-full border border-neutral-200 bg-white px-6 py-2.5 text-sm font-bold text-secondary-900 hover:bg-neutral-50 transition"
+              >
+                View all routes
+              </button>
+            </div>
+          )}
+          {isMobile && showAllRoutes && (
+            <div className="mt-4 flex justify-center">
+              <button
+                type="button"
+                onClick={() => { setShowAllRoutes(false); setHasSwiped(false); hasSwipedRef.current = false; }}
+                className="rounded-full border border-neutral-200 bg-white px-6 py-2.5 text-sm font-bold text-secondary-900 hover:bg-neutral-50 transition"
+              >
+                Back to slider
+              </button>
+            </div>
+          )}
+
+          {/* Desktop CTA */}
+          {!isMobile && (
+            <div className="mt-6 flex justify-center">
+              <a href={bookHref} className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white transition hover:bg-primary-700">
+                {bookLabel} <ArrowRight className="h-4 w-4" />
+              </a>
+            </div>
+          )}
         </>
       ) : null}
     </Section>
@@ -1847,7 +1976,7 @@ export default function MainTest01() {
       <CurrencyBridge />
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "#book" }}
       />
       <Hero />
@@ -1860,9 +1989,7 @@ export default function MainTest01() {
       <LogoSlider title="Trusted on top travel platforms" />
       <WhyBluuu />
       <FAQ />
-      <PrivateStyleFooter />
-      <MobileStickyCTA />
-      <div className="h-24 sm:hidden" />
+      <Footer />
     </div>
   );
 }

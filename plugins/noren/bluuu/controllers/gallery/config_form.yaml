@@ -1,0 +1,10 @@
+name: Gallery
+form: $/noren/bluuu/models/gallery/fields.yaml
+modelClass: Noren\Bluuu\Models\Gallery
+defaultRedirect: noren/bluuu/gallery
+create:
+    redirect: 'noren/bluuu/gallery/update/:id'
+    redirectClose: noren/bluuu/gallery
+update:
+    redirect: noren/bluuu/gallery
+    redirectClose: noren/bluuu/gallery

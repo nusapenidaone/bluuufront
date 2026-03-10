@@ -2,9 +2,8 @@ import React, { useMemo, useState } from "react";
 import { useSEO } from "./hooks/useSEO";
 import { ChevronLeft, CircleHelp, Mail, MessageCircle, Phone, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import Navbar from "./components/common/Navbar";
-import PrivateStyleFooter from "./components/common/PrivateStyleFooter";
-import { PRIVATE_STATIC_NAV_LINKS } from "./components/common/privateNavLinks";
+import Footer from "./components/common/Footer";
+import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import { useTours } from "./ToursContext";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 
@@ -69,7 +68,7 @@ export default function FaqPage() {
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
       <Navbar
         variant="fullbar"
-        links={PRIVATE_STATIC_NAV_LINKS}
+        links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private#booking" }}
       />
 
@@ -145,7 +144,7 @@ export default function FaqPage() {
         </div>
       </main>
 
-      <PrivateStyleFooter />
+      <Footer />
     </div>
   );
 }
