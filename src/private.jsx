@@ -7,7 +7,7 @@ import { useExtras } from "./contexts/ExtrasContext";
 import { useRules } from "./contexts/RulesContext";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, trackAddToCart } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, trackAddToCart } from "./lib/analytics";
 import { CoversCompact } from "./components/booking/TransferCoverPanels";
 import {
   formatIDR,
@@ -59,14 +59,12 @@ function SkeletonCard() {
         {/* Schedule link */}
         <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
         {/* Chips */}
-        <div className="flex items-center gap-2 min-h-10">
+        <div className="flex min-h-[3.75rem] flex-wrap content-start gap-x-3 gap-y-2">
           <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
           <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
         </div>
-        {/* Best for */}
+        {/* Recommendation */}
         <div className="h-3.5 w-3/5 rounded-lg bg-neutral-100 animate-pulse" />
-        {/* Best with */}
-        <div className="h-3.5 w-2/5 rounded-lg bg-neutral-100 animate-pulse" />
         {/* Button */}
         <div className="mt-auto pt-2">
           <div className="h-10 w-full rounded-xl bg-neutral-100 animate-pulse" />
@@ -491,6 +489,7 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
           email,
           whatsapp: phone,
           requests: null,
+          ga_client_id: getGaClientId(),
         }),
       });
       if (!res.ok) throw new Error("Request failed");
@@ -1153,7 +1152,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
   const [extrasFilter, setExtrasFilter] = useState("all");
   const [extraQuantity, setExtraQuantity] = useState(1);
   const [extrasExpanded, setExtrasExpanded] = useState(false);
-  const [extrasShowAll, setExtrasShowAll] = useState(false);
+  const [extrasVisibleCount, setExtrasVisibleCount] = useState(3);
   useEffect(() => {
     // Reset "show all" when filter changes
     setExtrasShowAll(false);
@@ -1766,7 +1765,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
             {filteredExtras.length ? (
               <div className="mx-auto w-full rounded-xl border border-neutral-200 bg-white">
                 <div className="divide-y divide-border">
-                  {(extrasFilter === "all" && !extrasShowAll ? filteredExtras.slice(0, 8) : filteredExtras).map((extra) => (
+                  {(extrasFilter === "all" && !extrasShowAll ? filteredExtras.slice(0, 5) : filteredExtras).map((extra) => (
                     <div key={extra.id} className="grid grid-cols-[auto,1fr,auto] items-center gap-4 px-4 py-4">
                       <img
                         src={extra.image}
@@ -1841,7 +1840,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                     </div>
                   ))}
                 </div>
-                {extrasFilter === "all" && !extrasShowAll && filteredExtras.length > 8 && (
+                {extrasFilter === "all" && !extrasShowAll && filteredExtras.length > 5 && (
                   <div className="border-t border-neutral-100 p-4">
                     <button
                       type="button"
@@ -2602,8 +2601,8 @@ const TOUR_SAFETY_ITEMS = [
   { icon: AlertTriangle, label: "Port Authority", helper: "Final go/no-go decisions are made on the morning of the tour based on Port Authority guidance and captain safety checks." },
 ];
 function TourTabContent({ activeTab, includedSections, cancellationSummaryCards, weatherGuaranteeCards }) {
-  const row = "flex items-center gap-3 border-b border-neutral-100 py-3";
-  const iconBlue = "flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600";
+  const row = "flex items-center gap-4 border-b border-neutral-100 py-3 sm:py-4 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0";
+  const iconBlue = "flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600";
   const grid = "grid grid-cols-1 sm:grid-cols-2 gap-x-6";
   if (activeTab === "included") return (
     <div className={grid}>
@@ -2611,7 +2610,7 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = item.icon;
         return (
           <div key={item.label} className={row}>
-            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{item.label}</div>
               {item.helper ? <div className="text-xs leading-normal text-secondary-500">{item.helper}</div> : null}
@@ -2627,7 +2626,7 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = item.icon;
         return (
           <div key={item.label} className={row}>
-            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{item.label}</div>
               <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
@@ -2643,7 +2642,7 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = item.icon;
         return (
           <div key={item.label} className={row}>
-            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{item.label}</div>
               <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
@@ -2659,7 +2658,9 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = card.icon;
         return (
           <div key={card.title} className={row}>
-            <div className={cn("flex h-14 w-14 shrink-0 items-center justify-center rounded-full border", card.iconWrapClassName)}><Icon className={cn("h-6 w-6", card.iconClassName)} /></div>
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100">
+              <Icon className={cn("h-6 w-6 text-primary-600", card.iconClassName)} />
+            </div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{card.title}</div>
               <div className="text-xs leading-normal text-secondary-500">{card.text}</div>
@@ -2675,7 +2676,7 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = MINI_FAQ_ICON_MAP[it.icon];
         return (
           <div key={it.q} className={row}>
-            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{it.q}</div>
               <div className="text-xs leading-normal text-secondary-500">{it.a}</div>
@@ -2691,7 +2692,7 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = card.icon;
         return (
           <div key={card.title} className={row}>
-            <div className={iconBlue}><Icon className="h-6 w-6" /></div>
+            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{card.title}</div>
               <div className="text-xs leading-normal text-secondary-500">{card.text}</div>
@@ -2730,25 +2731,11 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
     setInternalTab(id);
     onTabChange?.(id);
   };
-  const tabsContainerRef = useRef(null);
-  useEffect(() => {
-    const container = tabsContainerRef.current;
-    if (!container) return;
-    const handleClick = (e) => {
-      const btn = e.target.closest('button[data-tab-id]');
-      if (btn) {
-        const id = btn.getAttribute('data-tab-id');
-        handleTabChange(id);
-      }
-    };
-    container.addEventListener('click', handleClick);
-    return () => container.removeEventListener('click', handleClick);
-  }, []);
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0 md:h-[80vh]">
-      <div className="sticky top-0 z-20 flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 py-6">
+      <div className="sticky top-0 z-20 flex shrink-0 items-start justify-between gap-4 bg-neutral-50/60 py-6">
         <div>
-          <div className="text-xl font-semibold text-secondary-900">Tour details</div>
+          <div className="text-xl font-semibold text-secondary-900">Tour info</div>
           <div className="mt-1 truncate text-sm text-secondary-500">
             Whats included, pickup, and safety all in one place.
           </div>
@@ -2763,21 +2750,18 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
         </button>
       </div>
       <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="border-b border-neutral-200">
-          <div
-            ref={tabsContainerRef}
-            className="hide-scrollbar flex flex-nowrap items-center gap-1 overflow-x-auto py-1 text-sm font-semibold text-secondary-400 sm:gap-2"
-          >
+        <div className="border-b border-neutral-200 px-1">
+          <div className="hide-scrollbar flex flex-nowrap items-center gap-x-5 gap-y-2 overflow-x-auto py-3 text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
             {INFO_DRAWER_TABS.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                data-tab-id={tab.id}
+                onClick={() => handleTabChange(tab.id)}
                 className={cn(
-                  "relative shrink-0 whitespace-nowrap rounded-xl px-3 py-2.5 transition sm:px-4 sm:py-2",
+                  "inline-flex shrink-0 items-center whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
                   internalTab === tab.id
-                    ? "bg-primary-600 text-white shadow-sm"
-                    : "hover:bg-neutral-100 hover:text-secondary-900"
+                    ? "border-primary-600 text-primary-600 hover:text-primary-700"
+                    : "text-secondary-500 hover:text-secondary-700"
                 )}
               >
                 {tab.label}
@@ -2785,59 +2769,83 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
             ))}
           </div>
         </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 text-sm text-secondary-600 sm:py-6">
-            <TourTabContent
-              activeTab={internalTab}
-              includedSections={includedSections}
-              cancellationSummaryCards={cancellationSummaryCards}
-              weatherGuaranteeCards={weatherGuaranteeCards}
-            />
-          </div>
-      </div>
-    </div >
-  );
-}
-function TourInfoInline() {
-  const [activeTab, setActiveTab] = useState("included");
-  const [includedRestaurantPopup, setIncludedRestaurantPopup] = useState(null);
-  const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], iconClassName: card.iconColor, iconWrapClassName: card.bg }));
-  const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
-  const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
-  const tabsContainerRef = useRef(null);
-  useEffect(() => {
-    const container = tabsContainerRef.current;
-    if (!container) return;
-    const handleClick = (e) => {
-      const btn = e.target.closest('button[data-tab-id]');
-      if (btn) setActiveTab(btn.getAttribute('data-tab-id'));
-    };
-    container.addEventListener('click', handleClick);
-    return () => container.removeEventListener('click', handleClick);
-  }, []);
-  return (
-    <>
-      <div className="rounded-xl bg-white">
-        <div className="px-4 pt-4">
-          <div className="mb-3">
-            <div className="text-xl font-semibold text-secondary-900">Included</div>
-            <div className="text-sm text-secondary-500">Whats included, pickup, and safety all in one place.</div>
-          </div>
-          <div ref={tabsContainerRef} className="no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 text-sm text-secondary-500">
-            {INFO_DRAWER_TABS.map((tab) => (
-              <button key={tab.id} type="button" data-tab-id={tab.id} className={cn("inline-flex shrink-0 items-center whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-semibold transition duration-200 ease-out", activeTab === tab.id ? "bg-white text-primary-700" : "text-secondary-500 hover:text-secondary-700")}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="px-5 py-4 text-sm text-secondary-600">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 text-sm text-secondary-600 sm:py-6">
           <TourTabContent
-            activeTab={activeTab}
+            activeTab={internalTab}
             includedSections={includedSections}
             cancellationSummaryCards={cancellationSummaryCards}
             weatherGuaranteeCards={weatherGuaranteeCards}
           />
         </div>
+      </div>
+    </div >
+  );
+}
+function TourInfoInline() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("included");
+  const [includedRestaurantPopup, setIncludedRestaurantPopup] = useState(null);
+  const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], iconClassName: card.iconColor, iconWrapClassName: card.bg }));
+  const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
+  const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
+  return (
+    <>
+      <div className="rounded-xl border border-neutral-200 bg-white">
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
+          aria-expanded={isOpen}
+          aria-controls="tour-program-inline-panel"
+        >
+          <div>
+            <div className="text-xl font-semibold text-secondary-900">Tour info</div>
+            <div className="text-sm text-secondary-500">Whats included, pickup, and safety all in one place.</div>
+          </div>
+          <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl border border-neutral-200 bg-white text-secondary-700">
+            {isOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+          </span>
+        </button>
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              id="tour-program-inline-panel"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <div className="border-b border-neutral-200 px-5 pt-3 pb-3">
+                <div className="no-scrollbar flex items-center gap-x-5 gap-y-2 overflow-x-auto text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
+                  {INFO_DRAWER_TABS.map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "inline-flex shrink-0 items-center whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
+                        activeTab === tab.id
+                          ? "border-primary-600 text-primary-600 hover:text-primary-700"
+                          : "text-secondary-500 hover:text-secondary-700"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="px-5 py-4 text-sm text-secondary-600">
+                <TourTabContent
+                  activeTab={activeTab}
+                  includedSections={includedSections}
+                  cancellationSummaryCards={cancellationSummaryCards}
+                  weatherGuaranteeCards={weatherGuaranteeCards}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       {includedRestaurantPopup && (
         <Modal open={!!includedRestaurantPopup} onClose={() => setIncludedRestaurantPopup(null)} title={includedRestaurantPopup.name || "Restaurant"} subtitle="Included lunch" maxWidth="max-w-xl">
@@ -2868,7 +2876,7 @@ function InfoLinksRow({ onOpenTourInfo, className, tone = "default", variant = "
           onClick={() => openFancybox("included")}
           className={cn(pillClassName, "gap-2")}
         >
-          Included items
+          Tour info
           <ExternalLink className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -3526,87 +3534,88 @@ function StepTwo({
             </div>
           </div>
 
-          <div className="hidden sm:grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">
+          <div
+            ref={carouselRef}
+            className={cn(
+              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+              dateMode === "flex" || showAllBoats ? "flex-col overflow-visible px-4" : "snap-x snap-mandatory"
+            )}
+          >
             {sorted.map((boat) => (
-              <div key={boat.id} className="h-full">{renderBoatCard(boat, { isLocked: false })}</div>
+              <div
+                key={boat.id}
+                data-card
+                className={cn(
+                  "relative flex min-h-[70vh] w-full shrink-0 sm:min-h-0 sm:h-full",
+                  !(dateMode === "flex" || showAllBoats) && "snap-center snap-always",
+                  (dateMode === "flex" || showAllBoats) && "mb-4 sm:mb-0"
+                )}
+              >
+                {renderBoatCard(boat, { isLocked: false })}
+              </div>
             ))}
           </div>
-          <div className="sm:hidden">
-            <div
-              ref={carouselRef}
-              className={cn(
-                "no-scrollbar flex gap-0 pb-2 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-                dateMode === "flex" || showAllBoats ? "flex-col gap-4 overflow-visible" : "snap-x snap-mandatory overflow-x-auto"
-              )}
-            >
-              {sorted.map((boat) => (
-                <div key={boat.id} data-card className={cn("shrink-0", (dateMode === "flex" || showAllBoats) ? "w-full" : "w-full snap-center snap-always")}>
-                  <div className={cn("h-full", (dateMode === "flex" || showAllBoats) ? "min-h-0" : "min-h-[70vh]")}>{renderBoatCard(boat, { isLocked: false })}</div>
-                </div>
-              ))}
+          {isMobile && totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              {Array.from({ length: Math.min(7, totalCount) }, (_, i) => {
+                const maxDots = Math.min(7, totalCount);
+                const start = Math.max(0, Math.min(activeIndex - Math.floor(maxDots / 2), totalCount - maxDots));
+                const dotIndex = start + i;
+                const isActive = dotIndex === activeIndex;
+                return (
+                  <button
+                    key={`boat-dot-${dotIndex}`}
+                    type="button"
+                    onClick={() => {
+                      const track = carouselRef.current;
+                      const card = track?.querySelector("[data-card]");
+                      if (!track || !card) return;
+                      const cardWidth = card.getBoundingClientRect().width;
+                      track.scrollTo({ left: dotIndex * cardWidth, behavior: "smooth" });
+                      setHasSwiped(true);
+                    }}
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full transition",
+                      isActive ? "bg-secondary-900" : "bg-secondary-300"
+                    )}
+                    aria-label={`Go to boat ${dotIndex + 1}`}
+                  />
+                );
+              })}
             </div>
-            {totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
-              <div className="mt-3 flex items-center justify-center gap-2">
-                {Array.from({ length: Math.min(7, totalCount) }, (_, i) => {
-                  const maxDots = Math.min(7, totalCount);
-                  const start = Math.max(0, Math.min(activeIndex - Math.floor(maxDots / 2), totalCount - maxDots));
-                  const dotIndex = start + i;
-                  const isActive = dotIndex === activeIndex;
-                  return (
-                    <button
-                      key={`boat-dot-${dotIndex}`}
-                      type="button"
-                      onClick={() => {
-                        const track = carouselRef.current;
-                        const card = track?.querySelector("[data-card]");
-                        if (!track || !card) return;
-                        const cardWidth = card.getBoundingClientRect().width;
-                        track.scrollTo({ left: dotIndex * cardWidth, behavior: "smooth" });
-                        setHasSwiped(true);
-                      }}
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full transition",
-                        isActive ? "bg-secondary-900" : "bg-secondary-300"
-                      )}
-                      aria-label={`Go to boat ${dotIndex + 1}`}
-                    />
-                  );
-                })}
-              </div>
-            ) : null}
-            {!hasSwiped && totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
-              <div className="mt-2 flex items-center justify-center gap-1 text-sm text-secondary-300">
-                <ChevronLeft className="h-3 w-3" />
-                <span>Swipe</span>
-                <ChevronRight className="h-3 w-3" />
-              </div>
-            ) : null}
-            {isMobile && !showAllBoats && dateMode !== "flex" && (
-              <div className="mt-4 flex justify-center">
-                <Button
-                  variant="secondary"
-                  className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
-                  onClick={() => setShowAllBoats(true)}
-                >
-                  View all boats
-                </Button>
-              </div>
-            )}
-            {isMobile && showAllBoats && dateMode !== "flex" && (
-              <div className="mt-4 flex justify-center">
-                <Button
-                  variant="secondary"
-                  className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
-                  onClick={() => {
-                    setShowAllBoats(false);
-                    setHasSwiped(false);
-                  }}
-                >
-                  Back to slider
-                </Button>
-              </div>
-            )}
-          </div>
+          ) : null}
+          {isMobile && !hasSwiped && totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
+            <div className="mt-2 flex items-center justify-center gap-1 text-sm text-secondary-300">
+              <ChevronLeft className="h-3 w-3" />
+              <span>Swipe</span>
+              <ChevronRight className="h-3 w-3" />
+            </div>
+          ) : null}
+          {isMobile && !showAllBoats && dateMode !== "flex" && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="secondary"
+                className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
+                onClick={() => setShowAllBoats(true)}
+              >
+                View all boats
+              </Button>
+            </div>
+          )}
+          {isMobile && showAllBoats && dateMode !== "flex" && (
+            <div className="mt-4 flex justify-center">
+              <Button
+                variant="secondary"
+                className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
+                onClick={() => {
+                  setShowAllBoats(false);
+                  setHasSwiped(false);
+                }}
+              >
+                Back to slider
+              </Button>
+            </div>
+          )}
         </PremiumContainer>
       </PremiumSection>
       <Modal
@@ -4149,7 +4158,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         <Calendar className="h-4 w-4" />
                         Schedule
                       </button>
-                      <div className="flex items-center gap-2 min-h-10">
+                      <div className="flex min-h-[3.75rem] flex-wrap content-start gap-x-3 gap-y-2">
                         {chips.map((item) => {
                           const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
                           return (
@@ -4159,13 +4168,13 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                           );
                         })}
                       </div>
-                      <div className="line-clamp-1 text-sm font-semibold text-secondary-500">
-                        Best for: {style.best_for || style.bestFor || ""}
-                      </div>
-                      <div className="line-clamp-1 text-sm font-semibold text-secondary-500">
-                        Best with: {style.best_with || (Array.isArray(style.bestWith) ? style.bestWith.join("  ") : style.bestWith) || ""}
-                      </div>
-                      <div className="mt-auto pt-2">
+                      <div className="mt-auto flex flex-col gap-3 pt-1">
+                        {style.best_for || style.bestFor ? (
+                          <div className="flex min-h-5 items-start gap-2 text-sm font-semibold leading-5 text-secondary-500">
+                            <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                            <span>{style.best_for || style.bestFor}</span>
+                          </div>
+                        ) : <div className="min-h-5" />}
                         {isSelected ? (
                           <Button
                             className="w-full"
@@ -4288,6 +4297,11 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             const renderCompactScheduleItem = (item, sectionKey) => {
               const Icon = resolveScheduleIcon(item.title);
               const detailsText = sanitizeDisplayText(item.details, { stripTrailingOne: true });
+              const isLunch = /lunch/i.test(item.title);
+              const lunchDisplay = isLunch
+                ? getLunchDisplayData(item, selectedRestaurantData, getRouteRestaurantDetails(style))
+                : null;
+              const descriptionText = isLunch ? lunchDisplay?.description : detailsText;
               return (
                 <div
                   key={`${sectionKey}-${item.title}-${item.time}`}
@@ -4298,37 +4312,29 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="text-sm font-semibold text-secondary-900">{item.title}</div>
+                      <div className="text-sm font-semibold text-secondary-900">
+                        {lunchDisplay?.popupRestaurant ? (
+                          <button
+                            type="button"
+                            onClick={() => setRestaurantDataPopup(lunchDisplay.popupRestaurant)}
+                            className="group inline-flex items-center gap-1.5 text-left transition hover:text-primary-600"
+                          >
+                            <span>{lunchDisplay.title}</span>
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0 text-secondary-400 transition group-hover:text-primary-600" />
+                          </button>
+                        ) : (
+                          lunchDisplay?.title || item.title
+                        )}
+                      </div>
                       <div className="text-xs font-semibold text-secondary-500">
                         {item.time} {item.duration ? `(${item.duration})` : ""}
                       </div>
                     </div>
-                    <div className="mt-0.5 text-xs leading-relaxed text-secondary-600">
-                      {/lunch/i.test(item.title) && selectedRestaurantData ? (
-                        <>
-                          {(() => {
-                            const r = selectedRestaurantData;
-                            const rName = r?.name || r?.title || "";
-                            const rDescription = r?.description || "";
-                            const rMenu = r?.menu || "";
-                            const rImage = r?.image || r?.images_with_thumbs?.[0]?.thumb || null;
-                            if (!rName) return <span>{detailsText}</span>;
-                            return (
-                              <button
-                                type="button"
-                                onClick={() => setRestaurantDataPopup(r)}
-                                className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline underline-offset-4"
-                              >
-                                {rName}
-                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                              </button>
-                            );
-                          })()}
-                        </>
-                      ) : (
-                        detailsText
-                      )}
-                    </div>
+                    {descriptionText ? (
+                      <div className="mt-0.5 text-xs leading-relaxed text-secondary-600">
+                        {descriptionText}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );
@@ -4416,7 +4422,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                           onClick={onContinue}
                           className="rounded-full px-6"
                         >
-                          Choose your boat <ArrowRight className="h-4 w-4 ml-1.5" />
+                          Choose your tour <ArrowRight className="h-4 w-4 ml-1.5" />
                         </Button>
                       </div>
                     </div>
@@ -4486,36 +4492,42 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             {idx < section.items.length - 1 && (
                               <span className="absolute -left-[11px] top-4 h-full w-px bg-neutral-100" />
                             )}
-                            <div className="text-sm font-bold text-secondary-900">{item.title}</div>
-                            <div className="mt-1 text-sm text-secondary-600 leading-relaxed">
-                              {/lunch/i.test(item.title) && (activeRestaurantData || activeItineraryStyle?.restaurant) ? (
+                            {(() => {
+                              const isLunch = /lunch/i.test(item.title);
+                              const lunchDisplay = isLunch
+                                ? getLunchDisplayData(
+                                  item,
+                                  activeRestaurantData || activeItineraryStyle?.restaurant,
+                                  getRouteRestaurantDetails(activeItineraryStyle)
+                                )
+                                : null;
+                              const descriptionText = isLunch
+                                ? lunchDisplay?.description
+                                : sanitizeDisplayText(item.details, { stripTrailingOne: true });
+                              return (
                                 <>
-                                  {(() => {
-                                    const r = activeRestaurantData || activeItineraryStyle?.restaurant;
-                                    const rInferred = !r ? getRouteRestaurantDetails(activeItineraryStyle) : null;
-                                    const rName = r?.name || r?.title || r?.restaurant_name || rInferred?.name || "";
-                                    const rDescription = r?.description || "";
-                                    const rMenu = r?.menu || "";
-                                    const rImage = r?.image || r?.images_with_thumbs?.[0]?.thumb || null;
-                                    if (!rName) {
-                                      return <span>{sanitizeDisplayText(item.details, { stripTrailingOne: true })}</span>;
-                                    }
-                                    return (
+                                  <div className="text-sm font-bold text-secondary-900">
+                                    {lunchDisplay?.popupRestaurant ? (
                                       <button
                                         type="button"
-                                        onClick={() => setRestaurantDataPopup(r)}
-                                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline underline-offset-4"
+                                        onClick={() => setRestaurantDataPopup(lunchDisplay.popupRestaurant)}
+                                        className="group inline-flex items-center gap-1.5 text-left transition hover:text-primary-600"
                                       >
-                                        {rName}
-                                        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                                        <span>{lunchDisplay.title}</span>
+                                        <ExternalLink className="h-3.5 w-3.5 shrink-0 text-secondary-400 transition group-hover:text-primary-600" />
                                       </button>
-                                    );
-                                  })()}
+                                    ) : (
+                                      lunchDisplay?.title || item.title
+                                    )}
+                                  </div>
+                                  {descriptionText ? (
+                                    <div className="mt-1 text-sm text-secondary-600 leading-relaxed">
+                                      {descriptionText}
+                                    </div>
+                                  ) : null}
                                 </>
-                              ) : (
-                                sanitizeDisplayText(item.details, { stripTrailingOne: true })
-                              )}
-                            </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       ))}
@@ -4651,6 +4663,69 @@ const sanitizeDisplayText = (value, { stripTrailingOne = false } = {}) => {
   return withSentenceSpacing.replace(/\s+1$/, "").trim();
 };
 
+const getRestaurantDisplayName = (restaurant) => {
+  if (!restaurant || typeof restaurant !== "object") return "";
+  return sanitizeDisplayText(
+    restaurant.name ||
+    restaurant.title ||
+    restaurant.restaurant_name ||
+    restaurant.restaurantName ||
+    "",
+    { stripTrailingOne: true }
+  );
+};
+
+const getRestaurantDisplayDescription = (restaurant) => {
+  if (!restaurant || typeof restaurant !== "object") return "";
+  return sanitizeDisplayText(
+    restaurant.description ||
+    restaurant.short_description ||
+    restaurant.shortDescription ||
+    restaurant.details ||
+    restaurant.menu ||
+    "",
+    { stripTrailingOne: true }
+  );
+};
+
+const getLunchDisplayData = (item, restaurant = null, fallbackRestaurant = null) => {
+  const detailsText = sanitizeDisplayText(item?.details, { stripTrailingOne: true });
+  const primaryRestaurant = restaurant && typeof restaurant === "object" ? restaurant : null;
+  const inferredRestaurant = fallbackRestaurant && typeof fallbackRestaurant === "object" ? fallbackRestaurant : null;
+  const inferredNameFromDetails = detailsText
+    ? (
+      detailsText.match(/^([^()]+?(?:restaurant|beach ?club))/i)?.[1]?.trim()
+      || detailsText.match(/(?:at|served at)\s+([^()]+?(?:restaurant|beach ?club))/i)?.[1]?.trim()
+      || ""
+    )
+    : "";
+  const name =
+    getRestaurantDisplayName(primaryRestaurant)
+    || getRestaurantDisplayName(inferredRestaurant)
+    || inferredNameFromDetails;
+  const restaurantDescription =
+    getRestaurantDisplayDescription(primaryRestaurant)
+    || getRestaurantDisplayDescription(inferredRestaurant);
+  const fallbackDescription =
+    detailsText && detailsText !== String(item?.title || "").trim() && detailsText !== name
+      ? detailsText
+      : "";
+  const description = restaurantDescription || fallbackDescription;
+  const popupRestaurant = name || description
+    ? {
+      ...(primaryRestaurant || {}),
+      ...(inferredRestaurant || {}),
+      name,
+      description,
+    }
+    : null;
+  return {
+    title: name ? `Lunch at ${name}` : item?.title || "Lunch",
+    description,
+    popupRestaurant,
+  };
+};
+
 const getOptionDescription = (option) => {
   if (!option || typeof option !== "object") return "";
   const rawDescription = (
@@ -4722,134 +4797,142 @@ function StepTransfers({
   onContinue,
   embedded = false,
   showContinue = true,
+  showCovers = true,
+  showHeader = true,
+  framed = true,
 }) {
   const selectedTransfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
   const [activeTransferDetails, setActiveTransferDetails] = useState(null);
-  const content = (
-    <div className="flex flex-col gap-4">
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
-        <div className="flex items-center justify-between px-6 py-5">
-          <div>
-            <div className="text-xl font-semibold text-secondary-900">Transfer</div>
-            <div className="text-sm text-secondary-500">
-              {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
-            </div>
+  const transferOptions = (
+    <div className="flex flex-col divide-y divide-neutral-100">
+      {/* Option: No thanks */}
+      <label className={cn(
+        "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
+        !selectedTransferId ? "bg-primary-50/30" : "hover:bg-neutral-50"
+      )}>
+        <input
+          type="radio"
+          name="transfer-selection-step"
+          className="hidden"
+          checked={!selectedTransferId}
+          onChange={() => onSelectTransferId(null)}
+        />
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+            <MapPin className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold text-secondary-900 sm:text-base">No, thanks. We'll meet you there.</div>
+            <div className="mt-1 text-sm font-medium text-secondary-500">Self-arrival at the meeting point</div>
           </div>
         </div>
-        <div className="border-t border-neutral-200">
-          <div className="flex flex-col divide-y divide-neutral-100">
-            {/* Option: No thanks */}
-            <label className={cn(
-              "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
-              !selectedTransferId ? "bg-primary-50/30" : "hover:bg-neutral-50"
-            )}>
-              <input
-                type="radio"
-                name="transfer-selection-step"
-                className="hidden"
-                checked={!selectedTransferId}
-                onChange={() => onSelectTransferId(null)}
-              />
-              <div className="flex min-w-0 flex-1 items-center gap-4">
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                  <MapPin className={cn("h-6 w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-secondary-900 sm:text-base">No, thanks. We'll meet you there.</div>
-                  <div className="mt-1 text-sm font-medium text-secondary-500">Self-arrival at the meeting point</div>
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center justify-center">
-                <div className={cn(
-                  "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                  !selectedTransferId
-                    ? "border-primary-600 bg-primary-600"
-                    : "border-neutral-200 bg-white"
-                )}>
-                  {!selectedTransferId && <Check className="h-3 w-3 text-white" />}
-                </div>
-              </div>
-            </label>
-            {/* Transfer Options */}
-            {transfers && transfers.map((transfer) => {
-              const isLargeGroup = totalGuests > 5;
-              const unitPrice = (isLargeGroup && transfer.bus_price)
-                ? Number(transfer.bus_price)
-                : Number(transfer.price || 0);
-              const isSelected = String(selectedTransferId) === String(transfer.id);
-              const finalName = transfer.name;
-              const transferName = String(transfer.name || "").toLowerCase();
-              const isPickupDropoffTransfer = /pick[\s-]?up|drop[\s-]?off/.test(transferName);
-              const transferCapacityHint = isPickupDropoffTransfer
-                ? (isLargeGroup
-                  ? "6+ guests: minivan price is applied. Up to 5 guests use car price."
-                  : "Up to 5 guests: car price. For 6+ guests, minivan price is applied.")
-                : "";
-              const transferDetails = buildOptionDetails(transfer, {
-                extraDescription: transferCapacityHint,
-                fallbackDescription: "Transfer details will be confirmed after booking.",
-                fallbackImage: TRANSFER_DETAILS_FALLBACK_IMAGE,
-              });
-              const hasTransferDetails = Boolean(transferDetails.description || transferDetails.image);
-              return (
-                <label key={transfer.id} className={cn(
-                  "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
-                  isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
-                )}>
-                  <input
-                    type="radio"
-                    name="transfer-selection-step"
-                    className="hidden"
-                    checked={isSelected}
-                    onChange={() => onSelectTransferId(transfer.id)}
-                  />
-                  <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                      <Car className={cn("h-6 w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                          {formatIDR(unitPrice)}
-                        </span>
-                        <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
-                      </div>
-                      {hasTransferDetails && (
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            setActiveTransferDetails({
-                              title: finalName,
-                              description: transfer.description || transfer.short_description || transferDetails.description,
-                              image: transferDetails.image,
-                            });
-                          }}
-                          className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
-                          aria-label={`See transfer details for ${finalName}`}
-                        >
-                          <Info className="h-3.5 w-3.5" />
-                          <span>See full description</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center justify-center">
-                    <div className={cn(
-                      "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                      isSelected
-                        ? "border-primary-600 bg-primary-600"
-                        : "border-neutral-200 bg-white"
-                    )}>
-                      {isSelected && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                  </div>
-                </label>
-              );
-            })}
+        <div className="flex shrink-0 items-center justify-center">
+          <div className={cn(
+            "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
+            !selectedTransferId
+              ? "border-primary-600 bg-primary-600"
+              : "border-neutral-200 bg-white"
+          )}>
+            {!selectedTransferId && <Check className="h-3 w-3 text-white" />}
           </div>
+        </div>
+      </label>
+      {/* Transfer Options */}
+      {transfers && transfers.map((transfer) => {
+        const isLargeGroup = totalGuests > 5;
+        const unitPrice = (isLargeGroup && transfer.bus_price)
+          ? Number(transfer.bus_price)
+          : Number(transfer.price || 0);
+        const isSelected = String(selectedTransferId) === String(transfer.id);
+        const finalName = transfer.name;
+        const transferName = String(transfer.name || "").toLowerCase();
+        const isPickupDropoffTransfer = /pick[\s-]?up|drop[\s-]?off/.test(transferName);
+        const transferCapacityHint = isPickupDropoffTransfer
+          ? (isLargeGroup
+            ? "6+ guests: minivan price is applied. Up to 5 guests use car price."
+            : "Up to 5 guests: car price. For 6+ guests, minivan price is applied.")
+          : "";
+        const transferDetails = buildOptionDetails(transfer, {
+          extraDescription: transferCapacityHint,
+          fallbackDescription: "Transfer details will be confirmed after booking.",
+          fallbackImage: TRANSFER_DETAILS_FALLBACK_IMAGE,
+        });
+        const hasTransferDetails = Boolean(transferDetails.description || transferDetails.image);
+        return (
+          <label key={transfer.id} className={cn(
+            "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
+            isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
+          )}>
+            <input
+              type="radio"
+              name="transfer-selection-step"
+              className="hidden"
+              checked={isSelected}
+              onChange={() => onSelectTransferId(transfer.id)}
+            />
+            <div className="flex min-w-0 flex-1 items-center gap-4">
+              <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                <Car className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
+                    {formatIDR(unitPrice)}
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
+                </div>
+                {hasTransferDetails && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setActiveTransferDetails({
+                        title: finalName,
+                        description: transfer.description || transfer.short_description || transferDetails.description,
+                        image: transferDetails.image,
+                      });
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
+                    aria-label={`See transfer details for ${finalName}`}
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                    <span>See full description</span>
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center justify-center">
+              <div className={cn(
+                "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
+                isSelected
+                  ? "border-primary-600 bg-primary-600"
+                  : "border-neutral-200 bg-white"
+              )}>
+                {isSelected && <Check className="h-3 w-3 text-white" />}
+              </div>
+            </div>
+          </label>
+        );
+      })}
+    </div>
+  );
+  const content = (
+    <div className="flex flex-col gap-4">
+      <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
+        {showHeader && (
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <div className="text-xl font-semibold text-secondary-900">Transfer</div>
+              <div className="text-sm text-secondary-500">
+                {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
+              </div>
+            </div>
+          </div>
+        )}
+        <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
+          {transferOptions}
         </div>
       </div>
       <Modal
@@ -4888,13 +4971,17 @@ function StepTransfers({
           </div>
         </div>
       </Modal>
-      <CoversCompact
-        covers={covers}
-        selectedCoverId={selectedCoverId}
-        onSelectCoverId={onSelectCoverId}
-        priceLabel="per boat"
-        formatPrice={formatIDR}
-      />
+      {showCovers && (
+        <CoversCompact
+          covers={covers}
+          selectedCoverId={selectedCoverId}
+          onSelectCoverId={onSelectCoverId}
+          priceLabel="per boat"
+          formatPrice={formatIDR}
+          showHeader={showHeader}
+          framed={framed}
+        />
+      )}
       {
         showContinue && (
           <div className="flex justify-end">
@@ -4947,6 +5034,7 @@ function StepExtras({
   styleRecommendations = {},
   onReview,
   onSkip,
+  sectionId = "step-6",
 }) {
   const { categories, privateRoutes } = useExtras();
   const contacts = useSiteContacts();
@@ -5000,11 +5088,14 @@ function StepExtras({
     [extrasCatalog, recommendedIds]
   );
   const [extrasFilter, setExtrasFilter] = useState("all");
-  const [extrasShowAll, setExtrasShowAll] = useState(false);
+  const [extrasVisibleCount, setExtrasVisibleCount] = useState(3);
   const [activeExtraId, setActiveExtraId] = useState(null);
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [showAddedToast, setShowAddedToast] = useState(false);
   const [draftQuantities, setDraftQuantities] = useState({});
+  const [isExtrasOpen, setIsExtrasOpen] = useState(true);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isInsuranceOpen, setIsInsuranceOpen] = useState(false);
   const closeManageExtras = useCallback(() => {
     setIsManageExtrasOpen?.(false);
   }, [setIsManageExtrasOpen]);
@@ -5121,13 +5212,18 @@ function StepExtras({
     }
     return base;
   }, [combinedExtras, extrasFilter, extraCategoryById]);
+  const extrasPreviewLimit = 3;
+  const extrasIncrementCount = 5;
+  const extrasExpandedVisibleLimit = 8;
   useEffect(() => {
-    setExtrasShowAll(false);
+    setExtrasVisibleCount(extrasPreviewLimit);
   }, [extrasFilter]);
   const visibleExtras = useMemo(
-    () => (extrasShowAll ? filteredExtras : filteredExtras.slice(0, 8)),
-    [extrasShowAll, filteredExtras]
+    () => filteredExtras.slice(0, extrasVisibleCount),
+    [extrasVisibleCount, filteredExtras]
   );
+  const hasMoreExtras = visibleExtras.length < filteredExtras.length;
+  const nextExtrasChunkCount = Math.min(extrasIncrementCount, filteredExtras.length - visibleExtras.length);
   const extrasFilterCounts = useMemo(() => {
     return extraCategories.reduce((acc, filter) => {
       if (filter.id === "all") {
@@ -5279,6 +5375,12 @@ function StepExtras({
     if (selectedCoverItem) list.push(selectedCoverItem);
     return list;
   }, [extrasSummaryList, selectedTransferItem, selectedCoverItem]);
+  const transferSummary = selectedTransferItem?.name || "Not selected";
+  const insuranceSummary = selectedCoverItem?.name || "Not selected";
+  const transferCoverSummary = [
+    selectedTransferItem ? `Transfer: ${selectedTransferItem.name}` : "Transfer: not selected",
+    selectedCoverItem ? `Insurance: ${selectedCoverItem.name}` : "Insurance: not selected",
+  ].join(" · ");
   const selectedAddonsSubtotal = useMemo(() => {
     return selectedAddonsList.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   }, [selectedAddonsList]);
@@ -5327,7 +5429,7 @@ function StepExtras({
       <div
         key={extra.id}
         className={cn(
-          "group flex items-center gap-4 px-5 py-4 transition duration-200 ease-out",
+          "group flex items-center gap-3 px-4 py-2.5 transition duration-200 ease-out sm:px-5 sm:py-3",
           isHighlighted ? "bg-neutral-100" : "hover:bg-neutral-50"
         )}
       >
@@ -5336,9 +5438,9 @@ function StepExtras({
             e.preventDefault();
             setActiveExtraId(extra.id);
           }}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 sm:gap-4"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"
         >
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-neutral-50">
+          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-50 sm:h-14 sm:w-14">
             <img
               src={
                 extra.images_with_thumbs?.[0]?.thumb ||
@@ -5353,15 +5455,15 @@ function StepExtras({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="line-clamp-1 text-sm font-bold leading-tight text-secondary-900 sm:line-clamp-2 sm:text-base sm:leading-[1.3]">
+            <div className="line-clamp-1 text-[15px] font-bold leading-tight text-secondary-900 sm:line-clamp-2 sm:text-base sm:leading-[1.3]">
               {extra.name}
             </div>
             {/* <div
               className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-secondary-500 sm:mt-1 sm:line-clamp-2 sm:text-sm sm:leading-[1.4]"
               dangerouslySetInnerHTML={{ __html: extra.description }}
             /> */}
-            <div className="mt-1 flex items-center gap-2">
-              <div className="text-sm font-medium text-secondary-500 tabular-nums sm:text-base">
+            <div className="mt-0.5 flex items-center gap-2">
+              <div className="text-sm font-medium text-secondary-500 tabular-nums">
                 {extra.hasChildren ? `from ${formatPrice(extra)}` : formatPrice(extra)}
               </div>
               {/* {extra.hasChildren && (
@@ -5372,7 +5474,7 @@ function StepExtras({
             </div>
           </div>
         </div>
-        <div className="flex w-[120px] shrink-0 flex-col items-end justify-center gap-1.5 sm:w-40">
+        <div className="flex w-[90px] shrink-0 flex-col items-end justify-center gap-1 sm:w-[104px]">
           {extra.hasChildren ? (
             <button
               type="button"
@@ -5380,27 +5482,26 @@ function StepExtras({
                 e.stopPropagation();
                 setActiveExtraId(extra.id);
               }}
-              className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-primary-50 bg-neutral-100 px-3 text-xs font-black text-blue-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-11 sm:px-4 sm:text-base"
+              className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primary-50 bg-neutral-100 px-2.5 text-xs font-bold text-blue-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-10 sm:px-3 sm:text-sm"
             >
               {extra.children.length} options
             </button>
           ) : qty > 0 ? (
             <div className="flex items-center gap-2 sm:w-full sm:justify-end">
-              <div className="inline-flex items-center gap-1 rounded-xl border border-primary-100 bg-primary-50/50 p-1 text-sm font-semibold text-primary-600 sm:w-full sm:justify-between sm:gap-2 sm:px-2">
+              <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onChangeExtraQty(extra.id, qty - 1);
                   }}
-                  className="grid h-8 w-8 place-items-center rounded-xl border border-primary-100 bg-white text-primary-600 shadow-sm transition-all active:scale-90"
+                  className="grid h-7 w-7 place-items-center rounded-full text-secondary-700 transition-colors hover:text-primary-600 active:scale-90 sm:h-8 sm:w-8"
                   aria-label={`Decrease ${extra.name}`}
                 >
                   <Minus className="h-4 w-4" />
                 </button>
-                <div className="flex flex-col items-center px-1 sm:px-2">
-                  <span className="min-w-5 text-center text-sm font-black text-primary-700 sm:min-w-6 sm:text-base">{qty}</span>
-                  <span className="text-xs font-bold uppercase tracking-tighter text-primary-500 sm:hidden">Qty</span>
+                <div className="min-w-6 text-center text-base font-bold leading-none text-secondary-900 sm:min-w-7 sm:text-lg">
+                  {qty}
                 </div>
                 <button
                   type="button"
@@ -5408,7 +5509,7 @@ function StepExtras({
                     e.stopPropagation();
                     onChangeExtraQty(extra.id, qty + 1);
                   }}
-                  className="grid h-8 w-8 place-items-center rounded-xl border border-primary-100 bg-white text-primary-600 shadow-sm transition-all active:scale-90"
+                  className="grid h-7 w-7 place-items-center rounded-full text-secondary-700 transition-colors hover:text-primary-600 active:scale-90 sm:h-8 sm:w-8"
                   aria-label={`Increase ${extra.name}`}
                 >
                   <Plus className="h-4 w-4" />
@@ -5422,7 +5523,7 @@ function StepExtras({
                 e.stopPropagation();
                 onChangeExtraQty(extra.id, defaultQty);
               }}
-              className="inline-flex h-10 w-full items-center justify-center rounded-xl border border-primary-50 bg-neutral-100 px-3 text-sm font-black text-primary-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-11 sm:px-4 sm:text-base"
+              className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primary-50 bg-neutral-100 px-2.5 text-sm font-bold text-primary-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-10 sm:px-3"
             >
               Add
             </button>
@@ -5435,89 +5536,200 @@ function StepExtras({
   return (
     <>
       <PremiumSection
-        id="step-6"
+        id={sectionId}
         className="bg-transparent"
       >
         <PremiumContainer>
           <div className="mb-8 flex flex-col items-center text-center">
             <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">STEP 4 OF 4</div>
             <h2 className={Q_THEME.text.h2}>Extras, transfer & insurance</h2>
-            <p className={Q_THEME.text.body}>Personalize the day - add only what you want.</p>
+            <p className={Q_THEME.text.body}>You can add this anytime after booking.</p>
           </div>
           <InfoLinksRow onOpenTourInfo={onOpenTourInfo} className="mb-6" variant="single" />
-          <div className="mb-6">
-            <StepTransfers
-              embedded
-              showContinue={false}
-              transfers={transfers}
-              selectedTransferId={selectedTransferId}
-              onSelectTransferId={onSelectTransferId}
-              covers={covers}
-              selectedCoverId={selectedCoverId}
-              onSelectCoverId={onSelectCoverId}
-              totalGuests={totalGuests}
-            />
-          </div>
           <div className="flex flex-col gap-4">
             <div className="flex flex-col">
-              <div id="step-6-extras-anchor" className="sticky top-0 z-10 rounded-t-xl border border-neutral-200 bg-white/90 backdrop-blur-md mb-0">
-                <div className="px-6 pt-5 pb-2">
-                  <div className="text-lg font-semibold text-secondary-900">
-                    {selectedStyleId ? `Recommended for ${selectedStyleTitle}` : "Popular extras"}
+              <div
+                id={`${sectionId}-extras-anchor`}
+                className={cn(
+                  "sticky top-0 z-10 overflow-hidden bg-white/90 backdrop-blur-md",
+                  isExtrasOpen
+                    ? "rounded-t-xl border-x border-t border-neutral-200"
+                    : "rounded-xl border border-neutral-200"
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => setIsExtrasOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
+                  aria-expanded={isExtrasOpen}
+                  aria-controls={`${sectionId}-extras-panel`}
+                >
+                  <div className="min-w-0">
+                    <div className="text-xl font-semibold text-secondary-900">
+                      {selectedStyleId ? `Recommended for ${selectedStyleTitle}` : "Popular extras"}
+                    </div>
+                    <div className="mt-1 text-sm text-secondary-500">
+                      {selectedStyleId ? "You can still add any extras you want." : "Optional  add only what you want."}
+                    </div>
                   </div>
-                  <div className="mt-1 text-sm text-secondary-500">
-                    {selectedStyleId ? "You can still add any extras you want." : "Optional  add only what you want."}
-                  </div>
-                </div>
-                <div className="border-t border-neutral-200 px-6 pt-2 pb-3">
-                  <div className="flex items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 text-sm text-secondary-500 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
-                    {extraCategories.map((filter) => (
-                      <button
-                        key={filter.id}
-                        type="button"
-                        onClick={() => setExtrasFilter(filter.id)}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
+                    {isExtrasOpen ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                  </span>
+                </button>
+              </div>
+              <div className={cn("flex flex-col gap-4", !isExtrasOpen && "mt-4")}>
+                <AnimatePresence initial={false}>
+                  {isExtrasOpen && (
+                    <motion.div
+                      id={`${sectionId}-extras-panel`}
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="overflow-hidden rounded-b-xl border border-t-0 border-neutral-200 bg-white"
+                    >
+                      <div className="border-b border-neutral-200 px-6 py-3">
+                        <div className="flex items-center gap-x-5 gap-y-2 overflow-x-auto text-sm text-secondary-500 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+                          {extraCategories.map((filter) => (
+                            <button
+                              key={filter.id}
+                              type="button"
+                              onClick={() => setExtrasFilter(filter.id)}
+                              className={cn(
+                                "inline-flex items-center gap-1 whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
+                                extrasFilter === filter.id
+                                  ? "border-primary-600 text-primary-600 hover:text-primary-700"
+                                  : "text-secondary-500 hover:text-secondary-700"
+                              )}
+                            >
+                              {filter.show_name || filter.label}
+                              <span className={cn("text-sm", extrasFilter === filter.id ? "text-primary-600" : "text-secondary-500")}>
+                                {extrasFilterCounts[filter.id] ?? 0}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold transition duration-200 ease-out whitespace-nowrap",
-                          extrasFilter === filter.id
-                            ? "bg-white text-primary-700"
-                            : "text-secondary-500 hover:text-secondary-500"
+                          "divide-y divide-neutral-200",
+                          extrasVisibleCount > extrasExpandedVisibleLimit && filteredExtras.length > extrasExpandedVisibleLimit && "max-h-[40rem] overflow-y-auto"
                         )}
                       >
-                        {filter.show_name || filter.label}
-                        <span className="text-sm text-secondary-500">{extrasFilterCounts[filter.id] ?? 0}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div className="flex flex-col pb-10">
-                  <div className="overflow-hidden rounded-b-xl border border-t-0 border-neutral-200 bg-white">
-                    <div className="divide-y divide-neutral-200">
-                      {visibleExtras.map((extra) => renderExtraRow(extra))}
-                    </div>
-                    {!extrasShowAll && filteredExtras.length > 8 && (
-                      <div className="border-t border-neutral-200 p-4">
-                        <button
-                          type="button"
-                          onClick={() => setExtrasShowAll(true)}
-                          className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-50 py-3 text-sm font-bold text-secondary-600 transition-all hover:bg-neutral-100 hover:text-secondary-900 active:scale-[0.98]"
-                        >
-                          Show more ({filteredExtras.length - 8})
-                          <ChevronDown className="h-4 w-4" />
-                        </button>
+                        {visibleExtras.map((extra) => renderExtraRow(extra))}
                       </div>
-                    )}
-                    <div className="border-t border-neutral-200 px-6 py-4 text-center">
-                      <p className="text-sm text-secondary-500">
-                        Need help choosing?{" "}
-                        <a href={contacts.whatsapp?.link || "#"} target="_blank" rel="noopener noreferrer" className="font-bold text-primary-600 hover:underline">
-                          WhatsApp our team
-                        </a>
-                      </p>
+                      {hasMoreExtras && (
+                        <div className="flex justify-center border-t border-neutral-200 py-2.5">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExtrasVisibleCount((prev) => Math.min(prev + extrasIncrementCount, filteredExtras.length))
+                            }
+                            className="inline-flex items-center justify-center gap-1.5 py-1 text-sm font-semibold text-primary-600 transition-colors hover:text-primary-700"
+                          >
+                            Show more ({nextExtrasChunkCount})
+                            <ChevronDown className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setIsTransferOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
+                    aria-expanded={isTransferOpen}
+                    aria-controls={`${sectionId}-transfer-panel`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xl font-semibold text-secondary-900">Transfer</div>
+                      <div className="mt-1 text-sm text-secondary-500">{transferSummary}</div>
                     </div>
-                  </div>
+                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
+                      {isTransferOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isTransferOpen && (
+                      <motion.div
+                        id={`${sectionId}-transfer-panel`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="overflow-hidden border-t border-neutral-200"
+                      >
+                        <StepTransfers
+                          embedded
+                          showContinue={false}
+                          showCovers={false}
+                          showHeader={false}
+                          framed={false}
+                          transfers={transfers}
+                          selectedTransferId={selectedTransferId}
+                          onSelectTransferId={onSelectTransferId}
+                          covers={covers}
+                          selectedCoverId={selectedCoverId}
+                          onSelectCoverId={onSelectCoverId}
+                          totalGuests={totalGuests}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
+                <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+                  <button
+                    type="button"
+                    onClick={() => setIsInsuranceOpen((prev) => !prev)}
+                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
+                    aria-expanded={isInsuranceOpen}
+                    aria-controls={`${sectionId}-insurance-panel`}
+                  >
+                    <div className="min-w-0">
+                      <div className="text-xl font-semibold text-secondary-900">Insurance</div>
+                      <div className="mt-1 text-sm text-secondary-500">{insuranceSummary}</div>
+                    </div>
+                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
+                      {isInsuranceOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isInsuranceOpen && (
+                      <motion.div
+                        id={`${sectionId}-insurance-panel`}
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="overflow-hidden border-t border-neutral-200"
+                      >
+                        <CoversCompact
+                          covers={covers}
+                          selectedCoverId={selectedCoverId}
+                          onSelectCoverId={onSelectCoverId}
+                          priceLabel="per boat"
+                          formatPrice={formatIDR}
+                          showHeader={false}
+                          framed={false}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <TourInfoInline />
+                {onReview && (
+                  <div className="mt-3 flex justify-center sm:justify-end">
+                    <button
+                      type="button"
+                      onClick={onReview}
+                      className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95"
+                    >
+                      Review your booking <ArrowRight className="ml-2 h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -5834,27 +6046,27 @@ function WhyBookNow() {
   ];
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
-      <div className="flex items-center gap-2 border-b border-neutral-100 bg-neutral-50 px-6 py-3">
-        <span className="text-xs font-black uppercase tracking-widest text-secondary-400">Why book now</span>
+    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+      <div className="px-5 py-4">
+        <div className="text-base font-semibold text-secondary-900">Why book now</div>
       </div>
-      <div className="grid sm:grid-cols-3">
+      <div className="grid border-t border-neutral-200 sm:grid-cols-3">
         {trustItems.map((item, idx) => {
           const Icon = item.icon;
           return (
             <div
               key={idx}
               className={cn(
-                "flex items-start gap-4 p-6",
-                idx !== trustItems.length - 1 && "border-b border-neutral-100 sm:border-b-0 sm:border-r"
+                "flex items-start gap-4 p-5",
+                idx !== trustItems.length - 1 && "border-b border-neutral-200 sm:border-b-0 sm:border-r sm:border-neutral-200"
               )}
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600">
                 <Icon className="h-5 w-5" />
               </div>
               <div>
                 <div className="text-sm font-semibold text-secondary-900">{item.title}</div>
-                <div className="mt-1 text-xs leading-relaxed text-secondary-500">{item.description}</div>
+                <div className="mt-1 text-sm leading-relaxed text-secondary-500">{item.description}</div>
               </div>
             </div>
           );
@@ -6053,7 +6265,7 @@ function StepFive({
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-base font-semibold text-secondary-900">Your tour</div>
+                    <div className="text-lg font-semibold text-secondary-900">Your tour</div>
                     <div className="mt-1 text-sm text-secondary-500">A quick summary of your selections.</div>
                   </div>
                 </div>
@@ -6234,7 +6446,7 @@ function StepFive({
             </div>
           </div>
           <div className="sticky top-6 self-start rounded-xl border border-neutral-200 bg-white p-5">
-            <div className="text-base font-semibold text-secondary-900">Price summary</div>
+            <div className="text-lg font-semibold text-secondary-900">Price summary</div>
             <div className="mt-4 space-y-3 text-sm text-secondary-600">
               <div className="flex items-center justify-between">
                 <span>Boat base price</span>
@@ -9565,8 +9777,10 @@ export default function Premium_Private_With_Vibe() {
         </div>
         <PremiumSection backgroundClassName={SECTION_BACKGROUNDS.white}>
           <PremiumContainer>
-            <TourInfoInline />
-            <div className="mt-4 rounded-xl border border-neutral-200 bg-white p-6">
+            <div className="rounded-xl border border-neutral-200 bg-white p-6">
+              <h2 className="mb-4 text-xl font-semibold text-secondary-900">
+                What our customers say
+              </h2>
               <div className="elfsight-app-dc207859-e523-4551-bf17-1b6df3428bae" data-elfsight-app-lazy></div>
             </div>
           </PremiumContainer>

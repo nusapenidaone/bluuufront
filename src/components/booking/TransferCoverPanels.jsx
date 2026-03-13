@@ -134,7 +134,7 @@ export function TransfersCompact({
           <div className="flex flex-col divide-y divide-neutral-100">
             {/* Option: No thanks */}
             <label className={cn(
-              "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
+              "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
               !selectedTransferId ? "bg-primary-50/30" : "hover:bg-neutral-50"
             )}>
               <input
@@ -145,8 +145,8 @@ export function TransfersCompact({
                 onChange={() => onSelectTransferId(null)}
               />
               <div className="flex min-w-0 flex-1 items-center gap-4">
-                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                  <MapPin className={cn("h-6 w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
+                <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                  <MapPin className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-bold text-secondary-900 sm:text-base">No, thanks. We'll meet you there.</div>
@@ -177,7 +177,7 @@ export function TransfersCompact({
 
               return (
                 <label key={transfer.id} className={cn(
-                  "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
+                  "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
                   isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
                 )}>
                   <input
@@ -188,8 +188,8 @@ export function TransfersCompact({
                     onChange={() => onSelectTransferId(transfer.id)}
                   />
                   <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                      <Car className={cn("h-6 w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                      <Car className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
@@ -326,123 +326,130 @@ export function CoversCompact({
   onSelectCoverId,
   priceLabel = "per person",
   formatPrice = (v) => `IDR ${Number(v).toLocaleString()}`,
+  showHeader = true,
+  framed = true,
 }) {
   const selectedCover = covers?.find(c => String(c.id) === String(selectedCoverId));
   const [activeCoverDetails, setActiveCoverDetails] = useState(null);
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
-      <div className="flex items-center justify-between px-6 py-5">
-        <div>
-          <div className="text-xl font-semibold text-secondary-900">Insurance</div>
-          <div className="text-sm text-secondary-500">
-            {selectedCover ? selectedCover.name : "Optional protect your trip"}
+  const optionsContent = (
+    <div className="flex flex-col divide-y divide-neutral-100">
+      {/* Option: No coverage */}
+      <label className={cn(
+        "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
+        !selectedCoverId ? "bg-primary-50/30" : "hover:bg-neutral-50"
+      )}>
+        <input
+          type="radio"
+          name="cover-selection-compact"
+          className="hidden"
+          checked={!selectedCoverId}
+          onChange={() => onSelectCoverId(null)}
+        />
+        <div className="flex min-w-0 flex-1 items-center gap-4">
+          <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+            <Shield className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedCoverId ? "text-primary-600" : "text-secondary-400")} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-bold text-secondary-900 sm:text-base">No coverage</div>
+            <div className="mt-1 text-sm font-medium text-secondary-500">I have my own insurance</div>
           </div>
         </div>
-      </div>
+        <div className="flex shrink-0 items-center justify-center">
+          <div className={cn(
+            "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
+            !selectedCoverId
+              ? "border-primary-600 bg-primary-600"
+              : "border-neutral-200 bg-white"
+          )}>
+            {!selectedCoverId && <Check className="h-3 w-3 text-white" />}
+          </div>
+        </div>
+      </label>
 
-      <div className="border-t border-neutral-200">
-        <div className="flex flex-col divide-y divide-neutral-100">
-          {/* Option: No coverage */}
-          <label className={cn(
-            "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
-            !selectedCoverId ? "bg-primary-50/30" : "hover:bg-neutral-50"
+      {/* Cover Options */}
+      {covers && covers.map(cover => {
+        const isSelected = String(selectedCoverId) === String(cover.id);
+        const price = Number(cover.price);
+        const coverDetails = buildOptionDetails(cover, {
+          fallbackDescription: "Insurance terms and conditions will be confirmed before checkout.",
+          fallbackImage: INSURANCE_DETAILS_FALLBACK_IMAGE,
+        });
+        const hasCoverDetails = Boolean(coverDetails.description || coverDetails.image);
+        return (
+          <label key={cover.id} className={cn(
+            "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
+            isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
           )}>
             <input
               type="radio"
               name="cover-selection-compact"
               className="hidden"
-              checked={!selectedCoverId}
-              onChange={() => onSelectCoverId(null)}
+              checked={isSelected}
+              onChange={() => onSelectCoverId(cover.id)}
             />
             <div className="flex min-w-0 flex-1 items-center gap-4">
-              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                <Shield className={cn("h-6 w-6 transition-colors", !selectedCoverId ? "text-primary-600" : "text-secondary-400")} />
+              <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                <ShieldCheck className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-secondary-900 sm:text-base">No coverage</div>
-                <div className="mt-1 text-sm font-medium text-secondary-500">I have my own insurance</div>
+                <div className="text-sm font-bold text-secondary-900 sm:text-base">{cover.name}</div>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
+                    {formatPrice(price)}
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">{priceLabel}</span>
+                </div>
+                {hasCoverDetails && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setActiveCoverDetails({
+                        title: cover.name,
+                        description: cover.description || cover.short_description || coverDetails.description,
+                        image: coverDetails.image,
+                      });
+                    }}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
+                  >
+                    <Info className="h-3.5 w-3.5" />
+                    <span>See full description</span>
+                  </button>
+                )}
               </div>
             </div>
             <div className="flex shrink-0 items-center justify-center">
               <div className={cn(
                 "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                !selectedCoverId
+                isSelected
                   ? "border-primary-600 bg-primary-600"
                   : "border-neutral-200 bg-white"
               )}>
-                {!selectedCoverId && <Check className="h-3 w-3 text-white" />}
+                {isSelected && <Check className="h-3 w-3 text-white" />}
               </div>
             </div>
           </label>
+        );
+      })}
+    </div>
+  );
 
-          {/* Cover Options */}
-          {covers && covers.map(cover => {
-            const isSelected = String(selectedCoverId) === String(cover.id);
-            const price = Number(cover.price);
-            const coverDetails = buildOptionDetails(cover, {
-              fallbackDescription: "Insurance terms and conditions will be confirmed before checkout.",
-              fallbackImage: INSURANCE_DETAILS_FALLBACK_IMAGE,
-            });
-            const hasCoverDetails = Boolean(coverDetails.description || coverDetails.image);
-            return (
-              <label key={cover.id} className={cn(
-                "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
-                isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
-              )}>
-                <input
-                  type="radio"
-                  name="cover-selection-compact"
-                  className="hidden"
-                  checked={isSelected}
-                  onChange={() => onSelectCoverId(cover.id)}
-                />
-                <div className="flex min-w-0 flex-1 items-center gap-4">
-                  <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                    <ShieldCheck className={cn("h-6 w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-bold text-secondary-900 sm:text-base">{cover.name}</div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                        {formatPrice(price)}
-                      </span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">{priceLabel}</span>
-                    </div>
-                    {hasCoverDetails && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setActiveCoverDetails({
-                            title: cover.name,
-                            description: cover.description || cover.short_description || coverDetails.description,
-                            image: coverDetails.image,
-                          });
-                        }}
-                        className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
-                      >
-                        <Info className="h-3.5 w-3.5" />
-                        <span>See full description</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <div className="flex shrink-0 items-center justify-center">
-                  <div className={cn(
-                    "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                    isSelected
-                      ? "border-primary-600 bg-primary-600"
-                      : "border-neutral-200 bg-white"
-                  )}>
-                    {isSelected && <Check className="h-3 w-3 text-white" />}
-                  </div>
-                </div>
-              </label>
-            );
-          })}
+  return (
+    <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
+      {showHeader && (
+        <div className="flex items-center justify-between px-6 py-5">
+          <div>
+            <div className="text-xl font-semibold text-secondary-900">Insurance</div>
+            <div className="text-sm text-secondary-500">
+              {selectedCover ? selectedCover.name : "Optional protect your trip"}
+            </div>
+          </div>
         </div>
+      )}
+
+      <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
+        {optionsContent}
       </div>
       <Modal
         open={Boolean(activeCoverDetails)}
