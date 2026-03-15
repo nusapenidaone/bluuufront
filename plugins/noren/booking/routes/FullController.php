@@ -13,6 +13,7 @@ use Noren\Booking\Models\Transfer;
 use Noren\Booking\Models\Route;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Restaurant;
+use System\Models\File as SystemFile;
 use Noren\Booking\Models\Order;
 use Noren\Bluuu\Models\Settings;
 
@@ -508,19 +509,27 @@ class FullController extends Controller
             'ecategories.extras.images',
             'photos',
             'restaurant.images',
-            'tours.images',
         ])->where('classes_id', $classesId)->get();
 
-        return $routes->map(function ($route) {
+        $routeIds = $routes->pluck('id')->toArray();
+        $maps = SystemFile::where('attachment_type', 'Noren\Booking\Models\Route')
+            ->whereIn('attachment_id', $routeIds)
+            ->where('field', 'map')
+            ->get()
+            ->keyBy('attachment_id');
+
+        return $routes->map(function ($route) use ($maps) {
             $payload = $route->toArray();
+
+            $mapFile = $maps->get($route->id);
+            $payload['map'] = $mapFile ? $mapFile->getPath() : null;
 
             $payload['photos'] = $route->photos->map(fn($p) => [
                 'path' => $p->getPath(),
                 'thumb' => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp']),
             ])->toArray();
 
-            $firstTour = $route->tours->first();
-            $payload['tour_images'] = $firstTour ? $firstTour->images_with_thumbs : [];
+            $payload['tour_images'] = [];
 
             $restaurant = $route->restaurant;
             if (!$restaurant) {
@@ -551,6 +560,11 @@ class FullController extends Controller
             return response()->json(null, 404);
         }
 
+        $mapFile = SystemFile::where('attachment_type', 'Noren\Booking\Models\Route')
+            ->where('attachment_id', $id)
+            ->where('field', 'map')
+            ->first();
+
         $restaurant = $route->restaurant;
 
         return response()->json([
@@ -560,6 +574,7 @@ class FullController extends Controller
             'popup_afternoon' => $route->popup_afternoon,
             'schedule_before_lunch' => $route->schedule_before_lunch,
             'schedule_after_lunch' => $route->schedule_after_lunch,
+            'map' => $mapFile ? $mapFile->getPath() : null,
             'restaurant' => $restaurant ? [
                 'id' => $restaurant->id,
                 'name' => $restaurant->name,

@@ -150,3 +150,11 @@ tabs:
                 - preview
             type: relation
             tab: Extras
+
+        program:
+            label: Program
+            nameFrom: name
+            descriptionFrom: description
+            span: auto
+            type: relation
+            tab: Old

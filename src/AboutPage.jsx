@@ -68,14 +68,14 @@ export default function AboutPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/private#booking" }}
+        cta={{ label: "Check availability", href: "/new/private#booking" }}
       />
 
       <div className="mx-auto w-full max-w-7xl px-6 pt-8 sm:pt-12 lg:px-8">
 
         {/* Back link */}
         <a
-          href="/private"
+          href="/new/private"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-500 transition hover:text-primary-600"
         >
           <ChevronLeft className="h-4 w-4" />

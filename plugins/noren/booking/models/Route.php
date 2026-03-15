@@ -21,6 +21,7 @@ class Route extends Model
      */
     public $rules = [
     ];
+
     public $belongsToMany = [
         'ecategories' => [Ecategories::class, 'table' => 'noren_booking_route_ecategories'],
     ];
@@ -28,10 +29,7 @@ class Route extends Model
     public $belongsTo = [
         'restaurant' => [Restaurant::class],
         'classes' => [Classes::class],
-    ];
-
-    public $hasMany = [
-        'tours' => [Tours::class],
+        'program' => [Program::class],
     ];
 
     public $jsonable = [
@@ -42,5 +40,9 @@ class Route extends Model
 
     public $attachMany = [
         'photos' => [\System\Models\File::class],
+    ];
+
+    public $attachOne = [
+        'map' => [\System\Models\File::class],
     ];
 }

@@ -12,7 +12,7 @@ export function PremiumSection({
     return (
         <section
             id={id}
-            className={cn("py-16 md:py-24", backgroundClassName, centered && "text-center", className)}
+            className={cn("py-6 md:py-16 lg:py-24", backgroundClassName, centered && "text-center", className)}
             {...props}
         >
             {children}

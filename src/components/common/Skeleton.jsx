@@ -39,13 +39,28 @@ export const CardSkeleton = ({ className }) => {
 
 export const GallerySkeleton = () => {
     return (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[180px]">
-            <Skeleton className="col-span-2 row-span-2 rounded-2xl lg:h-full h-[300px]" />
-            <Skeleton className="hidden rounded-2xl lg:block" />
-            <Skeleton className="hidden rounded-2xl lg:block" />
-            <Skeleton className="rounded-2xl" />
-            <Skeleton className="rounded-2xl" />
-        </div>
+        <>
+            <div className="grid h-[340px] grid-rows-[2fr_1fr] gap-[3px] sm:hidden">
+                <Skeleton className="rounded-2xl" />
+                <div className="grid grid-cols-2 gap-[3px]">
+                    <Skeleton className="rounded-2xl" />
+                    <Skeleton className="rounded-2xl" />
+                </div>
+            </div>
+            <div className="hidden h-[520px] grid-cols-2 gap-[3px] sm:grid">
+                <Skeleton className="h-full rounded-2xl" />
+                <div className="grid grid-cols-2 gap-[3px]">
+                    <div className="grid min-h-0 grid-rows-[1.35fr_0.75fr] gap-[3px]">
+                        <Skeleton className="h-full rounded-2xl" />
+                        <Skeleton className="h-full rounded-2xl" />
+                    </div>
+                    <div className="grid min-h-0 grid-rows-[0.75fr_1.35fr] gap-[3px]">
+                        <Skeleton className="h-full rounded-2xl" />
+                        <Skeleton className="h-full rounded-2xl" />
+                    </div>
+                </div>
+            </div>
+        </>
     );
 };
 

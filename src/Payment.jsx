@@ -48,6 +48,9 @@ export default function Payment() {
   const boatId = params.get("boat") || "";                    // tour ID
   const tourType = params.get("tourType") || "private";       // "private" | "shared"
   const styleId = params.get("style") || "";                  // route/program ID
+  const programId = params.get("programId") || "";            // route.program_id
+  const pickupAddressParam = params.get("pickup_address") || "";
+  const dropoffAddressParam = params.get("dropoff_address") || "";
   const payMode = params.get("payMode") || "full";            // "full" | "part"
   const payMethod = params.get("payMethod") || "card";        // "card" | "paypal"
   const name = params.get("name") || "";
@@ -84,9 +87,9 @@ export default function Payment() {
   const selectedCoverId = coverExtra
     ? parseInt(String(coverExtra.id).replace("cover-", ""), 10) || null
     : null;
-  const selectedProgramId = styleId && !isNaN(parseInt(styleId, 10))
-    ? parseInt(styleId, 10)
-    : null;
+  const selectedProgramId = programId && !isNaN(parseInt(programId, 10))
+    ? parseInt(programId, 10)
+    : (styleId && !isNaN(parseInt(styleId, 10)) ? parseInt(styleId, 10) : null);
 
   // Pricing breakdown — transfer/cover are separate from pure extras
   const transferTotalPrice = transferExtra ? (transferExtra.price ?? 0) * (transferExtra.quantity ?? 1) : 0;
@@ -180,8 +183,8 @@ export default function Payment() {
       email: email.trim(),
       whatsapp: phone.trim(),
       requests: requests.trim() || null,
-      pickupAddress: null,
-      dropoffAddress: null,
+      pickupAddress: pickupAddressParam || null,
+      dropoffAddress: dropoffAddressParam || null,
 
       ga_client_id: getGaClientId(),
       leadId: null,

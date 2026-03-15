@@ -317,9 +317,7 @@ function GalleryBlock() {
 
   // Desktop: 5 previews (1 large + 2×2); Mobile: 3 previews (1 large + 2 bottom)
   const preview = galleryItems.slice(0, 5);
-  const remaining = galleryItems.length - 5;
   const previewMob = galleryItems.slice(0, 3);
-  const remainingMob = galleryItems.length - 3;
 
   const openFancybox = (startIndex = 0) => {
     Fancybox.show(
@@ -338,9 +336,9 @@ function GalleryBlock() {
         {/* Header */}
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <div className="text-xs font-black uppercase tracking-widest text-primary-600">Gallery</div>
+            <div className="text-xs font-black uppercase tracking-widest text-primary-600">From our guests</div>
             <h2 className="mt-1.5 text-2xl font-bold text-secondary-900 sm:text-3xl">
-              A quick look at the day
+              This is what your day looks like
             </h2>
           </div>
         </div>
@@ -352,7 +350,7 @@ function GalleryBlock() {
           <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl">
 
             {/* ── MOBILE: 1 large + 2 bottom ── */}
-            <div className="grid h-[340px] grid-rows-[2fr_1fr] gap-[3px] sm:hidden">
+            <div className="grid h-[440px] grid-rows-[1.2fr_1fr] gap-[3px] sm:hidden">
               {/* Large image */}
               <button
                 type="button"
@@ -372,7 +370,6 @@ function GalleryBlock() {
               <div className="grid grid-cols-2 gap-[3px]">
                 {[previewMob[1], previewMob[2]].map((item, i) => {
                   if (!item) return <div key={i} className="bg-neutral-200" />;
-                  const isLast = i === 1 && remainingMob > 0;
                   return (
                     <button
                       key={item.id ?? i}
@@ -411,27 +408,51 @@ function GalleryBlock() {
               </button>
 
               {/* 2 × 2 grid */}
-              <div className="grid grid-cols-2 grid-rows-2 gap-[3px]">
-                {[preview[1], preview[2], preview[3], preview[4]].map((item, i) => {
-                  if (!item) return <div key={i} className="bg-neutral-200" />;
-                  const isLast = i === 3 && remaining > 0;
-                  return (
-                    <button
-                      key={item.id ?? i}
-                      type="button"
-                      className="group relative overflow-hidden"
-                      onClick={() => openFancybox(i + 1)}
-                    >
-                      <img
-                        src={item.thumb}
-                        alt={item.title || "Gallery"}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                      />
-                      <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-2 gap-[3px]">
+                <div className="grid min-h-0 grid-rows-[1.35fr_0.75fr] gap-[3px]">
+                  {[preview[1], preview[3]].map((item, i) => {
+                    if (!item) return <div key={i} className="bg-neutral-200" />;
+                    const imageIndex = i === 0 ? 1 : 3;
+                    return (
+                      <button
+                        key={item.id ?? imageIndex}
+                        type="button"
+                        className="group relative h-full overflow-hidden"
+                        onClick={() => openFancybox(imageIndex)}
+                      >
+                        <img
+                          src={item.thumb}
+                          alt={item.title || "Gallery"}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                        />
+                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="grid min-h-0 grid-rows-[0.75fr_1.35fr] gap-[3px]">
+                  {[preview[2], preview[4]].map((item, i) => {
+                    if (!item) return <div key={i} className="bg-neutral-200" />;
+                    const imageIndex = i === 0 ? 2 : 4;
+                    return (
+                      <button
+                        key={item.id ?? imageIndex}
+                        type="button"
+                        className="group relative h-full overflow-hidden"
+                        onClick={() => openFancybox(imageIndex)}
+                      >
+                        <img
+                          src={item.thumb}
+                          alt={item.title || "Gallery"}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                        />
+                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -641,44 +662,44 @@ function TourTypeCards() {
   const sharedTour = TOUR_OPTIONS.find((t) => t.id === "shared");
 
   const cards = [
-    {
-      id: "shared",
-      tour: sharedTour,
-      label: "Shared",
-      badge: "Best value",
-      badgeIcon: Trophy,
-      title: "Unique tour to Nusa Penida",
-      description: "Small groups, all highlights in one smooth day.",
-      highlights: [
-        "Best snorkel spots + swim with mantas",
-        "Lunch at scenic restaurant",
-        "Land tour to Kelingking Cliff",
-      ],
-      image: "https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp",
-      href: "/shared",
-      cta: "View Options",
-      priceNote: "/ person",
-      featured: false,
-    },
-    {
-      id: "private",
-      tour: privateTour,
-      label: "Private tour",
-      badge: "For families & groups",
-      badgeIcon: Users,
-      title: "Private boat tour to Nusa Penida",
-      description: "Your own private yacht, only your group onboard. Choose your boat, add extras, set your pace.",
-      highlights: [
-        "Only your group onboard",
-        "Choose your yacht model",
-        "Add extras: diving, photography & more",
-      ],
-      image: "https://bluuu.tours/storage/app/media/image-30-1.jpg",
-      href: "/private",
-      cta: "View Options",
-      priceNote: "/ boat",
-      featured: true,
-    },
+      {
+        id: "shared",
+        tour: sharedTour,
+        label: "Group tour",
+        badge: "Best value",
+        badgeIcon: Trophy,
+        title: "Nusa Penida Full-Day Adventure",
+        description: "Small groups, big highlights, all in one day.",
+        highlights: [
+          "Best snorkel spots + swim with mantas",
+          "Lunch with ocean view included",
+          "Kelingking Cliff & more",
+        ],
+        image: "https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp",
+        href: "/new/shared",
+        cta: "See Tour Details",
+        priceNote: "/ person",
+        featured: false,
+      },
+      {
+        id: "private",
+        tour: privateTour,
+        label: "Private",
+        badge: "Most popular for groups",
+        badgeIcon: Users,
+        title: "Nusa Penida - Just Your Group",
+        description: "Same stunning spots, but on your own boat, your schedule, your pace.",
+        highlights: [
+          "No strangers on your boat",
+          "Choose from 10+ boats for your group",
+          "Add drone photos, diving & more",
+        ],
+        image: "https://bluuu.tours/storage/app/media/image-30-1.jpg",
+        href: "/new/private",
+        cta: "Choose Your Boat",
+        priceNote: "/ boat",
+        featured: true,
+      },
   ];
 
   return (
@@ -775,7 +796,7 @@ function TourTypeCards() {
                     "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-sm font-semibold transition",
                     card.featured
                       ? "bg-primary-600 text-white group-hover:bg-primary-700"
-                      : "border border-neutral-300 bg-white text-secondary-700 group-hover:border-primary-400 group-hover:text-primary-600"
+                      : "bg-primary-600 text-white group-hover:bg-primary-700"
                   )}>
                     {card.cta} <ArrowRight className="h-4 w-4" />
                   </span>
@@ -1192,7 +1213,7 @@ function SocialProof() {
       title="A premium tour with seamless flow"
     >
       <div className="overflow-hidden rounded-3xl bg-white p-4 sm:p-6">
-        <div className="elfsight-app-dc207859-e523-4551-bf17-1b6df3428bae" data-elfsight-app-lazy />
+        <div className="elfsight-app-1f614ea8-8602-4273-83b3-ab40c213a3d7" data-elfsight-app-lazy />
       </div>
     </Section>
   );
@@ -1360,7 +1381,7 @@ function DayPlan() {
         </div>
 
         <div className="lg:col-span-5">
-          <div className="lg:sticky lg:top-24">
+          <div className="mt-8 lg:mt-0 lg:sticky lg:top-24">
             <img
               src="https://bluuu.tours/themes/bluuu/assets/images/map.webp"
               alt="Route overview map"

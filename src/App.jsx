@@ -37,7 +37,7 @@ const POLICY_PATH_MAP = {
   "release-from-liability": "liability",
 };
 
-const BASE_PATH = "/test";
+const BASE_PATH = "/new";
 
 if (typeof window !== "undefined") {
   document.addEventListener("click", (e) => {

@@ -106,7 +106,7 @@ export default function BookingCard({
                 )
             );
         }
-        window.location.href = `/checkout?${params.toString()}`;
+        window.location.href = `/new/checkout?${params.toString()}`;
     };
 
     return (
