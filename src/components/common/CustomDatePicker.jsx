@@ -12,7 +12,7 @@ export default function CustomDatePicker({
   mode = "single", // "single" | "range"
   selected, // Date for single, { from, to } for range
   onSelect,
-  minDate = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; })(),
+  minDate = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })(),
   filterDate, // optional: (date: Date) => boolean — return false to disable
   onMonthChange, // optional: (date: Date) => void — called when month is navigated
   renderDayContents, // optional: (dayOfMonth: number, date: Date) => ReactNode

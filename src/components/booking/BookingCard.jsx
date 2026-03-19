@@ -288,7 +288,7 @@ export default function BookingCard({
                     </Button>
 
                     <div className="text-center text-sm text-secondary-500">
-                        Secure booking in 60s • confirmation email in 10-15 min
+                        You'll see the full total before confirming.
                     </div>
 
                     <div className="flex items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm text-secondary-600">

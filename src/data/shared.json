@@ -188,12 +188,6 @@
             "icon": "Waves",
             "label": "Towels",
             "helper": "Fresh towels for each guest."
-          },
-          {
-            "icon": "UtensilsCrossed",
-            "label": "Lunch",
-            "helper": "Lunch served at",
-            "restaurant": { "name": "La Rossa" }
           }
         ]
       },

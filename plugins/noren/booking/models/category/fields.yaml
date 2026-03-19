@@ -1,5 +1,12 @@
 tabs:
     fields:
+    
+        status:
+            label: 'Status'
+            span: auto
+            type: switch
+            tab: Main
+    
         name:
             label: Name
             span: auto

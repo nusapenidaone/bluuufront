@@ -1,5 +1,10 @@
 columns:
 
+    sort_order:
+        label: '#'
+        type: number
+        sortable: true
+
     title:
         label: title
         type: text

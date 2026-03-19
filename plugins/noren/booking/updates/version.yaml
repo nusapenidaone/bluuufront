@@ -625,3 +625,6 @@ v1.0.208:
 v1.0.209:
     - 'Updated table noren_booking_tours'
     - builder_table_update_noren_booking_tours_36.php
+v1.0.210:
+    - 'Added sort_order to noren_booking_route'
+    - builder_table_update_noren_booking_route_4.php

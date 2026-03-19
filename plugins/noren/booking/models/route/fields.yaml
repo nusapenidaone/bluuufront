@@ -1,5 +1,10 @@
 tabs:
     fields:
+        sort_order:
+            label: 'Sort order'
+            span: auto
+            type: number
+            tab: Main
         title:
             label: Title
             span: auto

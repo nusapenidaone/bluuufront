@@ -227,42 +227,40 @@ export default function Payment() {
   return (
     <div className="min-h-screen bg-neutral-50 text-secondary-900">
       {/* Header */}
-      <div className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
+      <div className="border-b border-neutral-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-secondary-600 hover:text-secondary-900"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-secondary-500 transition hover:text-secondary-900"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
           </button>
-          <div className="text-sm font-semibold text-secondary-900">
+          <div className="text-sm font-bold text-secondary-900">
             Bluuu · Confirm & Pay
           </div>
-          <div className="inline-flex items-center gap-1.5 text-xs text-secondary-500">
+          <div className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary-400">
             <Lock className="h-3.5 w-3.5" />
             Secure
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-8">
-        <div className="space-y-5">
+      <div className="mx-auto max-w-2xl px-4 py-8">
+        <div className="space-y-4">
           {/* ── Order summary ──────────────────────────────────────── */}
-          <div className="rounded-xl border border-neutral-200 bg-white p-6">
-            <div className="text-base font-semibold text-secondary-900">
-              Order summary
-            </div>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-lg shadow-neutral-100/40 sm:p-6">
+            <div className="text-base font-bold text-secondary-900">Order summary</div>
 
-            <div className="mt-4 space-y-2 text-sm text-secondary-600">
+            <div className="mt-4 flex flex-wrap gap-4 text-sm text-secondary-500">
               {date && (
-                <div className="flex items-center gap-2">
+                <div className="inline-flex items-center gap-1.5">
                   <Calendar className="h-4 w-4 shrink-0 text-secondary-400" />
                   {date}
                 </div>
               )}
-              <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5">
                 <Users className="h-4 w-4 shrink-0 text-secondary-400" />
                 {adults} adult{adults !== 1 ? "s" : ""}
                 {kids > 0 ? `, ${kids} kid${kids !== 1 ? "s" : ""}` : ""}
@@ -270,93 +268,80 @@ export default function Payment() {
             </div>
 
             {/* Price breakdown */}
-            <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 text-sm">
+            <div className="mt-4 space-y-2.5 border-t border-neutral-100 pt-4 text-sm">
               {boatPrice > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-secondary-600">Private tour</span>
-                  <span className="font-semibold text-secondary-900">
-                    {formatIDR(boatPrice)}
-                  </span>
+                  <span className="text-secondary-500">{tourType === "shared" ? "Shared tour" : "Private tour"}</span>
+                  <span className="font-semibold text-secondary-900">{formatIDR(boatPrice)}</span>
                 </div>
               )}
-              {extras.length > 0 &&
-                extras.map((e, i) => (
-                  <div key={i} className="flex justify-between text-xs text-secondary-600">
-                    <span>
-                      {e.name || `Extra #${e.id}`} ×{e.quantity ?? 1}
-                    </span>
-                    <span className="font-semibold text-secondary-900">
-                      {formatIDR((e.price ?? 0) * (e.quantity ?? 1))}
-                    </span>
-                  </div>
-                ))}
-              <div className="flex justify-between border-t border-neutral-100 pt-2 text-base font-semibold text-secondary-900">
+              {extras.map((e, i) => (
+                <div key={i} className="flex justify-between text-xs text-secondary-500">
+                  <span>{e.name || `Extra #${e.id}`} ×{e.quantity ?? 1}</span>
+                  <span className="font-semibold text-secondary-900">{formatIDR((e.price ?? 0) * (e.quantity ?? 1))}</span>
+                </div>
+              ))}
+              <div className="flex justify-between border-t border-neutral-100 pt-2.5 font-bold text-secondary-900">
                 <span>Total</span>
-                <span>{formatIDR(fullTotal)}</span>
+                <span className="text-base">{formatIDR(fullTotal)}</span>
               </div>
             </div>
           </div>
 
           {/* ── Contact & payment details ──────────────────────────── */}
-          <div className="rounded-xl border border-neutral-200 bg-white p-6">
-            <div className="text-base font-semibold text-secondary-900">
-              Your details
-            </div>
+          <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-lg shadow-neutral-100/40 sm:p-6">
+            <div className="text-base font-bold text-secondary-900">Your details</div>
             <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <div className="text-xs font-semibold text-secondary-400">Name</div>
-                <div className="mt-0.5 text-secondary-900">{name || "—"}</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">Name</div>
+                <div className="mt-1 font-medium text-secondary-900">{name || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-semibold text-secondary-400">Email</div>
-                <div className="mt-0.5 text-secondary-900">{email || "—"}</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">Email</div>
+                <div className="mt-1 font-medium text-secondary-900">{email || "—"}</div>
               </div>
               <div>
-                <div className="text-xs font-semibold text-secondary-400">WhatsApp</div>
-                <div className="mt-0.5 text-secondary-900">{phone || "—"}</div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">WhatsApp</div>
+                <div className="mt-1 font-medium text-secondary-900">{phone || "—"}</div>
               </div>
               {requests && (
                 <div className="sm:col-span-2">
-                  <div className="text-xs font-semibold text-secondary-400">Requests</div>
-                  <div className="mt-0.5 text-secondary-900">{requests}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">Requests</div>
+                  <div className="mt-1 font-medium text-secondary-900">{requests}</div>
                 </div>
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3 border-t border-neutral-100 pt-4 text-sm">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-                <CreditCard className="h-4 w-4 text-secondary-500" />
-                <span className="text-secondary-700">{methodLabel}</span>
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-neutral-100 pt-4">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-semibold text-secondary-600">
+                <CreditCard className="h-3.5 w-3.5 text-secondary-400" />
+                {methodLabel}
               </div>
-              <div className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2">
-                <BadgeCheck className="h-4 w-4 text-secondary-500" />
-                <span className="text-secondary-700">{depositLabel}</span>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-xs font-semibold text-secondary-600">
+                <BadgeCheck className="h-3.5 w-3.5 text-secondary-400" />
+                {depositLabel}
               </div>
             </div>
           </div>
 
           {/* ── Payment summary ────────────────────────────────────── */}
-          <div className="rounded-xl border border-primary-200 bg-primary-50 p-6">
-            <div className="flex items-center justify-between">
+          <div className="rounded-2xl border border-primary-200 bg-primary-50/60 p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold text-secondary-900">
-                  {depositLabel}
-                </div>
+                <div className="font-bold text-secondary-900">{depositLabel}</div>
                 {payMode === "part" && (
                   <div className="mt-0.5 text-xs text-secondary-500">
                     Remaining {formatIDR(fullTotal - depositAmount)} due before the tour
                   </div>
                 )}
               </div>
-              <div className="text-xl font-bold text-secondary-900">
-                {formatIDR(depositAmount)}
-              </div>
+              <div className="text-2xl font-bold text-secondary-900">{formatIDR(depositAmount)}</div>
             </div>
           </div>
 
           {/* ── Error ─────────────────────────────────────────────── */}
           {error && (
-            <div className="rounded-xl border border-danger bg-red-50 px-4 py-3 text-sm text-danger">
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
             </div>
           )}
@@ -367,27 +352,25 @@ export default function Payment() {
             onClick={handleSubmit}
             disabled={loading}
             className={cn(
-              "inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold text-white transition",
+              "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-base font-bold text-white shadow-md shadow-primary-600/20 transition",
               loading
                 ? "cursor-not-allowed bg-primary-300"
                 : "bg-primary-600 hover:bg-primary-700 active:bg-primary-800"
             )}
           >
-            {loading
-              ? "Processing…"
-              : `Confirm & Pay ${formatIDR(depositAmount)}`}
+            {loading ? "Processing…" : `Confirm & Pay ${formatIDR(depositAmount)}`}
             {!loading && <CreditCard className="h-5 w-5" />}
           </button>
 
-          <div className="flex items-center justify-center gap-6 text-xs text-secondary-400">
-            <span className="inline-flex items-center gap-1">
-              <Lock className="h-3 w-3" /> Secure payment
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-secondary-400">
+            <span className="inline-flex items-center gap-1.5">
+              <Lock className="h-3.5 w-3.5" /> Secure payment
             </span>
-            <span className="inline-flex items-center gap-1">
-              <Shield className="h-3 w-3" /> Free cancellation 24h
+            <span className="inline-flex items-center gap-1.5">
+              <Shield className="h-3.5 w-3.5" /> Free cancellation 24h
             </span>
-            <span className="inline-flex items-center gap-1">
-              <MessageCircle className="h-3 w-3" /> Support on WhatsApp
+            <span className="inline-flex items-center gap-1.5">
+              <MessageCircle className="h-3.5 w-3.5" /> Support on WhatsApp
             </span>
           </div>
         </div>

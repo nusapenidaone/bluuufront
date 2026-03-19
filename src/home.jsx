@@ -594,8 +594,7 @@ function Hero() {
               Full day tour · Bali to Nusa Penida · All-inclusive
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-secondary-900 sm:text-6xl lg:text-7xl">
-              Award-winning tours to{" "}
-              <span className="text-primary-600">Nusa Penida</span>
+              Award-winning tours to <br className="sm:hidden" /><span className="text-primary-600">Nusa Penida</span>
             </h1>
             <p className="mt-6 max-w-2xl text-sm text-secondary-600 sm:text-xl">
               Manta rays, snorkeling, diving, and a land tour — all in one unforgettable day.
@@ -1919,8 +1918,9 @@ function RoutesBlock({ id, kicker, title, subtitle, routes, bookHref, bookLabel,
               <button
                 type="button"
                 onClick={() => { setShowAllRoutes(false); setHasSwiped(false); hasSwipedRef.current = false; }}
-                className="rounded-full border border-neutral-200 bg-white px-6 py-2.5 text-sm font-bold text-secondary-900 hover:bg-neutral-50 transition"
+                className="inline-flex items-center gap-1.5 py-1 text-sm font-semibold text-primary-600 transition-colors hover:text-primary-700"
               >
+                <ChevronUp className="h-4 w-4" />
                 Back to slider
               </button>
             </div>

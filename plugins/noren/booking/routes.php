@@ -137,7 +137,16 @@ Route::get('api/new/faq', [FullController::class, 'getFaq']);
 // New API: gallery
 Route::get('api/new/gallery', [FullController::class, 'getGallery']);
 
+// New API: categories
+Route::get('api/new/categories', [FullController::class, 'getCategories']);
+
 // New API: rules and settings
 Route::get('api/new/rules', [FullController::class, 'getRules']);
 Route::get('api/new/settings', [FullController::class, 'getSettings']);
 Route::get('api/new/contacts', [FullController::class, 'getContacts']);
+
+// Chatbot API (API key required)
+use Noren\Booking\Routes\ChatbotController;
+Route::get('api/chatbot/boats/private', [ChatbotController::class, 'getPrivateBoats']);
+Route::get('api/chatbot/boats/shared',  [ChatbotController::class, 'getSharedBoats']);
+Route::post('api/chatbot/quote',        [ChatbotController::class, 'getQuote']);

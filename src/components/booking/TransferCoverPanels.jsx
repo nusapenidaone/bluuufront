@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Car, MapPin, Shield, ShieldCheck, Check, Info } from "lucide-react";
 import { cn } from "../../lib/utils";
-import Modal from "./ui/Modal";
+import InfoDetailModal from "./InfoDetailModal";
 import { formatIDR } from "./utils";
 
 // --------------- Helpers ---------------
@@ -286,34 +286,10 @@ export function TransfersCompact({
           )}
         </div>
       )}
-      <Modal
-        isOpen={Boolean(activeTransferDetails)}
+      <InfoDetailModal
+        data={activeTransferDetails ? { ...activeTransferDetails, subtitle: "Pickup and route information" } : null}
         onClose={() => setActiveTransferDetails(null)}
-        title={activeTransferDetails?.title || "Transfer details"}
-        subtitle="Additional information"
-        maxWidth="max-w-3xl"
-        bodyClassName="px-6 py-4 sm:py-5"
-      >
-        <div className="pb-4 space-y-4">
-          {activeTransferDetails?.image && (
-            <div className="overflow-hidden rounded-xl border border-neutral-200">
-              <img
-                src={activeTransferDetails.image}
-                alt={activeTransferDetails.title || "Transfer"}
-                className="h-52 w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            </div>
-          )}
-          {activeTransferDetails?.description ? (
-            <div
-              className="text-sm"
-              dangerouslySetInnerHTML={{ __html: activeTransferDetails.description }}
-            />
-          ) : null}
-        </div>
-      </Modal>
+      />
     </div>
   );
 }
@@ -451,21 +427,10 @@ export function CoversCompact({
       <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
         {optionsContent}
       </div>
-      <Modal
-        open={Boolean(activeCoverDetails)}
+      <InfoDetailModal
+        data={activeCoverDetails ? { ...activeCoverDetails, subtitle: "Coverage information" } : null}
         onClose={() => setActiveCoverDetails(null)}
-        title={activeCoverDetails?.title || "Insurance details"}
-        subtitle="Coverage information"
-        maxWidth="max-w-3xl"
-        bodyClassName="px-6 py-4 sm:py-5"
-      >
-        {activeCoverDetails?.description ? (
-          <div
-            className="text-sm"
-            dangerouslySetInnerHTML={{ __html: activeCoverDetails.description }}
-          />
-        ) : null}
-      </Modal>
+      />
     </div>
   );
 }

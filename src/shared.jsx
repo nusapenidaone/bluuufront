@@ -1,5 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { getBoatFeatures } from "./utils/boatFeatures";
+import {
+  TRANSFER_DETAILS_FALLBACK_IMAGE,
+  INSURANCE_DETAILS_FALLBACK_IMAGE,
+  decodeBasicEntities,
+  sanitizeDisplayText,
+  getRestaurantDisplayName,
+  getRestaurantDisplayDescription,
+  getLunchDisplayData,
+  getOptionDescription,
+  getOptionImage,
+  buildOptionDetails,
+  getBoatLength,
+} from "./utils/displayUtils";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCurrency } from "./CurrencyContext";
 import { useTours } from "./ToursContext";
@@ -37,7 +50,13 @@ import {
   REVIEW_COUNT_SHORT
 } from "./components/booking/constants";
 import Modal from "./components/booking/ui/Modal";
+import RestaurantModal from "./components/tour/RestaurantModal";
+import ScheduleModal from "./components/tour/ScheduleModal";
+import RestaurantCard from "./components/tour/RestaurantCard";
+import TourDetailsCard from "./components/tour/TourDetailsCard";
+import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
 import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
+import InfoDetailModal from "./components/booking/InfoDetailModal";
 import Section from "./components/common/Section";
 import { PremiumSection, PremiumContainer } from "./components/booking/ui/Section";
 import { PremiumCard as Card } from "./components/booking/ui/Card";
@@ -66,7 +85,6 @@ import {
   Clock,
   Compass,
   CreditCard,
-  Droplets,
   CloudRain,
   Coffee,
   ExternalLink,
@@ -588,7 +606,7 @@ function BookingCard({
             Reserve now <ArrowRight className="h-4 w-4" />
           </Button>
           <div className="text-center text-sm text-secondary-500">
-            Secure booking in 60s  confirmation email in 1015 min
+            You'll see the full total before confirming.
           </div>
           <div className="relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
@@ -1805,7 +1823,7 @@ function Hero() {
               Own boat | Weather guarantee | Small groups
             </p>
             <h1 className="mt-3 text-4xl font-bold tracking-tight text-secondary-900 sm:text-6xl lg:text-7xl">
-              Shared tour to <span className="text-primary-600">Nusa Penida</span>
+              Shared tour to <br className="sm:hidden" /><span className="text-primary-600">Nusa Penida</span>
             </h1>
             <p className="mt-6 max-w-2xl text-sm text-secondary-600 sm:text-xl">
               Comfort boat (not public fast boat) + snorkeling + mantas + Kelingking. <br className="hidden sm:block" />All-inclusive luxury experience.
@@ -2358,8 +2376,8 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
         const Icon = card.icon;
         return (
           <div key={card.title} className={row}>
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100">
-              <Icon className={cn("h-6 w-6 text-primary-600", card.iconClassName)} />
+            <div className={cn(iconBlue, card.accentClassName)}>
+              <Icon className={cn("h-5 w-5 sm:h-6 sm:w-6", card.iconClassName)} />
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-base font-semibold text-secondary-900">{card.title}</div>
@@ -2434,26 +2452,26 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
   };
   return (
     <>
-      <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0 md:h-[80vh]">
-        <div className="sticky top-0 z-20 flex shrink-0 items-start justify-between gap-4 bg-neutral-50/60 py-6">
+      <div className="flex h-full w-full flex-col bg-white p-0 md:h-[80vh]">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
           <div>
-            <div className="text-base sm:text-xl font-semibold text-secondary-900">Tour info</div>
-            <div className="mt-1 truncate text-sm text-secondary-500">
+            <div className="text-base font-semibold text-secondary-900">Tour info</div>
+            <div className="mt-0.5 text-sm text-secondary-500">
               Whats included, pickup, and safety all in one place.
             </div>
           </div>
           <button
             type="button"
             onClick={() => onClose?.()}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-secondary-500 transition-all hover:border-neutral-200 hover:bg-white hover:text-secondary-700"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-transparent text-secondary-500 transition-all hover:border-neutral-200 hover:bg-white hover:text-secondary-700"
             aria-label="Close"
           >
             <X className="w-5 h-5 text-secondary-600" />
           </button>
         </div>
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="border-b border-neutral-200 px-1">
-            <div className="hide-scrollbar flex flex-nowrap items-center gap-x-5 gap-y-2 overflow-x-auto py-3 text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
+          <div className="border-b border-neutral-200 px-6">
+            <div className="hide-scrollbar flex flex-nowrap items-center gap-x-5 overflow-x-auto py-3 text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
               {INFO_DRAWER_TABS.map((tab) => (
                 <button
                   key={tab.id}
@@ -2471,7 +2489,7 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
               ))}
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden py-6 text-sm text-secondary-600 sm:py-6">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 text-sm text-secondary-600">
             <TourTabContent
               activeTab={internalTab}
               includedSections={includedSections}
@@ -2482,31 +2500,10 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
           </div>
         </div>
       </div>
-      {includedRestaurantPopup && (
-        <Modal
-          open={!!includedRestaurantPopup}
-          onClose={() => setIncludedRestaurantPopup(null)}
-          title={includedRestaurantPopup.name || "Restaurant"}
-          subtitle="Included lunch"
-          maxWidth="max-w-xl"
-        >
-          <div className="pb-4">
-            {includedRestaurantPopup.image && (
-              <div className="mb-4 aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200">
-                <img src={includedRestaurantPopup.image} alt={includedRestaurantPopup.name} className="h-full w-full object-cover" />
-              </div>
-            )}
-            {includedRestaurantPopup.description ? (
-              <div className="text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.description }} />
-            ) : (
-              <p className="text-sm text-secondary-500">Lunch is included and served at {includedRestaurantPopup.name}.</p>
-            )}
-            {includedRestaurantPopup.menu && (
-              <div className="mt-4 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.menu }} />
-            )}
-          </div>
-        </Modal>
-      )}
+      <RestaurantModal
+        restaurantData={includedRestaurantPopup}
+        onClose={() => setIncludedRestaurantPopup(null)}
+      />
     </>
   );
 }
@@ -2577,15 +2574,10 @@ function TourInfoInline() {
           )}
         </AnimatePresence>
       </div>
-      {includedRestaurantPopup && (
-        <Modal open={!!includedRestaurantPopup} onClose={() => setIncludedRestaurantPopup(null)} title={includedRestaurantPopup.name || "Restaurant"} subtitle="Included lunch" maxWidth="max-w-xl">
-          <div className="pb-4">
-            {includedRestaurantPopup.image && <div className="mb-4 aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200"><img src={includedRestaurantPopup.image} alt={includedRestaurantPopup.name} className="h-full w-full object-cover" /></div>}
-            {includedRestaurantPopup.description ? <div className="text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.description }} /> : <p className="text-sm text-secondary-500">Lunch is included and served at {includedRestaurantPopup.name}.</p>}
-            {includedRestaurantPopup.menu && <div className="mt-4 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.menu }} />}
-          </div>
-        </Modal>
-      )}
+      <RestaurantModal
+        restaurantData={includedRestaurantPopup}
+        onClose={() => setIncludedRestaurantPopup(null)}
+      />
     </>
   );
 }
@@ -2849,11 +2841,18 @@ function StepTwo({
     if (now - boatSelectGuardRef.current < 250) return;
     boatSelectGuardRef.current = now;
     if (dateMode === "flex" && hasRange) {
-      // Don't select yet - open pick-day panel first, selection happens on confirm
+      // Reset confirmed date when switching to a different boat
+      if (boat.id !== selectedBoatId) {
+        onSelectFlexDate("");
+      }
       openPickDayMode(boat.id);
     } else {
-      // Exact date selected - select immediately
+      // Exact date selected - select immediately and show confirm modal
       onSelectBoatId(boat.id);
+      const rawBoat = (boats || []).find((b) => b.id === boat.id);
+      const price = rawBoat ? calculateBoatPrice(rawBoat.tourId, exactDate, groupSize, privateTours) : null;
+      const boatWithPrice = rawBoat ? { ...rawBoat, priceValue: price ?? rawBoat.priceValue } : null;
+      if (boatWithPrice) setConfirmModalData({ boat: boatWithPrice, date: exactDate, adults, kids, routeTitle: selectedStyleTitle });
     }
   };
   const selectedBoat = useMemo(
@@ -2882,6 +2881,12 @@ function StepTwo({
   useEffect(() => {
     hasSwipedRef.current = hasSwiped;
   }, [hasSwiped]);
+  useEffect(() => {
+    setActiveIndex(0);
+    if (carouselRef.current) {
+      carouselRef.current.scrollTo({ left: 0, behavior: "instant" });
+    }
+  }, [sorted]);
   const renderBoatCard = (boat, { isSoldOut = false, isLocked = false, isTooSmall = false } = {}) => {
     const availability = availabilityByBoat?.[boat.id];
     const fitsGroup = groupSize <= boat.people;
@@ -2890,14 +2895,17 @@ function StepTwo({
     const needsExactDateSelection = dateMode === "exact" && !exactDate;
     const availableDates = availability?.availableDates ?? [];
     const dateSeatsMap = availability?.dateSeatsMap ?? {};
-    const selectedDateForBoat = selectedBoatId === boat.id ? selectedFlexDate : "";
+    const selectedDateForBoat = selectedBoatId === boat.id ? (dateMode === "exact" ? exactDate : selectedFlexDate) : "";
     const showFrom = !((dateMode === "exact" && !!exactDate) || !!selectedDateForBoat);
-    const perks = (Array.isArray(boat.listItems) ? boat.listItems : [])
+    const rawPerks = Array.isArray(boat.list) && boat.list.length
+      ? boat.list
+      : Array.isArray(boat.listItems)
+        ? boat.listItems
+        : [];
+    const perks = rawPerks
       .map((item) => sanitizeDisplayText(item, { stripTrailingOne: true }))
       .filter(Boolean);
-    const displayPerks = perks.length
-      ? perks
-      : ["Comfort seating", "Shaded lounge", "Onboard toilet"];
+    const displayPerks = perks;
     const nextAvailable = availability?.nextAvailable || availableDates[0];
     const isSelected = selectedBoatId === boat.id && !isLocked;
     const isPickDayMode = inlineDatesFor === boat.id;
@@ -2919,8 +2927,7 @@ function StepTwo({
       <div
         className={cn(
           "group relative flex h-full w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left shadow-none transition-all duration-300",
-          "hover:border-primary-300",
-          isSelected && "border-primary-500 ring-1 ring-primary-500 bg-white shadow-2xl z-10",
+          isSelected && "border-neutral-200 shadow-2xl z-10",
           isLocked && "cursor-pointer",
           isSoon && "pointer-events-none select-none"
         )}
@@ -2935,171 +2942,168 @@ function StepTwo({
             <span className="rounded-full bg-white/90 px-4 py-1.5 text-sm font-bold text-secondary-900 shadow">Coming soon</span>
           </div>
         )}
-        <div
-          className={cn("flex h-full flex-col", isPickDayMode && "invisible pointer-events-none", isUnavailable && "opacity-40 pointer-events-none select-none")}
-          aria-hidden={isPickDayMode}
-        >
-          <div className="relative w-full overflow-hidden">
-            <PhotoCarousel
-              className="aspect-[4/3] cursor-pointer"
-              images={boat.images?.length ? boat.images : [boat.cover]}
-              alt={boat.name}
-              isLocked={isPickDayMode}
-              onOpenGallery={(startIndex) => {
-                const slides = boat.images?.length ? boat.images : [boat.cover];
-                Fancybox.show(slides.map(src => ({ src, type: "image" })), {
-                  startIndex: startIndex || 0,
-                });
-              }}
-            />
-          </div>
-          <div className="flex flex-1 flex-col p-6 pt-5">
-            <div className="flex items-center gap-2 min-h-9">
-              <span className="inline-flex h-5 w-5 items-center justify-center">
-                <span className={cn("flex h-4 w-4 items-center justify-center rounded-full bg-neutral-100 transition-colors", isSelected && "bg-primary-100")}>
-                  <span
-                    className={cn(
-                      "h-1.5 w-1.5 rounded-xl bg-secondary-300 transition-colors",
-                      isSelected && "bg-primary-600 h-2 w-2"
-                    )}
-                  />
-                </span>
-              </span>
-              <div className="text-xl font-semibold text-secondary-900 line-clamp-1">
-                {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
-              </div>
-            </div>
+        {(() => {
+          const perksLower = perks.map(p => p.toLowerCase());
+          const bf = boat.boatFeatures || {};
+          const boatFeatures = getBoatFeatures(boat.boatFeatures);
+          const boatTypeLabel = [
+            bf.boat_type || null,
+            boat.lengthMeters ? `${boat.lengthMeters}M` : null,
+          ].filter(Boolean).join(" · ").toUpperCase();
 
-            {hasBoatDescription ? (
-              <div className="mt-2 text-sm leading-relaxed text-secondary-500 line-clamp-2">
-                {boatDescriptionText}
-              </div>
-            ) : null}
-
-            {/* Specs pills */}
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-secondary-600">
-                <Users className="h-3.5 w-3.5" />
-                Up to {boat.people}
-              </span>
-              {boat.lengthMeters ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-secondary-600">
-                  <Ruler className="h-3.5 w-3.5" />
-                  {boat.lengthMeters}m
-                </span>
-              ) : null}
-              {boat.fleet_count ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold text-secondary-600">
-                  Fleet of {boat.fleet_count}
-                </span>
-              ) : null}
-            </div>
-
-            {/* Divider */}
-            <div className="my-3 border-t border-neutral-100" />
-
-            {/* Perks */}
-            <ul className="space-y-1.5">
-              {displayPerks.map((item) => (
-                <li key={item} className="flex items-center gap-2 text-sm text-secondary-600">
-                  <svg className="h-3.5 w-3.5 shrink-0 text-primary-500" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  {item}
-                </li>
-              ))}
-            </ul>
-
-            {/* See details & itinerary button */}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setScheduleModalBoat(boat); }}
-              className="mt-2 text-left inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors w-fit"
+          return (
+            <div
+              className={cn("flex h-full flex-col", isPickDayMode && "invisible pointer-events-none", isUnavailable && "opacity-40 pointer-events-none select-none")}
+              aria-hidden={isPickDayMode}
             >
-              See details &amp; itinerary
-              <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-            </button>
-
-            <div className="mt-auto pt-4">
-              <div className="flex items-end justify-between gap-2 mb-3">
-                <div
-                  className={cn(
-                    "flex items-baseline gap-1.5",
-                    (isSoldOut || isLocked) && "opacity-60"
-                  )}
-                >
-                  {showFrom && <span className="text-xs font-semibold text-secondary-400">From</span>}
-                  <span className="text-2xl font-black text-secondary-900 tracking-tight">
-                    {boat.id === "angels"
-                      ? formatIDR(33000000)
-                      : formatIDR(boat.priceValue)}
-                  </span>
-                  <span className="text-xs font-black tracking-widest text-secondary-300">
-                    {boat.id === "angels" ? "/ 2 boats" : `/ ${Math.max(1, groupSize)} passenger${groupSize > 1 ? "s" : ""}`}
-                  </span>
-                </div>
-
-                {hasRange && availableDates.length > 0 && isSelected && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openPickDayMode(boat.id);
-                    }}
-                    className="inline-flex h-7 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white px-3 text-xs font-semibold text-primary-600 transition hover:border-primary-200 hover:bg-primary-50 shadow-sm"
-                  >
-                    {selectedDateForBoat ? "Change date" : "Pick a day"}
-                  </button>
+              {/* Image */}
+              <div className="relative w-full overflow-hidden">
+                <PhotoCarousel
+                  className="aspect-video cursor-pointer"
+                  images={boat.images?.length ? boat.images : [boat.cover]}
+                  alt={boat.name}
+                  isLocked={isPickDayMode}
+                  onOpenGallery={(startIndex) => {
+                    const slides = boat.images?.length ? boat.images : [boat.cover];
+                    Fancybox.show(slides.map(src => ({ src, type: "image" })), { startIndex: startIndex || 0 });
+                  }}
+                />
+                {isSelected && (
+                  <>
+                    <div className="pointer-events-none absolute inset-0 bg-primary-600/30" />
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md">
+                        <Check className="h-5 w-5 text-primary-600" strokeWidth={3} />
+                      </div>
+                      <span className="rounded-full bg-white px-4 py-1 text-sm font-bold text-primary-600 shadow-md">Selected</span>
+                    </div>
+                  </>
                 )}
               </div>
 
-              {isLocked ? (
+              <div className="flex flex-1 flex-col p-5 pt-4">
+                {/* Type label */}
+                {boatTypeLabel && (
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
+                )}
+
+                {/* Title */}
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="text-xl font-bold text-secondary-900 leading-tight line-clamp-1">
+                    {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
+                  </div>
+                  {boat.isPartner ? (
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600 border border-amber-200">By request</span>
+                  ) : null}
+                </div>
+
+                {/* Description */}
+                <div className="mt-1.5 text-sm leading-relaxed text-secondary-500 line-clamp-2">
+                  {boatDescriptionText}
+                </div>
+
+                {/* Fleet size info */}
+                {boat.fleetSize > 1 && (
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold text-secondary-600">
+                    <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                    {boat.fleetSize} identical boats — we assign the best available for your date
+                  </div>
+                )}
+
+                {/* Best for badge */}
+                {bf.best_for && (
+                  <div className="mt-2.5">
+                    <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600">
+                      Best for: {bf.best_for}
+                    </span>
+                  </div>
+                )}
+
+                {/* Features grid */}
+                <div className="mt-3 border-t border-neutral-100 pt-3 pb-4">
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    <div className="flex items-center gap-2 text-sm font-medium text-secondary-900">
+                      <Users className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                      Up to {boat.people}
+                    </div>
+                    {boatFeatures.map(({ label, present, Icon }) => (
+                      <div key={label} className={cn("flex items-center gap-2 text-sm", present ? "font-medium text-secondary-900" : "text-secondary-300")}>
+                        <Icon className={cn("h-3.5 w-3.5 shrink-0", present ? "text-secondary-400" : "text-neutral-300")} />
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* See details */}
                 <button
                   type="button"
-                  onClick={focusStepOne}
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full border border-primary-200 bg-transparent text-sm font-semibold text-primary-600 transition hover:bg-primary-50"
+                  onClick={(e) => { e.stopPropagation(); setScheduleModalBoat(boat); }}
+                  className="mt-3 mb-4 text-left inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors w-fit"
                 >
-                  <Calendar className="h-4 w-4" />
-                  Select dates
+                  See details &amp; itinerary
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                 </button>
-              ) : dateMode === "exact" && needsExactDateSelection ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full rounded-full"
-                  onClick={focusStepOne}
-                  disabled={isDisabled}
-                >
-                  Select date
-                </Button>
-              ) : (
-                isSelected ? (
-                  <Button
-                    className="h-12 w-full rounded-full"
-                    disabled
-                  >
-                    <Check className="h-4 w-4" />
-                    Selected
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="primary"
-                    className="h-12 w-full rounded-full"
-                    onClick={() => {
-                      if (!hasDateCriteria) {
-                        document.getElementById("step-1")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                        return;
-                      }
-                      openBoat(boat);
-                    }}
-                    disabled={isDisabled}
-                  >
-                    {!hasDateCriteria ? "Pick a date first" : "Select option"}
-                  </Button>
-                )
-              )}
+
+                {/* Price + button */}
+                <div className="mt-auto border-t border-neutral-100 pt-5">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className={cn("flex min-w-0 flex-col", (isSoldOut || isLocked) && "opacity-60")}>
+                      {showFrom && <span className="text-[11px] font-semibold uppercase tracking-wide text-secondary-400 leading-none mb-0.5">From</span>}
+                      <div className="flex items-baseline gap-x-1">
+                        <span className="text-xl font-black text-secondary-900 tracking-tight">
+                          {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
+                        </span>
+                        <span className="text-xs font-semibold text-secondary-400">/ boat</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {isLocked ? (
+                        <button
+                          type="button"
+                          onClick={focusStepOne}
+                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-neutral-200 bg-white px-5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50"
+                        >
+                          <Calendar className="h-4 w-4" />
+                          Select dates
+                        </button>
+                      ) : dateMode === "exact" && needsExactDateSelection ? (
+                        <Button variant="secondary" className="h-10 rounded-full px-5" onClick={focusStepOne} disabled={isDisabled}>
+                          Select date
+                        </Button>
+                      ) : isSelected ? (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); openPickDayMode(boat.id); }}
+                          className="inline-flex h-10 items-center justify-center rounded-full border border-neutral-200 bg-white px-4 text-xs font-semibold text-primary-600 transition hover:border-primary-200 hover:bg-primary-50"
+                        >
+                          {selectedDateForBoat ? "Change date" : "Pick a day"}
+                        </button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="primary"
+                          className="h-10 rounded-full px-5"
+                          onClick={() => {
+                            if (!hasDateCriteria) {
+                              document.getElementById("step-1")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              return;
+                            }
+                            openBoat(boat);
+                          }}
+                          disabled={isDisabled}
+                        >
+                          {!hasDateCriteria ? "Pick a date first" : "Select"}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
         {isUnavailable && (
           <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-white/70 backdrop-blur-[3px]">
             <p className="text-sm font-semibold text-secondary-500 mb-3 px-6 text-center">Not available for these parameters</p>
@@ -3123,7 +3127,7 @@ function StepTwo({
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              className="fixed inset-x-4 bottom-4 z-50 flex flex-col rounded-2xl bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:rounded-xl sm:p-6 sm:shadow-none"
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:max-h-none sm:rounded-xl sm:p-6 sm:shadow-none"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="space-y-0.5">
@@ -3139,7 +3143,7 @@ function StepTwo({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="mt-5 flex-1">
+              <div className="mt-5 flex-1 overflow-y-auto">
                 {hasRange ? (
                   <div className="grid grid-cols-5 gap-2 pr-1">
                     {rangeDates.map((date) => {
@@ -3258,93 +3262,91 @@ function StepTwo({
             </p>
           </div>
 
-          <div className="hidden sm:grid sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 items-stretch">
+          <div
+            ref={carouselRef}
+            className={cn(
+              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+              dateMode === "flex" || showAllBoats ? "flex-col overflow-visible" : "snap-x snap-mandatory"
+            )}
+          >
             {sorted.map((boat) => {
               const boatSoldOut = hasDateCriteria && availabilityByBoat?.[boat.id]?.available === false;
               const boatTooSmall = groupSize > boat.people;
-              return <div key={boat.id} className="h-full">{renderBoatCard(boat, { isSoldOut: boatSoldOut, isTooSmall: boatTooSmall })}</div>;
+              return (
+                <div
+                  key={boat.id}
+                  data-card
+                  className={cn(
+                    "relative flex min-h-[70vh] w-full shrink-0 sm:min-h-0 sm:h-full",
+                    !(dateMode === "flex" || showAllBoats) && "snap-center snap-always",
+                    (dateMode === "flex" || showAllBoats) && "mb-4 sm:mb-0"
+                  )}
+                >
+                  {renderBoatCard(boat, { isSoldOut: boatSoldOut, isTooSmall: boatTooSmall })}
+                </div>
+              );
             })}
           </div>
-          <div className="sm:hidden">
-            <div
-              ref={carouselRef}
-              className={cn(
-                "no-scrollbar flex gap-0 pb-2 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-                dateMode === "flex" || showAllBoats ? "flex-col gap-4 overflow-visible" : "snap-x snap-mandatory overflow-x-auto"
-              )}
-            >
-              {sorted.map((boat) => {
-                const boatSoldOut = hasDateCriteria && availabilityByBoat?.[boat.id]?.available === false;
-                const boatTooSmall = groupSize > boat.people;
+          {isMobile && totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
+            <div className="mt-3 flex items-center justify-center gap-2">
+              {Array.from({ length: Math.min(7, totalCount) }, (_, i) => {
+                const maxDots = Math.min(7, totalCount);
+                const start = Math.max(0, Math.min(activeIndex - Math.floor(maxDots / 2), totalCount - maxDots));
+                const dotIndex = start + i;
+                const isActive = dotIndex === activeIndex;
                 return (
-                  <div key={boat.id} data-card className={cn("shrink-0", (dateMode === "flex" || showAllBoats) ? "w-full" : "w-full snap-center snap-always")}>
-                    <div className={cn("h-full", (dateMode === "flex" || showAllBoats) ? "min-h-0" : "min-h-[70vh]")}>{renderBoatCard(boat, { isSoldOut: boatSoldOut, isTooSmall: boatTooSmall })}</div>
-                  </div>
+                  <button
+                    key={`boat-dot-${dotIndex}`}
+                    type="button"
+                    onClick={() => {
+                      const track = carouselRef.current;
+                      const card = track?.querySelector("[data-card]");
+                      if (!track || !card) return;
+                      const cardWidth = card.getBoundingClientRect().width;
+                      track.scrollTo({ left: dotIndex * cardWidth, behavior: "smooth" });
+                      setHasSwiped(true);
+                    }}
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full transition",
+                      isActive ? "bg-secondary-900" : "bg-secondary-300"
+                    )}
+                    aria-label={`Go to boat ${dotIndex + 1}`}
+                  />
                 );
               })}
             </div>
-            {totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
-              <div className="mt-3 flex items-center justify-center gap-2">
-                {Array.from({ length: Math.min(7, totalCount) }, (_, i) => {
-                  const maxDots = Math.min(7, totalCount);
-                  const start = Math.max(0, Math.min(activeIndex - Math.floor(maxDots / 2), totalCount - maxDots));
-                  const dotIndex = start + i;
-                  const isActive = dotIndex === activeIndex;
-                  return (
-                    <button
-                      key={`boat-dot-${dotIndex}`}
-                      type="button"
-                      onClick={() => {
-                        const track = carouselRef.current;
-                        const card = track?.querySelector("[data-card]");
-                        if (!track || !card) return;
-                        const cardWidth = card.getBoundingClientRect().width;
-                        track.scrollTo({ left: dotIndex * cardWidth, behavior: "smooth" });
-                        setHasSwiped(true);
-                      }}
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full transition",
-                        isActive ? "bg-secondary-900" : "bg-secondary-300"
-                      )}
-                      aria-label={`Go to boat ${dotIndex + 1}`}
-                    />
-                  );
-                })}
-              </div>
-            ) : null}
-            {!hasSwiped && totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
-              <div className="mt-2 flex items-center justify-center gap-1 text-sm text-secondary-300">
-                <ChevronLeft className="h-3 w-3" />
-                <span>Swipe</span>
-                <ChevronRight className="h-3 w-3" />
-              </div>
-            ) : null}
-            {isMobile && !showAllBoats && dateMode !== "flex" && (
-              <div className="mt-4 flex justify-center">
-                <Button
-                  variant="secondary"
-                  className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
-                  onClick={() => setShowAllBoats(true)}
-                >
-                  View all boats
-                </Button>
-              </div>
-            )}
-            {isMobile && showAllBoats && dateMode !== "flex" && (
-              <div className="mt-4 flex justify-center">
-                <Button
-                  variant="secondary"
-                  className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
-                  onClick={() => {
-                    setShowAllBoats(false);
-                    setHasSwiped(false);
-                  }}
-                >
-                  Back to slider
-                </Button>
-              </div>
-            )}
-          </div>
+          ) : null}
+          {isMobile && !hasSwiped && totalCount > 1 && dateMode !== "flex" && !showAllBoats ? (
+            <div className="mt-2 flex items-center justify-center gap-1 text-sm text-secondary-300">
+              <ChevronLeft className="h-3 w-3" />
+              <span>Swipe</span>
+              <ChevronRight className="h-3 w-3" />
+            </div>
+          ) : null}
+          {isMobile && !showAllBoats && dateMode !== "flex" && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowAllBoats(true)}
+                className="inline-flex items-center gap-1.5 py-1 text-sm font-semibold text-primary-600 transition-colors hover:text-primary-700"
+              >
+                View all boats
+                <ChevronDown className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          {isMobile && showAllBoats && dateMode !== "flex" && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => { setShowAllBoats(false); setHasSwiped(false); }}
+                className="inline-flex items-center gap-1.5 py-1 text-sm font-semibold text-primary-600 transition-colors hover:text-primary-700"
+              >
+                <ChevronUp className="h-4 w-4" />
+                Back to slider
+              </button>
+            </div>
+          )}
         </PremiumContainer>
       </PremiumSection>
       <Modal
@@ -3353,236 +3355,92 @@ function StepTwo({
         maxWidth="max-w-lg"
         showClose={false}
         closeOnBackdrop={true}
+        bodyClassName="p-0"
       >
         {confirmModalData ? (
-          <div className="flex flex-col">
-            {/* Image edge-to-edge */}
-            <div className="aspect-[4/3] w-full overflow-hidden rounded-3xl">
-              <img
-                src={confirmModalData.boat.images?.[0] || confirmModalData.boat.cover}
-                alt={confirmModalData.boat.name}
-                className="h-full w-full object-cover"
-              />
-            </div>
-
-            {/* Content below image */}
-            <div className="p-6">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-primary-600">Your selection</div>
-              <div className="mt-1.5 text-xl font-bold tracking-tight text-secondary-900 leading-snug">
+          <div className="relative flex flex-col">
+            {(confirmModalData.boat.images?.[0] || confirmModalData.boat.cover) && (
+              <div className="hidden sm:block">
+                <img
+                  src={confirmModalData.boat.images?.[0] || confirmModalData.boat.cover}
+                  alt={confirmModalData.boat.name}
+                  className="h-52 w-full object-cover rounded-t-xl"
+                />
+              </div>
+            )}
+            <div className="px-5 pb-3 pt-4 text-center">
+              <div className="mb-2 flex justify-center">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-50">
+                  <CheckCircle2 className="h-4.5 w-4.5 text-primary-600" />
+                </div>
+              </div>
+              <div className="text-[10px] font-bold uppercase tracking-widest text-primary-500">Your selection</div>
+              <div className="mt-1 text-base font-bold tracking-tight text-secondary-900 leading-snug">
                 {confirmModalData.boat.name}
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                <div className="flex items-center gap-2 text-sm text-secondary-500">
-                  <Calendar className="h-3.5 w-3.5 shrink-0 text-secondary-300" />
+              <div className="mt-2 flex flex-wrap justify-center gap-1.5">
+                <div className="flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-secondary-600">
+                  <Calendar className="h-3 w-3 text-secondary-400" />
                   {formatShortDate(confirmModalData.date)}
                 </div>
-                <div className="flex items-center gap-2 text-sm text-secondary-500">
-                  <Users className="h-3.5 w-3.5 shrink-0 text-secondary-300" />
+                <div className="flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-secondary-600">
+                  <Users className="h-3 w-3 text-secondary-400" />
                   {confirmModalData.adults} adult{confirmModalData.adults !== 1 ? "s" : ""}
                   {confirmModalData.kids > 0 ? `, ${confirmModalData.kids} kid${confirmModalData.kids !== 1 ? "s" : ""}` : ""}
                 </div>
               </div>
 
-              <div className="mt-4 flex items-baseline gap-1.5">
-                <span className="text-2xl font-black tracking-tight text-secondary-900">
+              <div className="mt-2 flex items-baseline justify-center gap-1">
+                <span className="text-xl font-black tracking-tight text-secondary-900">
                   {formatIDR(confirmModalData.boat.priceValue)}
                 </span>
-                <span className="text-xs font-black tracking-widest text-secondary-300">{confirmModalData.boat.priceSuffix || "/ guest"}</span>
-              </div>
-
-              {/* Buttons in one row */}
-              <div className="mt-5 flex items-center gap-3">
-                <button
-                  type="button"
-                  className="flex-1 h-11 rounded-full border border-neutral-200 bg-neutral-50 text-sm font-semibold text-secondary-500 transition hover:bg-white hover:text-secondary-700"
-                  onClick={() => {
-                    setConfirmModalData(null);
-                    setTimeout(() => {
-                      document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }, 80);
-                  }}
-                >
-                  Another option
-                </button>
-                <Button
-                  className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-[1.01] active:scale-[0.98]"
-                  onClick={() => {
-                    setConfirmModalData(null);
-                    setTimeout(() => {
-                      document.getElementById("tour-details-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }, 80);
-                  }}
-                >
-                  Tour details <ArrowRight className="h-4 w-4" />
-                </Button>
+                <span className="text-xs font-semibold text-secondary-400">{confirmModalData.boat.priceSuffix || "/ guest"}</span>
               </div>
             </div>
-          </div>
-        ) : null}
-      </Modal>
-      <Modal
-        isOpen={!!scheduleModalBoat}
-        onClose={() => setScheduleModalBoat(null)}
-        maxWidth="max-w-3xl"
-        bodyClassName="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-200 sm:p-6"
-        showClose={false}
-      >
-        {scheduleModalBoat ? (
-          <div className="flex w-full flex-col overflow-hidden bg-white p-0">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 pb-4">
-              <div>
-                <div className="text-base font-semibold text-secondary-900">
-                  {fetchedRouteSchedule ? `${fetchedRouteSchedule.title} schedule` : `${scheduleModalBoat.name} schedule`}
-                </div>
-                <div className="mt-1 text-sm text-secondary-500">
-                  Morning plan is similar for all styles. Afternoon changes by style.
-                </div>
-              </div>
+
+            <div className="border-t border-neutral-100 px-4 pb-4 pt-4 flex items-center gap-3">
               <button
                 type="button"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-secondary-500 transition-all hover:border-neutral-200 hover:bg-white hover:text-secondary-700"
-                aria-label="Close"
-                onClick={() => setScheduleModalBoat(null)}
+                className="flex-1 h-11 rounded-full border border-neutral-200 bg-white text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50"
+                onClick={() => {
+                  setConfirmModalData(null);
+                  setTimeout(() => {
+                    document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 80);
+                }}
               >
-                <X className="w-5 h-5 text-secondary-600" aria-hidden="true" />
+                Another option
               </button>
-            </div>
-            <div className="overflow-y-auto mt-4">
-              {isFetchingRouteSchedule ? (
-                <div className="flex items-center justify-center h-48">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />
-                </div>
-              ) : (
-                <div className="space-y-8">
-                  {[
-                    { label: "Before lunch", items: fetchedRouteSchedule?.beforeLunch || scheduleModalBoat.routeSchedule?.beforeLunch || [] },
-                    { label: "After lunch", items: fetchedRouteSchedule?.afterLunch || scheduleModalBoat.routeSchedule?.afterLunch || [] },
-                  ].filter(s => s.items.length > 0).map((section) => (
-                    <div key={section.label}>
-                      <div className="text-sm font-bold uppercase tracking-wide-xl text-secondary-400 mb-5">
-                        {section.label}
-                      </div>
-                      <div className="space-y-6">
-                        {section.items.map((item, idx) => (
-                          <div key={`${section.label}-${idx}`} className="flex gap-5">
-                            <div className="w-24 shrink-0">
-                              <div className="text-sm font-bold text-secondary-600">{item.time}</div>
-                              {item.duration && (
-                                <div className="text-sm text-secondary-400">({item.duration})</div>
-                              )}
-                            </div>
-                            <div className="relative flex-1 pb-1">
-                              <span className="absolute -left-3.5 top-1.5 h-2 w-2 rounded-full bg-primary-600" />
-                              {idx < section.items.length - 1 && (
-                                <span className="absolute -left-[11px] top-4 h-full w-px bg-neutral-100" />
-                              )}
-                              {(() => {
-                                const isLunch = /lunch/i.test(item.title);
-                                const lunchDisplay = isLunch
-                                  ? getLunchDisplayData(item, fetchedRouteSchedule?.restaurant)
-                                  : null;
-                                const descriptionText = isLunch
-                                  ? lunchDisplay?.description
-                                  : sanitizeDisplayText(item.details, { stripTrailingOne: true });
-                                const popupRImg = lunchDisplay?.popupRestaurant?.image || lunchDisplay?.popupRestaurant?.images_with_thumbs?.[0]?.thumb || null;
-                                return (
-                                  <>
-                                    <div className="text-sm font-bold text-secondary-900">
-                                      {lunchDisplay?.title || item.title}
-                                    </div>
-                                    {descriptionText ? (
-                                      <div className="mt-1 text-sm text-secondary-600 leading-relaxed">
-                                        {descriptionText}
-                                      </div>
-                                    ) : null}
-                                    {lunchDisplay?.popupRestaurant?.name ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => setRouteRestaurantPopup(lunchDisplay.popupRestaurant)}
-                                        className="mt-2.5 w-full flex items-center gap-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 text-left transition hover:border-neutral-300 hover:bg-white"
-                                      >
-                                        {popupRImg ? (
-                                          <div className="h-14 w-14 shrink-0">
-                                            <img src={popupRImg} alt={lunchDisplay.popupRestaurant.name} className="h-full w-full object-cover" />
-                                          </div>
-                                        ) : (
-                                          <div className="h-14 w-14 shrink-0 bg-primary-50 flex items-center justify-center">
-                                            <UtensilsCrossed className="h-5 w-5 text-primary-300" />
-                                          </div>
-                                        )}
-                                        <div className="flex-1 min-w-0 px-3 py-2">
-                                          <div className="text-xs font-semibold uppercase tracking-wide text-secondary-400">Lunch venue</div>
-                                          <div className="text-sm font-bold text-secondary-900 truncate">{lunchDisplay.popupRestaurant.name}</div>
-                                        </div>
-                                        <div className="shrink-0 pr-3 text-sm font-semibold text-primary-600 flex items-center gap-1">
-                                          View menu
-                                          <ExternalLink className="h-3.5 w-3.5 text-primary-400" />
-                                        </div>
-                                      </button>
-                                    ) : null}
-                                  </>
-                                );
-                              })()}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="pt-4 space-y-2 border-t border-neutral-200">
-                    <p className="text-sm text-secondary-400 italic">Timing may adjust to sea conditions.</p>
-                    {(fetchedRouteSchedule?.footerNotes || scheduleModalBoat.routeSchedule?.footerNotes || []).map((note, i) => (
-                      <p key={i} className="text-sm text-secondary-400 italic">{note}</p>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <Button
+                className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-[1.01] active:scale-[0.98]"
+                onClick={() => {
+                  setConfirmModalData(null);
+                  setTimeout(() => {
+                    document.getElementById("tour-details-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 80);
+                }}
+              >
+                Tour details <ArrowRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         ) : null}
       </Modal>
-      {routeRestaurantPopup ? (
-        <Modal
-          open={!!routeRestaurantPopup}
-          onClose={() => setRouteRestaurantPopup(null)}
-          title={routeRestaurantPopup.name || routeRestaurantPopup.title || "Restaurant"}
-          subtitle="Included lunch"
-          maxWidth="max-w-3xl"
-        >
-          <div className="pb-4">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-              {(routeRestaurantPopup.image || routeRestaurantPopup.images_with_thumbs?.[0]?.thumb) ? (
-                <div className="w-full shrink-0 sm:w-2/5">
-                  <div className="aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200">
-                    <img
-                      src={routeRestaurantPopup.image || routeRestaurantPopup.images_with_thumbs[0].thumb}
-                      alt={routeRestaurantPopup.name || "Restaurant"}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                </div>
-              ) : null}
-              <div className="flex-1 space-y-3 overflow-y-auto">
-                {routeRestaurantPopup.description ? (
-                  <div
-                    className="text-sm leading-relaxed text-secondary-600"
-                    dangerouslySetInnerHTML={{ __html: routeRestaurantPopup.description }}
-                  />
-                ) : null}
-                {routeRestaurantPopup.menu ? (
-                  <div
-                    className="prose prose-sm max-w-none text-secondary-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1"
-                    dangerouslySetInnerHTML={{ __html: routeRestaurantPopup.menu }}
-                  />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </Modal>
-      ) : null}
+      <ScheduleModal
+        isOpen={!!scheduleModalBoat}
+        onClose={() => setScheduleModalBoat(null)}
+        title={fetchedRouteSchedule?.title || scheduleModalBoat?.name}
+        schedule={fetchedRouteSchedule || scheduleModalBoat?.routeSchedule}
+        isLoading={isFetchingRouteSchedule}
+        restaurantData={fetchedRouteSchedule?.restaurant}
+        onRestaurantClick={(r) => setRouteRestaurantPopup(r)}
+        sectionLabels={{ beforeLunch: "Morning", afterLunch: "Afternoon" }}
+      />
+      <RestaurantModal
+        restaurantData={routeRestaurantPopup}
+        onClose={() => setRouteRestaurantPopup(null)}
+      />
     </>
   );
 }
@@ -3862,23 +3720,22 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
       fetchRestaurant(restaurantId).then((data) => {
         if (!cancelled) setter(data);
       });
+    } else if (style.id) {
+      fetch(apiUrl(`route/${style.id}`))
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+          if (data?.restaurant && typeof data.restaurant === "object") { setter(data.restaurant); return; }
+          const rid = data?.restaurant_id || (typeof data?.restaurant === "number" ? data.restaurant : null);
+          if (rid) {
+            fetchRestaurant(rid).then((r) => { if (!cancelled) setter(r); }).catch(() => { if (!cancelled) setter(null); });
+          } else {
+            setter(null);
+          }
+        })
+        .catch(() => { if (!cancelled) setter(null); });
     } else {
-      const items = [...(style.schedule_before_lunch || []), ...(style.schedule_after_lunch || [])];
-      const lunchItem = items.find((i) => /lunch/i.test(i.title) || /restaurant/i.test(i.details));
-      if (!lunchItem) { setter(null); return () => { }; }
-      const details = lunchItem.details || "";
-      const inferredName = details.match(/^([^()]+?(?:restaurant|beach ?club))/i)?.[1]?.trim()
-        || details.split("(")[0].trim()
-        || null;
-      if (!inferredName) { setter(null); return () => { }; }
-      fetchRestaurants().then((list) => {
-        if (cancelled) return;
-        const match = list.find((r) =>
-          r.name?.toLowerCase().includes(inferredName.toLowerCase()) ||
-          inferredName.toLowerCase().includes(r.name?.toLowerCase())
-        );
-        setter(match || null);
-      });
+      setter(null);
     }
     return () => { cancelled = true; };
   }, []);
@@ -4139,16 +3996,14 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             )}
             {isMobile && showAllStyles && (
               <div className="mt-4 flex justify-center">
-                <Button
-                  variant="secondary"
-                  className="rounded-full bg-white hover:bg-neutral-50 px-6 font-bold"
-                  onClick={() => {
-                    setShowAllStyles(false);
-                    setHasSwiped(false);
-                  }}
+                <button
+                  type="button"
+                  onClick={() => { setShowAllStyles(false); setHasSwiped(false); }}
+                  className="inline-flex items-center gap-1.5 py-1 text-sm font-semibold text-primary-600 transition-colors hover:text-primary-700"
                 >
+                  <ChevronUp className="h-4 w-4" />
                   Back to slider
-                </Button>
+                </button>
               </div>
             )}
           </>
@@ -4170,526 +4025,43 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             const schedule = scheduleByStyleId[selectedStyleId];
             const style = styles.find(s => String(s.id) === String(selectedStyleId) || s.slug === selectedStyleId);
             const note = addOnNoteByStyleId[selectedStyleId];
-            const resolveScheduleIcon = (title = "") => {
-              let Icon = Clock;
-              const t = String(title).toLowerCase();
-              if (t.includes("meet") || t.includes("pick")) Icon = MapPin;
-              else if (t.includes("depart") || t.includes("boat")) Icon = Ship;
-              else if (t.includes("snorkeling") || t.includes("swim") || t.includes("manta")) Icon = Waves;
-              else if (t.includes("lunch") || t.includes("food")) Icon = UtensilsCrossed;
-              else if (t.includes("return") || t.includes("back")) Icon = Anchor;
-              else if (t.includes("photo")) Icon = Camera;
-              return Icon;
-            };
-            const renderCompactScheduleItem = (item, sectionKey) => {
-                const Icon = resolveScheduleIcon(item.title);
-                const detailsText = sanitizeDisplayText(item.details, { stripTrailingOne: true });
-                const isLunch = /lunch/i.test(item.title);
-                const lunchDisplay = isLunch
-                  ? getLunchDisplayData(item, selectedRestaurantData, getRouteRestaurantDetails(style))
-                  : null;
-                const descriptionText = isLunch ? lunchDisplay?.description : detailsText;
-                const rImg = lunchDisplay?.popupRestaurant?.image || lunchDisplay?.popupRestaurant?.images_with_thumbs?.[0]?.thumb || null;
-                return (
-                  <div
-                    key={`${sectionKey}-${item.title}-${item.time}`}
-                  className="flex items-start gap-3 py-3"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-secondary-500">
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-sm font-semibold text-secondary-900">
-                          {lunchDisplay?.title || item.title}
-                        </div>
-                        <div className="text-xs font-semibold text-secondary-500">
-                          {item.time} {item.duration ? `(${item.duration})` : ""}
-                        </div>
-                      </div>
-                      {descriptionText ? (
-                        <div className="mt-0.5 text-xs leading-relaxed text-secondary-600">
-                          {descriptionText}
-                        </div>
-                      ) : null}
-                      {lunchDisplay?.popupRestaurant?.name ? (
-                        <button
-                          type="button"
-                          onClick={() => setRestaurantDataPopup(lunchDisplay.popupRestaurant)}
-                          className="mt-2 w-full flex items-center gap-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 text-left transition hover:border-neutral-300 hover:bg-white"
-                        >
-                          {rImg ? (
-                            <div className="h-14 w-14 shrink-0">
-                              <img src={rImg} alt={lunchDisplay.popupRestaurant.name} className="h-full w-full object-cover" />
-                            </div>
-                          ) : (
-                            <div className="h-14 w-14 shrink-0 bg-primary-50 flex items-center justify-center">
-                              <UtensilsCrossed className="h-5 w-5 text-primary-300" />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0 px-3 py-2">
-                            <div className="text-xs font-semibold uppercase tracking-wide text-secondary-400">Lunch venue</div>
-                            <div className="text-sm font-bold text-secondary-900 truncate">{lunchDisplay.popupRestaurant.name}</div>
-                          </div>
-                          <div className="shrink-0 pr-3 text-sm font-semibold text-primary-600 flex items-center gap-1">
-                            View menu
-                            <ExternalLink className="h-3.5 w-3.5 text-primary-400" />
-                          </div>
-                        </button>
-                      ) : null}
-                    </div>
-                  </div>
-                );
-            };
             return (
-              <div className="space-y-8">
-                <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-                  <div className="flex flex-col lg:flex-row lg:items-stretch lg:h-[800px]">
-                    <div className="relative h-80 sm:h-96 lg:h-full w-full lg:w-[38%] shrink-0 overflow-hidden pt-4 lg:pt-0">
-                      <img
-                        src={style?.map || "https://bluuu.tours/themes/bluuu/assets/images/map.webp"}
-                        alt={style?.title || "Route map"}
-                        className="h-full w-full object-contain"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                    <div className="flex-1 flex flex-col lg:overflow-hidden p-5 sm:p-8 lg:p-10">
-                      {/* Fixed header */}
-                      <div className="shrink-0">
-                        <h3 className="text-lg font-bold text-secondary-900 sm:text-xl">{style?.title}</h3>
-                        <p className="mt-1 text-sm text-secondary-600">
-                          {sanitizeDisplayText(style?.description, { stripTrailingOne: true })}
-                        </p>
-                        <p className="mt-1 text-sm text-secondary-600">
-                          Times are approximate and may adjust due to sea conditions (safety-first routing).
-                        </p>
-                        {note ? (
-                          <div className="mt-3 rounded-full border border-primary-200 bg-neutral-100 px-3 py-2 text-sm font-medium text-primary-600">
-                            {note}
-                          </div>
-                        ) : null}
-                      </div>
-                      {/* Scrollable schedule */}
-                      <div className="mt-4 flex-1 overflow-y-auto grid gap-3 grid-cols-1">
-                        <div className="rounded-xl">
-                          <div className="mb-2 px-1 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-secondary-300">
-                            <span>Morning</span>
-                          </div>
-                          <div className="divide-y divide-neutral-100 border-t border-neutral-100">
-                            {schedule.beforeLunch.map((item) => renderCompactScheduleItem(item, "morning"))}
-                          </div>
-                        </div>
-                        <div className="rounded-xl">
-                          <div className="mb-2 px-1 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-secondary-300">
-                            <span>Midday & Afternoon</span>
-                          </div>
-                          <div className="divide-y divide-neutral-100 border-t border-neutral-100">
-                            {schedule.afterLunch.map((item) => renderCompactScheduleItem(item, "afternoon"))}
-                          </div>
-                        </div>
-                      </div>
-                      {(schedule.footerNotes || []).length ? (
-                        <div className="border-t border-neutral-200 pt-3 space-y-1.5">
-                          {(schedule.footerNotes || []).map((footerNote, i) => (
-                            <p key={i} className="text-sm italic text-secondary-400">{footerNote}</p>
-                          ))}
-                        </div>
-                      ) : null}
-                      </div>
-                      {/* Fixed buttons */}
-                      <div className="shrink-0 mt-4 flex items-center justify-end gap-4 border-t border-neutral-100 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                          }}
-                          className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-400 transition hover:text-secondary-700"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                          Another route
-                        </button>
-                        <Button
-                          onClick={onContinue}
-                          className="rounded-full px-6"
-                        >
-                          Choose your tour <ArrowRight className="h-4 w-4 ml-1.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <TourDetailsCard
+                style={style}
+                schedule={schedule}
+                note={note}
+                restaurant={selectedRestaurantData || style?.restaurant}
+                onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onContinue={onContinue}
+                continueLabel="Choose your tour"
+              />
             );
           })()}
         </div>
       ) : null}
-      <Modal
+      <ScheduleModal
         isOpen={!!activeItinerarySchedule}
         onClose={() => setActiveItineraryId(null)}
-        maxWidth="max-w-3xl"
-        bodyClassName="p-0"
-        showClose={false}
-      >
-        {activeItinerarySchedule ? (
-          <div className="flex w-full flex-col overflow-hidden bg-white p-0">
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
-              <div>
-                <div className="text-base font-semibold text-secondary-900">
-                  {activeItinerarySchedule.popupTitle || activeItinerarySchedule.title}  schedule
-                </div>
-                <div className="mt-1 text-sm text-secondary-500">
-                  Morning plan is similar for all styles. Afternoon changes by style.
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setActiveItineraryId(null)}
-                className="p-2 hover:bg-neutral-100 rounded-full transition-colors -mr-2 -mt-2"
-                aria-label="Close"
-              >
-                <X className="w-5 h-5 text-secondary-500" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-6 sm:p-10">
-              <div className="space-y-8">
-                {activeItineraryNote && (
-                  <div className="rounded-2xl border border-primary-100 bg-primary-50/50 px-4 py-3 text-sm text-primary-600 font-medium">
-                    {activeItineraryNote}
-                  </div>
-                )}
-                {[
-                  { label: "Before lunch", items: activeItinerarySchedule.beforeLunch },
-                  { label: "After lunch", items: activeItinerarySchedule.afterLunch },
-                ].map((section) => (
-                  <div key={section.label}>
-                    <div className="text-sm font-bold uppercase tracking-wide-xl text-secondary-400 mb-5">
-                      {section.label}
-                    </div>
-                    <div className="space-y-6">
-                      {section.items.map((item, idx) => (
-                        <div
-                          key={`${activeItineraryStyle?.id || "itinerary"}-${section.label}-${idx}`}
-                          className="flex gap-5"
-                        >
-                          <div className="w-24 shrink-0">
-                            <div className="text-sm font-bold text-secondary-600">{item.time}</div>
-                            {item.duration && (
-                              <div className="text-sm text-secondary-400">({item.duration})</div>
-                            )}
-                          </div>
-                          <div className="relative flex-1 pb-1">
-                            <span className="absolute -left-3.5 top-1.5 h-2 w-2 rounded-full bg-primary-600" />
-                            {idx < section.items.length - 1 && (
-                              <span className="absolute -left-[11px] top-4 h-full w-px bg-neutral-100" />
-                            )}
-                            {(() => {
-                              const isLunch = /lunch/i.test(item.title);
-                              const lunchDisplay = isLunch
-                                ? getLunchDisplayData(
-                                  item,
-                                  activeRestaurantData || activeItineraryStyle?.restaurant,
-                                  getRouteRestaurantDetails(activeItineraryStyle)
-                                )
-                                : null;
-                              const descriptionText = isLunch
-                                ? lunchDisplay?.description
-                                : sanitizeDisplayText(item.details, { stripTrailingOne: true });
-                              const popupRImg = lunchDisplay?.popupRestaurant?.image || lunchDisplay?.popupRestaurant?.images_with_thumbs?.[0]?.thumb || null;
-                              return (
-                                <>
-                                  <div className="text-sm font-bold text-secondary-900">
-                                    {lunchDisplay?.title || item.title}
-                                  </div>
-                                  {descriptionText ? (
-                                    <div className="mt-1 text-sm text-secondary-600 leading-relaxed">
-                                      {descriptionText}
-                                    </div>
-                                  ) : null}
-                                  {lunchDisplay?.popupRestaurant?.name ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => setRestaurantDataPopup(lunchDisplay.popupRestaurant)}
-                                      className="mt-2.5 w-full flex items-center gap-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 text-left transition hover:border-neutral-300 hover:bg-white"
-                                    >
-                                      {popupRImg ? (
-                                        <div className="h-14 w-14 shrink-0">
-                                          <img src={popupRImg} alt={lunchDisplay.popupRestaurant.name} className="h-full w-full object-cover" />
-                                        </div>
-                                      ) : (
-                                        <div className="h-14 w-14 shrink-0 bg-primary-50 flex items-center justify-center">
-                                          <UtensilsCrossed className="h-5 w-5 text-primary-300" />
-                                        </div>
-                                      )}
-                                      <div className="flex-1 min-w-0 px-3 py-2">
-                                        <div className="text-xs font-semibold uppercase tracking-wide text-secondary-400">Lunch venue</div>
-                                        <div className="text-sm font-bold text-secondary-900 truncate">{lunchDisplay.popupRestaurant.name}</div>
-                                      </div>
-                                      <div className="shrink-0 pr-3 text-sm font-semibold text-primary-600 flex items-center gap-1">
-                                        View menu
-                                        <ExternalLink className="h-3.5 w-3.5 text-primary-400" />
-                                      </div>
-                                    </button>
-                                  ) : null}
-                                </>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <div className="pt-4 space-y-2 border-t border-neutral-200">
-                  <p className="text-sm text-secondary-400 italic">Timing may adjust to sea conditions.</p>
-                  {(activeItinerarySchedule.footerNotes || []).map((note, i) => (
-                    <p key={i} className="text-sm text-secondary-400 italic">{note}</p>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
-      {restaurantDataPopup ? (() => {
-        const r = restaurantDataPopup;
-        const rName = r?.name || r?.title || "";
-        const rImage = r?.image || r?.images_with_thumbs?.[0]?.thumb || null;
-        const rDescription = r?.description || "";
-        const rMenu = r?.menu || "";
-        return (
-          <Modal
-            open={!!restaurantDataPopup}
-            onClose={() => setRestaurantDataPopup(null)}
-            title={rName || "Restaurant"}
-            subtitle="Included lunch"
-            maxWidth="max-w-3xl"
-          >
-            <div className="pb-4">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                {rImage ? (
-                  <div className="w-full shrink-0 sm:w-2/5">
-                    <div className="aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200">
-                      <img
-                        src={rImage}
-                        alt={rName || "Restaurant"}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                <div className="flex-1 space-y-3 overflow-y-auto">
-                  {rDescription ? (
-                    <div
-                      className="text-sm leading-relaxed text-secondary-600"
-                      dangerouslySetInnerHTML={{ __html: rDescription }}
-                    />
-                  ) : null}
-                  {rMenu ? (
-                    <div
-                      className="prose prose-sm max-w-none text-secondary-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1"
-                      dangerouslySetInnerHTML={{ __html: rMenu }}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </Modal>
-        );
-      })() : null}
-      {restaurantModalStyle ? (() => {
-        const r = restaurantModalStyle.restaurant;
-        const rName = r?.name || r?.title || r?.restaurant_name || "";
-        const rImage = r?.image || null;
-        const rDescription = r?.description || "";
-        const rMenu = r?.menu || "";
-        return (
-          <Modal
-            open={!!restaurantModalStyle}
-            onClose={() => setRestaurantModalStyle(null)}
-            title={rName || "Restaurant"}
-            subtitle="Included lunch"
-            maxWidth="max-w-3xl"
-          >
-            <div className="pb-4">
-              <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-                {rImage ? (
-                  <div className="w-full shrink-0 sm:w-2/5">
-                    <div className="aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200">
-                      <img
-                        src={rImage}
-                        alt={rName || "Restaurant"}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                <div className="flex-1 space-y-3 overflow-y-auto">
-                  {rDescription ? (
-                    <p className="text-sm leading-relaxed text-secondary-600">{rDescription}</p>
-                  ) : null}
-                  {rMenu ? (
-                    <div
-                      className="prose prose-sm max-w-none text-secondary-600 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:my-1"
-                      dangerouslySetInnerHTML={{ __html: rMenu }}
-                    />
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </Modal>
-        );
-      })() : null}
+        title={activeItinerarySchedule?.popupTitle || activeItinerarySchedule?.title}
+        note={activeItineraryNote}
+        schedule={activeItinerarySchedule}
+        restaurantData={activeRestaurantData || activeItineraryStyle?.restaurant}
+        routeRestaurant={getRouteRestaurantDetails(activeItineraryStyle)}
+        onRestaurantClick={(r) => setRestaurantDataPopup(r)}
+        sectionLabels={{ beforeLunch: "Morning", afterLunch: "Midday & Afternoon" }}
+      />
+      <RestaurantModal
+        restaurantData={restaurantDataPopup}
+        onClose={() => setRestaurantDataPopup(null)}
+      />
+      <RestaurantModal
+        restaurantData={restaurantModalStyle?.restaurant}
+        onClose={() => setRestaurantModalStyle(null)}
+      />
     </Section >
   );
 }
 
-const decodeBasicEntities = (value = "") =>
-  value
-    .replace(/<br\s*\/?>/gi, " ")
-    .replace(/&nbsp;|&#160;/gi, " ")
-    .replace(/&amp;|&#38;/gi, "&")
-    .replace(/&quot;|&#34;/gi, "\"")
-    .replace(/&#39;|&apos;/gi, "'")
-    .replace(/&ndash;|&#8211;/gi, "-")
-    .replace(/&mdash;|&#8212;/gi, "-")
-    .replace(/&bull;|&#8226;/gi, " - ");
-
-const sanitizeDisplayText = (value, { stripTrailingOne = false } = {}) => {
-  if (typeof value !== "string") return "";
-  const withoutTags = value.replace(/<[^>]*>/g, " ");
-  const decoded = decodeBasicEntities(withoutTags);
-  const normalized = decoded.replace(/\s+/g, " ").trim();
-  const withSentenceSpacing = normalized.replace(/([.!?])([A-Z?-??])/g, "$1 $2");
-  if (!stripTrailingOne) return withSentenceSpacing;
-  return withSentenceSpacing.replace(/\s+1$/, "").trim();
-};
-
-const getRestaurantDisplayName = (restaurant) => {
-  if (!restaurant || typeof restaurant !== "object") return "";
-  return sanitizeDisplayText(
-    restaurant.name ||
-    restaurant.title ||
-    restaurant.restaurant_name ||
-    restaurant.restaurantName ||
-    "",
-    { stripTrailingOne: true }
-  );
-};
-
-const getRestaurantDisplayDescription = (restaurant) => {
-  if (!restaurant || typeof restaurant !== "object") return "";
-  return sanitizeDisplayText(
-    restaurant.description ||
-    restaurant.short_description ||
-    restaurant.shortDescription ||
-    restaurant.details ||
-    restaurant.menu ||
-    "",
-    { stripTrailingOne: true }
-  );
-};
-
-const getLunchDisplayData = (item, restaurant = null, fallbackRestaurant = null) => {
-  const detailsText = sanitizeDisplayText(item?.details, { stripTrailingOne: true });
-  const primaryRestaurant = restaurant && typeof restaurant === "object" ? restaurant : null;
-  const inferredRestaurant = fallbackRestaurant && typeof fallbackRestaurant === "object" ? fallbackRestaurant : null;
-  const inferredNameFromDetails = detailsText
-    ? (
-      detailsText.match(/^([^()]+?(?:restaurant|beach ?club))/i)?.[1]?.trim()
-      || detailsText.match(/(?:at|served at)\s+([^()]+?(?:restaurant|beach ?club))/i)?.[1]?.trim()
-      || ""
-    )
-    : "";
-  const name =
-    getRestaurantDisplayName(primaryRestaurant)
-    || getRestaurantDisplayName(inferredRestaurant)
-    || inferredNameFromDetails;
-  const restaurantDescription =
-    getRestaurantDisplayDescription(primaryRestaurant)
-    || getRestaurantDisplayDescription(inferredRestaurant);
-  const fallbackDescription =
-    detailsText && detailsText !== String(item?.title || "").trim() && detailsText !== name
-      ? detailsText
-      : "";
-  const description = restaurantDescription || fallbackDescription;
-  const popupRestaurant = name || description
-    ? {
-      ...(primaryRestaurant || {}),
-      ...(inferredRestaurant || {}),
-      name,
-      description,
-    }
-    : null;
-  return {
-    title: name ? `Lunch at ${name}` : item?.title || "Lunch",
-    description,
-    popupRestaurant,
-  };
-};
-
-const getOptionDescription = (option) => {
-  if (!option || typeof option !== "object") return "";
-  const rawDescription = (
-    option.description ||
-    option.short_description ||
-    option.shortDescription ||
-    option.description_text ||
-    option.descriptionText ||
-    option.subtitle ||
-    option.helper ||
-    option.note ||
-    option.notes ||
-    option.details ||
-    option.desc ||
-    option.text ||
-    ""
-  );
-  return sanitizeDisplayText(rawDescription, { stripTrailingOne: true });
-};
-
-const TRANSFER_DETAILS_FALLBACK_IMAGE = "https://bluuu.tours/storage/app/uploads/public/68a/5fd/e10/68a5fde10e980917741317.jpg";
-const INSURANCE_DETAILS_FALLBACK_IMAGE = "https://bluuu.tours/storage/app/uploads/public/68f/9ed/c1a/68f9edc1a9270720998215.jpg";
-
-const getOptionImage = (option) => {
-  if (!option || typeof option !== "object") return "";
-  const firstImageWithThumbs = option.images_with_thumbs?.[0] || {};
-  const candidates = [
-    option.image,
-    option.image_url,
-    option.imageUrl,
-    option.thumb,
-    option.thumbnail,
-    option.cover,
-    option.photo,
-    firstImageWithThumbs.thumb1,
-    firstImageWithThumbs.thumb,
-    firstImageWithThumbs.original,
-    option.images?.[0],
-    option.gallery?.[0],
-  ];
-  const resolved = candidates.find((candidate) => typeof candidate === "string" && candidate.trim().length > 0);
-  return resolved ? resolved.trim() : "";
-};
-
-const buildOptionDetails = (
-  option,
-  {
-    extraDescription = "",
-    fallbackDescription = "Detailed information is available on request.",
-    fallbackImage = "",
-  } = {}
-) => {
-  const baseDescription = getOptionDescription(option);
-  const combinedDescription = [baseDescription, extraDescription].filter(Boolean).join("\n\n").trim();
-  return {
-    description: combinedDescription || fallbackDescription,
-    image: getOptionImage(option) || fallbackImage,
-  };
-};
 
 function StepTransfers({
   transfers,
@@ -4713,6 +4085,12 @@ function StepTransfers({
   const selectedTransfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
   const [activeTransferDetails, setActiveTransferDetails] = useState(null);
   const [sameAddress, setSameAddress] = useState(false);
+  const [skipAddress, setSkipAddress] = useState(false);
+
+  const handleSkipAddressChange = (checked) => {
+    setSkipAddress(checked);
+    if (checked && onSetPickupAddress) onSetPickupAddress("");
+  };
 
   const handleSameAddressChange = (checked) => {
     setSameAddress(checked);
@@ -4720,6 +4098,7 @@ function StepTransfers({
   };
 
   const handlePickupChange = (val) => {
+    if (val) setSkipAddress(false);
     if (onSetPickupAddress) onSetPickupAddress(val);
     if (sameAddress && onSetDropoffAddress) onSetDropoffAddress(val);
   };
@@ -4838,7 +4217,7 @@ function StepTransfers({
               </div>
             </label>
             {needsPickup && (
-              <div className="bg-primary-50/30 border-t border-neutral-100 px-5 pb-4 pt-1 space-y-3">
+              <div className="border-t border-neutral-100 px-5 sm:pl-[88px] sm:pr-5 pb-4 pt-3 space-y-3">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</label>
                   <input
@@ -4846,34 +4225,41 @@ function StepTransfers({
                     value={pickupAddress}
                     onChange={(e) => handlePickupChange(e.target.value)}
                     placeholder="Enter your hotel or villa address"
-                    className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none"
+                    className={cn("mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none", skipAddress && "hidden")}
                   />
+                  <label className="mt-2 flex cursor-pointer items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={skipAddress}
+                      onChange={(e) => handleSkipAddressChange(e.target.checked)}
+                      className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
+                    />
+                    <span className="text-xs text-secondary-400">Skip for now — add address in your account later</span>
+                  </label>
                 </div>
-                {needsDropoff && (
-                  <>
-                    <div className="flex items-center gap-2">
+                {needsDropoff && !skipAddress && (
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</label>
+                    {!sameAddress && (
+                      <input
+                        type="text"
+                        value={dropoffAddress}
+                        onChange={(e) => onSetDropoffAddress && onSetDropoffAddress(e.target.value)}
+                        placeholder="Enter your dropoff address"
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none"
+                      />
+                    )}
+                    <label className="mt-2 flex cursor-pointer items-center gap-2">
                       <input
                         id="transfer-same-address"
                         type="checkbox"
                         checked={sameAddress}
                         onChange={(e) => handleSameAddressChange(e.target.checked)}
-                        className="h-4 w-4 rounded border-neutral-300 accent-primary-600"
+                        className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
                       />
-                      <label htmlFor="transfer-same-address" className="text-sm text-secondary-600 cursor-pointer select-none">Same address for pickup and dropoff</label>
-                    </div>
-                    {!sameAddress && (
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</label>
-                        <input
-                          type="text"
-                          value={dropoffAddress}
-                          onChange={(e) => onSetDropoffAddress && onSetDropoffAddress(e.target.value)}
-                          placeholder="Enter your dropoff address"
-                          className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none"
-                        />
-                      </div>
-                    )}
-                  </>
+                      <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
+                    </label>
+                  </div>
                 )}
               </div>
             )}
@@ -4899,42 +4285,10 @@ function StepTransfers({
           {transferOptions}
         </div>
       </div>
-      <Modal
-        open={Boolean(activeTransferDetails)}
+      <InfoDetailModal
+        data={activeTransferDetails ? { ...activeTransferDetails, subtitle: "Pickup and route information" } : null}
         onClose={() => setActiveTransferDetails(null)}
-        title={activeTransferDetails?.title || "Transfer details"}
-        subtitle="Pickup and route information"
-        maxWidth="max-w-3xl"
-        bodyClassName="px-6 py-4 sm:py-5"
-      >
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-          {/* Image left, 4:3 */}
-          <div className="w-full shrink-0 overflow-hidden rounded-xl sm:w-2/5">
-            {activeTransferDetails?.image ? (
-              <img
-                src={activeTransferDetails.image}
-                alt={activeTransferDetails?.title || "Transfer details"}
-                className="aspect-[4/3] w-full object-cover"
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              <div className="aspect-[4/3] w-full flex items-center justify-center bg-neutral-100 rounded-xl">
-                <Car className="h-10 w-10 text-secondary-400" />
-              </div>
-            )}
-          </div>
-          {/* Description right */}
-          <div className="flex-1">
-            {activeTransferDetails?.description ? (
-              <div
-                className="mt-2 text-sm"
-                dangerouslySetInnerHTML={{ __html: activeTransferDetails.description }}
-              />
-            ) : null}
-          </div>
-        </div>
-      </Modal>
+      />
       {showCovers && (
         <CoversCompact
           covers={covers}
@@ -4945,9 +4299,6 @@ function StepTransfers({
           framed={framed}
         />
       )}
-      <div className="mt-6">
-        <TourInfoInline />
-      </div>
       {
         showContinue && (
           <div className="flex justify-end mt-6">
@@ -5062,6 +4413,9 @@ function StepExtras({
   const [activeExtraId, setActiveExtraId] = useState(null);
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [showAddedToast, setShowAddedToast] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [pickerQty, setPickerQty] = useState(1);
+  const [justAddedId, setJustAddedId] = useState(null);
   const [draftQuantities, setDraftQuantities] = useState({});
   const [isExtrasOpen, setIsExtrasOpen] = useState(true);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -5076,8 +4430,13 @@ function StepExtras({
   useEffect(() => {
     if (!activeExtraForPopup) {
       setSelectedChildId(null);
+      setDescExpanded(false);
+      setPickerQty(1);
+      setJustAddedId(null);
       return;
     }
+    setPickerQty(1);
+    setJustAddedId(null);
     if (activeExtraForPopup.hasChildren && activeExtraForPopup.children?.length) {
       // Find currently selected child or default to first
       const currentSelected = activeExtraForPopup.children.find(c => selectedExtras[c.id] > 0);
@@ -5090,7 +4449,7 @@ function StepExtras({
       if (activeExtraForPopup.hasChildren && activeExtraForPopup.children?.length) {
         activeExtraForPopup.children.forEach((child) => {
           const maxChildQty = child.available != null ? Math.max(1, Number(child.available)) : Infinity;
-          next[child.id] = Math.min(0, maxChildQty);
+          next[child.id] = Math.min(Number(selectedExtras[child.id] || 0), maxChildQty);
         });
       } else {
         const maxQty = activeExtraForPopup.available != null ? Math.max(1, Number(activeExtraForPopup.available)) : Infinity;
@@ -5512,7 +4871,7 @@ function StepExtras({
             <h2 className={Q_THEME.text.h2}>Transfer & insurance</h2>
             <p className={Q_THEME.text.body}>Optional — add only what you need.</p>
           </div>
-          <InfoLinksRow onOpenTourInfo={onOpenTourInfo} className="mb-6" variant="single" />
+
           <div className="flex flex-col gap-4">
             <div className="flex flex-col">
               <div className={cn("flex flex-col gap-4")}>
@@ -5698,7 +5057,7 @@ function StepExtras({
       <Modal
         isOpen={!!activeExtraId && !!activeExtraForPopup}
         onClose={() => setActiveExtraId(null)}
-        maxWidth="max-w-3xl"
+        maxWidth="max-w-[640px]"
         bodyClassName="p-0 max-h-none overflow-hidden"
         showClose={false}
       >
@@ -5710,46 +5069,45 @@ function StepExtras({
           const isSoldOut = currentItem?.available != null && Number(currentItem.available) <= 0;
           const maxQty = currentItem?.available != null ? Math.max(1, Number(currentItem.available)) : Infinity;
           const qty = getDraftQty(currentItem?.id, maxQty);
-          const basePrice = hasChildren
-            ? Math.min(...activeExtraForPopup.children.map(c => Number(c.price || 0)))
-            : Number(activeExtraForPopup.price || 0);
-          const cartItemCount = hasChildren
-            ? activeExtraForPopup.children.reduce((sum, child) => sum + Math.max(0, draftQuantities[child.id] ?? 0), 0)
+          const draftTotal = hasChildren
+            ? activeExtraForPopup.children.reduce((sum, c) => sum + Math.max(0, draftQuantities[c.id] ?? 0) * Number(c.price || 0), 0)
+            : qty * Number(currentItem?.price || 0);
+          const draftCount = hasChildren
+            ? activeExtraForPopup.children.reduce((sum, c) => sum + Math.max(0, draftQuantities[c.id] ?? 0), 0)
             : qty;
-          const cartTotal = hasChildren
-            ? activeExtraForPopup.children.reduce((sum, child) => {
-                const childQty = Math.max(0, draftQuantities[child.id] ?? 0);
-                return sum + childQty * Number(child.price || 0);
-              }, 0)
-            : currentItem.price * qty;
-          const addHandlerLocal = () => {
+          const handleConfirm = () => {
             if (hasChildren) {
               activeExtraForPopup.children.forEach(child => {
-                const draftQty = Math.max(0, draftQuantities[child.id] ?? 0);
-                if (draftQty > 0) {
-                  onChangeExtraQty(child.id, Number(selectedExtras[child.id] || 0) + draftQty);
-                }
+                onChangeExtraQty(child.id, Math.max(0, draftQuantities[child.id] ?? 0));
               });
             } else {
-              onChangeExtraQty(currentItem.id, Number(selectedExtras[currentItem.id] || 0) + qty);
-              updateDraftQty(currentItem.id, getDefaultQty(currentItem), maxQty);
+              onChangeExtraQty(currentItem.id, qty);
             }
-            setShowAddedToast(true);
-            setTimeout(() => {
-              setShowAddedToast(false);
-              setActiveExtraId(null);
-            }, 1200);
+            setActiveExtraId(null);
           };
+          const handleSkip = () => {
+            setActiveExtraId(null);
+          };
+          const imgSrc = (hasChildren && currentItem?.images_with_thumbs?.[0]?.thumb) ||
+            activeExtraForPopup.images_with_thumbs?.[0]?.thumb ||
+            extraImageById[activeExtraForPopup.id] ||
+            extraImageById[activeExtraForPopup.name?.toLowerCase().replace(/\s+/g, "-")] ||
+            extraFallbackImage;
+          const addedItems = hasChildren
+            ? activeExtraForPopup.children.filter(c => (draftQuantities[c.id] ?? 0) > 0)
+            : [];
+          const selectedChild = hasChildren
+            ? activeExtraForPopup.children.find(c => c.id === selectedChildId) || activeExtraForPopup.children[0]
+            : null;
+          const selectedSoldOut = selectedChild?.available != null && Number(selectedChild.available) <= 0;
+          const selectedMaxQty = selectedChild?.available != null ? Math.max(1, Number(selectedChild.available)) : 99;
 
           return (
             <div className="flex h-full w-full flex-col overflow-hidden bg-white">
               {/* Header */}
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 bg-white px-5 py-4">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-neutral-100 bg-white px-5 py-3 sm:py-4">
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-secondary-900 leading-tight">{activeExtraForPopup.name}</h2>
-                  <div className="mt-0.5 text-sm font-semibold text-primary-600">
-                    {hasChildren ? `from ${formatIDR(basePrice)}` : formatIDR(basePrice)}
-                  </div>
                 </div>
                 <button
                   onClick={() => setActiveExtraId(null)}
@@ -5760,146 +5118,158 @@ function StepExtras({
                 </button>
               </div>
 
-              {/* Body: stacked on mobile, side-by-side on desktop */}
-              <div className="flex flex-1 flex-col overflow-hidden sm:flex-row">
-                {/* Left: Image */}
-                <div className="shrink-0 p-4 pb-0 sm:w-2/5 sm:pb-4 sm:pr-0">
-                  <div className="overflow-hidden rounded-xl">
-                    <img
-                      src={
-                        activeExtraForPopup.images_with_thumbs?.[0]?.thumb ||
-                        extraImageById[activeExtraForPopup.id] ||
-                        extraImageById[activeExtraForPopup.name?.toLowerCase().replace(/\s+/g, "-")] ||
-                        extraFallbackImage
-                      }
-                      alt={activeExtraForPopup.name}
-                      className="aspect-[4/3] w-full object-cover"
-                    />
+              {/* Scrollable body */}
+              <div className="custom-scrollbar flex-1 overflow-y-auto">
+                <div className="relative overflow-hidden">
+                  <img
+                    src={imgSrc}
+                    alt={hasChildren ? (currentItem?.name || activeExtraForPopup.name) : activeExtraForPopup.name}
+                    className="aspect-video w-full object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent px-4 pb-3 pt-8">
+                    <span className="text-sm font-semibold text-white drop-shadow">
+                      {hasChildren ? (currentItem?.name || activeExtraForPopup.name) : activeExtraForPopup.name}
+                    </span>
                   </div>
                 </div>
 
-                {/* Right: Content + Actions */}
-                <div className="flex flex-1 flex-col overflow-hidden">
-                  {/* Scrollable content */}
-                  <div className="custom-scrollbar flex-1 overflow-y-auto px-5 py-4 space-y-4">
-                    {activeExtraForPopup.description && (
-                      <div
-                        className="text-sm leading-relaxed text-secondary-600"
-                        dangerouslySetInnerHTML={{ __html: activeExtraForPopup.description }}
-                      />
-                    )}
-                    {getExtraBullets(activeExtraForPopup).length > 0 && (
-                      <div className="space-y-2">
-                        {getExtraBullets(activeExtraForPopup).map((bullet, idx) => (
-                          <div key={idx} className="flex items-start gap-2.5 text-sm text-secondary-600">
-                            <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" />
-                            <span dangerouslySetInnerHTML={{ __html: bullet }} className="leading-relaxed" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {hasChildren && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400">Options</div>
-                        {activeExtraForPopup.children.map((child) => {
-                          const childMaxQty = child.available != null ? Math.max(1, Number(child.available)) : Infinity;
-                          const childQty = Math.max(0, Math.min(draftQuantities[child.id] ?? 0, childMaxQty));
-                          const childSoldOut = child.available != null && Number(child.available) <= 0;
-                          const isInCart = childQty > 0;
-                          return (
-                            <div key={child.id} className={cn(
-                              "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
-                              isInCart ? "border-primary-300 bg-primary-50" : "border-neutral-200 bg-white",
-                              childSoldOut && "opacity-50"
-                            )}>
-                              <div className="min-w-0 flex-1">
-                                <div className="text-sm font-semibold text-secondary-900 truncate">{child.name}</div>
-                                <div className={cn("text-xs font-bold", isInCart ? "text-primary-600" : "text-secondary-500")}>
-                                  {childSoldOut ? "Sold out" : formatIDR(child.price)}
-                                </div>
-                              </div>
-                              {childSoldOut ? (
-                                <span className="shrink-0 text-xs text-secondary-400">Sold out</span>
-                              ) : (
-                                <div className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-white px-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: Math.max(0, (prev[child.id] ?? 0) - 1) }))}
-                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
-                                    disabled={childQty <= 0}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </button>
-                                  <span className={cn("min-w-[1.5rem] text-center text-sm font-bold tabular-nums", isInCart ? "text-primary-600" : "text-secondary-400")}>{childQty}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: Math.min((prev[child.id] ?? 0) + 1, childMaxQty) }))}
-                                    className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
-                                    disabled={childQty >= childMaxQty}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    {!hasChildren && (
-                      <div className={cn(
-                        "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
-                        isSoldOut ? "border-neutral-200 bg-white opacity-50" : "border-primary-300 bg-primary-50"
-                      )}>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400 mb-0.5">Quantity</div>
-                          <div className="text-xs font-bold text-primary-600">{isSoldOut ? "Sold out" : formatIDR(currentItem.price)}</div>
-                        </div>
-                        {!isSoldOut && (
-                          <div className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-white px-1.5">
-                            <button
-                              type="button"
-                              onClick={() => updateDraftQty(currentItem.id, qty - 1, maxQty)}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
-                              disabled={qty <= 1}
-                            >
-                              <Minus className="h-3 w-3" />
-                            </button>
-                            <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums text-primary-600">{qty}</span>
-                            <button
-                              type="button"
-                              onClick={() => updateDraftQty(currentItem.id, qty + 1, maxQty)}
-                              className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition"
-                              disabled={qty >= maxQty}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                <div className="space-y-4 px-5 py-4">
+                  {activeExtraForPopup.description && (
+                    <div className="text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: activeExtraForPopup.description }} />
+                  )}
 
-                  {/* Actions */}
-                  <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm">
-                        {cartItemCount > 0
-                          ? <span className="font-semibold text-secondary-900">{cartItemCount} item{cartItemCount > 1 ? "s" : ""} · {formatIDR(cartTotal)}</span>
-                          : isSoldOut ? <span className="text-red-500">Sold out</span> : <span className="text-secondary-400">Select options above</span>
-                        }
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addHandlerLocal}
-                        className={cn("inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full px-5 text-sm font-bold text-white shadow-md transition-all active:scale-[0.98]",
-                          (cartItemCount > 0 && !isSoldOut) ? "bg-primary-600 hover:bg-primary-700" : "cursor-not-allowed bg-neutral-300"
-                        )}
-                        disabled={cartItemCount === 0 || isSoldOut}
-                      >
-                        {showAddedToast ? <><CheckCircle2 className="h-5 w-5" /> Added!</> : "Add to tour"}
-                      </button>
+                  {activeExtraForPopup.details?.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {activeExtraForPopup.details.map((detail) => (
+                        <div key={detail} className="rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-sm text-secondary-600">
+                          {detail}
+                        </div>
+                      ))}
                     </div>
+                  )}
+
+                  {hasChildren && (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <select
+                          value={selectedChildId || ""}
+                          onChange={(e) => { setSelectedChildId(e.target.value); setPickerQty(1); }}
+                          className="w-full appearance-none rounded-xl border border-neutral-200 bg-white px-4 py-3 pr-10 text-sm font-semibold text-secondary-900 focus:border-primary-300 focus:outline-none focus:ring-1 focus:ring-primary-300 transition"
+                        >
+                          {activeExtraForPopup.children.map((child) => {
+                            const childSoldOut = child.available != null && Number(child.available) <= 0;
+                            return (
+                              <option key={child.id} value={child.id} disabled={childSoldOut}>
+                                {child.name}{childSoldOut ? " (Sold out)" : ""}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-secondary-400" />
+                      </div>
+                      {!selectedSoldOut && (
+                        <div className="flex items-center gap-2">
+                          <div className="inline-flex h-10 items-center rounded-xl border border-neutral-200 bg-white">
+                            <button type="button" onClick={() => setPickerQty(v => Math.max(1, v - 1))} disabled={pickerQty <= 1} className="flex h-10 w-10 items-center justify-center text-secondary-500 hover:bg-neutral-50 disabled:opacity-30 transition rounded-l-xl">
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span className="min-w-[2rem] text-center text-sm font-bold tabular-nums text-secondary-900">{pickerQty}</span>
+                            <button type="button" onClick={() => setPickerQty(v => Math.min(selectedMaxQty, v + 1))} disabled={pickerQty >= selectedMaxQty} className="flex h-10 w-10 items-center justify-center text-secondary-500 hover:bg-neutral-50 disabled:opacity-30 transition rounded-r-xl">
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <span className="text-sm font-bold text-primary-600 min-w-[3rem]">{formatIDR((selectedChild?.price || 0) * pickerQty)}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDraftQuantities(prev => ({ ...prev, [selectedChildId]: (Number(prev[selectedChildId] || 0) + pickerQty) }));
+                              setPickerQty(1);
+                              setJustAddedId(selectedChildId);
+                              setTimeout(() => setJustAddedId(null), 1200);
+                            }}
+                            className={cn(
+                              "flex-1 h-10 rounded-xl text-sm font-bold transition",
+                              justAddedId === selectedChildId
+                                ? "border-2 border-green-500 bg-green-50 text-green-600"
+                                : "border-2 border-primary-500 bg-white text-primary-600 hover:bg-primary-50"
+                            )}
+                          >
+                            {justAddedId === selectedChildId ? <><CheckCircle2 className="inline h-3.5 w-3.5 mr-1" />Added</> : "+ Add"}
+                          </button>
+                        </div>
+                      )}
+                      {addedItems.length > 0 && (
+                        <div className="border-t border-neutral-100 pt-1">
+                          <div className="text-[10px] font-bold uppercase tracking-widest text-secondary-400 py-2">Your selection</div>
+                          {addedItems.map((child, idx) => (
+                            <div key={child.id} className={cn("flex items-center gap-3 py-3", idx > 0 && "border-t border-neutral-100")}>
+                              {child.images_with_thumbs?.[0]?.thumb ? (
+                                <img src={child.images_with_thumbs[0].thumb} alt={child.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                              ) : child.emoji ? (
+                                <span className="text-xl">{child.emoji}</span>
+                              ) : null}
+                              <span className="flex-1 truncate text-sm font-medium text-secondary-800">{child.name}</span>
+                              <span className="text-sm text-secondary-400">× {draftQuantities[child.id]}</span>
+                              <span className="text-sm font-bold text-secondary-900 min-w-[3rem] text-right">{formatIDR(child.price * Number(draftQuantities[child.id] || 0))}</span>
+                              <button type="button" onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: 0 }))} className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 bg-white text-secondary-400 hover:border-red-200 hover:text-red-500 transition">
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!hasChildren && (
+                    <div className={cn(
+                      "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
+                      isSoldOut ? "border-neutral-200 bg-white opacity-50" : "border-primary-300 bg-primary-50"
+                    )}>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-semibold uppercase tracking-wider text-secondary-400 mb-0.5">Quantity</div>
+                        <div className="text-xs font-bold text-primary-600">{isSoldOut ? "Sold out" : formatIDR(currentItem.price)}</div>
+                      </div>
+                      {!isSoldOut && (
+                        <div className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-white px-1.5">
+                          <button type="button" onClick={() => updateDraftQty(currentItem.id, qty - 1, maxQty)} className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition" disabled={qty <= 1}><Minus className="h-3 w-3" /></button>
+                          <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums text-primary-600">{qty}</span>
+                          <button type="button" onClick={() => updateDraftQty(currentItem.id, qty + 1, maxQty)} className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition" disabled={qty >= maxQty}><Plus className="h-3 w-3" /></button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer: Skip + Confirm */}
+              <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-3 sm:py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs text-secondary-400">Add-on total</div>
+                    <div className="text-base font-bold text-secondary-900">
+                      {draftTotal > 0 ? formatIDR(draftTotal) : <span className="text-secondary-300 font-normal text-sm">—</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSkip}
+                      className="inline-flex h-11 items-center justify-center rounded-xl border border-neutral-200 bg-white px-5 text-sm font-semibold text-secondary-600 hover:bg-neutral-50 transition"
+                    >
+                      Skip
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleConfirm}
+                      disabled={draftCount === 0}
+                      className={cn(
+                        "inline-flex h-11 items-center justify-center rounded-xl px-6 text-sm font-bold transition",
+                        draftCount > 0 ? "border-2 border-secondary-900 bg-white text-secondary-900 hover:bg-neutral-50" : "cursor-not-allowed border border-neutral-200 bg-white text-neutral-300"
+                      )}
+                    >
+                      Confirm
+                    </button>
                   </div>
                 </div>
               </div>
@@ -6064,21 +5434,10 @@ function StepFive({
     },
     {
       id: "boat",
-      label: "Boat",
+      label: "Tour",
       icon: Ship,
       value: selectedBoat?.name ?? "Not selected",
       action: isBoatSelected ? "Change" : "Select",
-      onClick: () => {
-        const target = document.getElementById("step-3");
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-      },
-    },
-    {
-      id: "style",
-      label: "Day style",
-      icon: Sparkles,
-      value: selectedStyleTitle || "Classic route",
-      action: selectedStyleId ? "Change" : "Select",
       onClick: () => {
         const target = document.getElementById("step-2");
         if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -8057,11 +7416,6 @@ function FinalCTA({
     </section>
   );
 }
-function getBoatLength(tour) {
-  if (tour.size) return tour.size;
-  if (tour.length) return tour.length;
-  return "";
-}
 export default function Shared_tour_01() {
   useSEO({
     title: "Shared Speedboat Tour to Nusa Penida | Bluuu Tours",
@@ -8183,6 +7537,7 @@ export default function Shared_tour_01() {
           beforeLunch: Array.isArray(linkedRoute.schedule_before_lunch) ? linkedRoute.schedule_before_lunch : [],
           afterLunch: Array.isArray(linkedRoute.schedule_after_lunch) ? linkedRoute.schedule_after_lunch : [],
           footerNotes: linkedRoute.popup_afternoon ? [linkedRoute.popup_afternoon] : [],
+          restaurant: linkedRoute.restaurant ?? null,
         }
         : null;
       return {
@@ -8204,6 +7559,7 @@ export default function Shared_tour_01() {
         routeId: routeId || (linkedRoute?.id ? Number(linkedRoute.id) : null),
         routeSchedule,
         status: tour.status || "ready",
+        fleetSize: Number(tour.fleet_size) || 0,
       };
     });
     // Final uniqueness sweep to prevent React duplicate key errors
@@ -8326,12 +7682,23 @@ export default function Shared_tour_01() {
       .then(res => res.json())
       .then(data => {
         if (!isMounted) return;
-        setInlineRouteSchedule({
+        const restaurantObj = data.restaurant && typeof data.restaurant === "object" ? data.restaurant : null;
+        const restaurantId = restaurantObj ? null : (data.restaurant_id || (typeof data.restaurant === "number" ? data.restaurant : null));
+        const base = {
+          title: data.popup_title || data.title || "",
+          description: data.description || data.short_description || "",
+          map: data.map || null,
           beforeLunch: Array.isArray(data.schedule_before_lunch) ? data.schedule_before_lunch : [],
           afterLunch: Array.isArray(data.schedule_after_lunch) ? data.schedule_after_lunch : [],
           footerNotes: data.popup_afternoon ? [data.popup_afternoon] : [],
-          restaurant: data.restaurant ?? null,
-        });
+          restaurant: restaurantObj,
+        };
+        setInlineRouteSchedule(base);
+        if (restaurantId) {
+          fetchRestaurant(restaurantId).then(r => {
+            if (isMounted) setInlineRouteSchedule(prev => prev ? { ...prev, restaurant: r } : prev);
+          }).catch(() => {});
+        }
       })
       .catch(err => console.error("Failed to fetch inline route schedule", err))
       .finally(() => {
@@ -8408,6 +7775,7 @@ export default function Shared_tour_01() {
       price: Number(e.show_price || e.price || 0),
       pricingType: e.pricing_type || "per_booking",
       description: e.description || "",
+      details: Array.isArray(e.details) ? e.details : (e.details ? [e.details] : []),
       available: e.available != null ? Number(e.available) : null,
       category: cat ? String(cat.id) : (e.ecategories?.[0]?.id ? String(e.ecategories[0].id) : "other"),
       categoryIds: cat ? [String(cat.id)] : (
@@ -8791,7 +8159,7 @@ export default function Shared_tour_01() {
   }, []);
   const inlineHintMessage = "Select the options above to activate this section.";
   const stepOneInlineHint = { message: inlineHintMessage, actionLabel: "Go to Step 1", targetId: "step-1" };
-  const boatInlineHint = { message: inlineHintMessage, actionLabel: "Choose a boat", targetId: "step-2" };
+  const boatInlineHint = { message: inlineHintMessage, actionLabel: "Choose an option", targetId: "step-2" };
   const stepTwoInlineHint = stepTwoLocked ? stepOneInlineHint : null;
   const stepExtrasInlineHint = stepExtrasLocked
     ? !canProceedFromStepOne
@@ -9013,197 +8381,34 @@ export default function Shared_tour_01() {
                       </div>
                     </div>
                   </div>
-                ) : (
+                ) : isFetchingInlineRoute ? (
                   <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                     <div className="flex flex-col lg:flex-row lg:items-stretch">
-                      <div className="relative h-48 sm:h-64 lg:h-auto w-full lg:w-[35%] shrink-0 overflow-hidden">
-                        {(selectedYacht?.images?.[0] || selectedYacht?.cover) ? (
-                          <img
-                            src={selectedYacht.images?.[0] || selectedYacht.cover}
-                            alt={selectedYacht?.name}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-neutral-100" />
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                        <div className="absolute left-4 top-4 inline-flex items-center rounded-full border border-primary-500 bg-primary-500 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-white shadow-sm transition-transform hover:scale-105 active:scale-95">
-                          Selected option
-                        </div>
-                        <div className="absolute inset-x-4 bottom-4">
-                          <div className="text-xl font-bold text-white drop-shadow-sm sm:text-2xl">
-                            {selectedStyleTitle.replace(" route", "")}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex-1 p-5 sm:p-8 lg:p-10">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            {selectedYacht?.description ? (
-                              <p className="text-sm text-secondary-600">
-                                {sanitizeDisplayText(selectedYacht.description, { stripTrailingOne: true })}
-                              </p>
-                            ) : null}
-                            <p className="mt-1 text-sm text-secondary-600">
-                              Times are approximate and may adjust due to sea conditions (safety-first routing).
-                            </p>
-                          </div>
-                        </div>
-                        {isFetchingInlineRoute ? (
-                          <div className="mt-4 space-y-6">
-                            {[1, 2].map((i) => (
-                              <div key={i} className="animate-pulse">
-                                <div className="h-4 w-1/4 rounded bg-neutral-100 mb-4" />
-                                <div className="space-y-4">
-                                  {[1, 2].map((j) => (
-                                    <div key={j} className="flex gap-4">
-                                      <div className="h-8 w-8 rounded-full bg-neutral-100" />
-                                      <div className="flex-1 space-y-2">
-                                        <div className="h-4 w-1/3 rounded bg-neutral-100" />
-                                        <div className="h-3 w-1/2 rounded bg-neutral-100" />
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="mt-4 grid gap-3 grid-cols-1">
-                            {[
-                              { label: "MORNING", displayLabel: "Morning", items: inlineRouteSchedule?.beforeLunch || selectedYacht?.routeSchedule?.beforeLunch || [] },
-                              { label: "MIDDAY & AFTERNOON", displayLabel: "Midday & Afternoon", items: inlineRouteSchedule?.afterLunch || selectedYacht?.routeSchedule?.afterLunch || [] },
-                            ]
-                              .filter((s) => s.items.length > 0)
-                              .map((section) => {
-                                const validItems = section.items.filter((i) => i.time);
-                                let timeHint = "";
-                                if (validItems.length > 0) {
-                                  const firstTime = validItems[0].time.split("-")[0].trim();
-                                  const lastTime = validItems[validItems.length - 1].time.split("-").pop().trim();
-                                  if (firstTime && lastTime && firstTime !== lastTime) {
-                                    timeHint = `${firstTime} - ${lastTime}`;
-                                  }
-                                }
-                                return (
-                                  <div key={section.label} className="rounded-xl">
-                                    <div className="mb-2 px-1 flex items-center justify-between text-xs font-bold uppercase tracking-widest text-secondary-300">
-                                      <span>{section.displayLabel}</span>
-                                    </div>
-                                    <div className="divide-y divide-neutral-100 border-t border-neutral-100">
-                                      {section.items.map((item, idx) => {
-                                        const t = String(item.title).toLowerCase();
-                                        const Icon =
-                                          t.includes("meet") || t.includes("pick")
-                                            ? MapPin
-                                            : t.includes("depart") || t.includes("boat")
-                                              ? Ship
-                                              : t.includes("snorkel") || t.includes("swim") || t.includes("manta")
-                                                ? Waves
-                                                : t.includes("lunch") || t.includes("food")
-                                                  ? UtensilsCrossed
-                                                  : t.includes("return") || t.includes("back")
-                                                    ? Anchor
-                                                    : Clock;
-                                        const detailsText = sanitizeDisplayText(item.details, { stripTrailingOne: true });
-                                        const isLunch = /lunch/i.test(item.title);
-                                        const lunchDisplay = isLunch
-                                          ? getLunchDisplayData(
-                                            item,
-                                            inlineRouteSchedule?.restaurant || selectedYacht?.routeSchedule?.restaurant
-                                          )
-                                          : null;
-                                        const descriptionText = isLunch ? lunchDisplay?.description : detailsText;
-                                        return (
-                                          <div key={`${section.label}-${idx}`} className="flex items-start gap-3 py-3">
-                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-secondary-500">
-                                              <Icon className="h-4 w-4" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                                <div className="text-sm font-semibold text-secondary-900">
-                                                  {lunchDisplay?.title || item.title}
-                                                </div>
-                                                <div className="text-xs font-semibold text-secondary-500">
-                                                  {item.time}{item.duration ? ` (${item.duration})` : ""}
-                                                </div>
-                                              </div>
-                                              {descriptionText && (
-                                                <div className="mt-0.5 text-xs leading-relaxed text-secondary-600">
-                                                  {descriptionText}
-                                                </div>
-                                              )}
-                                              {lunchDisplay?.popupRestaurant?.name ? (() => {
-                                                const rImg = lunchDisplay.popupRestaurant.image || lunchDisplay.popupRestaurant.images_with_thumbs?.[0]?.thumb || null;
-                                                return (
-                                                  <button
-                                                    type="button"
-                                                    onClick={() => setInlineRestaurantPopup(lunchDisplay.popupRestaurant)}
-                                                    className="mt-2 w-full flex items-center gap-0 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-50 text-left transition hover:border-neutral-300 hover:bg-white"
-                                                  >
-                                                    {rImg ? (
-                                                      <div className="h-14 w-14 shrink-0">
-                                                        <img src={rImg} alt={lunchDisplay.popupRestaurant.name} className="h-full w-full object-cover" />
-                                                      </div>
-                                                    ) : (
-                                                      <div className="h-14 w-14 shrink-0 bg-primary-50 flex items-center justify-center">
-                                                        <UtensilsCrossed className="h-5 w-5 text-primary-300" />
-                                                      </div>
-                                                    )}
-                                                    <div className="flex-1 min-w-0 px-3 py-2">
-                                                      <div className="text-xs font-semibold uppercase tracking-wide text-secondary-400">Lunch venue</div>
-                                                      <div className="text-sm font-bold text-secondary-900 truncate">{lunchDisplay.popupRestaurant.name}</div>
-                                                    </div>
-                                                    <div className="shrink-0 pr-3 text-sm font-semibold text-primary-600 flex items-center gap-1">
-                                                      View menu
-                                                      <ExternalLink className="h-3.5 w-3.5 text-primary-400" />
-                                                    </div>
-                                                  </button>
-                                                );
-                                              })() : null}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            {(() => {
-                              const footerNotes = inlineRouteSchedule?.footerNotes || selectedYacht?.routeSchedule?.footerNotes || [];
-                              if (!footerNotes.length) return null;
-                              return (
-                                <div className="mt-4 border-t border-neutral-200 pt-3 space-y-1.5">
-                                  {footerNotes.map((note, idx) => (
-                                    <p key={`note-${idx}`} className="text-sm italic text-secondary-400">{note}</p>
-                                  ))}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        )}
-                        <div className="mt-5 flex items-center justify-end gap-4 border-t border-neutral-100 pt-4">
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                            className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-400 transition hover:text-secondary-700"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                            Another option
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                            className="inline-flex items-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-700"
-                          >
-                            Add extras <ArrowRight className="h-4 w-4" />
-                          </button>
-                        </div>
+                      <div className="h-48 sm:h-64 lg:h-auto w-full lg:w-[35%] shrink-0 bg-neutral-100 animate-pulse" />
+                      <div className="flex-1 p-5 sm:p-8 lg:p-10 space-y-4">
+                        <div className="h-4 w-2/3 rounded bg-neutral-100 animate-pulse" />
+                        <div className="h-3 w-full rounded bg-neutral-100 animate-pulse" />
                       </div>
                     </div>
                   </div>
+                ) : (
+                  <TourDetailsCard
+                    style={{
+                      title: inlineRouteSchedule?.title || selectedStyleTitle,
+                      description: inlineRouteSchedule?.description || selectedStyle?.description,
+                      map: inlineRouteSchedule?.map || selectedStyle?.map || "https://bluuu.tours/themes/bluuu/assets/images/map.webp",
+                    }}
+                    schedule={{
+                      beforeLunch: inlineRouteSchedule?.beforeLunch || selectedYacht?.routeSchedule?.beforeLunch || [],
+                      afterLunch: inlineRouteSchedule?.afterLunch || selectedYacht?.routeSchedule?.afterLunch || [],
+                      footerNotes: inlineRouteSchedule?.footerNotes || selectedYacht?.routeSchedule?.footerNotes || [],
+                    }}
+                    restaurant={inlineRouteSchedule?.restaurant || selectedYacht?.routeSchedule?.restaurant}
+                    onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    onContinue={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    continueLabel="Add extras"
+                    anotherRouteLabel="Another option"
+                  />
                 )}
               </PremiumContainer>
             </PremiumSection>
@@ -9348,31 +8553,10 @@ export default function Shared_tour_01() {
         <div className="h-24 sm:hidden" />
       </div>
       <PolicyModal activePolicyKey={globalPolicyKey} activePolicy={globalPolicy} onClose={closeGlobalPolicy} />
-      {inlineRestaurantPopup && (
-        <Modal
-          open={!!inlineRestaurantPopup}
-          onClose={() => setInlineRestaurantPopup(null)}
-          title={inlineRestaurantPopup.name || inlineRestaurantPopup.title || "Restaurant"}
-          subtitle="Included lunch"
-          maxWidth="max-w-3xl"
-        >
-          <div className="pb-4">
-            {(inlineRestaurantPopup.image || inlineRestaurantPopup.images_with_thumbs?.[0]?.thumb) && (
-              <div className="mb-5 aspect-[4/3] w-full overflow-hidden rounded-xl border border-neutral-200 sm:w-2/5">
-                <img src={inlineRestaurantPopup.image || inlineRestaurantPopup.images_with_thumbs[0].thumb} alt={inlineRestaurantPopup.name} className="h-full w-full object-cover" />
-              </div>
-            )}
-            {inlineRestaurantPopup.description ? (
-              <div className="text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: inlineRestaurantPopup.description }} />
-            ) : (
-              <p className="text-sm text-secondary-500">Lunch is included and served at {inlineRestaurantPopup.name || inlineRestaurantPopup.title}.</p>
-            )}
-            {inlineRestaurantPopup.menu && (
-              <div className="mt-4 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: inlineRestaurantPopup.menu }} />
-            )}
-          </div>
-        </Modal>
-      )}
+      <RestaurantModal
+        restaurantData={inlineRestaurantPopup}
+        onClose={() => setInlineRestaurantPopup(null)}
+      />
     </>
   );
 }
@@ -9481,7 +8665,7 @@ function StepCheckout({
                 const isActive = s.num === step;
                 const isCompleted = s.num < step;
                 return (
-                  <div key={s.num} className="flex flex-col items-center gap-1.5 bg-neutral-50 px-2 sm:bg-transparent">
+                  <div key={s.num} className="flex flex-col items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
@@ -9495,10 +8679,12 @@ function StepCheckout({
                     >
                       {isCompleted ? <Check className="h-5 w-5" /> : <span className="text-sm font-bold">{s.num}</span>}
                     </button>
-                    <span className={cn(
-                      "absolute -bottom-5 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
-                      isActive ? "text-primary-700" : isCompleted ? "text-primary-600" : "text-neutral-300"
-                    )}
+                    <span
+                      onClick={() => isCompleted ? onSetStep(s.num) : null}
+                      className={cn(
+                        "absolute -bottom-5 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
+                        isActive ? "text-primary-700" : isCompleted ? "text-primary-600 cursor-pointer" : "text-neutral-300"
+                      )}
                       style={{ left: s.num === 1 ? '0' : s.num === 3 ? 'auto' : '50%', right: s.num === 3 ? '0' : 'auto', transform: s.num === 2 ? 'translateX(-50%)' : 'none' }}>
                       {s.label}
                     </span>
@@ -9674,30 +8860,28 @@ function StepCheckout({
                   </div>
                 )}
                 {String(selectedTransferId) === "2" && (
-                  <>
-                    <div className="flex items-center gap-2">
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address*</label>
+                    {!sameAddress && (
+                      <input
+                        type="text"
+                        value={dropoffAddress}
+                        onChange={(e) => onSetDropoffAddress(e.target.value)}
+                        placeholder="Enter your dropoff address"
+                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
+                      />
+                    )}
+                    <label className="mt-2 flex cursor-pointer items-center gap-2">
                       <input
                         id="same-address"
                         type="checkbox"
                         checked={sameAddress}
                         onChange={(e) => handleSameAddressChange(e.target.checked)}
-                        className="h-4 w-4 rounded border-neutral-300 accent-primary-600 focus:ring-primary-600"
+                        className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
                       />
-                      <label htmlFor="same-address" className="text-sm text-secondary-600 cursor-pointer">Same address for pickup and dropoff</label>
-                    </div>
-                    {!sameAddress && (
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address*</label>
-                        <input
-                          type="text"
-                          value={dropoffAddress}
-                          onChange={(e) => onSetDropoffAddress(e.target.value)}
-                          placeholder="Enter your dropoff address"
-                          className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
-                        />
-                      </div>
-                    )}
-                  </>
+                      <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
+                    </label>
+                  </div>
                 )}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Any special requests?</label>

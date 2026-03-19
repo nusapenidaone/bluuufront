@@ -5,6 +5,7 @@ namespace Noren\Booking\Routes;
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Noren\Booking\Models\Category;
 use Noren\Booking\Models\Rates;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Extras;
@@ -73,7 +74,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat'])
             ->whereIn('classes_id', [8])
             ->orderBy('sort_order')
             ->get();
@@ -87,11 +88,15 @@ class FullController extends Controller
                 'capacity' => $tour->capacity,
                 'size' => $tour->size,
                 'partner' => (bool) $tour->partner,
+                'list' => $tour->list,
                 'images_with_thumbs' => $tour->images_with_thumbs,
                 'packages' => $tour->packages,
                 'boat_price' => $tour->boat_price,
                 'pricesbydates' => $tour->pricesbydates,
                 'status' => $tour->status ?: 'ready',
+                'fleet_size' => $tour->boat->count(),
+                'categories' => $tour->category->filter(fn($c) => $c->status == 1)->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values(),
+                'boatFeatures' => $tour->props,
             ];
         });
     }
@@ -288,13 +293,14 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'route'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'route', 'route.restaurant', 'route.restaurant.images', 'boat'])
             ->whereIn('classes_id', [9])
             ->orderBy('sort_order')
             ->get();
 
         return $tours->map(function ($tour) {
             $route = $tour->route;
+            $restaurant = $route?->restaurant;
             return [
                 'id' => $tour->id,
                 'name' => $tour->name,
@@ -313,6 +319,7 @@ class FullController extends Controller
                 'boat_price' => 0,
                 'pricesbydates' => $tour->pricesbydates,
                 'status' => $tour->status ?: 'ready',
+                'fleet_size' => $tour->boat->count(),
                 'route' => $route ? [
                     'id' => $route->id,
                     'title' => $route->title,
@@ -320,6 +327,14 @@ class FullController extends Controller
                     'popup_afternoon' => $route->popup_afternoon,
                     'schedule_before_lunch' => $route->schedule_before_lunch,
                     'schedule_after_lunch' => $route->schedule_after_lunch,
+                    'restaurant' => $restaurant ? [
+                        'id' => $restaurant->id,
+                        'name' => $restaurant->name,
+                        'description' => $restaurant->description,
+                        'menu' => $restaurant->menu,
+                        'image' => $restaurant->image,
+                        'images_with_thumbs' => $restaurant->images_with_thumbs,
+                    ] : null,
                 ] : null,
             ];
         });
@@ -509,7 +524,7 @@ class FullController extends Controller
             'ecategories.extras.images',
             'photos',
             'restaurant.images',
-        ])->where('classes_id', $classesId)->get();
+        ])->where('classes_id', $classesId)->orderBy('sort_order')->get();
 
         $routeIds = $routes->pluck('id')->toArray();
         $maps = SystemFile::where('attachment_type', 'Noren\Booking\Models\Route')
@@ -777,6 +792,23 @@ class FullController extends Controller
         ]);
     }
 
+    public function getCategories()
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
+        $categories = Category::where('status', true)->get();
+
+        return response()->json(
+            $categories->map(fn($c) => [
+                'id'   => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+            ])->values()
+        );
+    }
+
     public function getRules()
     {
         header('Access-Control-Allow-Origin: *');
@@ -793,5 +825,6 @@ class FullController extends Controller
             'release' => $rules->release,
         ]);
     }
+
 
 }

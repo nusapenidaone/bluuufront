@@ -68,6 +68,41 @@ tabs:
             span: auto
             type: number
             tab: Main
+        props[boat_type]:
+            label: 'Boat Type (e.g. Speedboat, Luxury Yacht)'
+            span: auto
+            type: text
+            tab: Main
+        props[best_for]:
+            label: 'Best for (e.g. couples & small groups)'
+            span: auto
+            type: text
+            tab: Main
+        props[shade]:
+            label: 'Shade (Full shade + flybridge)'
+            span: left
+            type: switch
+            tab: Main
+        props[cabin]:
+            label: 'Cabin'
+            span: right
+            type: switch
+            tab: Main
+        props[ac]:
+            label: 'AC'
+            span: left
+            type: switch
+            tab: Main
+        props[sound]:
+            label: 'Sound (Bose sound)'
+            span: right
+            type: switch
+            tab: Main
+        props[toilet]:
+            label: 'Toilet'
+            span: left
+            type: switch
+            tab: Main
         duration:
             label: Duration
             span: auto

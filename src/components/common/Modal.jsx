@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -20,6 +20,8 @@ const Modal = ({
 }) => {
   const isModalOpen = isOpen ?? open;
   const modalSubtitle = subTitle ?? subtitle;
+  const dragY = useMotionValue(0);
+  const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
 
   useEffect(() => {
     if (!isModalOpen || typeof document === "undefined") return undefined;
@@ -48,7 +50,7 @@ const Modal = ({
     <AnimatePresence>
       {isModalOpen ? (
         <motion.div
-          className="fixed inset-0 z-[10000] flex items-end justify-center px-0 py-0 sm:items-center sm:px-4 sm:py-6"
+          className="fixed inset-0 z-[10000] flex flex-col justify-end sm:flex-row sm:items-center sm:justify-center sm:px-4 sm:py-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -56,25 +58,54 @@ const Modal = ({
         >
           <motion.div
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            style={{ opacity: backdropOpacity }}
             onClick={closeOnBackdrop ? onClose : undefined}
           />
           <motion.div
             className={cn(
-              "relative flex h-[100dvh] max-h-[100dvh] w-full flex-col overflow-hidden rounded-none border border-neutral-100 bg-white shadow-2xl sm:h-auto sm:max-h-[calc(100dvh-48px)] sm:rounded-2xl",
+              "relative flex w-full flex-col overflow-hidden bg-white shadow-2xl",
+              "rounded-t-2xl rounded-b-none max-h-[92dvh]",
+              "sm:rounded-2xl sm:max-h-[calc(100dvh-48px)]",
               maxWidth,
               className
             )}
-            initial={{ opacity: 0, scale: 0.95, y: 40 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95, y: 40 }}
-            transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+            style={{ y: dragY }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.3 }}
+            dragListener={false}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 80 || info.velocity.y > 500) {
+                onClose?.();
+              } else {
+                dragY.set(0);
+              }
+            }}
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 60 }}
+            transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
           >
+            {/* Drag handle — mobile only */}
+            <motion.div
+              className="flex shrink-0 cursor-grab justify-center pb-1 pt-3 sm:hidden"
+              drag="y"
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.3 }}
+              style={{ y: dragY, touchAction: "none" }}
+              onDragEnd={(_, info) => {
+                if (info.offset.y > 80 || info.velocity.y > 500) {
+                  onClose?.();
+                } else {
+                  dragY.set(0);
+                }
+              }}
+            >
+              <div className="h-1 w-10 rounded-full bg-neutral-300" />
+            </motion.div>
+
             {title || modalSubtitle || showClose ? (
-              <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-6 sm:px-6 sm:py-5">
+              <div className="flex shrink-0 items-start justify-between gap-4 bg-neutral-50/60 px-6 py-4 sm:py-5">
                 <div className="min-w-0 flex-1">
                   {title ? (
                     <h3 className="text-lg font-bold leading-tight text-secondary-900">{title}</h3>
@@ -97,8 +128,8 @@ const Modal = ({
             ) : null}
             <div
               className={cn(
-                "flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-slate-200 sm:p-6",
-                bodyClassName
+                "overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200",
+                bodyClassName || "p-6"
               )}
             >
               {children}

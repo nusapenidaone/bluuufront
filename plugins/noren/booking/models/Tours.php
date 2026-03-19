@@ -20,7 +20,7 @@ class Tours extends Model
      */
     public $rules = [
     ];
-    protected $jsonable = ['props','list', 'json'];
+    protected $jsonable = ['props', 'list', 'json'];
     
     public $belongsTo = [
         'types' => Types::class,

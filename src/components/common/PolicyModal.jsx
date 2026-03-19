@@ -45,7 +45,7 @@ export default function PolicyModal({ activePolicyKey, activePolicy, onClose }) 
     >
       {hasPolicyContent ? (
         <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0">
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-neutral-50/60 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
             <div className="min-w-0">
               <div className="text-lg font-semibold text-secondary-900">{activePolicy.title}</div>
               <div className="mt-1 text-sm text-secondary-500">{activePolicy.subtitle}</div>
@@ -59,13 +59,13 @@ export default function PolicyModal({ activePolicyKey, activePolicy, onClose }) 
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 text-sm leading-relaxed text-secondary-600 sm:px-5 sm:py-5">
+          <div className="custom-scrollbar flex-1 overflow-y-auto px-6 py-5 text-sm leading-relaxed text-secondary-600">
             <div className="policy-rich-content" dangerouslySetInnerHTML={{ __html: activePolicy.html }} />
           </div>
         </div>
       ) : loading ? (
         <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0">
-          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-neutral-50/60 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
             <div className="min-w-0 animate-pulse space-y-2">
               <div className="h-5 w-40 rounded bg-neutral-200" />
               <div className="h-4 w-56 rounded bg-neutral-100" />
@@ -79,7 +79,7 @@ export default function PolicyModal({ activePolicyKey, activePolicy, onClose }) 
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="custom-scrollbar flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <div className="custom-scrollbar flex-1 overflow-y-auto px-6 py-5">
             <div className="animate-pulse space-y-3">
               {Array.from({ length: 9 }).map((_, idx) => (
                 <div key={idx} className="h-4 rounded bg-neutral-100" style={{ width: `${96 - (idx % 3) * 12}%` }} />
@@ -88,7 +88,7 @@ export default function PolicyModal({ activePolicyKey, activePolicy, onClose }) 
           </div>
         </div>
       ) : (
-        <div className="px-5 py-8 text-sm text-secondary-500">
+        <div className="px-6 py-6 text-sm text-secondary-500">
           Policy not found.
         </div>
       )}
