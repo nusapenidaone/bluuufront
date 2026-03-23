@@ -316,6 +316,7 @@ class KommoDataBuilder
 
         if (!empty($order->tour_price)) {
             $boat_tour_price=$order->tour_price+$order->boat_price;
+            $total_price=$boat_tour_price;
             if($order->tours->types_id==1){
                 $total_price=$boat_tour_price/$order->members;
             }elseif($order->tours->types_id==2){

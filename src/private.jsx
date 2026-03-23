@@ -8736,7 +8736,7 @@ export default function Premium_Private_With_Vibe() {
     if (selectedCoverId) {
       const cover = covers?.find(c => String(c.id) === String(selectedCoverId));
       if (cover) {
-        sum += Number(cover.price || 0) * totalGuests;
+        sum += Number(cover.price || 0);
       }
     }
     return sum;
@@ -8774,8 +8774,8 @@ export default function Premium_Private_With_Vibe() {
           id: `cover-${cover.id}`,
           name: cover.name,
           price: Number(cover.price || 0),
-          pricingType: "per_person",
-          quantity: totalGuests
+          pricingType: "per_boat",
+          quantity: 1
         });
       }
     }

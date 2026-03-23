@@ -45,9 +45,7 @@ function FaqItem({ question, answer }) {
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden"
           >
-            <div className="px-6 pb-5 pr-12 text-sm leading-relaxed text-secondary-600">
-              {answer}
-            </div>
+            <div className="px-6 pb-5 pr-12 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: answer }} />
           </motion.div>
         )}
       </AnimatePresence>
