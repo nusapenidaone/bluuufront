@@ -46,9 +46,9 @@ export default function Payment() {
   const adults = Math.max(1, parseInt(params.get("adults") || "1", 10));
   const kids = Math.max(0, parseInt(params.get("kids") || "0", 10));
   const boatId = params.get("boat") || "";                    // tour ID
+  const availBoatId = params.get("availBoatId") ? parseInt(params.get("availBoatId"), 10) : null;
   const tourType = params.get("tourType") || "private";       // "private" | "shared"
   const styleId = params.get("style") || "";                  // route/program ID
-  const programId = params.get("programId") || "";            // route.program_id
   const pickupAddressParam = params.get("pickup_address") || "";
   const dropoffAddressParam = params.get("dropoff_address") || "";
   const payMode = params.get("payMode") || "full";            // "full" | "part"
@@ -57,7 +57,9 @@ export default function Payment() {
   const email = params.get("email") || "";
   const phone = params.get("phone") || "";
   const requests = params.get("requests") || "";
-  const boatPrice = parseFloat(params.get("boatPrice") || "0");
+  const boatPrice = parseFloat(params.get("boatPrice") || "0");       // raw boat_price surcharge
+  const totalBoatPrice = parseFloat(params.get("totalBoatPrice") || String(boatPrice)); // pricelist + surcharge
+  const guestFeeTotal = parseFloat(params.get("guestFeeTotal") || "0");
   const extrasTotal = parseFloat(params.get("extrasTotal") || "0");
   const restaurantId = params.get("restaurantId")
     ? parseInt(params.get("restaurantId"), 10) || null
@@ -87,10 +89,6 @@ export default function Payment() {
   const selectedCoverId = coverExtra
     ? parseInt(String(coverExtra.id).replace("cover-", ""), 10) || null
     : null;
-  const selectedProgramId = programId && !isNaN(parseInt(programId, 10))
-    ? parseInt(programId, 10)
-    : (styleId && !isNaN(parseInt(styleId, 10)) ? parseInt(styleId, 10) : null);
-
   // Pricing breakdown — transfer/cover are separate from pure extras
   const transferTotalPrice = transferExtra ? (transferExtra.price ?? 0) * (transferExtra.quantity ?? 1) : 0;
   const coverTotalPrice    = coverExtra    ? (coverExtra.price    ?? 0) * (coverExtra.quantity    ?? 1) : 0;
@@ -99,7 +97,7 @@ export default function Payment() {
     .reduce((sum, e) => sum + (e.price ?? 0) * (e.quantity ?? 1), 0);
 
   // Total without discount = all price components summed
-  const fullTotal = boatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
+  const fullTotal = totalBoatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
   const depositAmount = Math.round((fullTotal * deposite) / 100);
   const analyticsCurrency = params.get("analyticsCurrency") || "IDR";
   const analyticsTotal = parseFloat(params.get("analyticsTotal") || String(fullTotal));
@@ -130,6 +128,7 @@ export default function Payment() {
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
+    console.log('[payment] styleId:', styleId, '| restaurantId:', restaurantId, '| URL:', window.location.search);
     if (!name.trim() || !email.trim()) {
       setError("Missing contact details. Please go back and fill in your name and email.");
       return;
@@ -142,15 +141,16 @@ export default function Payment() {
 
     const body = {
       tourId: boatId ? parseInt(boatId, 10) : null,
+      boatId: availBoatId,
       travelDate: date,
       adults,
       kids,
       children: 0,
       members: totalGuests,
-      cars: 0,
+      cars: transferExtra ? (transferExtra.quantity ?? 1) : (parseInt(params.get("cars") || "0", 10) || 0),
 
       boatPrice,
-      tourPrice: boatPrice,
+      tourPrice: (totalBoatPrice - boatPrice) + guestFeeTotal,
       programPrice: 0,
       transferPrice: transferTotalPrice,
       coverPrice: coverTotalPrice,
@@ -163,15 +163,17 @@ export default function Payment() {
 
       selectedTransferId,
       selectedCoverId,
-      selectedProgramId,
+      selectedRouteId: styleId ? parseInt(styleId, 10) || null : null,
       selectedRestaurantId: restaurantId,
 
-      selectedExtras: extras.map((e) => ({
-        id: e.id,
-        qty: e.quantity ?? 1,
-        price: e.price ?? 0,
-        name: e.name ?? "",
-      })),
+      selectedExtras: extras
+        .filter((e) => !String(e.id).startsWith("transfer-") && !String(e.id).startsWith("cover-"))
+        .map((e) => ({
+          id: e.id,
+          qty: e.quantity ?? 1,
+          price: e.price ?? 0,
+          name: e.name ?? "",
+        })),
 
       method,
 

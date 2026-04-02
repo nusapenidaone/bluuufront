@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getBoatFeatures } from "./utils/boatFeatures";
+import { getBoatFeatures, bfOn } from "./utils/boatFeatures";
 import {
   TRANSFER_DETAILS_FALLBACK_IMAGE,
   INSURANCE_DETAILS_FALLBACK_IMAGE,
@@ -171,8 +171,8 @@ import Footer from "./components/common/Footer";
 
 function SkeletonCard() {
   return (
-    <div className="group relative flex min-h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-100 bg-white sm:min-h-[470px]">
-      <div className="relative h-[250px] shrink-0 overflow-hidden bg-neutral-100">
+    <div className="group relative flex min-h-70vh w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-100 bg-white sm:min-h-470">
+      <div className="relative h-250 shrink-0 overflow-hidden bg-neutral-100">
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
           animate={{ x: ["-100%", "100%"] }}
@@ -194,7 +194,7 @@ function SkeletonCard() {
           <div className="h-3.5 w-4/5 rounded-lg bg-neutral-100 animate-pulse" />
         </div>
         <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
-        <div className="flex min-h-[3.75rem] flex-wrap content-start gap-x-3 gap-y-2">
+        <div className="flex min-h-3.75 flex-wrap content-start gap-x-3 gap-y-2">
           <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
           <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
         </div>
@@ -230,14 +230,14 @@ const Q_THEME = {
     borderLight: "#f1f5f9",
   },
   text: {
-    h1: "md:text-6xl text-4xl font-bold tracking-tight text-slate-900 leading-tight md:leading-tight",
+    h1: "text-4xl md:text-6xl font-bold tracking-tight text-slate-900 leading-tight",
     h2: "text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl",
     h3: "text-xl font-bold tracking-tight text-secondary-900 sm:text-2xl",
     body: "mt-3 max-w-2xl mx-auto text-lg leading-relaxed text-secondary-600",
     caption: "text-sm text-slate-500 font-medium",
     label: "text-xs font-black uppercase tracking-widest text-primary-600",
   },
-  container: "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8",
+  container: "container",
   section: "py-20 md:py-32",
   card: {
     base: "bg-white rounded-xl border border-slate-100 transition-all duration-300",
@@ -422,8 +422,11 @@ function BookingCard({
     });
     const params = new URLSearchParams({ date, adults: String(adults), kids: String(kids) });
     params.set("tourId", String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""));
+    const availEntry = availabilityMap[selectedYacht?.id]?.[date];
+    if (availEntry?.boat_id) params.set("boatId", String(availEntry.boat_id));
     params.set("tourName", selectedYacht?.name || "Shared Tour");
     params.set("tourCategory", "Shared Tour");
+    if (selectedYacht?.routeId) params.set("routeId", String(selectedYacht.routeId));
     params.set("analyticsCurrency", analyticsCurrency);
     params.set("analyticsTotal", String(analyticsTotal));
     if (safeCartItems.length) {
@@ -600,7 +603,7 @@ function BookingCard({
         <div className="mt-4 grid gap-2">
           <Button
             onClick={onReserve}
-            className={cn("w-full rounded-full h-12 text-sm font-black transition-all hover:scale-[1.02] active:scale-[0.98]", reserveDisabled && "cursor-not-allowed opacity-60")}
+            className={cn("w-full rounded-full h-12 text-sm font-black transition-all hover:scale-102 active:scale-98", reserveDisabled && "cursor-not-allowed opacity-60")}
             disabled={reserveDisabled}
           >
             Reserve now <ArrowRight className="h-4 w-4" />
@@ -693,7 +696,7 @@ function HeroGallery({ images = [] }) {
         {items.map((it) => (
           <div
             key={it.label}
-            className="relative min-w-[82%] snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card"
+            className="relative min-w-82pct snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card"
           >
             <img
               src={it.src}
@@ -702,13 +705,13 @@ function HeroGallery({ images = [] }) {
               decoding="async"
               className="h-48 w-full object-cover"
             />
-            <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900 backdrop-blur">
+            <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900">
               {it.label}
             </div>
           </div>
         ))}
       </div>
-      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[180px]">
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-180">
         <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:col-span-2 sm:row-span-2">
           <img
             src={items[0].src}
@@ -717,7 +720,7 @@ function HeroGallery({ images = [] }) {
             decoding="async"
             className="h-full w-full object-cover"
           />
-          <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900 backdrop-blur">
+          <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900">
             {items[0].label}
           </div>
         </div>
@@ -726,7 +729,7 @@ function HeroGallery({ images = [] }) {
             key={it.label}
             className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card"
           >
-            <div className="h-full min-h-[180px] bg-neutral-50 lg:min-h-0">
+            <div className="h-full min-h-180 bg-neutral-50 lg:min-h-0">
               <img
                 src={it.src}
                 alt={it.label}
@@ -735,7 +738,7 @@ function HeroGallery({ images = [] }) {
                 className="h-full w-full object-cover"
               />
             </div>
-            <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900 backdrop-blur">
+            <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900">
               {it.label}
             </div>
           </div>
@@ -793,16 +796,16 @@ function GalleryHeroGrid({ onOpenGallery }) {
             data-vibe-card
             type="button"
             onClick={() => onOpenGallery(vibe.id)}
-            className="group flex min-w-[72%] snap-start flex-col overflow-hidden rounded-full border border-neutral-200 bg-white text-left shadow-none transition hover:border-neutral-300 sm:min-w-[46%] lg:min-w-[30%]"
+            className="group flex min-w-72pct snap-start flex-col overflow-hidden rounded-full border border-neutral-200 bg-white text-left shadow-none transition hover:border-neutral-300 sm:min-w-46pct lg:min-w-30pct"
           >
-            <div className="relative aspect-[4/3] overflow-hidden">
+            <div className="relative aspect-4/3 overflow-hidden">
               <PhotoCarousel
                 images={vibe.photos?.length ? vibe.photos : [vibe.hero]}
                 alt={vibe.title}
                 onOpenGallery={() => onOpenGallery(vibe.id)}
-                className="aspect-[4/3]"
+                className="aspect-4/3"
               />
-              <div className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/70 backdrop-blur-sm px-2 py-0.5 text-sm font-semibold text-secondary-600 backdrop-blur">
+              <div className="absolute left-3 top-3 rounded-full border border-neutral-200 bg-white/70 px-2 py-0.5 text-sm font-semibold text-secondary-600">
                 {vibe.id === "classic" ? (
                   <span className="inline-flex items-center gap-1.5">
                     <Check className="h-2.5 w-2.5 text-success" />
@@ -813,14 +816,14 @@ function GalleryHeroGrid({ onOpenGallery }) {
                 )}
               </div>
             </div>
-            <div className="flex min-h-[150px] flex-1 flex-col p-4">
-              <div className="mt-2 line-clamp-1 min-h-[1.25rem] text-sm font-semibold text-secondary-900">
+            <div className="flex min-h-150 flex-1 flex-col p-4">
+              <div className="mt-2 line-clamp-1 min-h-1.25 text-sm font-semibold text-secondary-900">
                 {vibe.title}
               </div>
-              <div className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-5 text-secondary-600">
+              <div className="mt-2 line-clamp-2 min-h-2.5 text-sm leading-5 text-secondary-600">
                 {vibe.description}
               </div>
-              <div className="mt-2 inline-flex min-h-[1.25rem] items-center gap-1.5 text-sm text-secondary-500 whitespace-nowrap">
+              <div className="mt-2 inline-flex min-h-1.25 items-center gap-1.5 text-sm text-secondary-500 whitespace-nowrap">
                 <Sun className="h-3 w-3 text-secondary-400" />
                 <span className="text-secondary-400">Afternoon stop:</span>
                 <span className="font-semibold text-secondary-600">{vibe.afterLunch}</span>
@@ -1109,7 +1112,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
   }, [activeVibe, lightboxIndex]);
   return (
     <PremiumSection id="step-5" className="bg-transparent">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-card sm:p-8">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -1185,7 +1188,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       >
         {activeVibe ? (
           <div>
-            <div className="no-scrollbar max-h-[70vh] overflow-y-auto pr-1">
+            <div className="no-scrollbar max-h-70vh overflow-y-auto pr-1">
               <div className="px-4 py-3 pb-6 sm:px-6">
                 <div className="space-y-4">
                   <div className="space-y-3">
@@ -1215,7 +1218,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                               key={photo}
                               type="button"
                               onClick={() => setLightboxIndex(idx)}
-                              className="group relative aspect-[4/3] w-[280px] shrink-0 snap-start overflow-hidden rounded-full bg-neutral-50 shadow-none ring-1 ring-neutral-200 transition duration-200 hover:ring-border-strong md:w-80 lg:w-[360px]"
+                              className="group relative aspect-4/3 w-70 shrink-0 snap-start overflow-hidden rounded-full bg-neutral-50 shadow-none ring-1 ring-neutral-200 transition duration-200 hover:ring-border-strong md:w-80 lg:w-90"
                             >
                               <img
                                 src={photo}
@@ -1287,12 +1290,12 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                 <div className="mb-2 text-sm font-semibold uppercase tracking-wide-xl text-secondary-400">
                                   Top picks for this vibe
                                 </div>
-                                <div className="no-scrollbar max-h-[520px] overflow-y-auto rounded-xl bg-white shadow-card">
+                                <div className="no-scrollbar max-h-520 overflow-y-auto rounded-xl bg-white shadow-card">
                                   <div className="divide-y divide-border-soft">
                                     {(extrasShowAll ? activeVibe.extras : visibleVibeExtras).map((extra) => (
                                       <div
                                         key={extra.id}
-                                        className="grid grid-cols-[auto,1fr,auto] items-center gap-4 px-4 py-3"
+                                        className="grid grid-cols-body-layout items-center gap-4 px-4 py-3"
                                       >
                                         <div className="flex shrink-0">
                                           <img
@@ -1336,7 +1339,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                                     Remove
                                                   </button>
                                                 )}
-                                                <span className="min-w-[18px] text-center text-sm font-black text-secondary-900 tabular-nums">
+                                                <span className="min-w-5 text-center text-sm font-black text-secondary-900 tabular-nums">
                                                   {getExtraQuantity(extra.id)}
                                                 </span>
                                                 <button
@@ -1353,7 +1356,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                             <button
                                               type="button"
                                               onClick={() => openExtraDetails(extra)}
-                                              className="inline-flex h-9 w-[110px] items-center justify-center rounded-full bg-blue-50/80 px-4 text-xs font-black text-blue-600 transition-all hover:bg-blue-100 hover:scale-[1.02] active:scale-95"
+                                              className="inline-flex h-9 w-110 items-center justify-center rounded-full bg-blue-50/80 px-4 text-xs font-black text-blue-600 transition-all hover:bg-blue-100 hover:scale-102 active:scale-95"
                                             >
                                               {extra.hasChildren ? `${extra.children.length} Options` : "Add"}
                                             </button>
@@ -1404,7 +1407,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                 </div>
               </div>
             </div>
-            <div className="sticky bottom-0 z-10 border-t border-neutral-200 bg-white/90 backdrop-blur-md backdrop-blur">
+            <div className="sticky bottom-0 z-10 border-t border-neutral-200 bg-white/90 backdrop-blur-md">
               <div className="flex flex-col gap-3 px-4 pb-3 pt-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <div className="flex flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-secondary-600">
@@ -1453,9 +1456,9 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
         onClose={() => setAllExtrasOpen(false)}
         title="Add extras"
         subtitle="Customize the vibe with optional additions. Selections save automatically."
-        maxWidth="max-w-[980px]"
+        maxWidth="max-w-5xl"
       >
-        <div className="no-scrollbar max-h-[70vh] overflow-y-auto px-1">
+        <div className="no-scrollbar max-h-70vh overflow-y-auto px-1">
           <div className="space-y-4">
             <div className="border-b border-neutral-200 pb-4">
               <div className="no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 text-sm text-secondary-500">
@@ -1481,7 +1484,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
               <div className="mx-auto w-full rounded-xl border border-neutral-200 bg-white">
                 <div className="divide-y divide-border">
                   {(extrasFilter === "all" && !extrasShowAll ? filteredExtras.slice(0, 5) : filteredExtras).map((extra) => (
-                    <div key={extra.id} className="grid grid-cols-[auto,1fr,auto] items-center gap-4 px-4 py-4">
+                    <div key={extra.id} className="grid grid-cols-body-layout items-center gap-4 px-4 py-4">
                       <img
                         src={extra.image}
                         alt={extra.title}
@@ -1503,7 +1506,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                           <ChevronRight className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="flex min-w-[120px] flex-col items-end gap-2">
+                      <div className="flex min-w-32 flex-col items-end gap-2">
                         <div className="text-sm font-semibold text-secondary-900">{formatUSD(extra.priceUSD)}</div>
                         {getExtraQuantity(extra.id) ? (
                           <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-2 py-1 text-sm font-semibold text-secondary-600">
@@ -1546,7 +1549,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                           <button
                             type="button"
                             onClick={extra.hasChildren ? () => openExtraDetails(extra) : () => handleCatalogAdd(extra)}
-                            className="inline-flex h-9 w-[110px] items-center justify-center rounded-full border border-neutral-200 bg-white px-4 text-xs font-black text-secondary-600 transition hover:bg-neutral-100"
+                            className="inline-flex h-9 w-110 items-center justify-center rounded-full border border-neutral-200 bg-white px-4 text-xs font-black text-secondary-600 transition hover:bg-neutral-100"
                           >
                             {extra.hasChildren ? `${extra.children.length} Options` : "Add"}
                           </button>
@@ -1560,7 +1563,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                     <button
                       type="button"
                       onClick={() => setExtrasShowAll(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-50 py-3 text-sm font-bold text-secondary-600 transition-all hover:bg-neutral-100 hover:text-secondary-900 active:scale-[0.98]"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-50 py-3 text-sm font-bold text-secondary-600 transition-all hover:bg-neutral-100 hover:text-secondary-900 active:scale-98"
                     >
                       Show all {filteredExtras.length} extras
                       <ChevronDown className="h-4 w-4" />
@@ -1644,7 +1647,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
               <PhotoCarousel
                 images={activeExtra.gallery?.length ? activeExtra.gallery : [activeExtra.image]}
                 alt={activeExtra.title}
-                className="aspect-[4/3]"
+                className="aspect-4/3"
                 onOpenGallery={(idx) => {
                   const slides = activeExtra.gallery?.length ? activeExtra.gallery : [activeExtra.image];
                   Fancybox.show(slides.map(src => ({ src, type: "image" })), {
@@ -1707,7 +1710,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-4">
                 <div className="text-lg font-bold text-secondary-900">{formatUSD(activeExtra.priceUSD)}</div>
-                <div className="inline-flex h-11 min-w-[160px] items-center justify-between gap-3 rounded-full border border-primary-200 bg-primary-50/80 px-2.5">
+                <div className="inline-flex h-11 min-w-160 items-center justify-between gap-3 rounded-full border border-primary-200 bg-primary-50/80 px-2.5">
                   <button
                     type="button"
                     onClick={() => setExtraQuantity((prev) => Math.max(1, prev - 1))}
@@ -1717,7 +1720,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="min-w-[2rem] text-center text-xl font-semibold leading-none tabular-nums text-primary-600">
+                  <span className="min-w-8 text-center text-xl font-semibold leading-none tabular-nums text-primary-600">
                     {extraQuantity}
                   </span>
                   <button
@@ -1756,14 +1759,14 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
         ) : null}
       </Modal>
       {addToast ? (
-        <div className="pointer-events-none fixed bottom-5 left-1/2 z-[80] w-[92%] max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+        <div className="pointer-events-none fixed bottom-5 left-1/2 z-80 w-92pct max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
           <div className="rounded-xl border border-primary-200 bg-white px-4 py-3 text-sm font-semibold text-success shadow-card">
             Added to cart  {addToast.title}
           </div>
         </div>
       ) : null}
       {savedToast ? (
-        <div className="pointer-events-none fixed bottom-5 left-1/2 z-[80] w-[92%] max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+        <div className="pointer-events-none fixed bottom-5 left-1/2 z-80 w-92pct max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
           <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-secondary-600 shadow-card">
             Saved. You can edit extras anytime.
           </div>
@@ -1810,7 +1813,7 @@ function Hero() {
   };
   return (
     <section className={cn("relative overflow-hidden pt-12 sm:pt-20", SECTION_BACKGROUNDS.white)}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="container">
         <div className="flex flex-col items-center text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1850,9 +1853,9 @@ function Hero() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative mt-12 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-3xl"
+          className="relative mt-12 overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-4xl"
         >
-          <div className="aspect-[16/9] sm:aspect-[21/9]">
+          <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
               src="https://bluuu.tours/storage/app/media/video-xl.webm"
@@ -1886,11 +1889,11 @@ function MobileHeroBookingBar() {
   const basePrice = 4500000;
   return (
     <div className="sm:hidden">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="relative overflow-hidden rounded-none border-none bg-gradient-to-br from-white to-neutral-50 p-6 shadow-none sm:rounded-xl sm:border sm:border-neutral-200">
           {/* Decorative elements */}
           <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-accent-soft to-transparent opacity-40 blur-2xl" />
-          <div className="absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-gradient-to-tr from-accent-soft to-transparent opacity-30 blur-xl" />
+          <div className="absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-gradient-text-accent-theme-soft to-transparent opacity-30 blur-xl" />
           <div className="relative flex flex-col gap-4">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
@@ -1952,17 +1955,17 @@ function HowItWorks() {
       className="py-16 sm:min-h-screen sm:py-0 sm:flex sm:items-center md:py-24 md:min-h-0 md:block"
       backgroundClassName="bg-transparent"
     >
-      <PremiumContainer className="max-w-none px-0 md:max-w-7xl md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-2">
+      <PremiumContainer>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-2">
           {/* Master "How It Works" Intro Card */}
-          <div className="relative flex flex-col items-start overflow-hidden rounded-xl bg-gradient-to-br from-primary-700 via-primary-600 to-[#0b79e5] p-6 pt-7 sm:col-span-2 sm:p-6 sm:pt-7 md:p-10 md:pt-12 transition-all duration-300 lg:col-span-4 lg:row-span-2">
+          <div className="relative flex flex-col items-start overflow-hidden rounded-xl bg-gradient-to-br from-primary-700 via-primary-600 to-primary-500 p-6 pt-7 sm:col-span-2 sm:p-6 sm:pt-7 md:p-10 md:pt-12 transition-all duration-300 lg:col-span-4 lg:row-span-2">
             <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
             <div className="pointer-events-none absolute -left-16 bottom-12 h-44 w-44 rounded-full bg-cyan-300/20 blur-3xl" />
             <div className="pointer-events-none absolute inset-0 z-0">
               <img
                 src="https://bluuu.tours/themes/bluuu/assets/icons/bluu-icon.svg"
                 alt=""
-                className="absolute bottom-4 right-4 h-[72%] w-[72%] object-contain opacity-50 [filter:brightness(0)_invert(1)]"
+                className="absolute bottom-4 right-4 h-72pct w-72pct object-contain opacity-50 [filter:brightness(0)_invert(1)]"
                 loading="lazy"
                 decoding="async"
               />
@@ -1974,7 +1977,7 @@ function HowItWorks() {
                   THE PROCESS
                 </span>
               </div>
-              <div className="mt-8 max-w-[380px] pb-2 sm:mt-9 sm:pb-3 md:mt-14 md:pb-4 lg:mt-auto">
+              <div className="mt-8 max-w-sm pb-2 sm:mt-9 sm:pb-3 md:mt-14 md:pb-4 lg:mt-auto">
                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
                   How it works
                 </h2>
@@ -2006,7 +2009,7 @@ function HowItWorks() {
                   <h3 className="text-base font-bold text-secondary-900 sm:text-lg">
                     {step.title}
                   </h3>
-                  <p className="text-xs leading-relaxed text-secondary-500 sm:mx-auto sm:max-w-[200px]">
+                  <p className="text-xs leading-relaxed text-secondary-500 sm:mx-auto sm:max-w-50">
                     {step.text}
                   </p>
                 </div>
@@ -2146,7 +2149,7 @@ function StepOne({
                           className={cn(
                             "flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-200",
                             rangeDays === days
-                              ? "bg-primary-600 text-white shadow-lg scale-[1.02]"
+                              ? "bg-primary-600 text-white shadow-lg scale-102"
                               : "bg-neutral-100 text-secondary-500 hover:bg-neutral-100"
                           )}
                         >
@@ -2257,7 +2260,7 @@ function StepOne({
                     <Info className="h-4 w-4" />
                   </div>
                   <p className="text-xs font-bold leading-relaxed text-secondary-500">
-                    Minimum age for shared tours is 7 — traveling with younger kids? <a href="/private" className="text-secondary-900 font-semibold hover:text-primary-600 transition-colors">A private tour is the way to go.</a>
+                    Minimum age for shared tours is 7 — traveling with younger kids? <a href="/private" className="text-ink-faint font-semibold hover:text-primary-600 transition-colors">A private tour is the way to go.</a>
                   </p>
                 </div>
               </div>
@@ -2452,7 +2455,7 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
   };
   return (
     <>
-      <div className="flex h-full w-full flex-col bg-white p-0 md:h-[80vh]">
+      <div className="flex h-full w-full flex-col bg-white p-0 md:h-80vh">
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
           <div>
             <div className="text-base font-semibold text-secondary-900">Tour info</div>
@@ -2625,6 +2628,12 @@ function InfoLinksRow({ onOpenTourInfo, className, tone = "default", variant = "
     </div>
   );
 }
+const TIER_CONFIGS = [
+  { strip: "BEST PRICE",   stripColor: "#1a3a4a", label: "CLASSIC" },
+  { strip: "MOST POPULAR", stripColor: "#2563eb", label: "PREMIUM" },
+  { strip: "TOP TIER",     stripColor: "#1a3a4a", label: "ELITE"   },
+];
+
 function StepTwo({
   dateMode,
   exactDate,
@@ -2655,7 +2664,6 @@ function StepTwo({
   const hasAutoOpenedPickDayRef = useRef(false);
   const [hasSwiped, setHasSwiped] = useState(false);
   const hasSwipedRef = useRef(false);
-  const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const [isMobile, setIsMobile] = useState(false);
   const [inlineDatesFor, setInlineDatesFor] = useState(null);
   const [scheduleModalBoat, setScheduleModalBoat] = useState(null);
@@ -2665,6 +2673,7 @@ function StepTwo({
   const [showAllBoats, setShowAllBoats] = useState(false);
   const [draftFlexDate, setDraftFlexDate] = useState("");
   const [confirmModalData, setConfirmModalData] = useState(null);
+  const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
     const start = new Date(rangeStart);
@@ -2829,6 +2838,20 @@ function StepTwo({
     });
   }, [list, sort, availabilityByBoat, hasDateCriteria]);
   const totalCount = sorted.length;
+  const priceRankMap = useMemo(() => {
+    const enabledBoats = (boats || []).filter(b => b.status !== "disabled");
+    const byPrice = [...enabledBoats].sort((a, b) => a.priceValue - b.priceValue);
+    const map = {};
+    byPrice.forEach((b, i) => {
+      map[b.id] = {
+        rank: i,
+        total: byPrice.length,
+        prevPrice: i > 0 ? byPrice[i - 1].priceValue : 0,
+        prevBadgeName: i > 0 ? (byPrice[i - 1].badgeName || null) : null,
+      };
+    });
+    return map;
+  }, [boats]);
   const dateSummary = !hasDateCriteria
     ? ""
     : dateMode === "exact" && exactDate
@@ -2887,7 +2910,7 @@ function StepTwo({
       carouselRef.current.scrollTo({ left: 0, behavior: "instant" });
     }
   }, [sorted]);
-  const renderBoatCard = (boat, { isSoldOut = false, isLocked = false, isTooSmall = false } = {}) => {
+  const renderBoatCard = (boat, { isSoldOut = false, isLocked = false, isTooSmall = false, isPopular = false, upgradeCost = 0, upgradeFromName = null, tierIndex = -1 } = {}) => {
     const availability = availabilityByBoat?.[boat.id];
     const fitsGroup = groupSize <= boat.people;
     const soldOut = dateMode === "exact" && exactDate && !availability?.available;
@@ -2897,15 +2920,15 @@ function StepTwo({
     const dateSeatsMap = availability?.dateSeatsMap ?? {};
     const selectedDateForBoat = selectedBoatId === boat.id ? (dateMode === "exact" ? exactDate : selectedFlexDate) : "";
     const showFrom = !((dateMode === "exact" && !!exactDate) || !!selectedDateForBoat);
-    const rawPerks = Array.isArray(boat.list) && boat.list.length
-      ? boat.list
-      : Array.isArray(boat.listItems)
-        ? boat.listItems
-        : [];
-    const perks = rawPerks
-      .map((item) => sanitizeDisplayText(item, { stripTrailingOne: true }))
+    const displayPerks = (Array.isArray(boat.listItems) ? boat.listItems : [])
+      .map((item) => {
+        const text = sanitizeDisplayText(
+          typeof item === "object" ? item.text : item,
+          { stripTrailingOne: true }
+        );
+        return text ? { text, icon: (typeof item === "object" ? item.icon : null) || "check-icon-green" } : null;
+      })
       .filter(Boolean);
-    const displayPerks = perks;
     const nextAvailable = availability?.nextAvailable || availableDates[0];
     const isSelected = selectedBoatId === boat.id && !isLocked;
     const isPickDayMode = inlineDatesFor === boat.id;
@@ -2923,11 +2946,27 @@ function StepTwo({
     }
 
     const isSoon = boat.status === "soon";
+    const tierCfg = tierIndex >= 0 ? TIER_CONFIGS[tierIndex] : null;
+    // Header strip: always show using tier config fallback
+    const stripText  = tierCfg?.strip  || null;
+    const stripColor = tierCfg?.stripColor || "#1a3a4a";
+    // Tier label shown below image
+    const tierLabel = boat.badgeName || tierCfg?.label || "";
+    const tierLabelColor = boat.badgeColor || (isPopular ? "#2563eb" : "#0f6eb4");
+    const tierName = tierLabel
+      ? tierLabel.charAt(0).toUpperCase() + tierLabel.slice(1).toLowerCase()
+      : "";
+    const props = boat.boatProps || {};
+    const specBoatType = [
+      props.boat_type || null,
+      boat.lengthMeters ? `${boat.lengthMeters}m` : null,
+    ].filter(Boolean).join(" · ") || "—";
+    const specShade = bfOn(props.shade) ? "Full shade · flybridge" : "Partial shade · open deck";
     return (
       <div
         className={cn(
-          "group relative flex h-full w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left shadow-none transition-all duration-300",
-          isSelected && "border-neutral-200 shadow-2xl z-10",
+          "group relative flex h-full w-full shrink-0 flex-col overflow-hidden rounded-xl border bg-white text-left transition-all duration-300",
+          isSelected ? "border-primary-400 shadow-2xl z-10" : isPopular ? "border-primary-400 shadow-lg" : "border-neutral-200 shadow-sm",
           isLocked && "cursor-pointer",
           isSoon && "pointer-events-none select-none"
         )}
@@ -2938,174 +2977,188 @@ function StepTwo({
         role={isLocked ? "button" : undefined}
       >
         {isSoon && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl bg-black/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl bg-black/40 backdrop-blur-xs">
             <span className="rounded-full bg-white/90 px-4 py-1.5 text-sm font-bold text-secondary-900 shadow">Coming soon</span>
           </div>
         )}
-        {(() => {
-          const perksLower = perks.map(p => p.toLowerCase());
-          const bf = boat.boatFeatures || {};
-          const boatFeatures = getBoatFeatures(boat.boatFeatures);
-          const boatTypeLabel = [
-            bf.boat_type || null,
-            boat.lengthMeters ? `${boat.lengthMeters}M` : null,
-          ].filter(Boolean).join(" · ").toUpperCase();
-
-          return (
-            <div
-              className={cn("flex h-full flex-col", isPickDayMode && "invisible pointer-events-none", isUnavailable && "opacity-40 pointer-events-none select-none")}
-              aria-hidden={isPickDayMode}
-            >
-              {/* Image */}
-              <div className="relative w-full overflow-hidden">
-                <PhotoCarousel
-                  className="aspect-video cursor-pointer"
-                  images={boat.images?.length ? boat.images : [boat.cover]}
-                  alt={boat.name}
-                  isLocked={isPickDayMode}
-                  onOpenGallery={(startIndex) => {
-                    const slides = boat.images?.length ? boat.images : [boat.cover];
-                    Fancybox.show(slides.map(src => ({ src, type: "image" })), { startIndex: startIndex || 0 });
-                  }}
-                />
-                {isSelected && (
-                  <>
-                    <div className="pointer-events-none absolute inset-0 bg-primary-600/30" />
-                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md">
-                        <Check className="h-5 w-5 text-primary-600" strokeWidth={3} />
-                      </div>
-                      <span className="rounded-full bg-white px-4 py-1 text-sm font-bold text-primary-600 shadow-md">Selected</span>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-1 flex-col p-5 pt-4">
-                {/* Type label */}
-                {boatTypeLabel && (
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
-                )}
-
-                {/* Title */}
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="text-xl font-bold text-secondary-900 leading-tight line-clamp-1">
-                    {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
+        {/* Badge header — always visible */}
+        {stripText && (
+          <div
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5"
+            style={{ backgroundColor: stripColor }}
+          >
+            <Star className="h-3 w-3 fill-white text-white" />
+            <span className="text-xs font-black uppercase tracking-widest text-white">
+              {stripText}
+            </span>
+          </div>
+        )}
+        <div
+          className={cn("flex h-full flex-col", isPickDayMode && "invisible pointer-events-none", isUnavailable && "opacity-40 pointer-events-none select-none")}
+          aria-hidden={isPickDayMode}
+        >
+          {/* Image */}
+          <div className="relative w-full overflow-hidden" style={stripColor ? { backgroundColor: stripColor } : undefined}>
+            <PhotoCarousel
+              className="aspect-video cursor-pointer"
+              images={boat.images?.length ? boat.images : [boat.cover]}
+              alt={boat.name}
+              isLocked={isPickDayMode}
+              onOpenGallery={(startIndex) => {
+                const slides = boat.images?.length ? boat.images : [boat.cover];
+                Fancybox.show(slides.map(src => ({ src, type: "image" })), { startIndex: startIndex || 0 });
+              }}
+            />
+            {isSelected && (
+              <>
+                <div className="pointer-events-none absolute inset-0 bg-primary-600/30" />
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md">
+                    <Check className="h-5 w-5 text-primary-600" strokeWidth={3} />
                   </div>
-                  {boat.isPartner ? (
-                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600 border border-amber-200">By request</span>
-                  ) : null}
+                  <span className="rounded-full bg-white px-4 py-1 text-sm font-bold text-primary-600 shadow-md">Selected</span>
                 </div>
+              </>
+            )}
+          </div>
 
-                {/* Description */}
-                <div className="mt-1.5 text-sm leading-relaxed text-secondary-500 line-clamp-2">
+          <div className="flex flex-1 flex-col p-5">
+            {/* Tier label */}
+            {tierLabel && (
+              <span
+                className="mb-1 text-xs font-bold uppercase tracking-wider"
+                style={{ color: tierLabelColor }}
+              >
+                {tierLabel}
+              </span>
+            )}
+
+            {/* Headline */}
+            <h3 className="mb-1.5 min-h-[3.5rem] text-xl font-bold leading-tight text-secondary-900 line-clamp-3">
+              {boat.headline || (boat.id === "angels" ? "Two boats (14+ guests)" : boat.name)}
+            </h3>
+
+            {/* Description — fixed 2-line min-height so specs always align */}
+            <div className="mb-4 min-h-[2.75rem]">
+              {boatDescriptionText && (
+                <p className="text-sm leading-relaxed text-secondary-500 line-clamp-2">
                   {boatDescriptionText}
-                </div>
+                </p>
+              )}
+            </div>
 
-                {/* Fleet size info */}
-                {boat.fleetSize > 1 && (
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold text-secondary-600">
-                    <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                    {boat.fleetSize} identical boats — we assign the best available for your date
-                  </div>
-                )}
-
-                {/* Best for badge */}
-                {bf.best_for && (
-                  <div className="mt-2.5">
-                    <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600">
-                      Best for: {bf.best_for}
-                    </span>
-                  </div>
-                )}
-
-                {/* Features grid */}
-                <div className="mt-3 border-t border-neutral-100 pt-3 pb-4">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                    <div className="flex items-center gap-2 text-sm font-medium text-secondary-900">
-                      <Users className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                      Up to {boat.people}
-                    </div>
-                    {boatFeatures.map(({ label, present, Icon }) => (
-                      <div key={label} className={cn("flex items-center gap-2 text-sm", present ? "font-medium text-secondary-900" : "text-secondary-300")}>
-                        <Icon className={cn("h-3.5 w-3.5 shrink-0", present ? "text-secondary-400" : "text-neutral-300")} />
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* See details */}
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setScheduleModalBoat(boat); }}
-                  className="mt-3 mb-4 text-left inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 transition-colors w-fit"
-                >
-                  See details &amp; itinerary
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-                </button>
-
-                {/* Price + button */}
-                <div className="mt-auto border-t border-neutral-100 pt-5">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className={cn("flex min-w-0 flex-col", (isSoldOut || isLocked) && "opacity-60")}>
-                      {showFrom && <span className="text-[11px] font-semibold uppercase tracking-wide text-secondary-400 leading-none mb-0.5">From</span>}
-                      <div className="flex items-baseline gap-x-1">
-                        <span className="text-xl font-black text-secondary-900 tracking-tight">
-                          {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
-                        </span>
-                        <span className="text-xs font-semibold text-secondary-400">/ boat</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isLocked ? (
-                        <button
-                          type="button"
-                          onClick={focusStepOne}
-                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-neutral-200 bg-white px-5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50"
-                        >
-                          <Calendar className="h-4 w-4" />
-                          Select dates
-                        </button>
-                      ) : dateMode === "exact" && needsExactDateSelection ? (
-                        <Button variant="secondary" className="h-10 rounded-full px-5" onClick={focusStepOne} disabled={isDisabled}>
-                          Select date
-                        </Button>
-                      ) : isSelected ? (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); openPickDayMode(boat.id); }}
-                          className="inline-flex h-10 items-center justify-center rounded-full border border-neutral-200 bg-white px-4 text-xs font-semibold text-primary-600 transition hover:border-primary-200 hover:bg-primary-50"
-                        >
-                          {selectedDateForBoat ? "Change date" : "Pick a day"}
-                        </button>
-                      ) : (
-                        <Button
-                          type="button"
-                          variant="primary"
-                          className="h-10 rounded-full px-5"
-                          onClick={() => {
-                            if (!hasDateCriteria) {
-                              document.getElementById("step-1")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                              return;
-                            }
-                            openBoat(boat);
-                          }}
-                          disabled={isDisabled}
-                        >
-                          {!hasDateCriteria ? "Pick a date first" : "Select"}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            {/* Specs box — always 3 rows for alignment */}
+            <div className="mb-4 rounded-xl border border-neutral-100 bg-neutral-50 px-4 py-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-sm text-secondary-600">
+                <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                <span>{specBoatType}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-secondary-600">
+                <Users className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                <span>Max {boat.people} guests</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-secondary-600">
+                <Sun className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                <span>{specShade}</span>
               </div>
             </div>
-          );
-        })()}
+
+            {/* Price */}
+            <div className={cn("mb-3 flex items-baseline gap-1", (isSoldOut || isLocked) && "opacity-60")}>
+              {showFrom && <span className="text-sm font-semibold text-secondary-400">from</span>}
+              <span className="text-2xl font-black tracking-tight text-secondary-900">
+                {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
+              </span>
+              <span className="text-sm font-medium text-secondary-500">/ person</span>
+            </div>
+
+            {/* Select button */}
+            <div className="mb-1">
+              {isLocked ? (
+                <button
+                  type="button"
+                  onClick={focusStepOne}
+                  className="inline-flex w-full h-11 items-center justify-center gap-1.5 rounded-full border border-neutral-200 bg-white text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50"
+                >
+                  <Calendar className="h-4 w-4" />
+                  Select dates
+                </button>
+              ) : dateMode === "exact" && needsExactDateSelection ? (
+                <button
+                  type="button"
+                  onClick={focusStepOne}
+                  className="inline-flex w-full h-11 items-center justify-center rounded-full border-2 border-neutral-200 text-sm font-semibold text-secondary-500 transition hover:bg-neutral-50"
+                >
+                  Select date first
+                </button>
+              ) : isSelected ? (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openPickDayMode(boat.id); }}
+                  className="inline-flex w-full h-11 items-center justify-center rounded-full border-2 border-primary-300 bg-primary-50 text-sm font-semibold text-primary-600 transition hover:bg-primary-100"
+                >
+                  {selectedDateForBoat ? "Change date" : "Pick a day"}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex w-full h-11 items-center justify-center gap-2 rounded-full text-sm font-bold transition-all duration-200",
+                    isDisabled
+                      ? "border-2 border-neutral-200 text-secondary-400 cursor-not-allowed"
+                      : isPopular
+                        ? "bg-primary-600 text-white hover:bg-primary-700 shadow-sm"
+                        : "border-2 border-primary-500 text-primary-600 bg-white hover:bg-primary-50"
+                  )}
+                  onClick={() => {
+                    if (!hasDateCriteria) {
+                      document.getElementById("step-1")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      return;
+                    }
+                    openBoat(boat);
+                  }}
+                  disabled={isDisabled}
+                >
+                  {!hasDateCriteria ? "Pick a date first" : tierName ? `Select ${tierName}` : "Select"}
+                  {!isDisabled && <ArrowRight className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+
+            {/* No payment text */}
+            <p className="mb-4 text-center text-xs text-secondary-400">No payment required to view options</p>
+
+            {/* Upgrade banner */}
+            {upgradeCost > 0 && upgradeFromName && (
+              <div className="mb-4 rounded-xl border border-primary-100 bg-primary-50 px-4 py-2.5">
+                <p className="text-xs font-semibold text-primary-600">
+                  ↑ Only +{formatIDR(upgradeCost)}/person to upgrade from {upgradeFromName}
+                </p>
+              </div>
+            )}
+
+            {/* Feature checklist */}
+            {displayPerks.length > 0 && (
+              <ul className="space-y-2 border-t border-neutral-100 pt-3">
+                {displayPerks.map((perk, i) => {
+                  if (perk.icon === "none-icon-red" || perk.icon === "minis-icon-red") return null;
+                  return (
+                    <li key={i} className="flex items-start gap-2 text-sm text-secondary-700">
+                      {perk.icon === "plus-icon-green" ? (
+                        <Plus className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary-600" strokeWidth={2.5} />
+                      ) : (
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-green-500" strokeWidth={2.5} />
+                      )}
+                      <span>{perk.text}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
         {isUnavailable && (
-          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-white/70 backdrop-blur-[3px]">
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
             <p className="text-sm font-semibold text-secondary-500 mb-3 px-6 text-center">Not available for these parameters</p>
             <button
               type="button"
@@ -3127,7 +3180,7 @@ function StepTwo({
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:max-h-none sm:rounded-xl sm:p-6 sm:shadow-none"
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-85vh flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:max-h-none sm:rounded-xl sm:p-6 sm:shadow-none"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="space-y-0.5">
@@ -3161,9 +3214,9 @@ function StepTwo({
                             setDraftFlexDate(date);
                           }}
                           className={cn(
-                            "flex min-h-[58px] flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all duration-200",
+                            "flex min-h-58 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all duration-200",
                             isPicked
-                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-[1.02]"
+                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-102"
                               : isAvailable
                                 ? "border-neutral-200 bg-white text-secondary-600 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
                                 : "border-neutral-200 bg-neutral-50 text-secondary-500 opacity-40 cursor-not-allowed"
@@ -3172,7 +3225,7 @@ function StepTwo({
                         >
                           <span
                             className={cn(
-                              "text-[11px] font-semibold uppercase tracking-wide",
+                              "text-xs leading-tight font-semibold uppercase tracking-wide",
                               isPicked ? "text-primary-600" : isAvailable ? "text-secondary-400" : "text-secondary-300"
                             )}
                           >
@@ -3180,7 +3233,7 @@ function StepTwo({
                           </span>
                           <span
                             className={cn(
-                              "mt-0.5 text-xl font-extrabold leading-none",
+                              "mt-0.5 text-2xs font-bold leading-none",
                               isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400"
                             )}
                           >
@@ -3189,7 +3242,7 @@ function StepTwo({
                           {dateSeatsMap[date] !== undefined && (
                             <span
                               className={cn(
-                                "mt-0.5 text-[9px] font-bold leading-none",
+                                "mt-0.5 text-2xs font-bold leading-none",
                                 isPicked ? "text-primary-500" : isAvailable ? "text-secondary-400" : "text-secondary-300"
                               )}
                             >
@@ -3217,7 +3270,7 @@ function StepTwo({
                       <span className="text-lg font-black text-secondary-900 tracking-tight">
                         {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
                       </span>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-secondary-300">
+                      <span className="text-2xs font-bold uppercase tracking-widest text-secondary-300">
                         {boat.id === "angels" ? "/ 2 boats" : `/ ${Math.max(1, groupSize)} passenger${groupSize > 1 ? "s" : ""}`}
                       </span>
                     </div>
@@ -3228,7 +3281,7 @@ function StepTwo({
                   className={cn(
                     "inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-bold transition-all duration-200",
                     draftDate
-                      ? "bg-primary-600 text-white shadow-card hover:scale-[1.01] hover:bg-primary-600-strong active:scale-[0.98]"
+                      ? "bg-primary-600 text-white shadow-card hover:scale-101 hover:bg-primary-600-strong active:scale-98"
                       : "bg-neutral-100 text-secondary-300 cursor-not-allowed"
                   )}
                   onClick={() => confirmPickDay(draftDate)}
@@ -3257,7 +3310,7 @@ function StepTwo({
               STEP 2 OF 4
             </div>
             <h2 className={Q_THEME.text.h2}>Choose your option</h2>
-            <p className={cn(Q_THEME.text.body, "mx-auto max-w-[800px]")}>
+            <p className={cn(Q_THEME.text.body, "mx-auto max-w-200")}>
               Classic is the best value. Premium is the relaxed version of the day.
             </p>
           </div>
@@ -3265,24 +3318,32 @@ function StepTwo({
           <div
             ref={carouselRef}
             className={cn(
-              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
               dateMode === "flex" || showAllBoats ? "flex-col overflow-visible" : "snap-x snap-mandatory"
             )}
           >
             {sorted.map((boat) => {
               const boatSoldOut = hasDateCriteria && availabilityByBoat?.[boat.id]?.available === false;
               const boatTooSmall = groupSize > boat.people;
+              const rankInfo = priceRankMap[boat.id];
+              const rank = rankInfo?.rank ?? -1;
+              const total = rankInfo?.total ?? 1;
+              const tierIndex = total === 3 ? rank : total === 2 ? (rank === 0 ? 0 : 2) : -1;
+              const isPopular = tierIndex === 1;
+              const upgradeCost = rank > 0 && rankInfo?.prevPrice ? boat.priceValue - rankInfo.prevPrice : 0;
+              const prevTierIndex = tierIndex > 0 ? tierIndex - 1 : -1;
+              const upgradeFromName = rank > 0 ? (rankInfo?.prevBadgeName || TIER_CONFIGS[prevTierIndex]?.label || null) : null;
               return (
                 <div
                   key={boat.id}
                   data-card
                   className={cn(
-                    "relative flex min-h-[70vh] w-full shrink-0 sm:min-h-0 sm:h-full",
+                    "relative flex min-h-70vh w-full shrink-0 sm:min-h-0 sm:h-full",
                     !(dateMode === "flex" || showAllBoats) && "snap-center snap-always",
                     (dateMode === "flex" || showAllBoats) && "mb-4 sm:mb-0"
                   )}
                 >
-                  {renderBoatCard(boat, { isSoldOut: boatSoldOut, isTooSmall: boatTooSmall })}
+                  {renderBoatCard(boat, { isSoldOut: boatSoldOut, isTooSmall: boatTooSmall, isPopular, upgradeCost, upgradeFromName, tierIndex })}
                 </div>
               );
             })}
@@ -3374,7 +3435,7 @@ function StepTwo({
                   <CheckCircle2 className="h-4.5 w-4.5 text-primary-600" />
                 </div>
               </div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-primary-500">Your selection</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-primary-500">Your selection</div>
               <div className="mt-1 text-base font-bold tracking-tight text-secondary-900 leading-snug">
                 {confirmModalData.boat.name}
               </div>
@@ -3413,7 +3474,7 @@ function StepTwo({
                 Another option
               </button>
               <Button
-                className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-[1.01] active:scale-[0.98]"
+                className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-101 active:scale-98"
                 onClick={() => {
                   setConfirmModalData(null);
                   setTimeout(() => {
@@ -3485,7 +3546,7 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
 
   if (!total) {
     return (
-      <div className="flex h-[250px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-400">
+      <div className="flex h-250 w-full flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-400">
         <Camera className="h-8 w-8 opacity-40" />
         <span className="text-sm font-medium">No photos yet</span>
       </div>
@@ -3520,12 +3581,12 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
     >
       <div
         ref={scrollRef}
-        className="flex h-[250px] snap-x snap-mandatory rounded-xl"
+        className="flex h-250 snap-x snap-mandatory rounded-xl"
         style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" }}
         onScroll={handleScroll}
       >
         {images.map((src, i) => (
-          <div key={i} className="flex-[0_0_100%] snap-center relative shrink-0 h-[250px] overflow-hidden">
+          <div key={i} className="flex-none w-full snap-center relative shrink-0 h-250 overflow-hidden">
             <img
               src={src}
               alt={i === activeIndex ? "Day style preview" : ""}
@@ -3538,7 +3599,7 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
       </div>
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent rounded-xl" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/5 to-transparent rounded-xl" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-black/20 to-transparent" />
 
       <button
         type="button"
@@ -3804,7 +3865,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     >
       <div ref={stepRef} className="pb-28 sm:pb-24">
         {showRoutesSkeleton ? (
-          <div className="no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:snap-none sm:grid-cols-2 lg:grid-cols-3">
+          <div className="no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:snap-none sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: routeSkeletonCount }, (_, i) => (
               <SkeletonCard key={`route-skel-${i}`} />
             ))}
@@ -3814,7 +3875,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             <div
               ref={carouselRef}
               className={cn(
-                "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3",
+                "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3",
                 !showAllStyles ? "snap-x snap-mandatory" : "flex-col overflow-visible px-4"
               )}
             >
@@ -3836,7 +3897,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                     key={style.id}
                     data-route-card
                     className={cn(
-                      "group relative flex min-h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left transition-all duration-300 sm:min-h-[470px] sm:w-auto sm:snap-start",
+                      "group relative flex min-h-70vh w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left transition-all duration-300 sm:min-h-470 sm:w-auto sm:snap-start",
                       !showAllStyles && "snap-center snap-always",
                       showAllStyles && "mb-4 sm:mb-0",
                       "hover:border-primary-300 hover:shadow-md",
@@ -3899,10 +3960,9 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         }}
                         className="inline-flex items-center gap-1.5 self-start text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline underline-offset-4"
                       >
-                        <Calendar className="h-4 w-4" />
-                        Schedule
+                        See itinerary
                       </button>
-                      <div className="flex min-h-[3.75rem] flex-wrap content-start gap-x-3 gap-y-2">
+                      <div className="flex min-h-3.75 flex-wrap content-start gap-x-3 gap-y-2">
                         {chips.map((item) => {
                           const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
                           return (
@@ -4217,7 +4277,7 @@ function StepTransfers({
               </div>
             </label>
             {needsPickup && (
-              <div className="border-t border-neutral-100 px-5 sm:pl-[88px] sm:pr-5 pb-4 pt-3 space-y-3">
+              <div className="border-t border-neutral-100 px-5 pb-4 pt-3 space-y-3 sm:pl-22 sm:pr-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</label>
                   <input
@@ -4304,7 +4364,7 @@ function StepTransfers({
           <div className="flex justify-end mt-6">
             <button
               onClick={onContinue}
-              className="inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95"
+              className="btn-primary inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg"
             >
               Review your booking <ArrowRight className="ml-2 h-4 w-4" />
             </button>
@@ -4781,11 +4841,11 @@ function StepExtras({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="line-clamp-1 text-[15px] font-bold leading-tight text-secondary-900 sm:line-clamp-2 sm:text-base sm:leading-[1.3]">
+            <div className="line-clamp-1 text-base leading-tight font-bold leading-tight text-secondary-900 sm:line-clamp-2 sm:text-base sm:leading-tight">
               {extra.name}
             </div>
             {/* <div
-              className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-secondary-500 sm:mt-1 sm:line-clamp-2 sm:text-sm sm:leading-[1.4]"
+              className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-secondary-500 sm:mt-1 sm:line-clamp-2 sm:text-sm sm:leading-normal"
               dangerouslySetInnerHTML={{ __html: extra.description }}
             /> */}
             <div className="mt-0.5 flex items-center gap-2">
@@ -4800,7 +4860,7 @@ function StepExtras({
             </div>
           </div>
         </div>
-        <div className="flex w-[90px] shrink-0 flex-col items-end justify-center gap-1 sm:w-[104px]">
+        <div className="flex w-104 shrink-0 flex-col items-end justify-center gap-1">
           {extra.hasChildren ? (
             <button
               type="button"
@@ -4967,7 +5027,7 @@ function StepExtras({
                     <button
                       type="button"
                       onClick={onReview}
-                      className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95"
+                      className="btn-primary w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg"
                     >
                       Review your booking <ArrowRight className="ml-2 h-4 w-4" />
                     </button>
@@ -5046,7 +5106,7 @@ function StepExtras({
               </div>
               <button
                 onClick={closeManageExtras}
-                className="inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
+                className="btn-primary inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-2.5 text-sm font-bold text-white"
               >
                 Done
               </button>
@@ -5057,7 +5117,7 @@ function StepExtras({
       <Modal
         isOpen={!!activeExtraId && !!activeExtraForPopup}
         onClose={() => setActiveExtraId(null)}
-        maxWidth="max-w-[640px]"
+        maxWidth="max-w-screen-sm"
         bodyClassName="p-0 max-h-none overflow-hidden"
         showClose={false}
       >
@@ -5173,12 +5233,12 @@ function StepExtras({
                             <button type="button" onClick={() => setPickerQty(v => Math.max(1, v - 1))} disabled={pickerQty <= 1} className="flex h-10 w-10 items-center justify-center text-secondary-500 hover:bg-neutral-50 disabled:opacity-30 transition rounded-l-xl">
                               <Minus className="h-3.5 w-3.5" />
                             </button>
-                            <span className="min-w-[2rem] text-center text-sm font-bold tabular-nums text-secondary-900">{pickerQty}</span>
+                            <span className="min-w-8 text-center text-sm font-bold tabular-nums text-secondary-900">{pickerQty}</span>
                             <button type="button" onClick={() => setPickerQty(v => Math.min(selectedMaxQty, v + 1))} disabled={pickerQty >= selectedMaxQty} className="flex h-10 w-10 items-center justify-center text-secondary-500 hover:bg-neutral-50 disabled:opacity-30 transition rounded-r-xl">
                               <Plus className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <span className="text-sm font-bold text-primary-600 min-w-[3rem]">{formatIDR((selectedChild?.price || 0) * pickerQty)}</span>
+                          <span className="text-sm font-bold text-primary-600 min-w-12">{formatIDR((selectedChild?.price || 0) * pickerQty)}</span>
                           <button
                             type="button"
                             onClick={() => {
@@ -5200,7 +5260,7 @@ function StepExtras({
                       )}
                       {addedItems.length > 0 && (
                         <div className="border-t border-neutral-100 pt-1">
-                          <div className="text-[10px] font-bold uppercase tracking-widest text-secondary-400 py-2">Your selection</div>
+                          <div className="text-2xs font-bold uppercase tracking-widest text-secondary-400 py-2">Your selection</div>
                           {addedItems.map((child, idx) => (
                             <div key={child.id} className={cn("flex items-center gap-3 py-3", idx > 0 && "border-t border-neutral-100")}>
                               {child.images_with_thumbs?.[0]?.thumb ? (
@@ -5210,7 +5270,7 @@ function StepExtras({
                               ) : null}
                               <span className="flex-1 truncate text-sm font-medium text-secondary-800">{child.name}</span>
                               <span className="text-sm text-secondary-400">× {draftQuantities[child.id]}</span>
-                              <span className="text-sm font-bold text-secondary-900 min-w-[3rem] text-right">{formatIDR(child.price * Number(draftQuantities[child.id] || 0))}</span>
+                              <span className="text-sm font-bold text-secondary-900 min-w-12 text-right">{formatIDR(child.price * Number(draftQuantities[child.id] || 0))}</span>
                               <button type="button" onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: 0 }))} className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 bg-white text-secondary-400 hover:border-red-200 hover:text-red-500 transition">
                                 <X className="h-3.5 w-3.5" />
                               </button>
@@ -5233,7 +5293,7 @@ function StepExtras({
                       {!isSoldOut && (
                         <div className="inline-flex h-9 shrink-0 items-center gap-1 rounded-full border border-neutral-200 bg-white px-1.5">
                           <button type="button" onClick={() => updateDraftQty(currentItem.id, qty - 1, maxQty)} className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition" disabled={qty <= 1}><Minus className="h-3 w-3" /></button>
-                          <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums text-primary-600">{qty}</span>
+                          <span className="min-w-6 text-center text-sm font-bold tabular-nums text-primary-600">{qty}</span>
                           <button type="button" onClick={() => updateDraftQty(currentItem.id, qty + 1, maxQty)} className="inline-flex h-6 w-6 items-center justify-center rounded-full text-secondary-500 hover:bg-neutral-100 disabled:opacity-30 transition" disabled={qty >= maxQty}><Plus className="h-3 w-3" /></button>
                         </div>
                       )}
@@ -5489,9 +5549,9 @@ function StepFive({
           <p className={Q_THEME.text.body}>Confirm details before reserving.</p>
         </div>
         <InfoLinksRow onOpenTourInfo={onOpenTourInfo} className="mb-6" />
-        <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.7fr]">
-          <div className="space-y-5">
-            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <div className="mt-6 grid gap-8 lg:grid-cols-asymmetric-base">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-xl border border-neutral-200 bg-white">
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -5510,7 +5570,7 @@ function StepFive({
                           type="button"
                           onClick={() => handleRowClick(row)}
                           className={cn(
-                            "flex w-full items-center justify-between gap-3 py-3 text-left transition",
+                            "flex w-full items-center justify-between gap-3 py-4 text-left transition",
                             isMuted && "opacity-55"
                           )}
                         >
@@ -5775,7 +5835,7 @@ function HeroDetails({
   const lead = "All-inclusive day with zero logistics  everything essential is covered.";
   return (
     <section className="py-6 sm:py-10">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="flex flex-col gap-8">
           <div>
             <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
@@ -5901,8 +5961,8 @@ function ChooseBoatSection({
         type="button"
         onClick={() => onOpen(yacht)}
         className={cn(
-          "group flex h-full w-[300px] min-w-[300px] snap-center flex-col rounded-xl border bg-white p-5 text-left shadow-card transition-transform sm:snap-start",
-          "sm:w-[260px] sm:min-w-[260px] sm:p-4",
+          "group flex h-full w-75 min-w-75 snap-center flex-col rounded-xl border bg-white p-5 text-left shadow-card transition-transform sm:snap-start",
+          "sm:w-65 sm:min-w-65 sm:p-4",
           "hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-card",
           isSelected ? "border-neutral-300 ring-1 ring-border-soft" : "border-neutral-200"
         )}
@@ -5914,10 +5974,10 @@ function ChooseBoatSection({
             alt={`${yacht.name} yacht`}
             loading="lazy"
             decoding="async"
-            className="h-56 w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:h-48"
+            className="h-56 w-full object-cover transition duration-300 group-hover:scale-103 sm:h-48"
           />
           {yacht.tag ? (
-            <div className="absolute right-3 top-3 rounded-xl bg-white/90 backdrop-blur-md px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card">
+            <div className="absolute right-3 top-3 rounded-xl bg-white/90 px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card">
               {yacht.tag}
             </div>
           ) : null}
@@ -5992,7 +6052,7 @@ function ChooseBoatSection({
       title="Pick a boat for your tour"
       subtitle="Each yacht is fully private for your group. Choose the model, set the pace, and add extras on request."
       backgroundClassName={SECTION_BACKGROUNDS.ocean}
-      containerClassName="max-w-7xl"
+      containerClassName="container"
     >
       {!hasDateCriteria ? (
         <div className="mb-4 rounded-xl border border-neutral-200 bg-white p-4 text-sm text-secondary-600 shadow-card">
@@ -6006,7 +6066,7 @@ function ChooseBoatSection({
       ) : null}
       <div className="-mx-4 overflow-hidden sm:mx-0">
         <div
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-4 px-[calc((100vw-300px)/2)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4"
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-carousel-center pb-4 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4"
         >
           {availableYachts.map((yacht) => renderCard(yacht))}
         </div>
@@ -6045,12 +6105,12 @@ function ChooseBoatSection({
             <div className="text-sm font-semibold uppercase tracking-wide-xl text-secondary-400">
               Private yacht option
             </div>
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+            <div className="mt-5 grid gap-4 lg:grid-cols-asymmetric-wide">
               <div>
                 <PhotoCarousel
                   images={activeYacht.images}
                   alt={activeYacht.name}
-                  className="h-[200px] sm:h-[260px]"
+                  className="h-200 sm:h-65"
                   onOpenGallery={(idx) => {
                     Fancybox.show(activeYacht.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
                   }}
@@ -6378,7 +6438,7 @@ function DayPlan() {
       title="Your private day plan"
       subtitle="A private premium day with flexible stops, curated snorkeling, and time reserved for each highlight."
       backgroundClassName={SECTION_BACKGROUNDS.mist}
-      containerClassName="max-w-7xl"
+      containerClassName="container"
     >
       <div className="grid gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
@@ -6552,12 +6612,12 @@ function DayPlan() {
         maxWidth="max-w-3xl"
       >
         {infoItem ? (
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+          <div className="grid gap-4 lg:grid-cols-asymmetric-wide">
             <div>
               <PhotoCarousel
                 images={infoItem.images}
                 alt={infoItem.title}
-                className="h-[200px] sm:h-60"
+                className="h-200 sm:h-60"
                 onOpenGallery={(idx) => {
                   Fancybox.show(infoItem.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
                 }}
@@ -7016,7 +7076,7 @@ function Compare() {
       title="Compare tours"
       subtitle="Want a more elevated experience? Upgrade anytime and enjoy extra comfort and premium touches on the same iconic route."
       backgroundClassName={SECTION_BACKGROUNDS.ocean}
-      containerClassName="max-w-7xl"
+      containerClassName="container"
     >
       <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] lg:grid lg:grid-cols-3">
         {tiers.map((t, i) => {
@@ -7037,7 +7097,7 @@ function Compare() {
               key={i}
               variant={cardVariant}
               className={cn(
-                "min-w-[85%] snap-start lg:min-w-0 flex flex-col p-6",
+                "min-w-85pct snap-start lg:min-w-0 flex flex-col p-6",
                 // Remove the old cardTone logic which might conflict
               )}
             >
@@ -7101,7 +7161,7 @@ function Compare() {
       <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-card">
         <div className="text-sm font-semibold text-secondary-900">Premium Private vs Standard Private (another operator)</div>
         <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2">
-          <div className="min-w-[80%] snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
+          <div className="min-w-4/5 snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
             <div className="text-sm font-semibold uppercase tracking-wide text-secondary-500">Bluuu Premium Private</div>
             <ul className="mt-3 space-y-2 text-sm text-secondary-600">
               <li className="flex items-start gap-2">
@@ -7115,7 +7175,7 @@ function Compare() {
               </li>
             </ul>
           </div>
-          <div className="min-w-[80%] snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
+          <div className="min-w-80pct snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
             <div className="text-sm font-semibold uppercase tracking-wide text-secondary-500">Typical standard private</div>
             <ul className="mt-3 space-y-2 text-sm text-secondary-600">
               <li className="flex items-start gap-2">
@@ -7311,7 +7371,7 @@ function FinalCTA({
     : "No extras selected";
   return (
     <section className="py-14 sm:py-16" id="booking">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="container">
         <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-gradient-to-r from-primary-50 via-white to-primary-100 p-8 shadow-card animate-gradient-flow">
           <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center">
             <div className="lg:col-span-7">
@@ -7422,31 +7482,35 @@ export default function Shared_tour_01() {
     description: "Affordable shared speedboat day tour from Bali to Nusa Penida. Manta rays, snorkeling & land tour — all-inclusive from IDR 1,300,000 per person.",
   });
   const { selectedCurrency } = useCurrency();
-  const { sharedTours, transfers, covers: allCovers, loading } = useTours();
+  const { sharedTours, sharedTransfers: transfers, sharedCovers: allCovers, loading } = useTours();
   const { extras, sharedRoutes: privateRoutes } = useExtras();
-  const covers = useMemo(
-    () =>
-      (allCovers || []).filter((cover) => {
-        const raw = cover?.per_boat;
-        if (typeof raw === "boolean") return !raw;
-        if (typeof raw === "number") return raw === 0;
-        if (typeof raw === "string") {
-          const normalized = raw.trim().toLowerCase();
-          return normalized === "false" || normalized === "0";
-        }
-        return false;
-      }),
-    [allCovers]
-  );
+  const covers = allCovers || [];
   // State Declarations
   const [selectedBoatId, setSelectedBoatId] = useState(null);
-  const [dateMode, setDateMode] = useState("flex");
-  const [exactDate, setExactDate] = useState("");
+  const [dateMode, setDateMode] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") ? "exact" : "flex";
+  });
+  const [exactDate, setExactDate] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") || "";
+  });
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
-  const [adults, setAdults] = useState(1);
-  const [kids, setKids] = useState(0);
-  const [dateSelectionPreference, setDateSelectionPreference] = useState("pickLater");
+  const [adults, setAdults] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("adults") || "1", 10);
+    return isNaN(n) || n < 1 ? 1 : n;
+  });
+  const [kids, setKids] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("kids") || "0", 10);
+    return isNaN(n) || n < 0 ? 0 : n;
+  });
+  const [dateSelectionPreference, setDateSelectionPreference] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") ? "pickNow" : "pickLater";
+  });
   const [selectedFlexDate, setSelectedFlexDate] = useState("");
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const selectionModalGuardRef = useRef(0);
@@ -7461,12 +7525,17 @@ export default function Shared_tour_01() {
   }, []);
   const [selectedStyleId, setSelectedStyleId] = useState(null);
   const [selectedExtras, setSelectedExtras] = useState({});
-  const [selectedTransferId, setSelectedTransferId] = useState(null);
+  const [selectedTransferId, setSelectedTransferId] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get("transfer");
+    return v ? parseInt(v, 10) || v : null;
+  });
   const [selectedCoverId, setSelectedCoverId] = useState(null);
   const [availabilityMap, setAvailabilityMap] = useState({});
   const [calendarAvailMap, setCalendarAvailMap] = useState({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const d = new Date();
+    const p = new URLSearchParams(window.location.search);
+    const dateParam = p.get("date");
+    const d = dateParam ? new Date(dateParam + "T00:00:00") : new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [tourDetails, setTourDetails] = useState(null);
@@ -7513,19 +7582,16 @@ export default function Shared_tour_01() {
         : Array.isArray(tour?.json?.list)
           ? tour.json.list
           : [];
-      const listItems = Array.from(
-        new Set(
-          rawList
-            .map((item) => {
-              if (typeof item === "string") return item.trim();
-              if (item && typeof item === "object") {
-                return String(item.text || item.test || item.title || "").trim();
-              }
-              return "";
-            })
-            .filter(Boolean)
-        )
-      );
+      const listItems = rawList
+        .map((item) => {
+          if (typeof item === "string") return { text: item.trim(), icon: "check-icon-green" };
+          if (item && typeof item === "object") {
+            const text = String(item.text || item.test || item.title || "").trim();
+            return text ? { text, icon: item.icon || "check-icon-green" } : null;
+          }
+          return null;
+        })
+        .filter(Boolean);
       // Build route schedule from embedded route data (returned by API) or fall back to routes list
       const embeddedRoute = tour.route || null;
       const routeId = tour.route_id ?? null;
@@ -7560,11 +7626,42 @@ export default function Shared_tour_01() {
         routeSchedule,
         status: tour.status || "ready",
         fleetSize: Number(tour.fleet_size) || 0,
+        badgeName: tour.badge_name || null,
+        badgeColor: tour.badge_color || null,
+        boatProps: tour.props || {},
+        headline: tour.json?.subtitle || tour.json?.headline || "",
       };
     });
     // Final uniqueness sweep to prevent React duplicate key errors
     return Array.from(new Map(options.map(opt => [opt.id, opt])).values());
   }, [sharedTours, privateRoutes]);
+  // Pre-select boat from URL ?tour= param once data is loaded
+  const urlTourIdRef = useRef((() => {
+    const n = parseInt(new URLSearchParams(window.location.search).get("tour") || "", 10);
+    return isNaN(n) ? null : n;
+  })());
+  const urlTourAppliedRef = useRef(false);
+  useEffect(() => {
+    if (urlTourAppliedRef.current || !urlTourIdRef.current || !yachtOptions.length) return;
+    const match = yachtOptions.find((y) => Number(y.tourId) === urlTourIdRef.current);
+    if (match) {
+      setSelectedBoatId(match.id);
+      urlTourAppliedRef.current = true;
+    }
+  }, [yachtOptions]);
+  const urlCoverIdRef = useRef((() => {
+    const v = new URLSearchParams(window.location.search).get("cover");
+    return v || null;
+  })());
+  const urlCoverAppliedRef = useRef(false);
+  useEffect(() => {
+    if (urlCoverAppliedRef.current || !urlCoverIdRef.current || !(covers || []).length) return;
+    const match = (covers || []).find((c) => String(c.id) === String(urlCoverIdRef.current));
+    if (match) {
+      setSelectedCoverId(match.id);
+      urlCoverAppliedRef.current = true;
+    }
+  }, [covers]);
   // Fetch availability from backend when user selects a date or date range
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
@@ -7593,6 +7690,7 @@ export default function Shared_tour_01() {
                   available_seats: row.available_seats,
                   available: row.available,
                   price_per_person: row.price_per_person,
+                  boat_id: row.boat_id,
                 };
               }
             } catch (err) {
@@ -7975,8 +8073,10 @@ export default function Shared_tour_01() {
   };
 
   const handleApplyCheckout = () => {
+    const _checkoutDate = dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart || "");
+    const _availBoatId = availabilityMap[selectedYacht?.id]?.[_checkoutDate]?.boat_id ?? null;
     const params = new URLSearchParams({
-      date: dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart || ""),
+      date: _checkoutDate,
       adults: String(adults),
       kids: String(kids),
       boat: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
@@ -7984,7 +8084,7 @@ export default function Shared_tour_01() {
       tourName: selectedYacht?.name ?? "Shared Tour",
       tourCategory: "Shared Tour",
       tourType: "shared",
-      style: selectedStyleId ?? "",
+      style: String(selectedStyle?.id ?? selectedYacht?.routeId ?? ""),
       programId: String(selectedStyle?.program_id ?? ""),
       restaurantId: String(selectedStyle?.restaurant_id ?? ""),
       payMode,
@@ -7995,8 +8095,10 @@ export default function Shared_tour_01() {
       requests: specialRequests,
       pickup_address: pickupAddress,
       dropoff_address: dropoffAddress,
-      boatPrice: String(mainBasePrice ?? 0),
+      boatPrice: "0",
+      totalBoatPrice: String(mainBasePrice ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
+      ...(_availBoatId ? { availBoatId: String(_availBoatId) } : {}),
       analyticsCurrency: "IDR",
       analyticsTotal: String(totalPrice),
     });
@@ -8337,7 +8439,7 @@ export default function Shared_tour_01() {
         <Modal
           isOpen={isTourInfoOpen}
           onClose={() => setIsTourInfoOpen(false)}
-          maxWidth="max-w-[860px]"
+          maxWidth="max-w-4xl"
           bodyClassName="p-0"
           showClose={false}
         >
@@ -8362,7 +8464,7 @@ export default function Shared_tour_01() {
                 {!selectedBoatId ? (
                   <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                     <div className="flex flex-col lg:flex-row lg:items-stretch">
-                      <div className="h-48 sm:h-64 lg:h-auto w-full lg:w-[35%] shrink-0 bg-neutral-100 animate-pulse" />
+                      <div className="h-48 sm:h-64 lg:h-auto w-full lg:w-35pct shrink-0 bg-neutral-100 animate-pulse" />
                       <div className="flex-1 p-5 sm:p-8 lg:p-10 space-y-4">
                         <div className="h-4 w-2/3 rounded bg-neutral-100 animate-pulse" />
                         <div className="h-3 w-full rounded bg-neutral-100 animate-pulse" />
@@ -8384,7 +8486,7 @@ export default function Shared_tour_01() {
                 ) : isFetchingInlineRoute ? (
                   <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                     <div className="flex flex-col lg:flex-row lg:items-stretch">
-                      <div className="h-48 sm:h-64 lg:h-auto w-full lg:w-[35%] shrink-0 bg-neutral-100 animate-pulse" />
+                      <div className="h-48 sm:h-64 lg:h-auto w-full lg:w-35pct shrink-0 bg-neutral-100 animate-pulse" />
                       <div className="flex-1 p-5 sm:p-8 lg:p-10 space-y-4">
                         <div className="h-4 w-2/3 rounded bg-neutral-100 animate-pulse" />
                         <div className="h-3 w-full rounded bg-neutral-100 animate-pulse" />
@@ -8651,7 +8753,7 @@ function StepCheckout({
 
   return (
     <>
-      <Section id="step-checkout" className="py-8 sm:py-10" containerClassName="max-w-7xl">
+      <Section id="step-checkout" className="py-8 sm:py-10" containerClassName="container">
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-secondary-900 sm:text-3xl">Complete your booking</h2>
@@ -8682,7 +8784,7 @@ function StepCheckout({
                     <span
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
                       className={cn(
-                        "absolute -bottom-5 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
+                        "absolute -bottom-5 text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
                         isActive ? "text-primary-700" : isCompleted ? "text-primary-600 cursor-pointer" : "text-neutral-300"
                       )}
                       style={{ left: s.num === 1 ? '0' : s.num === 3 ? 'auto' : '50%', right: s.num === 3 ? '0' : 'auto', transform: s.num === 2 ? 'translateX(-50%)' : 'none' }}>
@@ -8960,7 +9062,7 @@ function StepCheckout({
               <Button
                 onClick={() => step < 3 ? onSetStep(step + 1) : handleFinalize()}
                 disabled={step === 3 && (!agreedTerms || !agreedLiability)}
-                className="h-10 min-w-[128px] px-5 shadow-md shadow-primary-600/20"
+                className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
                 {step < 3 ? "Continue" : "Complete booking"}
               </Button>
@@ -9199,7 +9301,7 @@ function CheckoutModal({
           <Button
             onClick={() => step < 3 ? onSetStep(step + 1) : onFinalize()}
             disabled={!canContinue}
-            className="min-w-[120px]"
+            className="min-w-32"
           >
             {step < 3 ? "Continue" : "Complete booking"}
           </Button>
