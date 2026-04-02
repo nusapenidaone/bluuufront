@@ -1,17 +1,33 @@
 fields:
+    closed:
+        label: Closed
+        span: full
+        type: switch
+        
+
     name:
         label: Name
         span: left
         type: text
-    amo_name:
-        label: 'Amo Boat Name'
-        span: left
-        type: text
+    company:
+        label: Company
+        nameFrom: name
+        span: auto
+        type: relation
     capacity:
         label: Capacity
-        span: left
-        type: number
-    closed:
-        label: Closed
         span: auto
-        type: switch
+        type: number
+        
+    odoo_id:
+        label: 'Odoo ID'
+        span: auto
+        type: number
+        
+
+
+
+    amo_name:
+        label: 'Amo Boat Name'
+        span: auto
+        type: text

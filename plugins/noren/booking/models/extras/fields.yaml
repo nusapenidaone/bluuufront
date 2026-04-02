@@ -15,6 +15,11 @@ tabs:
             span: auto
             type: text
             tab: Main
+        odoo_id:
+            label: Odoo ID
+            span: auto
+            type: number
+            tab: Main
         price:
             label: Price
             span: auto

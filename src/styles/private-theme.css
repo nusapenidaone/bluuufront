@@ -11,11 +11,11 @@
   --surface-glass: rgba(255, 255, 255, 0.78);
   --surface-glass-strong: rgba(255, 255, 255, 0.92);
 
-  --text: #0b1d39;
-  --text-muted: #4f6380;
-  --text-subtle: #7b8da7;
-  --text-faint: #9aa8be;
-  --text-ghost: #aeb8c8;
+  --ink: #0b1d39;
+  --ink-muted: #4f6380;
+  --ink-subtle: #7b8da7;
+  --ink-faint: #9aa8be;
+  --ink-ghost: #aeb8c8;
   --text-inverse: #ffffff;
   --text-inverse-muted: rgba(255, 255, 255, 0.84);
   --text-inverse-faint: rgba(255, 255, 255, 0.68);

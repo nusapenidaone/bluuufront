@@ -2,10 +2,18 @@ columns:
     id:
         label: ID
         type: number
+    odoo_id:
+        label: 'Odoo ID'
+        type: number
     name:
         label: Name
         type: text
-
+    company_name:
+        label: Compamy
+        relation: company
+        valueFrom: name
+        span: auto
+        type: text
     capacity:
         label: Capacity
         type: number

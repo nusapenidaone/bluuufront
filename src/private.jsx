@@ -43,9 +43,9 @@ import {
 
 function SkeletonCard() {
   return (
-    <div className="rounded-xl border border-neutral-100 bg-white overflow-hidden flex flex-col sm:min-h-[470px]">
+    <div className="rounded-xl border border-neutral-100 bg-white overflow-hidden flex flex-col sm:min-h-470">
       {/* Image area */}
-      <div className="relative h-[250px] shrink-0 overflow-hidden bg-neutral-100">
+      <div className="relative h-250 shrink-0 overflow-hidden bg-neutral-100">
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
           animate={{ x: ["-100%", "100%"] }}
@@ -74,7 +74,7 @@ function SkeletonCard() {
         {/* Schedule link */}
         <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
         {/* Chips */}
-        <div className="flex min-h-[3.75rem] flex-wrap content-start gap-x-3 gap-y-2">
+        <div className="flex min-h-3.75 flex-wrap content-start gap-x-3 gap-y-2">
           <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
           <div className="h-6 w-28 rounded-full bg-neutral-100 animate-pulse" />
         </div>
@@ -256,7 +256,7 @@ const Q_THEME = {
     caption: "text-sm text-slate-500 font-medium",
     label: "text-xs font-black uppercase tracking-widest text-primary-600",
   },
-  container: "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8", // Wider container
+  container: "container", // Wider container
   section: "py-20 md:py-32", // More vertical space
   card: {
     base: "bg-white rounded-xl border border-slate-100 transition-all duration-300",
@@ -286,7 +286,7 @@ function PremiumSection({
 
 function PremiumContainer({ className, children, ...props }) {
   return (
-    <div className={cn("mx-auto max-w-7xl px-4 sm:px-6 lg:px-8", className)} {...props}>
+    <div className={cn("container", className)} {...props}>
       {children}
     </div>
   );
@@ -452,9 +452,9 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
                   key={d}
                   type="button"
                   onClick={() => setPickedDate(d)}
-                  className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white px-2 py-1 text-secondary-600 transition-all duration-200 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
+                  className="flex min-h-58 flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white px-2 py-1 text-secondary-600 transition-all duration-200 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
                 >
-                  <span className="text-[11px] font-semibold uppercase tracking-wide text-secondary-400">{monthLabel}</span>
+                  <span className="text-xs leading-tight font-semibold uppercase tracking-wide text-secondary-400">{monthLabel}</span>
                   <span className="mt-0.5 text-xl font-extrabold leading-none text-secondary-900">{dayLabel}</span>
                 </button>
               );
@@ -791,7 +791,7 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
         <div className="mt-4 grid gap-2">
           <Button
             onClick={onReserve}
-            className={cn("w-full rounded-full h-12 text-sm font-black transition-all hover:scale-[1.02] active:scale-[0.98]", reserveDisabled && "cursor-not-allowed opacity-60")}
+            className={cn("w-full rounded-full h-12 text-sm font-black transition-all hover:scale-102 active:scale-98", reserveDisabled && "cursor-not-allowed opacity-60")}
             disabled={reserveDisabled}
           >
             Reserve now <ArrowRight className="h-4 w-4" />
@@ -893,7 +893,7 @@ function HeroGallery({ images = [] }) {
         {items.map((it) => (
           <div
             key={it.label}
-            className="relative min-w-[82%] snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card"
+            className="relative min-w-82pct snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card"
           >
             <img
               src={it.src}
@@ -908,7 +908,7 @@ function HeroGallery({ images = [] }) {
           </div>
         ))}
       </div>
-      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[180px]">
+      <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-180">
         <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:col-span-2 sm:row-span-2">
           <img
             src={items[0].src}
@@ -926,7 +926,7 @@ function HeroGallery({ images = [] }) {
             key={it.label}
             className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card"
           >
-            <div className="h-full min-h-[180px] bg-neutral-50 lg:min-h-0">
+            <div className="h-full min-h-180 bg-neutral-50 lg:min-h-0">
               <img
                 src={it.src}
                 alt={it.label}
@@ -993,14 +993,14 @@ function GalleryHeroGrid({ onOpenGallery }) {
             data-vibe-card
             type="button"
             onClick={() => onOpenGallery(vibe.id)}
-            className="group flex min-w-[72%] snap-start flex-col overflow-hidden rounded-full border border-neutral-200 bg-white text-left shadow-none transition hover:border-neutral-300 sm:min-w-[46%] lg:min-w-[30%]"
+            className="group flex min-w-72pct snap-start flex-col overflow-hidden rounded-full border border-neutral-200 bg-white text-left shadow-none transition hover:border-neutral-300 sm:min-w-46pct lg:min-w-30pct"
           >
-            <div className="relative aspect-[4/3] overflow-hidden">
+            <div className="relative aspect-4/3 overflow-hidden">
               <PhotoCarousel
-                images={vibe.photos?.length ? vibe.photos : [vibe.hero]}
+                photos={vibe.gallery}
                 alt={vibe.title}
                 onOpenGallery={() => onOpenGallery(vibe.id)}
-                className="aspect-[4/3]"
+                className="aspect-4/3"
               />
               <div className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/70 backdrop-blur-sm px-2 py-0.5 text-sm font-semibold text-secondary-600 backdrop-blur">
                 {vibe.id === "classic" ? (
@@ -1013,14 +1013,14 @@ function GalleryHeroGrid({ onOpenGallery }) {
                 )}
               </div>
             </div>
-            <div className="flex min-h-[150px] flex-1 flex-col p-4">
-              <div className="mt-2 line-clamp-1 min-h-[1.25rem] text-sm font-semibold text-secondary-900">
+            <div className="flex min-h-150 flex-1 flex-col p-4">
+              <div className="mt-2 line-clamp-1 min-h-1.25 text-sm font-semibold text-secondary-900">
                 {vibe.title}
               </div>
-              <div className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-5 text-secondary-600">
+              <div className="mt-2 line-clamp-2 min-h-2.5 text-sm leading-5 text-secondary-600">
                 {vibe.description}
               </div>
-              <div className="mt-2 inline-flex min-h-[1.25rem] items-center gap-1.5 text-sm text-secondary-500 whitespace-nowrap">
+              <div className="mt-2 inline-flex min-h-1.25 items-center gap-1.5 text-sm text-secondary-500 whitespace-nowrap">
                 <Sun className="h-3 w-3 text-secondary-400" />
                 <span className="text-secondary-400">Afternoon stop:</span>
                 <span className="font-semibold text-secondary-600">{vibe.afterLunch}</span>
@@ -1309,7 +1309,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
   }, [activeVibe, lightboxIndex]);
   return (
     <PremiumSection id="step-5" className="bg-transparent">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-card sm:p-8">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -1385,7 +1385,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
       >
         {activeVibe ? (
           <div>
-            <div className="no-scrollbar max-h-[70vh] overflow-y-auto pr-1">
+            <div className="no-scrollbar max-h-70vh overflow-y-auto pr-1">
               <div className="px-4 py-3 pb-6 sm:px-6">
                 <div className="space-y-4">
                   <div className="space-y-3">
@@ -1415,7 +1415,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                               key={photo}
                               type="button"
                               onClick={() => setLightboxIndex(idx)}
-                              className="group relative aspect-[4/3] w-[280px] shrink-0 snap-start overflow-hidden rounded-full bg-neutral-50 shadow-none ring-1 ring-neutral-200 transition duration-200 hover:ring-border-strong md:w-80 lg:w-[360px]"
+                              className="group relative aspect-4/3 w-70 shrink-0 snap-start overflow-hidden rounded-full bg-neutral-50 shadow-none ring-1 ring-neutral-200 transition duration-200 hover:ring-border-strong md:w-80 lg:w-90"
                             >
                               <img
                                 src={photo}
@@ -1487,12 +1487,12 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                 <div className="mb-2 text-sm font-semibold uppercase tracking-wide-xl text-secondary-400">
                                   Top picks for this vibe
                                 </div>
-                                <div className="no-scrollbar max-h-[520px] overflow-y-auto rounded-xl bg-white shadow-card">
+                                <div className="no-scrollbar max-h-520 overflow-y-auto rounded-xl bg-white shadow-card">
                                   <div className="divide-y divide-border-soft">
                                     {(extrasShowAll ? activeVibe.extras : visibleVibeExtras).map((extra) => (
                                       <div
                                         key={extra.id}
-                                        className="grid grid-cols-[auto,1fr,auto] items-center gap-4 px-4 py-3"
+                                        className="grid grid-cols-body-layout items-center gap-4 px-4 py-3"
                                       >
                                         <div className="flex shrink-0">
                                           <img
@@ -1536,7 +1536,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                                     Remove
                                                   </button>
                                                 )}
-                                                <span className="min-w-[18px] text-center text-sm font-black text-secondary-900 tabular-nums">
+                                                <span className="min-h-180 text-center text-sm font-black text-secondary-900 tabular-nums">
                                                   {getExtraQuantity(extra.id)}
                                                 </span>
                                                 <button
@@ -1553,7 +1553,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                             <button
                                               type="button"
                                               onClick={() => openExtraDetails(extra)}
-                                              className="inline-flex h-9 w-[110px] items-center justify-center rounded-full bg-blue-50/80 px-4 text-xs font-black text-blue-600 transition-all hover:bg-blue-100 hover:scale-[1.02] active:scale-95"
+                                              className="inline-flex h-9 w-110 items-center justify-center rounded-full bg-blue-50/80 px-4 text-xs font-black text-blue-600 transition-all hover:bg-blue-100 hover:scale-102 active:scale-95"
                                             >
                                               {extra.hasChildren ? `${extra.children.length} Options` : "Add"}
                                             </button>
@@ -1604,7 +1604,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                 </div>
               </div>
             </div>
-            <div className="sticky bottom-0 z-10 border-t border-neutral-200 bg-white/90 backdrop-blur-md backdrop-blur">
+            <div className="sticky bottom-0 z-10 border-t border-neutral-200 bg-white/90 backdrop-blur-md">
               <div className="flex flex-col gap-3 px-4 pb-3 pt-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <div className="flex flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-secondary-600">
@@ -1653,9 +1653,9 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
         onClose={() => setAllExtrasOpen(false)}
         title="Add extras"
         subtitle="Customize the vibe with optional additions. Selections save automatically."
-        maxWidth="max-w-[980px]"
+        maxWidth="max-w-5xl"
       >
-        <div className="no-scrollbar max-h-[70vh] overflow-y-auto px-1">
+        <div className="no-scrollbar max-h-70vh overflow-y-auto px-1">
           <div className="space-y-4">
             <div className="border-b border-neutral-200 pb-4">
               <div className="no-scrollbar flex items-center gap-1 overflow-x-auto rounded-full bg-neutral-100 p-1 text-sm text-secondary-500">
@@ -1681,7 +1681,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
               <div className="mx-auto w-full rounded-xl border border-neutral-200 bg-white">
                 <div className="divide-y divide-border">
                   {(extrasFilter === "all" && !extrasShowAll ? filteredExtras.slice(0, 5) : filteredExtras).map((extra) => (
-                    <div key={extra.id} className="grid grid-cols-[auto,1fr,auto] items-center gap-4 px-4 py-4">
+                    <div key={extra.id} className="grid grid-cols-body-layout items-center gap-4 px-4 py-4">
                       <img
                         src={extra.image}
                         alt={extra.title}
@@ -1703,7 +1703,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                           <ChevronRight className="h-3.5 w-3.5" />
                         </button>
                       </div>
-                      <div className="flex min-w-[120px] flex-col items-end gap-2">
+                      <div className="flex min-w-32 flex-col items-end gap-2">
                         <div className="text-sm font-semibold text-secondary-900">{formatUSD(extra.priceUSD)}</div>
                         {getExtraQuantity(extra.id) ? (
                           <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-2 py-1 text-sm font-semibold text-secondary-600">
@@ -1746,7 +1746,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                           <button
                             type="button"
                             onClick={extra.hasChildren ? () => openExtraDetails(extra) : () => handleCatalogAdd(extra)}
-                            className="inline-flex h-9 w-[110px] items-center justify-center rounded-full border border-neutral-200 bg-white px-4 text-xs font-black text-secondary-600 transition hover:bg-neutral-100"
+                            className="inline-flex h-9 w-110 items-center justify-center rounded-full bg-blue-50/80 px-4 text-xs font-black text-blue-600 transition-all hover:bg-blue-100 hover:scale-102 active:scale-95"
                           >
                             {extra.hasChildren ? `${extra.children.length} Options` : "Add"}
                           </button>
@@ -1760,7 +1760,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                     <button
                       type="button"
                       onClick={() => setExtrasShowAll(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-50 py-3 text-sm font-bold text-secondary-600 transition-all hover:bg-neutral-100 hover:text-secondary-900 active:scale-[0.98]"
+                      className="flex w-full items-center justify-center gap-2 rounded-full bg-neutral-50 py-3 text-sm font-bold text-secondary-600 transition-all hover:bg-neutral-100 hover:text-secondary-900 active:scale-98"
                     >
                       Show all {filteredExtras.length} extras
                       <ChevronDown className="h-4 w-4" />
@@ -1844,7 +1844,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
               <PhotoCarousel
                 images={activeExtra.gallery?.length ? activeExtra.gallery : [activeExtra.image]}
                 alt={activeExtra.title}
-                className="aspect-[4/3]"
+                className="aspect-4/3"
                 onOpenGallery={(idx) => {
                   const slides = activeExtra.gallery?.length ? activeExtra.gallery : [activeExtra.image];
                   Fancybox.show(slides.map(src => ({ src, type: "image" })), {
@@ -1907,7 +1907,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-4">
                 <div className="text-lg font-bold text-secondary-900">{formatUSD(activeExtra.priceUSD)}</div>
-                <div className="inline-flex h-11 min-w-[160px] items-center justify-between gap-3 rounded-full border border-primary-200 bg-primary-50/80 px-2.5">
+                <div className="inline-flex h-11 min-w-160 items-center justify-between gap-3 rounded-full border border-primary-200 bg-primary-50/80 px-2.5">
                   <button
                     type="button"
                     onClick={() => setExtraQuantity((prev) => Math.max(1, prev - 1))}
@@ -1917,7 +1917,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="min-w-[2rem] text-center text-xl font-semibold leading-none tabular-nums text-primary-600">
+                  <span className="min-w-8 text-center text-xl font-semibold leading-none tabular-nums text-primary-600">
                     {extraQuantity}
                   </span>
                   <button
@@ -1956,14 +1956,14 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
         ) : null}
       </Modal>
       {addToast ? (
-        <div className="pointer-events-none fixed bottom-5 left-1/2 z-[80] w-[92%] max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+        <div className="pointer-events-none fixed bottom-5 left-1/2 z-80 w-92pct max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
           <div className="rounded-xl border border-primary-200 bg-white px-4 py-3 text-sm font-semibold text-success shadow-card">
             Added to cart  {addToast.title}
           </div>
         </div>
       ) : null}
       {savedToast ? (
-        <div className="pointer-events-none fixed bottom-5 left-1/2 z-[80] w-[92%] max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
+        <div className="pointer-events-none fixed bottom-5 left-1/2 z-80 w-92pct max-w-sm -translate-x-1/2 sm:left-auto sm:right-6 sm:translate-x-0">
           <div className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm font-semibold text-secondary-600 shadow-card">
             Saved. You can edit extras anytime.
           </div>
@@ -2010,7 +2010,7 @@ function Hero() {
   };
   return (
     <section className={cn("relative overflow-hidden pt-12 sm:pt-20", SECTION_BACKGROUNDS.white)}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="container">
         <div className="flex flex-col items-center text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -2050,9 +2050,9 @@ function Hero() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative mt-12 overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-3xl"
+          className="relative mt-12 overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-4xl"
         >
-          <div className="aspect-[16/9] sm:aspect-[21/9]">
+          <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
               src="https://bluuu.tours/storage/app/media/video-xl.webm"
@@ -2086,7 +2086,7 @@ function MobileHeroBookingBar() {
   const basePrice = 4500000;
   return (
     <div className="sm:hidden">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="relative overflow-hidden rounded-none border-none bg-gradient-to-br from-white to-neutral-50 p-6 shadow-none sm:rounded-xl sm:border sm:border-neutral-200">
           {/* Decorative elements */}
           <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-gradient-to-br from-accent-soft to-transparent opacity-40 blur-2xl" />
@@ -2157,8 +2157,8 @@ function HowItWorks() {
       className="py-16 sm:min-h-screen sm:py-0 sm:flex sm:items-center md:py-24 md:min-h-0 md:block"
       backgroundClassName="bg-transparent"
     >
-      <PremiumContainer className="max-w-none px-0 md:max-w-7xl md:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-3 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-2">
+      <PremiumContainer>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-12 lg:grid-rows-2">
           {/* Master "How It Works" Intro Card */}
           <div className="relative flex flex-col items-start overflow-hidden rounded-xl bg-gradient-to-br from-primary-700 via-primary-600 to-[#0b79e5] p-6 pt-7 sm:col-span-2 sm:p-6 sm:pt-7 md:p-10 md:pt-12 transition-all duration-300 lg:col-span-4 lg:row-span-2">
             <div className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-white/20 blur-3xl" />
@@ -2167,7 +2167,7 @@ function HowItWorks() {
               <img
                 src="https://bluuu.tours/themes/bluuu/assets/icons/bluu-icon.svg"
                 alt=""
-                className="absolute bottom-4 right-4 h-[72%] w-[72%] object-contain opacity-50 [filter:brightness(0)_invert(1)]"
+                className="absolute bottom-4 right-4 h-72pct w-72pct object-contain opacity-50 [filter:brightness(0)_invert(1)]"
                 loading="lazy"
                 decoding="async"
               />
@@ -2179,7 +2179,7 @@ function HowItWorks() {
                   THE PROCESS
                 </span>
               </div>
-              <div className="mt-8 max-w-[380px] pb-2 sm:mt-9 sm:pb-3 md:mt-14 md:pb-4 lg:mt-auto">
+              <div className="mt-8 max-w-sm pb-2 sm:mt-9 sm:pb-3 md:mt-14 md:pb-4 lg:mt-auto">
                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
                   How it works
                 </h2>
@@ -2208,7 +2208,7 @@ function HowItWorks() {
                   <h3 className="text-base font-bold text-secondary-900 sm:text-lg">
                     {step.title}
                   </h3>
-                  <p className="text-xs leading-relaxed text-secondary-500 sm:mx-auto sm:max-w-[200px]">
+                  <p className="text-xs leading-relaxed text-secondary-500 sm:mx-auto sm:max-w-50">
                     {step.text}
                   </p>
                 </div>
@@ -2348,7 +2348,7 @@ function StepOne({
                           className={cn(
                             "flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-200",
                             rangeDays === days
-                              ? "bg-primary-600 text-white shadow-lg scale-[1.02]"
+                              ? "bg-primary-600 text-white shadow-lg scale-102"
                               : "bg-neutral-100 text-secondary-500 hover:bg-neutral-100"
                           )}
                         >
@@ -2646,7 +2646,7 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
     onTabChange?.(id);
   };
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0 md:h-[80vh]">
+    <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0 md:h-80vh">
       <div className="sticky top-0 z-20 flex shrink-0 items-start justify-between gap-4 bg-neutral-50/60 px-6 py-5">
         <div>
           <div className="text-base sm:text-xl font-semibold text-secondary-900">Tour info</div>
@@ -2764,7 +2764,7 @@ function TourInfoInline() {
       {includedRestaurantPopup && (
         <Modal open={!!includedRestaurantPopup} onClose={() => setIncludedRestaurantPopup(null)} title={includedRestaurantPopup.name || "Restaurant"} subtitle="Included lunch" maxWidth="max-w-xl">
           <div className="pb-4">
-            {includedRestaurantPopup.image && <div className="mb-4 aspect-[4/3] overflow-hidden rounded-xl border border-neutral-200"><img src={includedRestaurantPopup.image} alt={includedRestaurantPopup.name} className="h-full w-full object-cover" /></div>}
+            {includedRestaurantPopup.image && <div className="mb-4 aspect-4/3 overflow-hidden rounded-xl border border-neutral-200"><img src={includedRestaurantPopup.image} alt={includedRestaurantPopup.name} className="h-full w-full object-cover" /></div>}
             {includedRestaurantPopup.description ? <div className="text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.description }} /> : <p className="text-sm text-secondary-500">Lunch is included and served at {includedRestaurantPopup.name}.</p>}
             {includedRestaurantPopup.menu && <div className="mt-4 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: includedRestaurantPopup.menu }} />}
           </div>
@@ -2852,7 +2852,6 @@ function StepTwo({
   const hasAutoOpenedPickDayRef = useRef(false);
   const [hasSwiped, setHasSwiped] = useState(false);
   const hasSwipedRef = useRef(false);
-  const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const [isMobile, setIsMobile] = useState(false);
   const [inlineDatesFor, setInlineDatesFor] = useState(null);
   const [showAllBoats, setShowAllBoats] = useState(false);
@@ -2868,6 +2867,7 @@ function StepTwo({
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
   }, [rangeStart, rangeEnd]);
+  const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const rangeDates = useMemo(() => {
     if (!hasRange) return [];
     const start = new Date(rangeStart);
@@ -3146,7 +3146,7 @@ function StepTwo({
         role={isLocked ? "button" : undefined}
       >
         {isSoon && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl bg-black/40 backdrop-blur-[2px]">
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 rounded-xl bg-black/40 backdrop-blur-xs">
             <span className="rounded-full bg-white/90 px-4 py-1.5 text-sm font-bold text-secondary-900 shadow">Coming soon</span>
           </div>
         )}
@@ -3191,7 +3191,7 @@ function StepTwo({
               <div className="flex flex-1 flex-col p-5 pt-4">
                 {/* Type label */}
                 {boatTypeLabel && (
-                  <div className="mb-1 text-[11px] font-bold uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
+                  <div className="mb-1 text-xs leading-tight font-bold uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
                 )}
 
                 {/* Title */}
@@ -3200,31 +3200,31 @@ function StepTwo({
                     {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
                   </div>
                   {boat.isPartner && (
-                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600 border border-amber-200">By request</span>
+                    <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs leading-tight font-semibold text-amber-600 border border-amber-200">By request</span>
                   )}
                 </div>
 
                 {/* Description */}
-                <div className="mt-1.5 text-sm leading-relaxed text-secondary-500 line-clamp-2">
+                <div className="mt-1.5 min-h-[4.5rem] text-sm leading-relaxed text-secondary-500 line-clamp-3">
                   {boatDescriptionText}
                 </div>
 
                 {/* Fleet size info */}
-                {boat.fleetSize > 1 && (
+                {boat.fleetSize >= 1 && (
                   <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold text-secondary-600">
                     <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                    {boat.fleetSize} identical boats — we assign the best available for your date
+                    {boat.fleetSize} identical {boat.fleetSize === 1 ? "boat" : "boats"} — we assign the best available for your date
                   </div>
                 )}
 
-                {/* Best for badge */}
-                {bf.best_for && (
-                  <div className="mt-2.5">
+                {/* Best for badge — always reserve space */}
+                <div className="mt-2.5 h-7">
+                  {bf.best_for && (
                     <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600">
                       Best for: {bf.best_for}
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Features grid */}
                 <div className="mt-3 border-t border-neutral-100 pt-3 pb-4">
@@ -3246,7 +3246,7 @@ function StepTwo({
                 <div className="mt-auto border-t border-neutral-100 pt-5">
                   <div className="flex items-center justify-between gap-3">
                     <div className={cn("flex min-w-0 flex-col", (isSoldOut || isLocked) && "opacity-60")}>
-                      {showFrom && <span className="text-[11px] font-semibold uppercase tracking-wide text-secondary-400 leading-none mb-0.5">From</span>}
+                      {showFrom && <span className="text-xs leading-tight font-semibold uppercase tracking-wide text-secondary-400 leading-none mb-0.5">From</span>}
                       <div className="flex items-baseline gap-x-1">
                         <span className="text-xl font-black text-secondary-900 tracking-tight">
                           {boat.id === "angels" ? formatIDR(33000000) : formatIDR(isLocked ? (boat.gross_price || boat.priceValue) : draftPriceValue)}
@@ -3322,7 +3322,7 @@ function StepTwo({
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:max-h-none sm:rounded-xl sm:p-6 sm:shadow-none"
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-85vh flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:max-h-none sm:rounded-xl sm:p-6 sm:shadow-none"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="space-y-0.5">
@@ -3356,9 +3356,9 @@ function StepTwo({
                             setDraftFlexDate(date);
                           }}
                           className={cn(
-                            "flex min-h-[58px] flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all duration-200",
+                            "flex min-h-58 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all duration-200",
                             isPicked
-                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-[1.02]"
+                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-102"
                               : isAvailable
                                 ? "border-neutral-200 bg-white text-secondary-600 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
                                 : "border-neutral-200 bg-neutral-50 text-secondary-500 opacity-40 cursor-not-allowed"
@@ -3367,7 +3367,7 @@ function StepTwo({
                         >
                           <span
                             className={cn(
-                              "text-[11px] font-semibold uppercase tracking-wide",
+                              "text-xs leading-tight font-semibold uppercase tracking-wide",
                               isPicked ? "text-primary-600" : isAvailable ? "text-secondary-400" : "text-secondary-300"
                             )}
                           >
@@ -3402,7 +3402,7 @@ function StepTwo({
                       <span className="text-lg font-black text-secondary-900 tracking-tight">
                         {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
                       </span>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-secondary-300">
+                      <span className="text-2xs font-bold uppercase tracking-widest text-secondary-300">
                         {boat.id === "angels" ? "/ 2 boats" : "/ boat"}
                       </span>
                     </div>
@@ -3413,7 +3413,7 @@ function StepTwo({
                   className={cn(
                     "inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-bold transition-all duration-200",
                     draftDate
-                      ? "bg-primary-600 text-white shadow-card hover:scale-[1.01] hover:bg-primary-600-strong active:scale-[0.98]"
+                      ? "bg-primary-600 text-white shadow-card hover:scale-101 hover:bg-primary-600-strong active:scale-98"
                       : "bg-neutral-100 text-secondary-300 cursor-not-allowed"
                   )}
                   onClick={() => confirmPickDay(draftDate)}
@@ -3423,10 +3423,10 @@ function StepTwo({
                 </button>
               </div>
             </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div >
+          </>
+        )}
+      </AnimatePresence>
+    </div>
     );
   };
   return (
@@ -3442,7 +3442,7 @@ function StepTwo({
               STEP 3 OF 4
             </div>
             <h2 className={Q_THEME.text.h2}>Choose your boat</h2>
-            <p className={cn(Q_THEME.text.body, "mx-auto max-w-[800px]")}>
+            <p className={cn(Q_THEME.text.body, "mx-auto max-w-200")}>
               Your boat sets the base price for the Classic route.
             </p>
           </div>
@@ -3602,7 +3602,7 @@ function StepTwo({
           <div
             ref={carouselRef}
             className={cn(
-              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+              "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
               !showAllBoats ? "snap-x snap-mandatory" : "flex-col overflow-visible"
             )}
           >
@@ -3612,7 +3612,7 @@ function StepTwo({
                 data-card
                 className={cn(
                   "relative flex w-full shrink-0 sm:h-full",
-                  !showAllBoats && "snap-center snap-always min-h-[70vh] sm:min-h-0",
+                  !showAllBoats && "snap-center snap-always min-h-70vh sm:min-h-0",
                   showAllBoats && "mb-4 sm:mb-0"
                 )}
               >
@@ -3720,7 +3720,7 @@ function StepTwo({
                   <CheckCircle2 className="h-4.5 w-4.5 text-primary-600" />
                 </div>
               </div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-primary-500">Your selection</div>
+              <div className="text-2xs font-bold uppercase tracking-widest text-primary-500">Your selection</div>
               <div className="mt-1 text-base font-bold tracking-tight text-secondary-900 leading-snug">
                 {confirmModalData.boat.name}
               </div>
@@ -3760,7 +3760,7 @@ function StepTwo({
                 Another boat
               </button>
               <Button
-                className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-[1.01] active:scale-[0.98]"
+                className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-101 active:scale-98"
                 onClick={() => {
                   setConfirmModalData(null);
                   setTimeout(() => {
@@ -3833,7 +3833,7 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
 
   if (!total) {
     return (
-      <div className="flex h-[250px] w-full flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-400">
+      <div className="flex h-250 w-full flex-col items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-neutral-100 text-neutral-400">
         <Camera className="h-8 w-8 opacity-40" />
         <span className="text-sm font-medium">No photos yet</span>
       </div>
@@ -3868,12 +3868,12 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
     >
       <div
         ref={scrollRef}
-        className="flex h-[250px] snap-x snap-mandatory rounded-xl"
+        className="flex h-250 snap-x snap-mandatory rounded-xl"
         style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" }}
         onScroll={handleScroll}
       >
         {images.map((src, i) => (
-          <div key={i} className="flex-[0_0_100%] snap-center relative shrink-0 h-[250px] overflow-hidden">
+          <div key={i} className="flex-none w-full snap-center relative shrink-0 h-250 overflow-hidden">
             <img
               src={src}
               alt={i === activeIndex ? "Day style preview" : ""}
@@ -4014,7 +4014,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     };
     handleScroll();
     track.addEventListener("scroll", handleScroll, { passive: true });
-    return () => track.removeEventListener("scroll", handleScroll);
+    return () => track.removeEventListener("change", handleScroll);
   }, [isMobile, styles.length]);
   useEffect(() => {
     hasSwipedRef.current = hasSwiped;
@@ -4138,7 +4138,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     >
       <div ref={stepRef} className="pb-28 sm:pb-24">
         {showRoutesSkeleton ? (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: routeSkeletonCount }, (_, i) => (
               <SkeletonCard key={`route-skel-${i}`} />
             ))}
@@ -4148,7 +4148,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             <div
               ref={carouselRef}
               className={cn(
-                "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-3 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3",
+                "no-scrollbar flex gap-0 overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3",
                 !showAllStyles ? "snap-x snap-mandatory" : "flex-col overflow-visible"
               )}
             >
@@ -4170,7 +4170,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                     key={style.id}
                     data-route-card
                     className={cn(
-                      "group relative flex min-h-[70vh] w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left transition-all duration-300 sm:min-h-[470px] sm:w-auto sm:snap-start",
+                      "group relative flex min-h-70vh w-full shrink-0 flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white text-left transition-all duration-300 sm:min-h-470 sm:w-auto sm:snap-start",
                       !showAllStyles && "snap-center snap-always",
                       showAllStyles && "mb-4 sm:mb-0",
                       "hover:border-primary-300 hover:shadow-md",
@@ -4226,8 +4226,8 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         {style.description}
                       </div>
 
-                      {/* Divider + highlights */}
-                      <div className="mt-4 border-t border-neutral-100 pt-4">
+                      {/* Divider + highlights + best_for */}
+                      <div className="mt-4 border-t border-neutral-100 pt-4 flex flex-col gap-2">
                         <div className="flex flex-wrap gap-x-4 gap-y-2">
                           {chips.map((item) => {
                             const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
@@ -4239,19 +4239,19 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             );
                           })}
                         </div>
-                      </div>
-
-                      {/* Divider + best_for + schedule + button */}
-                      <div className="mt-4 border-t border-neutral-100 pt-4">
                         {style.best_for || style.bestFor ? (
-                          <div className="mb-3 flex items-start gap-2 text-sm font-semibold leading-5 text-secondary-600">
+                          <div className="flex items-start gap-2 text-sm font-semibold leading-5 text-secondary-600">
                             <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
                             <span>{style.best_for || style.bestFor}</span>
                           </div>
                         ) : null}
+                      </div>
+
+                      {/* Divider + button */}
+                      <div className="mt-auto border-t border-neutral-100 pt-4">
                         <div className="flex items-center gap-2">
                           {isSelected ? (
-                            <Button className="h-9 w-full text-sm" disabled>
+                            <Button className="h-9 text-sm px-4" disabled>
                               <Check className="h-3.5 w-3.5" />
                               Selected
                             </Button>
@@ -4259,14 +4259,14 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             <Button
                               type="button"
                               variant="primary"
-                              className="h-9 w-full text-sm"
+                              className="h-9 text-sm px-4"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 setSelectionError(false);
                                 onSelectStyleId(style.id || style.slug);
                               }}
                             >
-                              Select route
+                              Select
                             </Button>
                           )}
                           <button
@@ -4275,10 +4275,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                               e.stopPropagation();
                               setActiveItineraryId(style.id || style.slug);
                             }}
-                            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 text-sm font-semibold text-primary-600 transition hover:border-primary-200 hover:bg-primary-50"
+                            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline underline-offset-4"
                           >
                             <Calendar className="h-3.5 w-3.5" />
-                            Schedule
+                            See itinerary
                           </button>
                         </div>
                       </div>
@@ -4478,7 +4478,7 @@ function StepTransfers({
         </div>
       </label>
       {/* Transfer Options */}
-      {transfers && transfers.slice(0, -1).map((transfer) => {
+      {transfers && transfers.map((transfer) => {
         const isLargeGroup = totalGuests > 5;
         const unitPrice = (isLargeGroup && transfer.bus_price)
           ? Number(transfer.bus_price)
@@ -4558,7 +4558,7 @@ function StepTransfers({
               </div>
             </label>
             {needsPickup && (
-              <div className="border-t border-neutral-100 px-5 sm:pl-[88px] sm:pr-5 pb-4 pt-3 space-y-3">
+              <div className="border-t border-neutral-100 px-5 pb-4 pt-3 space-y-3 sm:pl-22 sm:pr-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</label>
                   <input
@@ -4646,7 +4646,7 @@ function StepTransfers({
           <div className="flex justify-end">
             <button
               onClick={onContinue}
-              className="inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95"
+              className="btn-primary inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg"
             >
               Continue to Extras
             </button>
@@ -5068,11 +5068,11 @@ function StepExtras({
             />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="line-clamp-1 text-[15px] font-bold leading-tight text-secondary-900 sm:line-clamp-2 sm:text-base sm:leading-[1.3]">
+            <div className="line-clamp-1 text-xs leading-tight font-bold leading-tight text-secondary-900 sm:line-clamp-2 sm:text-base sm:leading-tight">
               {extra.name}
             </div>
             {/* <div
-              className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-secondary-500 sm:mt-1 sm:line-clamp-2 sm:text-sm sm:leading-[1.4]"
+              className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-secondary-500 sm:mt-1 sm:line-clamp-2 sm:text-sm sm:leading-normal"
               dangerouslySetInnerHTML={{ __html: extra.description }}
             /> */}
             <div className="mt-0.5 flex items-center gap-2">
@@ -5087,7 +5087,7 @@ function StepExtras({
             </div>
           </div>
         </div>
-        <div className="flex w-[90px] shrink-0 flex-col items-end justify-center gap-1 sm:w-[104px]">
+        <div className="flex w-90px shrink-0 flex-col items-end justify-center gap-1 sm:w-104px">
           {extra.hasChildren ? (
             <button
               type="button"
@@ -5340,7 +5340,7 @@ function StepExtras({
                     <button
                       type="button"
                       onClick={onReview}
-                      className="w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-95"
+                      className="btn-primary w-full sm:w-auto inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg"
                     >
                       Review your booking <ArrowRight className="ml-2 h-4 w-4" />
                     </button>
@@ -5419,7 +5419,7 @@ function StepExtras({
               </div>
               <button
                 onClick={closeManageExtras}
-                className="inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-2.5 text-sm font-bold text-white transition-transform active:scale-95"
+                className="btn-primary inline-flex items-center justify-center rounded-full bg-primary-600 px-6 py-2.5 text-sm font-bold text-white"
               >
                 Done
               </button>
@@ -5673,9 +5673,9 @@ function StepFive({
           <p className={Q_THEME.text.body}>Confirm details before reserving.</p>
         </div>
         <InfoLinksRow onOpenTourInfo={onOpenTourInfo} className="mb-6" />
-        <div className="mt-6 grid gap-8 lg:grid-cols-[1.1fr_0.7fr]">
-          <div className="space-y-5">
-            <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+        <div className="mt-6 grid gap-8 lg:grid-cols-asymmetric-base">
+          <div className="flex flex-col gap-4">
+            <div className="rounded-xl border border-neutral-200 bg-white">
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -5694,7 +5694,7 @@ function StepFive({
                           type="button"
                           onClick={() => handleRowClick(row)}
                           className={cn(
-                            "flex w-full items-center justify-between gap-3 py-3 text-left transition",
+                            "flex w-full items-center justify-between gap-3 py-4 text-left transition",
                             isMuted && "opacity-55"
                           )}
                         >
@@ -5987,7 +5987,7 @@ function HeroDetails({
   const lead = "All-inclusive day with zero logistics  everything essential is covered.";
   return (
     <section className="py-6 sm:py-10">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="flex flex-col gap-8">
           <div>
             <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
@@ -6243,7 +6243,7 @@ function SocialProof() {
                       href={src}
                       target="_blank"
                       rel="noreferrer"
-                      className="group relative min-w-[72%] snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:min-w-[260px]"
+                      className="group relative min-w-72pct snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:min-w-65"
                       aria-label="Open guest photo"
                     >
                       <img
@@ -6251,7 +6251,7 @@ function SocialProof() {
                         alt={`Guest photo ${item.idx + 1}`}
                         loading="lazy"
                         decoding="async"
-                        className="h-52 w-full object-cover transition duration-700 group-hover:scale-[1.03] sm:h-44"
+                        className="h-52 w-full object-cover transition duration-700 group-hover:scale-103 sm:h-44"
                       />
                       <div className="absolute inset-x-0 bottom-0 bg-white/90 backdrop-blur-md px-3 py-2 text-sm font-semibold text-secondary-600">
                         Guest photo
@@ -6266,7 +6266,7 @@ function SocialProof() {
                 return (
                   <div
                     key={r.id}
-                    className="min-w-[82%] snap-start rounded-xl border border-neutral-200 bg-white p-4 shadow-card sm:min-w-80 lg:min-w-[340px]"
+                    className="min-w-82pct snap-start rounded-xl border border-neutral-200 bg-white p-4 shadow-card sm:min-w-80 lg:min-w-340"
                   >
                     <div className="flex items-start gap-3">
                       <PlatformIcon source={platform ?? {}} sizeClassName="h-10 w-10 shrink-0" iconClassName="h-5 w-5" />
@@ -6316,7 +6316,7 @@ function SocialProof() {
                         <button
                           type="button"
                           onClick={() => setExpandedReviewId((prev) => (prev === r.id ? null : r.id))}
-                          className="mt-2 inline-flex items-center justify-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card transition hover:bg-neutral-100 active:scale-[0.99]"
+                          className="mt-2 inline-flex items-center justify-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card transition hover:bg-neutral-100 active:scale-99"
                         >
                           {isExpanded ? "Show less" : "Read more"}
                         </button>
@@ -6361,7 +6361,7 @@ function SocialProof() {
 function QuickFAQSection() {
   return (
     <section className="py-8 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <BookingMiniFAQ className="p-4" />
       </div>
     </section>
@@ -6439,7 +6439,7 @@ function LunchHighlight() {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <section className="pb-12 sm:pb-16">
-      <div className="mx-auto max-w-7xl px-4">
+      <div className="container">
         <div className="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white sm:w-80">
@@ -6609,8 +6609,8 @@ function ChooseBoatSection({
         type="button"
         onClick={() => onOpen(yacht)}
         className={cn(
-          "group flex h-full w-[300px] min-w-[300px] snap-center flex-col rounded-xl border bg-white p-5 text-left shadow-card transition-transform sm:snap-start",
-          "sm:w-[260px] sm:min-w-[260px] sm:p-4",
+          "group flex h-full w-75 min-w-75 snap-center flex-col rounded-xl border bg-white p-5 text-left shadow-card transition-transform sm:snap-start",
+          "sm:w-65 sm:min-w-65 sm:p-4",
           "hover:-translate-y-0.5 hover:border-neutral-300 hover:shadow-card",
           isSelected ? "border-neutral-300 ring-1 ring-border-soft" : "border-neutral-200"
         )}
@@ -6622,7 +6622,7 @@ function ChooseBoatSection({
             alt={`${yacht.name} yacht`}
             loading="lazy"
             decoding="async"
-            className="h-56 w-full object-cover transition duration-300 group-hover:scale-[1.03] sm:h-48"
+            className="h-56 w-full object-cover transition duration-300 group-hover:scale-103 sm:h-48"
           />
           {yacht.tag ? (
             <div className="absolute right-3 top-3 rounded-xl bg-white/90 backdrop-blur-md px-3 py-1 text-sm font-semibold text-secondary-600 shadow-card">
@@ -6700,7 +6700,7 @@ function ChooseBoatSection({
       title="Pick a boat for your tour"
       subtitle="Each yacht is fully private for your group. Choose the model, set the pace, and add extras on request."
       backgroundClassName={SECTION_BACKGROUNDS.ocean}
-      containerClassName="max-w-7xl"
+      containerClassName="container"
     >
       {!hasDateCriteria ? (
         <div className="mb-4 rounded-xl border border-neutral-200 bg-white p-4 text-sm text-secondary-600 shadow-card">
@@ -6714,7 +6714,7 @@ function ChooseBoatSection({
       ) : null}
       <div className="-mx-4 overflow-hidden sm:mx-0">
         <div
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-4 px-[calc((100vw-300px)/2)] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4"
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto px-carousel-center pb-4 pt-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-4"
         >
           {availableYachts.map((yacht) => renderCard(yacht))}
         </div>
@@ -6753,12 +6753,12 @@ function ChooseBoatSection({
             <div className="text-sm font-semibold uppercase tracking-wide-xl text-secondary-400">
               Private yacht option
             </div>
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+            <div className="mt-5 grid gap-4 lg:grid-cols-asymmetric-wide">
               <div>
                 <PhotoCarousel
                   images={activeYacht.images}
                   alt={activeYacht.name}
-                  className="h-[200px] sm:h-[260px]"
+                  className="h-200 sm:h-65"
                   onOpenGallery={(idx) => {
                     Fancybox.show(activeYacht.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
                   }}
@@ -7086,9 +7086,9 @@ function DayPlan() {
       title="Your private day plan"
       subtitle="A private premium day with flexible stops, curated snorkeling, and time reserved for each highlight."
       backgroundClassName={SECTION_BACKGROUNDS.mist}
-      containerClassName="max-w-7xl"
+      containerClassName="container"
     >
-      <div className="grid gap-4 lg:grid-cols-12">
+      <div className="mt-6 grid gap-8 lg:grid-cols-asymmetric-wide">
         <div className="lg:col-span-7">
           <AnimatePresence mode="wait" initial={false}>
             {!showAll ? (
@@ -7260,12 +7260,12 @@ function DayPlan() {
         maxWidth="max-w-3xl"
       >
         {infoItem ? (
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr]">
+          <div className="grid gap-4 lg:grid-cols-asymmetric-wide">
             <div>
               <PhotoCarousel
                 images={infoItem.images}
                 alt={infoItem.title}
-                className="h-[200px] sm:h-60"
+                className="h-200 sm:h-60"
                 onOpenGallery={(idx) => {
                   Fancybox.show(infoItem.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
                 }}
@@ -7881,7 +7881,7 @@ function Compare() {
       title="Compare tours"
       subtitle="Want a more elevated experience? Upgrade anytime and enjoy extra comfort and premium touches on the same iconic route."
       backgroundClassName={SECTION_BACKGROUNDS.ocean}
-      containerClassName="max-w-7xl"
+      containerClassName="container"
     >
       <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch] lg:grid lg:grid-cols-3">
         {tiers.map((t, i) => {
@@ -7902,7 +7902,7 @@ function Compare() {
               key={i}
               variant={cardVariant}
               className={cn(
-                "min-w-[85%] snap-start lg:min-w-0 flex flex-col p-6",
+                "min-w-85pct snap-start lg:min-w-0 flex flex-col p-6",
                 // Remove the old cardTone logic which might conflict
               )}
             >
@@ -7966,7 +7966,7 @@ function Compare() {
       <div className="mt-6 rounded-xl border border-neutral-200 bg-white p-6 shadow-card">
         <div className="text-sm font-semibold text-secondary-900">Premium Private vs Standard Private (another operator)</div>
         <div className="mt-3 flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2">
-          <div className="min-w-[80%] snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
+          <div className="min-w-80pct snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
             <div className="text-sm font-semibold uppercase tracking-wide text-secondary-500">Bluuu Premium Private</div>
             <ul className="mt-3 space-y-2 text-sm text-secondary-600">
               <li className="flex items-start gap-2">
@@ -7980,7 +7980,7 @@ function Compare() {
               </li>
             </ul>
           </div>
-          <div className="min-w-[80%] snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
+          <div className="min-w-80pct snap-start rounded-xl border border-neutral-200 bg-white p-4 sm:min-w-0">
             <div className="text-sm font-semibold uppercase tracking-wide text-secondary-500">Typical standard private</div>
             <ul className="mt-3 space-y-2 text-sm text-secondary-600">
               <li className="flex items-start gap-2">
@@ -8068,7 +8068,7 @@ function FAQ() {
       id="faq"
       backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
     >
-      <div className="mx-auto w-full max-w-[1280px]">
+      <div className="mx-auto w-full max-w-screen-xl">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
           <h2 className={Q_THEME.text.h2}>
@@ -8246,7 +8246,7 @@ function FinalCTA({
     : "No extras selected";
   return (
     <section className="py-14 sm:py-16" id="booking">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="container">
         <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-gradient-to-r from-primary-50 via-white to-primary-100 p-8 shadow-card animate-gradient-flow">
           <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center">
             <div className="lg:col-span-7">
@@ -8357,31 +8357,35 @@ export default function Premium_Private_With_Vibe() {
     description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",
   });
   const { selectedCurrency } = useCurrency();
-  const { privateTours, transfers, covers: allCovers } = useTours();
+  const { privateTours, privateTransfers: transfers, privateCovers: allCovers } = useTours();
   const { extras, privateRoutes } = useExtras();
-  const covers = useMemo(
-    () =>
-      (allCovers || []).filter((cover) => {
-        const raw = cover?.per_boat;
-        if (typeof raw === "boolean") return raw;
-        if (typeof raw === "number") return raw === 1;
-        if (typeof raw === "string") {
-          const normalized = raw.trim().toLowerCase();
-          return normalized === "true" || normalized === "1";
-        }
-        return false;
-      }),
-    [allCovers]
-  );
+  const covers = allCovers || [];
   // State Declarations
   const [selectedBoatId, setSelectedBoatId] = useState(null);
-  const [dateMode, setDateMode] = useState("flex");
-  const [exactDate, setExactDate] = useState("");
+  const [dateMode, setDateMode] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") ? "exact" : "flex";
+  });
+  const [exactDate, setExactDate] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") || "";
+  });
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
-  const [adults, setAdults] = useState(1);
-  const [kids, setKids] = useState(0);
-  const [dateSelectionPreference, setDateSelectionPreference] = useState("pickLater");
+  const [adults, setAdults] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("adults") || "1", 10);
+    return isNaN(n) || n < 1 ? 1 : n;
+  });
+  const [kids, setKids] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("kids") || "0", 10);
+    return isNaN(n) || n < 0 ? 0 : n;
+  });
+  const [dateSelectionPreference, setDateSelectionPreference] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") ? "pickNow" : "pickLater";
+  });
   const [selectedFlexDate, setSelectedFlexDate] = useState("");
   const [isSelectionModalOpen, setIsSelectionModalOpen] = useState(false);
   const selectionModalGuardRef = useRef(0);
@@ -8396,12 +8400,17 @@ export default function Premium_Private_With_Vibe() {
   }, []);
   const [selectedStyleId, setSelectedStyleId] = useState(null);
   const [selectedExtras, setSelectedExtras] = useState({});
-  const [selectedTransferId, setSelectedTransferId] = useState(null);
+  const [selectedTransferId, setSelectedTransferId] = useState(() => {
+    const v = new URLSearchParams(window.location.search).get("transfer");
+    return v ? parseInt(v, 10) || v : null;
+  });
   const [selectedCoverId, setSelectedCoverId] = useState(null);
   const [availabilityMap, setAvailabilityMap] = useState({});
   const [calendarAvailMap, setCalendarAvailMap] = useState({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
-    const d = new Date();
+    const p = new URLSearchParams(window.location.search);
+    const dateParam = p.get("date");
+    const d = dateParam ? new Date(dateParam + "T00:00:00") : new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [tourDetails, setTourDetails] = useState(null);
@@ -8458,6 +8467,7 @@ export default function Premium_Private_With_Vibe() {
         name: tour.name || "Private Boat",
         slug: tour.slug || "",
         priceValue: defaultPrice,
+        boat_price: Number(tour.boat_price) || 0,
         isPartner: !!tour.partner,
         people: tour.capacity || 1,
         lengthMeters: getBoatLength(tour),
@@ -8475,6 +8485,48 @@ export default function Premium_Private_With_Vibe() {
     // Final uniqueness sweep to prevent React duplicate key errors
     return Array.from(new Map(options.map(opt => [opt.id, opt])).values());
   }, [privateTours]);
+  // Pre-select boat from URL ?tour= param once data is loaded
+  const urlTourIdRef = useRef((() => {
+    const n = parseInt(new URLSearchParams(window.location.search).get("tour") || "", 10);
+    return isNaN(n) ? null : n;
+  })());
+  const urlTourAppliedRef = useRef(false);
+  useEffect(() => {
+    if (urlTourAppliedRef.current || !urlTourIdRef.current || !yachtOptions.length) return;
+    const match = yachtOptions.find((y) => Number(y.tourId) === urlTourIdRef.current);
+    if (match) {
+      setSelectedBoatId(match.id);
+      urlTourAppliedRef.current = true;
+    }
+  }, [yachtOptions]);
+  const urlRouteIdRef = useRef((() => {
+    const v = new URLSearchParams(window.location.search).get("route");
+    return v || null;
+  })());
+  const urlRouteAppliedRef = useRef(false);
+  useEffect(() => {
+    if (urlRouteAppliedRef.current || !urlRouteIdRef.current || !(privateRoutes || []).length) return;
+    const match = (privateRoutes || []).find(
+      (s) => String(s.id) === String(urlRouteIdRef.current) || s.slug === urlRouteIdRef.current
+    );
+    if (match) {
+      setSelectedStyleId(match.id || match.slug);
+      urlRouteAppliedRef.current = true;
+    }
+  }, [privateRoutes]);
+  const urlCoverIdRef = useRef((() => {
+    const v = new URLSearchParams(window.location.search).get("cover");
+    return v || null;
+  })());
+  const urlCoverAppliedRef = useRef(false);
+  useEffect(() => {
+    if (urlCoverAppliedRef.current || !urlCoverIdRef.current || !(covers || []).length) return;
+    const match = (covers || []).find((c) => String(c.id) === String(urlCoverIdRef.current));
+    if (match) {
+      setSelectedCoverId(match.id);
+      urlCoverAppliedRef.current = true;
+    }
+  }, [covers]);
   // Fetch availability from backend when user selects a date or date range
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
@@ -8827,6 +8879,7 @@ export default function Premium_Private_With_Vibe() {
   };
 
   const handleApplyCheckout = () => {
+    console.log('[checkout] selectedStyleId:', selectedStyleId, '| selectedStyle:', selectedStyle);
     const params = new URLSearchParams({
       date: dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart || ""),
       adults: String(adults),
@@ -8835,7 +8888,7 @@ export default function Premium_Private_With_Vibe() {
       tourId: String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""),
       tourName: selectedYacht?.name ?? "Private Tour",
       tourCategory: "Private Tour",
-      style: selectedStyleId ?? "",
+      style: String(selectedStyle?.id ?? ""),
       programId: String(selectedStyle?.program_id ?? ""),
       restaurantId: String(selectedStyle?.restaurant_id ?? ""),
       payMode,
@@ -8846,7 +8899,9 @@ export default function Premium_Private_With_Vibe() {
       requests: specialRequests,
       pickup_address: pickupAddress,
       dropoff_address: dropoffAddress,
-      boatPrice: String(mainBasePrice ?? 0),
+      boatPrice: String(selectedYacht?.boat_price ?? 0),
+      totalBoatPrice: String(mainBasePrice ?? 0),
+      guestFeeTotal: String(guestFeeTotal ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
       analyticsCurrency: "IDR",
       analyticsTotal: String(totalPrice),
@@ -9213,7 +9268,7 @@ export default function Premium_Private_With_Vibe() {
         <Modal
           isOpen={isTourInfoOpen}
           onClose={() => setIsTourInfoOpen(false)}
-          maxWidth="max-w-[860px]"
+          maxWidth="max-w-4xl"
           bodyClassName="p-0"
           showClose={false}
         >
@@ -9443,7 +9498,7 @@ function StepCheckout({
 
   return (
     <>
-      <Section id="step-checkout" className="py-8 sm:py-10" containerClassName="max-w-7xl">
+      <Section id="step-checkout" className="py-8 sm:py-10" containerClassName="container">
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-secondary-900 sm:text-3xl">Complete your booking</h2>
@@ -9474,7 +9529,7 @@ function StepCheckout({
                     <span
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
                       className={cn(
-                        "absolute -bottom-5 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
+                        "absolute -bottom-5 text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
                         isActive ? "text-primary-700" : isCompleted ? "text-primary-600 cursor-pointer" : "text-neutral-300"
                       )}
                       style={{ left: s.num === 1 ? '0' : s.num === 3 ? 'auto' : '50%', right: s.num === 3 ? '0' : 'auto', transform: s.num === 2 ? 'translateX(-50%)' : 'none' }}>
@@ -9716,7 +9771,7 @@ function StepCheckout({
               <Button
                 onClick={() => step < 3 ? onSetStep(step + 1) : handleFinalize()}
                 disabled={step === 3 && (!agreedTerms || !agreedLiability)}
-                className="h-10 min-w-[128px] px-5 shadow-md shadow-primary-600/20"
+                className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
                 {step < 3 ? "Continue" : "Complete booking"}
               </Button>
@@ -9955,7 +10010,7 @@ function CheckoutModal({
           <Button
             onClick={() => step < 3 ? onSetStep(step + 1) : onFinalize()}
             disabled={!canContinue}
-            className="min-w-[120px]"
+            className="min-w-32"
           >
             {step < 3 ? "Continue" : "Complete booking"}
           </Button>

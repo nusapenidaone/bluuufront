@@ -1,4 +1,14 @@
 columns:
+    id:
+        label: ID
+        type: number
+        searchable: true
+        sortable: true
+    odoo_id:
+        label: Odoo ID
+        type: number
+        searchable: true
+        sortable: true
     name:
         label: Name
         type: text
@@ -6,3 +16,8 @@ columns:
         label: Price
         type: number
         select: "format(price, 0, 'de_DE')"
+    bus_price:
+        label: Bus Price
+        type: number
+        select: "format(price, 0, 'de_DE')"
+        

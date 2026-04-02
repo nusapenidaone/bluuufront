@@ -33,8 +33,28 @@ export async function fetchTransfers() {
     return await res.json();
 }
 
+export async function fetchPrivateTransfers() {
+    const res = await fetchWithRetry(apiUrl('transfers/private'));
+    return await res.json();
+}
+
+export async function fetchSharedTransfers() {
+    const res = await fetchWithRetry(apiUrl('transfers/shared'));
+    return await res.json();
+}
+
 export async function fetchCovers() {
     const res = await fetchWithRetry(apiUrl('covers'));
+    return await res.json();
+}
+
+export async function fetchPrivateCovers() {
+    const res = await fetchWithRetry(apiUrl('covers/private'));
+    return await res.json();
+}
+
+export async function fetchSharedCovers() {
+    const res = await fetchWithRetry(apiUrl('covers/shared'));
     return await res.json();
 }
 

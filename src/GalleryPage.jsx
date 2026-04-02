@@ -69,7 +69,7 @@ export default function GalleryPage() {
         cta={{ label: "Check availability", href: "/new/private#booking" }}
       />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8 sm:py-12 lg:px-8">
+      <main className="container flex-1 py-8 sm:py-12">
         <a
           href="/new/private"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-500 transition hover:text-primary-600"

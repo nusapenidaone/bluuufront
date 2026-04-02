@@ -49,6 +49,21 @@ tabs:
             emptyOption: '--'
             spanClass: col-lg-2
             tab: Main
+        boat:
+            label: Boat
+            span: row
+            type: relation
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
+        route:
+            label: Route
+            span: row
+            type: relation
+            nameFrom: title
+            emptyOption: '--'
+            spanClass: col-lg-2
+            tab: Main
         program:
             label: Program
             span: row

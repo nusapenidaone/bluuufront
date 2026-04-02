@@ -294,15 +294,19 @@ curl -X POST https://bluuu.tours/api/chatbot/quote \
 | `tour_id` | int | ✅ | ID тура из `/boats/private` или `/boats/shared` |
 | `date` | string | ✅ | Дата бронирования `"YYYY-MM-DD"` |
 | `guests` | int | ✅ | Количество гостей |
+| `route_id` | int\|null | ❌ | ID маршрута (только приватные туры, из `routes[]` в `/boats/private`) |
 | `transfer` | int\|null | ❌ | ID трансфера (из `/api/new/transfers`) |
 | `insurance` | int\|null | ❌ | ID страховки (из `/api/new/covers`) |
 | `extras` | array | ❌ | Дополнения `[{extra_id, quantity}]` |
+
+> Если `transfer` или `insurance` переданы, они будут включены в `booking_url`.
 
 ### Ответ `200 OK`
 
 ```json
 {
   "success": true,
+  "booking_url": "https://bluuu.tours/new/private?date=2026-06-15&adults=4&tour=1&route=5&transfer=3&cover=2",
   "currency_idr": {
     "total_price": 2700000,
     "price_per_pax": 675000,
@@ -340,6 +344,7 @@ curl -X POST https://bluuu.tours/api/chatbot/quote \
 ```
 
 > `currency_usd` = `null` если курс USD не настроен в CMS.
+> `booking_url` — прямая ссылка на страницу бронирования с предзаполненными параметрами.
 
 **Формула `boat_base_price`:**
 - Находим активный `pricelist` (с учётом сезонных цен по дате)

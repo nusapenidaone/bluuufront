@@ -1,0 +1,10 @@
+name: Company
+form: $/noren/booking/models/company/fields.yaml
+modelClass: Noren\Booking\Models\Company
+defaultRedirect: noren/booking/company
+create:
+    redirect: 'noren/booking/company/update/:id'
+    redirectClose: noren/booking/company
+update:
+    redirect: noren/booking/company
+    redirectClose: noren/booking/company

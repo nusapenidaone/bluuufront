@@ -626,5 +626,62 @@ v1.0.209:
     - 'Updated table noren_booking_tours'
     - builder_table_update_noren_booking_tours_36.php
 v1.0.210:
-    - 'Added sort_order to noren_booking_route'
+    - 'Updated table noren_booking_route'
     - builder_table_update_noren_booking_route_4.php
+v1.0.211:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_37.php
+v1.0.212:
+    - 'Updated table noren_booking_category'
+    - builder_table_update_noren_booking_category_2.php
+v1.0.213:
+    - 'Updated table noren_booking_route'
+    - builder_table_update_noren_booking_route_5.php
+v1.0.214:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_38.php
+v1.0.215:
+    - 'Updated table noren_booking_order'
+    - builder_table_update_noren_booking_order_25.php
+v1.0.216:
+    - 'Updated table noren_booking_boat'
+    - builder_table_update_noren_booking_boat_6.php
+v1.0.217:
+    - 'Created table noren_booking_company'
+    - builder_table_create_noren_booking_company.php
+v1.0.218:
+    - 'Updated table noren_booking_boat'
+    - builder_table_update_noren_booking_boat_7.php
+v1.0.219:
+    - 'Updated table noren_booking_boat'
+    - builder_table_update_noren_booking_boat_8.php
+v1.0.220:
+    - 'Updated table noren_booking_company'
+    - builder_table_update_noren_booking_company.php
+v1.0.221:
+    - 'Updated table noren_booking_tours'
+    - builder_table_update_noren_booking_tours_39.php
+v1.0.222:
+    - 'Updated table noren_booking_extras'
+    - builder_table_update_noren_booking_extras_11.php
+v1.0.223:
+    - 'Updated table noren_booking_transfer'
+    - builder_table_update_noren_booking_transfer_5.php
+v1.0.224:
+    - 'Updated table noren_booking_cover'
+    - builder_table_update_noren_booking_cover_5.php
+v1.0.225:
+    - 'Updated table noren_booking_order'
+    - builder_table_update_noren_booking_order_26.php
+v1.0.226:
+    - 'Updated table noren_booking_cover'
+    - builder_table_update_noren_booking_cover_6.php
+v1.0.227:
+    - 'Updated table noren_booking_transfer'
+    - builder_table_update_noren_booking_transfer_6.php
+v1.0.228:
+    - 'Updated table noren_booking_restaurant'
+    - builder_table_update_noren_booking_restaurant_6.php
+v1.0.229:
+    - 'Updated table noren_booking_route'
+    - builder_table_update_noren_booking_route_6.php

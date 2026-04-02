@@ -30,6 +30,12 @@ class Transfer extends Model
     public $attachOne = [
         'image' => File::class,
     ];
+    
+    public $belongsTo = [
+        'classes' => Classes::class,
+    ];
+    
+    
 
     public function getImageUrlAttribute()
     {

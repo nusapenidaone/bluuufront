@@ -9,7 +9,7 @@ use Model;
 class Route extends Model
 {
     use \October\Rain\Database\Traits\Validation;
-
+    use \October\Rain\Database\Traits\Sortable;
 
     /**
      * @var string table in the database used by the model.
@@ -21,7 +21,6 @@ class Route extends Model
      */
     public $rules = [
     ];
-
     public $belongsToMany = [
         'ecategories' => [Ecategories::class, 'table' => 'noren_booking_route_ecategories'],
     ];
@@ -41,7 +40,6 @@ class Route extends Model
     public $attachMany = [
         'photos' => [\System\Models\File::class],
     ];
-
     public $attachOne = [
         'map' => [\System\Models\File::class],
     ];

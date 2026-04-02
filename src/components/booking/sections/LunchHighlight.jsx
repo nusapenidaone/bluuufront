@@ -6,7 +6,7 @@ export function LunchHighlight() {
     const [menuOpen, setMenuOpen] = useState(false);
     return (
         <section className="pb-12 sm:pb-16">
-            <div className="mx-auto max-w-7xl px-4">
+            <div className="container">
                 <div className="rounded-xl border border-neutral-200 bg-white p-5 sm:p-6">
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                         <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white sm:w-80">

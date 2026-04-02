@@ -1,0 +1,12 @@
+fields:
+    id:
+        label: id
+        type: number
+    name:
+        label: Name
+        span: auto
+        type: text
+    odoo_id:
+        label: 'Odoo ID'
+        span: auto
+        type: number

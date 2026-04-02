@@ -1,24 +1,21 @@
+fields:
+
+    # new:
+    #     label: 'For new Page'
+    #     span: auto
+    #     type: switch
+    #     tab: Main
+
 tabs:
     fields:
     
-    
-        status:
-            label: Status
-            options:
-                ready: 'Ready'
-                soon: 'Soon'
-                disabled: 'Disabled'
-            type: dropdown
-            showSearch: true
-            tab: Main
-    
-        static:
-            label: 'Static Position'
+        partner:
+            label: Partner
             span: auto
             type: switch
             tab: Main
-        partner:
-            label: Partner
+        static:
+            label: 'Static Position'
             span: auto
             type: switch
             tab: Main
@@ -35,15 +32,36 @@ tabs:
                 type: slug
             type: text
             tab: Main
+        odoo_id:
+            label: Odoo ID
+            span: auto
+            type: number
+            tab: Main
+            
+            
+        status:
+            label: Status
+            span: left
+            options:
+                ready: 'Ready'
+                soon: 'Soon'
+                disabled: 'Disabled'
+            type: dropdown
+            showSearch: true
+            tab: Main
+        route:
+            label: Default Route (only for shared)
+            span: auto
+            type: relation
+            tab: Main
+            nameFrom: title
+            emptyOption: --
+            
+
         types:
             label: Type
             span: auto
             type: relation
-            tab: Main
-        category:
-            label: Category
-            type: relation
-            span: auto
             tab: Main
         classes:
             label: Class
@@ -51,13 +69,19 @@ tabs:
             type: relation
             tab: Main
             
-        route:
-            label: Route
-            span: auto
+        category:
+            label: Category
             type: relation
+            span: auto
             tab: Main
-            nameFrom: title
-            emptyOption: --
+        description:
+            label: Description
+            size: large
+            span: auto
+            type: richeditor
+            tab: Main
+            
+
         capacity:
             label: Capacity
             span: auto
@@ -68,41 +92,14 @@ tabs:
             span: auto
             type: number
             tab: Main
-        props[boat_type]:
-            label: 'Boat Type (e.g. Speedboat, Luxury Yacht)'
-            span: auto
-            type: text
+            
+            
+        _section1:
+            type: section
+            label: Old
             tab: Main
-        props[best_for]:
-            label: 'Best for (e.g. couples & small groups)'
-            span: auto
-            type: text
-            tab: Main
-        props[shade]:
-            label: 'Shade (Full shade + flybridge)'
-            span: left
-            type: switch
-            tab: Main
-        props[cabin]:
-            label: 'Cabin'
-            span: right
-            type: switch
-            tab: Main
-        props[ac]:
-            label: 'AC'
-            span: left
-            type: switch
-            tab: Main
-        props[sound]:
-            label: 'Sound (Bose sound)'
-            span: right
-            type: switch
-            tab: Main
-        props[toilet]:
-            label: 'Toilet'
-            span: left
-            type: switch
-            tab: Main
+            comment: For the old page version.
+            
         duration:
             label: Duration
             span: auto
@@ -118,12 +115,6 @@ tabs:
             label: 'Old boat ID'
             span: auto
             type: number
-            tab: Main
-        description:
-            label: Description
-            size: large
-            span: auto
-            type: richeditor
             tab: Main
         list:
             label: List
@@ -148,6 +139,49 @@ tabs:
                         label: Text
                         span: full
                         type: text
+            
+
+            
+        props[boat_type]:
+            label: 'Boat Type (e.g. Speedboat, Luxury Yacht)'
+            span: auto
+            type: text
+            tab: Props
+        props[best_for]:
+            label: 'Best for (e.g. couples & small groups)'
+            span: auto
+            type: text
+            tab: Props
+        props[shade]:
+            label: 'Shade'
+            span: left
+            type: switch
+            tab: Props
+        props[cabin]:
+            label: 'Cabin'
+            span: right
+            type: switch
+            tab: Props
+        props[ac]:
+            label: 'AC'
+            span: left
+            type: switch
+            tab: Props
+        props[sound]:
+            label: 'Sound'
+            span: right
+            type: switch
+            tab: Props
+        props[toilet]:
+            label: 'Toilet'
+            span: left
+            type: switch
+            tab: Props
+            
+  
+                        
+                        
+                        
         boat_price:
             label: 'Boat price'
             span: auto
@@ -160,6 +194,23 @@ tabs:
             span: auto
             type: relation
             tab: Price
+        pricesbydates:
+            label: 'Price by dates'
+            nameFrom: name
+            descriptionFrom: description
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Price
+        _section2:
+            type: section
+            label: Old
+            tab: Price
+            comment: For the old page version.            
+            
+            
         percent:
             label: 'Gross percent'
             span: auto
@@ -175,16 +226,18 @@ tabs:
             span: auto
             type: number
             tab: Price
-        pricesbydates:
-            label: 'Price by dates'
-            nameFrom: name
-            descriptionFrom: description
+            
+        boat:
+            label: Boats
             span: full
-            context:
-                - update
-                - preview
             type: relation
-            tab: Price
+            tab: Boats
+            nameFrom: name
+            emptyOption: '--'
+            
+            
+            
+
         ecategories:
             label: 'Extras categories'
             nameFrom: name
@@ -381,46 +434,43 @@ tabs:
             tab: Similar
             nameFrom: name
             emptyOption: '--'
-        boat:
-            label: Boat
-            span: full
-            type: relation
-            tab: Boats
-            nameFrom: name
-            emptyOption: '--'
+
             
-        json[subtitle]:
-            label: Subtitle
-            span: left
-            type: text
-            tab: New
-        json[props]:
-            label: Props
-            span: auto
-            type: repeater
-            tab: New
-            form:
-                fields:
-                    text:
-                        label: Text
-                        type: text
-        json[list]:
-            label: List
-            span: auto
-            type: repeater
-            tab: New
-            form:
-                fields:
-                    text:
-                        label: Text
-                        type: text
-        json[included]:
-            label: Included
-            span: auto
-            type: repeater
-            tab: New
-            form:
-                fields:
-                    text:
-                        label: Text
-                        type: text 
+            
+            
+            
+        # json[subtitle]:
+        #     label: Subtitle
+        #     span: left
+        #     type: text
+        #     tab: New
+        # json[props]:
+        #     label: Props
+        #     span: auto
+        #     type: repeater
+        #     tab: New
+        #     form:
+        #         fields:
+        #             text:
+        #                 label: Text
+        #                 type: text
+        # json[list]:
+        #     label: List
+        #     span: auto
+        #     type: repeater
+        #     tab: New
+        #     form:
+        #         fields:
+        #             text:
+        #                 label: Text
+        #                 type: text
+        # json[included]:
+        #     label: Included
+        #     span: auto
+        #     type: repeater
+        #     tab: New
+        #     form:
+        #         fields:
+        #             text:
+        #                 label: Text
+        #                 type: text 

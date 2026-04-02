@@ -8,7 +8,7 @@ use Model;
 class Boat extends Model
 {
     use \October\Rain\Database\Traits\Validation;
-
+    use \October\Rain\Database\Traits\Sortable;
 
     /**
      * @var string table in the database used by the model.
@@ -23,5 +23,11 @@ class Boat extends Model
     public $hasMany =[
         'closeddates'=> Closeddates::class,
     ];
+    
+    
+    public $belongsTo = [
+        'company' => [Company::class],
+    ];
+
 
 }

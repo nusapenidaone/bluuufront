@@ -28,7 +28,7 @@ function imgUrl(img) { return img?.url || img?.path || null; }
 function imgThumb(img) { return img?.thumb || img?.url || img?.path || null; }
 
 const PROSE = [
-  "text-[16px] leading-[1.85] text-secondary-700",
+  "text-base leading-relaxed text-secondary-700",
   "[&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-secondary-900 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:leading-tight",
   "[&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-secondary-900 [&_h3]:mt-8 [&_h3]:mb-3 [&_h3]:leading-tight",
   "[&_h4]:text-lg [&_h4]:font-semibold [&_h4]:text-secondary-900 [&_h4]:mt-6 [&_h4]:mb-2",
@@ -306,7 +306,7 @@ export default function BlogPostPage({ slug }) {
                       <div className="my-12 flex items-center gap-4">
                         <div className="h-px flex-1 bg-neutral-200" />
                         <div className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-1.5 shadow-sm">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-secondary-400">Part</span>
+                          <span className="text-2xs font-black uppercase tracking-widest text-secondary-400">Part</span>
                           <span className="text-sm font-black text-primary-500">{String(i + 1).padStart(2, "0")}</span>
                         </div>
                         <div className="h-px flex-1 bg-neutral-200" />

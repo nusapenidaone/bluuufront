@@ -71,7 +71,7 @@ export default function AboutPage() {
         cta={{ label: "Check availability", href: "/new/private#booking" }}
       />
 
-      <div className="mx-auto w-full max-w-7xl px-6 pt-8 sm:pt-12 lg:px-8">
+      <div className="container pt-8 sm:pt-12">
 
         {/* Back link */}
         <a
@@ -149,7 +149,7 @@ export default function AboutPage() {
         </section>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl px-6 pb-8 sm:pb-12 lg:px-8">
+      <div className="container pb-8 sm:pb-12">
         <section className="mt-4 rounded-3xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
           <div className="border-b border-neutral-200 pb-6">
             <div className="text-xs font-semibold uppercase tracking-wider text-secondary-500">Our team</div>
@@ -198,7 +198,7 @@ export default function AboutPage() {
             <div>
               <a
                 href="/private#booking"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-700"
+                className="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Book now
                 <ArrowRight className="h-4 w-4" />

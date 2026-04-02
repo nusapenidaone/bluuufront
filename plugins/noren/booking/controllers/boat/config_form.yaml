@@ -1,6 +1,6 @@
 name: Boat
-form: $/noren/booking/models/boat/fields.yaml
 modelClass: Noren\Booking\Models\Boat
+form: $/noren/booking/models/boat/fields.yaml
 defaultRedirect: noren/booking/boat
 create:
     redirect: 'noren/booking/boat/update/:id'
@@ -8,3 +8,4 @@ create:
 update:
     redirect: noren/booking/boat
     redirectClose: noren/booking/boat
+preview: {  }

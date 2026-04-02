@@ -326,7 +326,7 @@ export default function CustomDatePicker({
           }
         }
       `}</style>
-      {!inline && <CalendarIcon className="date-icon h-5 w-5 text-[color:var(--secondary-300)]" />}
+      {!inline && <CalendarIcon className="date-icon h-5 w-5 text-secondary-300" />}
       <DatePicker
         selected={selectedDate}
         startDate={selectedDate}
@@ -356,7 +356,7 @@ export default function CustomDatePicker({
           nextMonthButtonDisabled,
         }) => (
           <div className="flex items-center justify-between px-4 pb-2">
-            <span className="text-base font-extrabold text-[color:var(--secondary-900)]">
+            <span className="text-base font-extrabold text-secondary-900">
               {monthDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
             </span>
             <div className="flex gap-2">
@@ -364,7 +364,7 @@ export default function CustomDatePicker({
                 type="button"
                 onClick={decreaseMonth}
                 disabled={prevMonthButtonDisabled}
-                className="grid h-8 w-8 place-items-center rounded-xl border border-[color:var(--neutral-100)] bg-white text-[color:var(--secondary-600)] transition hover:border-[color:var(--primary-600)] hover:text-[color:var(--primary-600)] disabled:opacity-30"
+                className="grid h-8 w-8 place-items-center rounded-full border border-neutral-100 bg-white text-secondary-600 transition hover:border-primary-600 hover:text-primary-600 disabled:opacity-30"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -372,7 +372,7 @@ export default function CustomDatePicker({
                 type="button"
                 onClick={increaseMonth}
                 disabled={nextMonthButtonDisabled}
-                className="grid h-8 w-8 place-items-center rounded-xl border border-[color:var(--neutral-100)] bg-white text-[color:var(--secondary-600)] transition hover:border-[color:var(--primary-600)] hover:text-[color:var(--primary-600)] disabled:opacity-30"
+                className="grid h-8 w-8 place-items-center rounded-full border border-neutral-100 bg-white text-secondary-600 transition hover:border-primary-600 hover:text-primary-600 disabled:opacity-30"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

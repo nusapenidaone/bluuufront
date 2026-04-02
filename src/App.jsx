@@ -1,5 +1,6 @@
 import "./index.css";
 import Home from "./home.jsx";
+import Home1 from "./home1.jsx";
 import Private from "./private.jsx";
 import Shared from "./shared.jsx";
 import Checkout from "./Checkout.jsx";
@@ -111,6 +112,9 @@ export default function App() {
       return <BlogPostPage slug={blogPostMatch[1]} />;
     }
 
+    if (path === "/home1") {
+      return <Home1 />;
+    }
 
     return <Home />;
   })();

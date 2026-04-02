@@ -21,18 +21,22 @@ navigation:
                 label: 'Tour Types'
                 url: noren/booking/types
                 icon: icon-sliders
+            side-menu-item20:
+                label: 'Tour Category'
+                url: noren/booking/category
+                icon: icon-filter
             side-menu-item2:
                 label: 'Tour Classes'
                 url: noren/booking/classes
                 icon: icon-sitemap
-            side-menu-item14:
-                label: Badge
-                url: noren/booking/badge
-                icon: icon-tag
             side-menu-item4:
                 label: 'Price Packages'
                 url: noren/booking/packages
                 icon: icon-money
+            side-menu-item14:
+                label: Badge
+                url: noren/booking/badge
+                icon: icon-tag
             side-menu-item19:
                 label: Included
                 url: noren/booking/included
@@ -41,10 +45,10 @@ navigation:
                 label: 'What include'
                 url: noren/booking/includes
                 icon: icon-check
-            side-menu-item8:
-                label: 'Tour Program'
-                url: noren/booking/program
-                icon: icon-map-marker
+            side-menu-item21:
+                label: Routes
+                url: noren/booking/route
+                icon: icon-subway
             side-menu-item6:
                 label: Extras
                 url: noren/booking/extras
@@ -69,6 +73,10 @@ navigation:
                 label: Rates
                 url: noren/booking/rates
                 icon: icon-usd
+            side-menu-item8:
+                label: 'Tour Program'
+                url: noren/booking/program
+                icon: icon-map-marker
             side-menu-item15:
                 label: Cancelation
                 url: noren/booking/cancelation
@@ -89,14 +97,6 @@ navigation:
                 label: Why
                 url: noren/booking/why
                 icon: icon-tasks
-            side-menu-item20:
-                label: Category
-                url: noren/booking/category
-                icon: icon-filter
-            side-menu-item21:
-                label: Routes
-                url: noren/booking/route
-                icon: icon-subway
     main-menu-item2:
         label: Orders
         url: noren/booking/order
@@ -160,6 +160,10 @@ navigation:
         permissions:
             - admin
         sideMenu:
+            side-menu-item4:
+                label: Company
+                url: noren/booking/company
+                icon: icon-copyright
             side-menu-item:
                 label: Boats
                 url: noren/booking/boat

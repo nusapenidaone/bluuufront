@@ -1,8 +1,21 @@
 fields:
+    odoo_id:
+        label: Odoo ID
+        span: auto
+        type: number
+        tab: Main
     per_boat:
         label: 'Price Per Boat'
         span: full
         type: switch
+        
+    classes:
+        label: Class
+        span: auto
+        type: relation
+        tab: Main
+        emptyOption: '--'
+        
     name:
         label: Name
         span: auto

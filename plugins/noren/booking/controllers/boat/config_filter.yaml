@@ -1,0 +1,7 @@
+scopes:
+
+    company:
+        label: Company
+        modelClass: Noren\Booking\Models\Company
+        conditions: company_id in (:value)
+        nameFrom: name

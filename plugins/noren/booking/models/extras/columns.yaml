@@ -1,4 +1,14 @@
 columns:
+    id:
+        label: ID
+        type: number
+        searchable: true
+        sortable: true
+    odoo_id:
+        label: Odoo ID
+        type: number
+        searchable: true
+        sortable: true
     name:
         label: Name
         type: text

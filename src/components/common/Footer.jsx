@@ -15,7 +15,7 @@ export default function Footer() {
 
   return (
     <footer className="overflow-hidden border-t border-neutral-100 bg-white pb-0 pt-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="container">
         <div className="mb-24 grid grid-cols-1 gap-12 md:grid-cols-4 md:gap-8">
           <div className="flex flex-col gap-6">
             <div className="space-y-4">
@@ -71,14 +71,14 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="relative z-0 mt-[-40px] flex w-full select-none justify-center overflow-hidden pb-0 pt-0 leading-[0.75] pointer-events-none">
+      <div className="relative z-0 -mt-10 flex w-full select-none justify-center overflow-hidden pb-0 pt-0 leading-[0.75] pointer-events-none">
         <div className="translate-y-[10%] scale-y-110 bg-gradient-to-r from-secondary-400 via-secondary-200 to-secondary-400 bg-clip-text text-[25vw] font-bold tracking-tighter text-transparent opacity-10 animate-gradient-flow">
           BLUUU
         </div>
       </div>
 
       <div className="relative z-10 border-t border-neutral-100 bg-white py-6">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 md:flex-row lg:px-8">
+        <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <span className="text-xs text-secondary-400">&copy; 2026 Bluuu Inc. All rights reserved.</span>
           <button
             type="button"

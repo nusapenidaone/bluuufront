@@ -1,12 +1,18 @@
-list: $/noren/booking/models/boat/columns.yaml
-modelClass: Noren\Booking\Models\Boat
 title: Boat
+modelClass: Noren\Booking\Models\Boat
+list: $/noren/booking/models/boat/columns.yaml
+recordUrl: 'noren/booking/boat/update/:id'
 noRecordsMessage: 'backend::lang.list.no_records'
+recordsPerPage: 20
 showSetup: true
 showCheckboxes: true
-recordsPerPage: 20
+structure:
+    showTree: false
+    showReorder: true
+    showSorting: true
+    maxDepth: 1
 toolbar:
     buttons: list_toolbar
     search:
         prompt: 'backend::lang.list.search_prompt'
-recordUrl: 'noren/booking/boat/update/:id'
+filter: config_filter.yaml

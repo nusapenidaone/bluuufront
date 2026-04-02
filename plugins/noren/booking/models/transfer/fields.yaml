@@ -1,12 +1,20 @@
 fields:
+    odoo_id:
+        label: Odoo ID
+        span: auto
+        type: number
+        tab: Main
+
     name:
         label: Name
         span: auto
         type: text
-    amo_name:
-        label: 'Amo Name'
+    classes:
+        label: Class
         span: auto
-        type: text
+        type: relation
+        tab: Main
+        emptyOption: '--'
     price:
         label: Price
         span: auto
@@ -18,7 +26,7 @@ fields:
     short_description:
         label: Short Description
         size: small
-        span: left
+        span: auto
         type: richeditor
         
     description:
@@ -26,6 +34,7 @@ fields:
         size: large
         span: right
         type: richeditor
+        
     image:
         label: Images
         mode: image
@@ -38,3 +47,9 @@ fields:
         span: full
         type: fileupload
         tab: Images
+        
+        
+    amo_name:
+        label: 'Amo Name'
+        span: auto
+        type: text

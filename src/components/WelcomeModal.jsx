@@ -77,7 +77,7 @@ const WelcomeModal = () => {
                         transition={{ type: "spring", bounce: 0.18, duration: 0.5 }}
                         className="fixed inset-0 z-[10011] flex items-center justify-center p-4"
                     >
-                        <div className="w-full max-w-md bg-white rounded-[28px] shadow-2xl border border-neutral-100 overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden flex flex-col max-h-[90vh]">
 
                             {/* Header */}
                             <div className="px-6 pt-6 pb-4">
@@ -185,7 +185,7 @@ const WelcomeModal = () => {
                                         </button>
                                         <button
                                             onClick={handleSave}
-                                            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-primary-600 text-white text-sm font-bold rounded-2xl hover:bg-primary-700 transition-colors"
+                                            className="btn-primary flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-primary-600 text-white text-sm font-bold rounded-2xl"
                                         >
                                             <Check className="w-4 h-4" /> Save preferences
                                         </button>

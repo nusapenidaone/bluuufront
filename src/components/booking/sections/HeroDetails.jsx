@@ -14,7 +14,7 @@ export default function HeroDetails({
     const lead = "All-inclusive day with zero logistics — everything essential is covered.";
     return (
         <section className="py-6 sm:py-10">
-            <div className="mx-auto max-w-7xl px-4">
+            <div className="container">
                 <div className="flex flex-col gap-8">
                     <div>
                         <div className="grid gap-8 lg:grid-cols-12 lg:items-start">

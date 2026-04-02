@@ -49,7 +49,9 @@ class Order extends Model
         'email_status' => EmailStatus::class,
         'confirmation_status' => ConfirmationStatus::class,
         'order_type' => OrderType::class,
-        'method' =>Method::class
+        'method' =>Method::class,
+        'boat' => Boat::class,
+        'route' => Route::class,
     ];
     
     public $hasMany =[

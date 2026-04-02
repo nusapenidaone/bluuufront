@@ -77,7 +77,11 @@ const Navbar = ({
     const [navHeight, setNavHeight] = useState(0);
     const navRef = useRef(null);
     useEffect(() => {
-        if (navRef.current) setNavHeight(navRef.current.offsetHeight);
+        if (navRef.current) {
+            const h = navRef.current.offsetHeight;
+            setNavHeight(h);
+            document.documentElement.style.setProperty('--nav-height', h + 'px');
+        }
     }, [menuOpen]);
 
     useEffect(() => {

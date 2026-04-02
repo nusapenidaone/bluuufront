@@ -52,6 +52,8 @@ export default function Checkout() {
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
 
   const tourId = params.get("tourId");
+  const boatId = params.get("boatId") ? parseInt(params.get("boatId"), 10) : null;
+  const routeId = params.get("routeId") ? parseInt(params.get("routeId"), 10) || null : null;
   const date = params.get("date") || "";
   const adults = Math.max(1, parseInt(params.get("adults") || "1", 10));
   const kids = Math.max(0, parseInt(params.get("kids") || "0", 10));
@@ -129,10 +131,12 @@ export default function Checkout() {
 
     const body = {
       tourId: tourId ? parseInt(tourId, 10) : null,
+      boatId: boatId,
       travelDate: date,
       adults,
       kids,
       children: 0,
+      cars: pickup && pickup !== 'no-pickup' ? 1 : 0,
       pricePerPerson,
       boatPrice: 0,
       tourPrice,
@@ -147,7 +151,7 @@ export default function Checkout() {
       fullPrice: fullTotal,
       selectedTransferId: null,
       selectedCoverId: null,
-      selectedRouteId: null,
+      selectedRouteId: routeId,
       selectedExtras: extras.map((e) => ({
         id: e.id,
         qty: e.quantity ?? 1,
@@ -485,10 +489,10 @@ export default function Checkout() {
                 type="submit"
                 disabled={loading}
                 className={cn(
-                  "inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white transition",
+                  "inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3.5 text-sm font-semibold text-white",
                   loading
                     ? "cursor-not-allowed bg-primary-300"
-                    : "bg-primary-600 hover:bg-primary-700 active:bg-primary-800"
+                    : "btn-primary bg-primary-600"
                 )}
               >
                 {loading

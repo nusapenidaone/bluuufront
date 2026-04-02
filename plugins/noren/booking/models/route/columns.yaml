@@ -1,10 +1,10 @@
 columns:
-
-    sort_order:
-        label: '#'
+    id:
+        label: Id
         type: number
-        sortable: true
-
+    odoo_id:
+        label: Odoo ID
+        type: number
     title:
         label: title
         type: text

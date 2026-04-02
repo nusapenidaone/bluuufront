@@ -50,7 +50,7 @@ export default function ScheduleModal({
             <X className="w-5 h-5 text-secondary-500" />
           </button>
         </div>
-        <div className="overflow-y-auto p-6">
+        <div className="overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
             <div className="flex items-center justify-center h-48">
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />

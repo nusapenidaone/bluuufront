@@ -29,7 +29,7 @@ const Section = ({
             className={`${verticalPadding[size]} ${backgroundClassName} ${className}`}
             {...props}
         >
-            <div className={`mx-auto max-w-[1280px] px-4 sm:px-6 lg:px-8 ${containerClassName}`}>
+            <div className={`container ${containerClassName}`}>
                 {(title || kicker || subtitle) && (
                     <div className={`mb-8 flex flex-col sm:mb-10 ${centered ? "items-center text-center" : "items-start text-left"}`}>
                         {kicker && (

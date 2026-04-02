@@ -67,7 +67,7 @@ export const Q_THEME = {
         caption: "text-sm text-slate-500 font-medium",
         label: "text-xs font-black uppercase tracking-widest text-primary-600",
     },
-    container: "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8",
+    container: "container",
     section: "py-20 md:py-32",
     card: {
         base: "bg-white rounded-xl border border-slate-100 transition-all duration-300",

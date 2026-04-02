@@ -22,7 +22,7 @@ export function PremiumSection({
 
 export function PremiumContainer({ className, children, ...props }) {
     return (
-        <div className={cn("mx-auto max-w-7xl px-4 sm:px-6 lg:px-8", className)} {...props}>
+        <div className={cn("container", className)} {...props}>
             {children}
         </div>
     );

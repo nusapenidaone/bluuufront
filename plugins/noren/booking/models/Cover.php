@@ -25,5 +25,8 @@ class Cover extends Model
      */
     public $rules = [
     ];
+    public $belongsTo = [
+        'classes' => Classes::class,
+    ];
 
 }

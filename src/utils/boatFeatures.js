@@ -21,7 +21,7 @@ export const getBoatFeatures = (boatFeatures) => {
       Icon: Wind,
     },
     {
-      label: bfOn(bf.sound) ? "Bose sound" : "No sound",
+      label: bfOn(bf.sound) ? "In-built Sound System " : "JBL Speaker",
       present: bfOn(bf.sound),
       Icon: Music,
     },
@@ -32,3 +32,6 @@ export const getBoatFeatures = (boatFeatures) => {
     },
   ];
 };
+
+
+

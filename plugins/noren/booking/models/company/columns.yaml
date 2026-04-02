@@ -1,0 +1,12 @@
+columns:
+    id:
+        label: id
+        type: number
+    odoo_id:
+        label: 'Odoo ID'
+        type: number
+        
+    name:
+        label: Name
+        type: text
+

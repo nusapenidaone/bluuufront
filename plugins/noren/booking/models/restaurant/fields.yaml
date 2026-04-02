@@ -1,16 +1,14 @@
 fields:
-    included:
-        type: switch
-        label: Included
-        span: full
+
     name:
         label: Name
         span: auto
         type: text
-    amo_name:
-        label: 'Amo Name'
+    odoo_id:
+        type: number
+        label: Odoo ID
         span: auto
-        type: text
+
     description:
         label: Description
         size: large
@@ -34,3 +32,11 @@ fields:
         span: auto
         type: fileupload
 
+    amo_name:
+        label: 'Amo Name'
+        span: auto
+        type: text
+    included:
+        type: switch
+        label: Included
+        span: full

@@ -23,9 +23,9 @@ export default function TourDetailsCard({
   return (
     <>
       <div className="space-y-8">
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-          <div className="flex flex-col lg:flex-row lg:items-stretch lg:h-[800px]">
-            <div className="relative h-80 sm:h-96 lg:h-full w-full lg:w-[38%] shrink-0 overflow-hidden pt-4 lg:pt-0">
+        <div className="rounded-xl border border-neutral-200 bg-white">
+          <div className="flex flex-col lg:flex-row lg:items-start">
+            <div className="relative h-80 sm:h-96 lg:h-auto w-full lg:w-[38%] shrink-0 overflow-hidden p-4 lg:p-6 lg:sticky lg:top-16 rounded-t-xl lg:rounded-t-none lg:rounded-l-xl">
               <img
                 src={style.map || "https://bluuu.tours/themes/bluuu/assets/images/map.webp"}
                 alt={style.title || "Route map"}
@@ -34,7 +34,7 @@ export default function TourDetailsCard({
                 decoding="async"
               />
             </div>
-            <div className="flex-1 flex flex-col lg:overflow-hidden p-5 sm:p-8 lg:p-10">
+            <div className="flex-1 flex flex-col p-5 sm:p-8 lg:p-10">
               <div className="shrink-0">
                 <h3 className="text-lg font-bold text-secondary-900 sm:text-xl">{style.title}</h3>
                 <p className="mt-1 text-sm text-secondary-600">
@@ -49,7 +49,7 @@ export default function TourDetailsCard({
                   </div>
                 ) : null}
               </div>
-              <div className="mt-4 flex-1 min-h-0 overflow-y-auto grid gap-3 grid-cols-1">
+              <div className="mt-4 grid gap-3 grid-cols-1">
                 <div className="rounded-xl">
                   <div className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-secondary-300">
                     Morning

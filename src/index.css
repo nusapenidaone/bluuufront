@@ -69,7 +69,6 @@
     --radius-md: 18px;
     --radius-lg: 26px;
     --radius-full: 9999px;
-    --container-max-w: 1280px;
 }
 
 html,
@@ -489,6 +488,48 @@ img[data-image-loaded="true"] {
 .policy-rich-content h3,
 .policy-rich-content h4 {
     font-size: 1.05rem;
+}
+
+/* ─── Numeric value pop animation (slider price changes) ─── */
+@keyframes num-pop {
+    0%   { opacity: 0.45; transform: scale(0.88); }
+    60%  { transform: scale(1.05); }
+    100% { opacity: 1;    transform: scale(1); }
+}
+.num-pop {
+    display: inline-block;
+    animation: num-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ─── Button animations ──────────────────────────────────── */
+.btn-primary,
+.btn-outline {
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-500);
+}
+
+.btn-primary:active {
+    background-color: var(--primary-700);
+    transition-duration: 0.08s;
+}
+
+.btn-outline:hover {
+    background-color: var(--primary-50);
+}
+
+.btn-outline:active {
+    background-color: var(--primary-100);
+    transition-duration: 0.08s;
+}
+
+.btn-primary:disabled,
+.btn-outline:disabled,
+.btn-primary[aria-disabled="true"],
+.btn-outline[aria-disabled="true"] {
+    transition: none;
 }
 
 .policy-rich-content strong {

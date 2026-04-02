@@ -191,7 +191,7 @@ export default function BlogPage() {
 
       {/* Hero */}
       <div className="bg-gradient-to-b from-[#eef4ff] to-neutral-50 border-b border-neutral-100">
-        <div className="mx-auto w-full max-w-7xl px-6 py-10 sm:py-14 lg:px-8">
+        <div className="container py-10 sm:py-14">
           <a
             href="/"
             className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-400 transition hover:text-primary-600"
@@ -216,7 +216,7 @@ export default function BlogPage() {
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-7xl px-6 py-10 lg:px-8">
+      <main className="container py-10">
         {loading ? (
           <>
             <div className="mb-8 h-80 animate-pulse rounded-3xl bg-neutral-200" />

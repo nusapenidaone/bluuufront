@@ -249,7 +249,7 @@ public function getTourClosedDates($id)
             'boat.closeddates',
             'packages',
             'pricesbydates.packages',
-        ])->where('types_id', '<', 4);//poxel
+        ])->where('types_id', '<', 4)->where('id','<',54);//poxel
 
         if ($typeId) {
             $query->where('types_id', $typeId);

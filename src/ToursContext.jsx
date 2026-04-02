@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import {
     fetchSharedTours as apiFetchSharedTours,
-    fetchTransfers as apiFetchTransfers,
-    fetchCovers as apiFetchCovers,
+    fetchPrivateTransfers as apiFetchPrivateTransfers,
+    fetchSharedTransfers as apiFetchSharedTransfers,
+    fetchPrivateCovers as apiFetchPrivateCovers,
+    fetchSharedCovers as apiFetchSharedCovers,
     fetchFaq as apiFetchFaq,
     fetchGallery as apiFetchGallery,
 } from "./api/shared";
@@ -18,8 +20,10 @@ export const useTours = () => useContext(ToursContext);
 export const ToursProvider = ({ children }) => {
     const [sharedTours, setSharedTours] = useState([]);
     const [privateTours, setPrivateTours] = useState([]);
-    const [transfers, setTransfers] = useState([]);
-    const [covers, setCovers] = useState([]);
+    const [privateTransfers, setPrivateTransfers] = useState([]);
+    const [sharedTransfers, setSharedTransfers] = useState([]);
+    const [privateCovers, setPrivateCovers] = useState([]);
+    const [sharedCovers, setSharedCovers] = useState([]);
     const [faqs, setFaqs] = useState([]);
     const [gallery, setGallery] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,11 +32,13 @@ export const ToursProvider = ({ children }) => {
     useEffect(() => {
         const fetchAllData = async () => {
             try {
-                const [sharedRes, privateRes, transfersRes, coversRes, faqRes, galleryRes] = await Promise.allSettled([
+                const [sharedRes, privateRes, privateTransfersRes, sharedTransfersRes, privateCoversRes, sharedCoversRes, faqRes, galleryRes] = await Promise.allSettled([
                     apiFetchSharedTours(),
                     apiFetchPrivateTours(),
-                    apiFetchTransfers(),
-                    apiFetchCovers(),
+                    apiFetchPrivateTransfers(),
+                    apiFetchSharedTransfers(),
+                    apiFetchPrivateCovers(),
+                    apiFetchSharedCovers(),
                     apiFetchFaq(),
                     apiFetchGallery(),
                 ]);
@@ -56,17 +62,27 @@ export const ToursProvider = ({ children }) => {
                 }
 
                 // Handle transfers
-                if (transfersRes.status === "fulfilled") {
-                    setTransfers(transfersRes.value);
+                if (privateTransfersRes.status === "fulfilled") {
+                    setPrivateTransfers(privateTransfersRes.value);
                 } else {
-                    console.warn("Failed to fetch transfers:", transfersRes.reason);
+                    console.warn("Failed to fetch private transfers:", privateTransfersRes.reason);
+                }
+                if (sharedTransfersRes.status === "fulfilled") {
+                    setSharedTransfers(sharedTransfersRes.value);
+                } else {
+                    console.warn("Failed to fetch shared transfers:", sharedTransfersRes.reason);
                 }
 
                 // Handle covers
-                if (coversRes.status === "fulfilled") {
-                    setCovers(coversRes.value);
+                if (privateCoversRes.status === "fulfilled") {
+                    setPrivateCovers(privateCoversRes.value);
                 } else {
-                    console.warn("Failed to fetch covers:", coversRes.reason);
+                    console.warn("Failed to fetch private covers:", privateCoversRes.reason);
+                }
+                if (sharedCoversRes.status === "fulfilled") {
+                    setSharedCovers(sharedCoversRes.value);
+                } else {
+                    console.warn("Failed to fetch shared covers:", sharedCoversRes.reason);
                 }
 
                 // Handle FAQs
@@ -108,8 +124,10 @@ export const ToursProvider = ({ children }) => {
         <ToursContext.Provider value={{
             sharedTours,
             privateTours,
-            transfers,
-            covers,
+            privateTransfers,
+            sharedTransfers,
+            privateCovers,
+            sharedCovers,
             faqs,
             gallery,
             loading,

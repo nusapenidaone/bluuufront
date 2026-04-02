@@ -1,10 +1,5 @@
 tabs:
     fields:
-        sort_order:
-            label: 'Sort order'
-            span: auto
-            type: number
-            tab: Main
         title:
             label: Title
             span: auto
@@ -15,6 +10,20 @@ tabs:
             span: auto
             type: text
             tab: Main
+            
+        start:
+            label: 'Start Time'
+            mode: time
+            span: auto
+            type: datepicker
+            tab: Main
+        end:
+            label: 'End Time'
+            mode: time
+            span: auto
+            type: datepicker
+            tab: Main
+            
         classes:
             label: Class
             nameFrom: name
@@ -49,28 +58,12 @@ tabs:
             span: full
             type: text
             tab: Main
-        add_on_note:
-            label: 'Add-on note (e.g. Diving license required)'
-            span: full
-            type: text
-            tab: Popup
         description:
             label: Description
             span: full
             size: small
             type: textarea
             tab: Main
-        popup_title:
-            label: 'Popup title'
-            span: auto
-            type: text
-            tab: Popup
-        popup_afternoon:
-            label: 'Popup afternoon description'
-            span: full
-            size: small
-            type: textarea
-            tab: Popup
         highlights:
             label: Highlights
             span: full
@@ -89,6 +82,23 @@ tabs:
                         placeholder: MapPin
                         commentHtml: true
                         comment: 'Choose icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a>. Use key from frontend map (src/private.jsx, ICON_MAP): MapPin, Fish, Clock, LifeBuoy, UtensilsCrossed, Camera, Shield, Waves, Anchor, Sun, BadgeCheck, Ship, Coffee, Ticket, Users, Wine, Globe, Star, Search.'
+
+        add_on_note:
+            label: 'Add-on note (e.g. Diving license required)'
+            span: full
+            type: text
+            tab: Popup
+        popup_title:
+            label: 'Popup title'
+            span: auto
+            type: text
+            tab: Popup
+        popup_afternoon:
+            label: 'Popup afternoon description'
+            span: full
+            size: small
+            type: textarea
+            tab: Popup
         schedule_before_lunch:
             label: 'Schedule: Before lunch'
             span: full
@@ -145,6 +155,14 @@ tabs:
             imageHeight: 100
             imageWidth: 100
             tab: Images
+        map:
+            label: Map
+            span: full
+            type: fileupload
+            mode: image
+            imageHeight: 100
+            imageWidth: 100
+            tab: Images
         ecategories:
             label: 'Extras categories'
             nameFrom: name
@@ -155,7 +173,6 @@ tabs:
                 - preview
             type: relation
             tab: Extras
-
         program:
             label: Program
             nameFrom: name
