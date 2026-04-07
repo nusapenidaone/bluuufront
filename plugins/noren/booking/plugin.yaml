@@ -137,6 +137,10 @@ navigation:
                 label: Leads
                 url: noren/booking/lead
                 icon: icon-tasks
+            side-menu-item9:
+                label: Source
+                url: noren/booking/source
+                icon: icon-compass
     main-menu-item3:
         label: Agents
         url: noren/booking/agent

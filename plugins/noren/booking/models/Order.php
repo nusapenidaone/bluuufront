@@ -3,40 +3,29 @@
 use Model;
 use Mail;
 use Log;
+use App;
 use Noren\Booking\Classes\KommoDataBuilder;
 use Noren\Booking\Classes\Ga4Service;
+use Noren\Booking\Odoo\OdooService;
 
-/**
- * Model
- */
 class Order extends Model
 {
     use \October\Rain\Database\Traits\Validation;
 
-
-    /**
-     * @var string table in the database used by the model.
-     */
     public $table = 'noren_booking_order';
 
-    /**
-     * @var array rules for validation.
-     */
     public $rules = [
-    	
         'name'        => 'required',
         'email'       => 'required|email',
-        'travel_date'  => 'required|date',
+        'travel_date' => 'required|date',
         'adults'      => 'required|integer|min:1',
-        'kids'			=> 'required|numeric|min:0',
-        'children'      => 'required|numeric|min:0',
-        'tours_id'      => 'required|numeric|min:0',
-
-
-    	
+        'kids'        => 'required|numeric|min:0',
+        'children'    => 'required|numeric|min:0',
+        'tours_id'    => 'required|numeric|min:0',
     ];
+
     protected $jsonable = ['extras','utm'];
-    protected $fillable = ['amo_lead_id'];
+    protected $fillable = ['amo_lead_id','odoo_id'];
 
     public $belongsTo = [
         'tours' => Tours::class,
@@ -49,34 +38,32 @@ class Order extends Model
         'email_status' => EmailStatus::class,
         'confirmation_status' => ConfirmationStatus::class,
         'order_type' => OrderType::class,
-        'method' =>Method::class,
+        'method' => Method::class,
         'boat' => Boat::class,
         'route' => Route::class,
+        'source' => Source::class,
     ];
-    
-    public $hasMany =[
+
+    public $hasMany = [
         'payment'=> Payment::class,
         'lead'=> Lead::class,
         'order_history'=> OrderHistory::class,
-        
     ];
-    
+
+    // =========================
+    // CREATE
+    // =========================
     public function beforeCreate()
     {
         $this->external_id = $this->generateCustomCode();
-        $this->key= bin2hex(random_bytes(16));
+        $this->key = bin2hex(random_bytes(16));
     }
-    
-    
+
     protected function generateCustomCode(): string
     {
-        $prefix = 'bluuu'; // твой префикс
-        $timestamp = time(); // unix timestamp в секундах
-
-        return $prefix . $timestamp;
+        return 'bluuu' . time();
     }
-    
-    //for filter yaml
+
     public function scopeFilterByTourTypes($query, $value)
     {
         $query->whereHas('tours', function($q) use ($value) {
@@ -84,65 +71,104 @@ class Order extends Model
         });
     }
 
-	//send request to kommo
+    // =========================
+    // AFTER CREATE
+    // =========================
     public function afterCreate()
-    {    
-        if($this->status_id==4){
-            $data= KommoDataBuilder::createLead($this->id);
-        }elseif($this->status_id==1){
-            $this->handleEmailOnCreated();
+    {
+        $order = $this;
+
+        if ($this->status_id == 4) {
+
+            App::after(function () use ($order) {
+                static::dispatchLead($order);
+            });
+
+        } elseif ($this->status_id == 1) {
+
+            $this->sendEmailAsyncSimple('created', 'info@bluuu.tours');
+
         }
     }
-    
-    
-    //send order if status confirmed    
+
+    // =========================
+    // AFTER UPDATE
+    // =========================
     public function afterUpdate()
     {
-        if ($this->isDirty('status_id')) {
-            if($this->status_id==2){
-                $data = KommoDataBuilder::createLead($this->id);
-                
-                $this->handleEmailOnPaymentStatus();
-                Ga4Service::sendPurchase($this);
-            }elseif($this->status_id==4){
-                $data= KommoDataBuilder::createLead($this->id);
-                Ga4Service::sendPurchase($this);
-            }
+        if (!$this->isDirty('status_id')) {
+            return;
+        }
+
+        $order = $this;
+
+        // ✅ статус confirm (оплата)
+        if ($this->status_id == 2) {
+
+            App::after(function () use ($order) {
+
+                try {
+                    static::dispatchLead($order);
+                    Ga4Service::sendPurchase($order);
+                } catch (\Exception $e) {
+                    Log::error("AfterUpdate error #{$order->id}: " . $e->getMessage());
+                }
+
+            });
+
+            // 📩 письмо клиенту
+            $this->sendEmailAsyncSimple('confirmed', 'info@bluuu.tours', $this->name);
+            $this->sendEmailAsyncSimple('confirmed', $this->email, $this->name);
+        }
+
+        // ✅ статус 4
+        elseif ($this->status_id == 4) {
+
+            App::after(function () use ($order) {
+
+                try {
+                    static::dispatchLead($order);
+                    Ga4Service::sendPurchase($order);
+                } catch (\Exception $e) {
+                    Log::error("Status 4 error #{$order->id}: " . $e->getMessage());
+                }
+
+            });
         }
     }
-    
-    protected function handleEmailOnPaymentStatus()
+
+    // =========================
+    // LEAD ROUTING
+    // =========================
+    protected static function dispatchLead(Order $order): void
     {
-            try {
-                $vars = ['order' => $this];
-    
-                Mail::send('confirmed', $vars, function ($message) {
-                    $message->to($this->email, $this->name);
-                    $message->bcc('info@bluuu.tours');
-                });
-            
-            } catch (\Exception $e) {
-                Log::error("Email send error  #{$this->id}: " . $e->getMessage());
-            }
+        if ($order->source_id == 1) {
+            $result = OdooService::createLead($order);
+            $order->odoo_id = $result['order_id'];
+            $order->save();
+        } else {
+            KommoDataBuilder::createLead($order->id);
+        }
     }
 
-    protected function handleEmailOnCreated()
+    // =========================
+    // UNIVERSAL EMAIL METHOD
+    // =========================
+    protected function sendEmailAsyncSimple(string $template, $to, $name = null)
     {
+        $order = $this->fresh();
+
+        App::after(function () use ($order, $template, $to, $name) {
+
             try {
-                $vars = ['order' => $this];
-    
-                Mail::send('created', $vars, function ($message) {
-                    $message->to('info@bluuu.tours');
+                Mail::send($template, ['order' => $order], function ($message) use ($to, $name) {
+                    $message->to($to, $name);
                 });
-            
+
             } catch (\Exception $e) {
-                Log::error("Email send error  #{$this->id}: " . $e->getMessage());
+                Log::error("Email send error #{$order->id}: " . $e->getMessage());
             }
+
+        });
     }
-
-
-
-
-
-
 }

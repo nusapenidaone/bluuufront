@@ -685,3 +685,17 @@ v1.0.228:
 v1.0.229:
     - 'Updated table noren_booking_route'
     - builder_table_update_noren_booking_route_6.php
+v1.0.230:
+    - 'Updated table noren_booking_order'
+    - builder_table_update_noren_booking_order_27.php
+v1.0.231:
+    - 'Updated table noren_booking_closeddates'
+    - builder_table_update_noren_booking_closeddates_5.php
+v1.0.232:
+    - 'Updated table noren_booking_order'
+    - builder_table_update_noren_booking_order_28.php
+v1.0.233:
+    - 'Created table noren_booking_source'
+    - builder_table_create_noren_booking_source.php
+v1.0.234:
+    - 'Chatbot API: add odoo_id to boats, routes, extras, transfers, covers, restaurant'

@@ -4,11 +4,17 @@ columns:
         type: number
         searchable: true
         sortable: true
+        
     external_id:
         label: 'Extrernal ID'
         type: number
         searchable: true
         sortable: true
+        
+    odoo_id:
+        label: Odoo ID
+        type: number
+        
     created_at:
         label: Created
         type: datetime
@@ -22,7 +28,13 @@ columns:
         searchable: true
         sortable: true
         format: 'Y-m-d H:i:s'
-        
+    source:
+        label: Source
+        type: number
+        searchable: true
+        sortable: true
+        select: name
+        relation: source
     tours:
         label: Tour
         type: number

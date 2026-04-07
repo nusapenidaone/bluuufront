@@ -253,6 +253,8 @@ fields:
         span: row
         spanClass: col-lg-2
         tab: Main
+        
+        
     status:
         label: Status
         span: row
@@ -282,3 +284,12 @@ fields:
         span: row
         type: number
         spanClass: col-lg-2
+        
+    odoo_id: 
+        label: Odoo ID
+        type: text
+        disabled: true
+        span: row
+        spanClass: col-lg-2
+        tab: Main
+        

@@ -1,5 +1,6 @@
-<?php namespace Noren\Booking\Api;
+<?php namespace Noren\Booking\Odoo;
 
+use Carbon\Carbon;
 use Http;
 use Log;
 use Noren\Booking\Models\Order;
@@ -7,18 +8,40 @@ use Noren\Booking\Models\Extras;
 
 class OdooService
 {
-    protected static string $url    = 'https://pt-day-trip-bali.odoo.com';
-    protected static string $db     = 'pt-day-trip-bali';
-    protected static string $apiKey = '30f271163aac8949eeeabdd8b1810fd1928a8304';
+    protected static function cfg(): array
+    {
+        static $cfg = null;
+        if ($cfg === null) {
+            $cfg = require(__DIR__ . '/services.config.php');
+            if (!is_array($cfg) || !isset($cfg['url'])) {
+                throw new \RuntimeException('Invalid or missing Odoo config in services.config.php');
+            }
+        }
+        return $cfg;
+    }
+
+    protected static function url():    string { return static::cfg()['url']; }
+    protected static function db():     string { return static::cfg()['db']; }
+    protected static function apiKey(): string { return static::cfg()['api_key']; }
 
 
     // ─── Entry point ──────────────────────────────────────────────────────────
+
+    protected static function paymentSource(Order $order): string
+    {
+        return match ((int) $order->method_id) {
+            1 => 'Xendit',
+            2 => 'PayPal',
+            default => '',
+        };
+    }
 
     public static function createLead(Order $order): array
     {
         $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
 
         $data = static::buildOrderData($order);
+        $data['lead']['payment_source'] = static::paymentSource($order);
 
         $partnerId   = static::createOrFindPartner($order);
         $odooOrderId = static::createSaleOrder($data, $partnerId);
@@ -28,6 +51,103 @@ class OdooService
             'partner_id' => $partnerId,
             'order_id'   => $odooOrderId,
         ];
+    }
+
+    // ─── Get order collect amount ─────────────────────────────────────────────
+
+    public static function getOrderCollect(int $odooOrderId): float
+    {
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['x_studio_collect'],
+            'limit'  => 1,
+        ]);
+
+        return (float) ($result[0]['x_studio_collect'] ?? 0);
+    }
+
+    public static function getOrderInfo(int $odooOrderId): array
+    {
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['state', 'x_studio_collect'],
+            'limit'  => 1,
+        ]);
+
+        if (empty($result[0])) {
+            throw new \RuntimeException('Order not found');
+        }
+
+        return [
+            'state'   => $result[0]['state'] ?? '',
+            'collect' => (float) ($result[0]['x_studio_collect'] ?? 0),
+        ];
+    }
+
+    /**
+     * Called after a weblink (bluuu) payment is confirmed via Xendit callback.
+     * Finds the Odoo sale order via $order->odoo_id, then:
+     *   - increases x_studio_deposit by $amount
+     *   - decreases x_studio_collect by $amount (floored at 0)
+     */
+    public static function registerWebPayment(Order $order, float $amount): void
+    {
+        $odooOrderId = (int) $order->odoo_id;
+
+        if (!$odooOrderId) {
+            Log::warning('OdooService::registerWebPayment — order has no odoo_id', ['order_id' => $order->id]);
+            return;
+        }
+
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['x_studio_deposit', 'x_studio_collect'],
+            'limit'  => 1,
+        ]);
+
+        if (empty($result[0])) {
+            Log::warning('OdooService::registerWebPayment — odoo order not found', ['odoo_id' => $odooOrderId]);
+            return;
+        }
+
+        $currentDeposit = (float) ($result[0]['x_studio_deposit'] ?? 0);
+        $currentCollect = (float) ($result[0]['x_studio_collect'] ?? 0);
+
+        static::post('/json/2/sale.order/write', [
+            'ids'  => [$odooOrderId],
+            'vals' => [
+                'x_studio_deposit' => $currentDeposit + $amount,
+                'x_studio_collect' => max(0.0, $currentCollect - $amount),
+            ],
+        ]);
+
+        Log::info('OdooService::registerWebPayment — done', [
+            'odoo_id'         => $odooOrderId,
+            'amount'          => $amount,
+            'deposit_before'  => $currentDeposit,
+            'collect_before'  => $currentCollect,
+        ]);
+    }
+
+    public static function registerPayment(int $odooOrderId, float $amount): void
+    {
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['x_studio_deposit', 'x_studio_collect'],
+            'limit'  => 1,
+        ]);
+
+        if (empty($result[0])) return;
+
+        $currentDeposit = (float) ($result[0]['x_studio_deposit'] ?? 0);
+
+        static::post('/json/2/sale.order/write', [
+            'ids'  => [$odooOrderId],
+            'vals' => [
+                'x_studio_deposit' => $currentDeposit + $amount,
+                'x_studio_collect' => 0,
+            ],
+        ]);
     }
 
     // ─── Build data array ─────────────────────────────────────────────────────
@@ -40,9 +160,7 @@ class OdooService
         $boat    = $order->boat;
         $company = optional($boat)->company;
 
-        $date = is_string($order->travel_date)
-            ? $order->travel_date
-            : $order->travel_date->format('Y-m-d');
+        $date = Carbon::parse($order->travel_date)->format('Y-m-d');
 
         // ── Lead / order fields ───────────────────────────────────────────────
         $lead = [
@@ -166,23 +284,29 @@ class OdooService
             'limit'  => 1,
         ]);
 
-        $vals = [
-            'name'  => $order->name,
-            'email' => $order->email,
-            'phone' => $order->whatsapp ?? '',
-        ];
-
         if (!empty($found[0]['id'])) {
             $partnerId = (int) $found[0]['id'];
-            static::post('/json/2/res.partner/write', [
-                'ids'  => [$partnerId],
-                'vals' => $vals,
-            ]);
+
+            $updateVals = [];
+            if (!empty($order->name))     $updateVals['name']  = $order->name;
+            if (!empty($order->whatsapp)) $updateVals['phone'] = $order->whatsapp;
+
+            if (!empty($updateVals)) {
+                static::post('/json/2/res.partner/write', [
+                    'ids'  => [$partnerId],
+                    'vals' => $updateVals,
+                ]);
+            }
+
             return $partnerId;
         }
 
         $id = static::post('/json/2/res.partner/create', [
-            'vals_list' => [$vals],
+            'vals_list' => [[
+                'name'  => $order->name,
+                'email' => $order->email,
+                'phone' => $order->whatsapp ?? '',
+            ]],
         ]);
 
         return (int) (is_array($id) ? $id[0] : $id);
@@ -198,29 +322,35 @@ class OdooService
             'partner_id' => $partnerId,
 
             'is_rental_order'    => true,
-            'rental_start_date'  => $lead['travel_date'] . ' ' . $lead['route_start'],
-            'rental_return_date' => $lead['travel_date'] . ' ' . $lead['route_end'],
+            'rental_start_date'  => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
+            'rental_return_date' => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
 
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_boat_name'        => $lead['boat_name'],
-            'x_studio_pickup_cars'      => $lead['cars'],
-            'x_studio_drop_off_cars'    => $lead['transfer_type'] === 'pickup' ? 0 : $lead['cars'],
+            'x_studio_pickup_cars'      => $lead['transfer_type'] === 'dropoff'  ? 0 : $lead['cars'],
+            'x_studio_drop_off_cars'    => $lead['transfer_type'] === 'pickup'  ? 0 : $lead['cars'],
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
             'x_studio_route'            => $lead['route_name'],
             'x_studio_collect'          => $lead['total_price'] - $lead['deposite_summ'],
+            'x_studio_payment_source'   => $lead['payment_source'] ?? '',
+            'client_order_ref'          => $lead['external_id'],
         ];
 
         if (!empty($lead['company_odoo_id'])) {
             $vals['company_id'] = $lead['company_odoo_id'];
         }
 
-$id = static::post('/json/2/sale.order/create', ['vals_list' => [$vals]]);
+        $id = static::post('/json/2/sale.order/create', ['vals_list' => [$vals]]);
 
-        return (int) (is_array($id) ? $id[0] : $id);
+        $odooId = (int) (is_array($id) ? $id[0] : $id);
+
+        static::post('/json/2/sale.order/action_confirm', ['ids' => [$odooId]]);
+
+        return $odooId;
     }
 
     // ─── Step 4: Order lines ──────────────────────────────────────────────────
@@ -342,16 +472,35 @@ $id = static::post('/json/2/sale.order/create', ['vals_list' => [$vals]]);
 
     // ─── HTTP helper ──────────────────────────────────────────────────────────
 
-    protected static function post(string $endpoint, array $body)
+    public static function post(string $endpoint, array $body, int $maxRetries = 3)
     {
-        $response = Http::withHeaders([
-                'Authorization'   => 'bearer ' . static::$apiKey,
-                'X-Odoo-Database' => static::$db,
-            ])
-            ->timeout(30)
-            ->post(static::$url . $endpoint, $body);
+        $attempt = 0;
+        $delay   = 2; // seconds
 
-        if (!$response->successful()) {
+        while (true) {
+            $response = Http::withHeaders([
+                    'Authorization'   => 'bearer ' . static::apiKey(),
+                    'X-Odoo-Database' => static::db(),
+                ])
+                ->timeout(30)
+                ->post(static::url() . $endpoint, $body);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            if ($response->status() === 429 && $attempt < $maxRetries) {
+                $attempt++;
+                Log::warning('OdooService rate limited, retrying', [
+                    'endpoint' => $endpoint,
+                    'attempt'  => $attempt,
+                    'delay'    => $delay,
+                ]);
+                sleep($delay);
+                $delay *= 2;
+                continue;
+            }
+
             Log::error('OdooService error', [
                 'endpoint' => $endpoint,
                 'status'   => $response->status(),
@@ -359,7 +508,5 @@ $id = static::post('/json/2/sale.order/create', ['vals_list' => [$vals]]);
             ]);
             throw new \RuntimeException('Odoo API error ' . $response->status() . ': ' . $response->body());
         }
-
-        return $response->json();
     }
 }

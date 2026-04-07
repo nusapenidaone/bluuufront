@@ -87,4 +87,6 @@ Route::get('robots.txt', function(){
 
 
 require __DIR__ . '/api/routes.php';
+require __DIR__ . '/chatbot/routes.php';
 require __DIR__ . '/viator/routes.php';
+require __DIR__ . '/odoo/routes.php';

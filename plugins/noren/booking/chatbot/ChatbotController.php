@@ -1,6 +1,6 @@
 <?php
 
-namespace Noren\Booking\Api;
+namespace Noren\Booking\Chatbot;
 
 use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
@@ -15,14 +15,14 @@ use System\Models\File as SystemFile;
 
 class ChatbotController extends Controller
 {
-    private function corsHeaders()
+    protected function corsHeaders()
     {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, OPTIONS');
         header('Access-Control-Allow-Headers: *');
     }
 
-    private function authenticate(Request $request): bool
+    protected function authenticate(Request $request): bool
     {
         $apiKey  = $request->header('X-Api-Key') ?? $request->query('api_key');
         $validKey = env('CHATBOT_API_KEY', 'bluuu-chatbot-2026');
@@ -30,14 +30,14 @@ class ChatbotController extends Controller
         return $apiKey && $apiKey === $validKey;
     }
 
-    private function unauthorized()
+    protected function unauthorized()
     {
         return response()->json(['error' => 'Unauthorized'], 401);
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────
 
-    private function formatBoatFeatures(array $bf): array
+    protected function formatBoatFeatures(array $bf): array
     {
         $on = fn($v) => $v === true || $v === 1 || $v === '1';
 
@@ -315,7 +315,7 @@ class ChatbotController extends Controller
         $isShared = in_array((int) $tour->classes_id, [9, 10]);
 
         // ── Boat price ───────────────────────────────────────────────────
-        $pricelist      = $tour->packages->first()?->pricelist ?? [];
+        $pricelist      = $tour->packages?->pricelist ?? [];
         $boatPriceToAdd = (int) $tour->boat_price;
 
         // Seasonal override

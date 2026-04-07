@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Response;
 use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\OrderPaymentService;
 use Noren\Booking\Classes\KommoService;
+use Noren\Booking\Models\Order;
+use Noren\Booking\Odoo\OdooService;
 
 class VerifyController extends Controller
 {
@@ -43,10 +45,24 @@ class VerifyController extends Controller
 	    if (str_starts_with($external_id, 'bluuu')) {
 	        $status = $statusValue === 'PAID' ? 1 : 2;
 	        (new OrderPaymentService)->handle('1', $external_id, $status, $request->getContent());
-	    }
 
-	    else {
-	    	
+	        if ($statusValue === 'PAID') {
+	        	$order = Order::where('external_id', $external_id)->first();
+	        	if ($order) {
+	        		OdooService::registerWebPayment($order, (float) $request->input('amount'));
+	        	}
+	        }
+
+	    } elseif (str_starts_with($external_id, 'odoo_')) {
+
+	    	if ($statusValue === 'PAID') {
+	    		$odooOrderId = (int) str_replace('odoo_', '', $external_id);
+	    		$amount      = (float) $request->input('amount');
+	    		OdooService::registerPayment($odooOrderId, $amount);
+	    	}
+
+	    } else {
+
 	    	if($statusValue==='PAID'){
 				$amount=$request->input('amount');
 		        $description=$request->input('description');

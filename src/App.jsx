@@ -1,6 +1,7 @@
 import "./index.css";
 import Home from "./home.jsx";
 import Home1 from "./home1.jsx";
+import Home2 from "./Home2.jsx";
 import Private from "./private.jsx";
 import Shared from "./shared.jsx";
 import Checkout from "./Checkout.jsx";
@@ -114,6 +115,10 @@ export default function App() {
 
     if (path === "/home1") {
       return <Home1 />;
+    }
+
+    if (path === "/home2") {
+      return <Home2 />;
     }
 
     return <Home />;

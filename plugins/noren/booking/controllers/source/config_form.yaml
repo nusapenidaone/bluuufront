@@ -1,0 +1,10 @@
+name: Source
+form: $/noren/booking/models/source/fields.yaml
+modelClass: Noren\Booking\Models\Source
+defaultRedirect: noren/booking/source
+create:
+    redirect: 'noren/booking/source/update/:id'
+    redirectClose: noren/booking/source
+update:
+    redirect: noren/booking/source
+    redirectClose: noren/booking/source

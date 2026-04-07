@@ -359,23 +359,14 @@ private function calculateTourAvailability($tour, $date)
         return 0;
     }
 
-    // Проверяем: есть ли "закрытая" лодка, участвующая в этой дате
-    foreach ($tour->boat as $boat) {
-        if (!empty($boat->closed)) {
-            $hasClosedBoatRecord = $boat->closeddates()
-                ->whereDate('date', $date)
-                ->exists();
-
-            if ($hasClosedBoatRecord) {
-                // Если хотя бы одна закрытая лодка участвует в этой дате — всё недоступно
-                return 0;
-            }
-        }
-    }
-
     // Shared tour (тип 1)
     if ($tour->types_id == 1) {
         foreach ($tour->boat as $boat) {
+            // Если лодка закрыта в бэк-офисе, она не доступна
+            if (!empty($boat->closed)) {
+                $hasClosedBoatRecord = $boat->closeddates()->whereDate('date', $date)->exists();
+                if ($hasClosedBoatRecord) continue;
+            }
 
             $records = $boat->closeddates()
                 ->whereDate('date', $date)
@@ -387,8 +378,10 @@ private function calculateTourAvailability($tour, $date)
                 continue;
             }
 
-            // Если есть запись с type != 1 — лодка недоступна
-            $hasOtherTypes = $records->where('type', '!=', 1)->isNotEmpty();
+            // Типы 2, 3, 4 полностью блокируют лодку
+            $hasOtherTypes = $records->whereIn('type', [2, 3, 4])->isNotEmpty() 
+                          || $records->whereNull('type')->isNotEmpty() 
+                          || $records->where('type', '')->isNotEmpty();
             if ($hasOtherTypes) {
                 continue;
             }
@@ -401,6 +394,12 @@ private function calculateTourAvailability($tour, $date)
     // Private tour (иначе)
     } else {
         foreach ($tour->boat as $boat) {
+            // Если лодка помечена как закрытая и есть запись на дату — она занята
+            if (!empty($boat->closed)) {
+                $hasClosedBoatRecord = $boat->closeddates()->whereDate('date', $date)->exists();
+                if ($hasClosedBoatRecord) continue;
+            }
+
             $isClosed = $boat->closeddates()
                 ->whereDate('date', $date)
                 ->exists();

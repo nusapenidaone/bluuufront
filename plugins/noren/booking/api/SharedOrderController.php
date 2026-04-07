@@ -14,7 +14,6 @@ use Noren\Booking\Models\Route;
 
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PayPalService;
-use Noren\Booking\Api\OdooService;
 
 use Log;
 
@@ -176,6 +175,8 @@ class SharedOrderController extends Controller
             $order->pickup_address = $data['pickupAddress'] ?? null;
             $order->dropoff_address = $data['dropoffAddress'] ?? null;
 
+            $order->source_id = 1;
+
             $order->save();
 
             Log::info('SharedOrder saved', [
@@ -184,12 +185,6 @@ class SharedOrderController extends Controller
                 'restaurant_id' => $order->restaurant_id,
                 'program_id' => $order->program_id,
             ]);
-
-            try {
-                OdooService::createLead($order);
-            } catch (\Exception $e) {
-                Log::error('OdooService SharedOrder error: ' . $e->getMessage());
-            }
 
             Session::put('order_id', $order->id);
 

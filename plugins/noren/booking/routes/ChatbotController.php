@@ -199,7 +199,7 @@ class ChatbotController extends Controller
         $this->corsHeaders();
         if (!$this->authenticate($request)) return $this->unauthorized();
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'route', 'route.restaurant'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'route', 'route.restaurant', 'boat.closeddates'])
             ->whereIn('classes_id', [9])
             ->where('status', '!=', 'disabled')
             ->orderBy('sort_order')
@@ -224,13 +224,43 @@ class ChatbotController extends Controller
                     ] : null,
                 ])->values();
 
+            // Рассчитываем доступность на "сегодня"
+            $dateStr   = $today->format('Y-m-d');
+            $realtimeCapacity = 0;
+            foreach ($tour->boat as $boat) {
+                if (!empty($boat->closed)) {
+                    $hasClosedBoatRecord = $boat->closeddates->filter(fn($cd) =>
+                        $cd->deleted_at === null && substr($cd->date, 0, 10) === $dateStr
+                    )->isNotEmpty();
+                    if ($hasClosedBoatRecord) continue;
+                }
+
+                $records = $boat->closeddates->filter(fn($cd) =>
+                    $cd->deleted_at === null && substr($cd->date, 0, 10) === $dateStr
+                );
+
+                if ($records->isEmpty()) {
+                    $realtimeCapacity += (int) ($boat->capacity ?? 0);
+                    continue;
+                }
+
+                $blocked = $records->first(fn($cd) =>
+                    $cd->type === null || $cd->type === '' || in_array((int) $cd->type, [2, 3, 4])
+                );
+
+                if ($blocked) continue;
+
+                $used = (int) $records->where('type', 1)->sum('qtty');
+                $realtimeCapacity += max(0, (int) ($boat->capacity ?? 0) - $used);
+            }
+
             return [
                 'id'          => $tour->id,
                 'name'        => $tour->name,
                 'slug'        => $tour->slug,
                 'description' => $tour->description,
                 'size'        => $tour->size,
-                'capacity'    => $tour->capacity,
+                'capacity'    => $realtimeCapacity,
                 'currency'    => 'IDR',
                 'status'      => $tour->status ?: 'ready',
                 'categories'  => $tour->category->map(fn($c) => $c->name)->values(),

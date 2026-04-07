@@ -3,8 +3,6 @@
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\PrivateOrderController;
 use Noren\Booking\Api\SharedOrderController;
-use Noren\Booking\Api\ChatbotController;
-
 // Tours
 Route::get('api/new/tours/private', [FullController::class, 'getPrivateTours']);
 Route::get('api/new/tours/shared',  [FullController::class, 'getSharedTours']);
@@ -64,9 +62,4 @@ Route::get('api/new/categories', [FullController::class, 'getCategories']);
 Route::get('api/new/rules',    [FullController::class, 'getRules']);
 Route::get('api/new/settings', [FullController::class, 'getSettings']);
 Route::get('api/new/contacts', [FullController::class, 'getContacts']);
-
-// Chatbot (API key required)
-Route::get('api/chatbot/boats/private', [ChatbotController::class, 'getPrivateBoats']);
-Route::get('api/chatbot/boats/shared',  [ChatbotController::class, 'getSharedBoats']);
-Route::post('api/chatbot/quote',        [ChatbotController::class, 'getQuote']);
 

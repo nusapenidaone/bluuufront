@@ -21,6 +21,7 @@ class Payment extends Model
      */
     public $rules = [
     ];
+    
     public $belongsTo =[
         'order'=> Order::class,
     ];

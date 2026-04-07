@@ -38,15 +38,15 @@ class OrderPaymentService
         if ($status === 1) {
             $order->status_id = 2;//confirmed
             $order->payment_status_id = ($order->deposite == 100) ? 2 : 3; //2 fullpayd 3 partial payd
-            
-            
+
+
         } else {
             $order->status_id = 3;//deleded
             $order->payment_status_id = 4;//expired
         }
 
         $order->save();
- 
+
         //Log::info("Order #{$order->id} updated. Status: {$order->status_id}, Payment Status: {$order->payment_status_id}");
     }
 

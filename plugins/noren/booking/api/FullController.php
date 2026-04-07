@@ -429,37 +429,34 @@ class FullController extends Controller
         // ── Helper: availability for one date — picks the best boat ──────
         // Returns available_seats and boat_id of the boat with most free seats.
         $calcDate = function (array $boats, string $date) use ($boatIndex): array {
-            $bestBoatId   = null;
-            $bestAvailable = 0;
-            $bestBooked    = 0;
+            $totalAvailable = 0;
+            $firstBoatId    = null;
 
             foreach ($boats as $boat) {
                 $boatId   = $boat->id;
+                if ($firstBoatId === null) {
+                    $firstBoatId = $boatId;
+                }
+
                 $capacity = $boatIndex[$boatId]['capacity'] ?? 0;
                 $rec      = $boatIndex[$boatId]['dates'][$date] ?? null;
 
                 if ($rec === null) {
-                    $avail  = $capacity;
-                    $booked = 0;
+                    $avail = $capacity;
                 } elseif ($rec['blocked']) {
-                    $avail  = 0;
-                    $booked = 0;
+                    $avail = 0;
                 } else {
                     $booked = (int) ($rec['qtty'] ?? 0);
                     $avail  = max(0, $capacity - $booked);
                 }
 
-                if ($avail > $bestAvailable) {
-                    $bestAvailable = $avail;
-                    $bestBoatId    = $boatId;
-                    $bestBooked    = $booked;
-                }
+                $totalAvailable += $avail;
             }
 
             return [
-                'available_seats' => $bestAvailable,
-                'available'       => $bestAvailable > 0 ? 1 : 0,
-                'boat_id'         => $bestBoatId,
+                'available_seats' => $totalAvailable,
+                'available'       => $totalAvailable > 0 ? 1 : 0,
+                'boat_id'         => $firstBoatId,
             ];
         };
 
