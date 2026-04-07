@@ -184,6 +184,8 @@ class OdooService
             'whatsapp'        => $order->whatsapp    ?? '',
             'external_id'     => $order->external_id ?? '',
             'order_id'        => $order->id,
+            'transfer_id'      => (int) $order->transfer_id,
+            'free_shuttle_bus' => (int) $order->transfer_id === 3,
         ];
 
         // ── Products ──────────────────────────────────────────────────────────
@@ -329,7 +331,7 @@ class OdooService
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_boat_name'        => $lead['boat_name'],
             'x_studio_pickup_cars'      => $lead['transfer_type'] === 'dropoff'  ? 0 : $lead['cars'],
-            'x_studio_drop_off_cars'    => $lead['transfer_type'] === 'pickup'  ? 0 : $lead['cars'],
+            'x_studio_drop_off_cars'    => $lead['transfer_id'] === 2 ? $lead['cars'] : 0,
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
@@ -338,6 +340,7 @@ class OdooService
             'x_studio_collect'          => $lead['total_price'] - $lead['deposite_summ'],
             'x_studio_payment_source'   => $lead['payment_source'] ?? '',
             'client_order_ref'          => $lead['external_id'],
+            'x_studio_free_shuttle_bus' => $lead['free_shuttle_bus'] ?? false,
         ];
 
         if (!empty($lead['company_odoo_id'])) {
