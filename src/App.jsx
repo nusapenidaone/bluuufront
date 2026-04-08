@@ -1,4 +1,5 @@
 import "./index.css";
+import LeadAdmin from "./LeadAdmin.jsx";
 import Home from "./home.jsx";
 import Home1 from "./home1.jsx";
 import Home2 from "./Home2.jsx";
@@ -68,6 +69,10 @@ export default function App() {
   const policyKeyFromPath = policyMatch?.[1] ? POLICY_PATH_MAP[policyMatch[1].toLowerCase()] : null;
 
   const content = (() => {
+    if (path === "/lead-admin") {
+      return <LeadAdmin />;
+    }
+
     if (policyKeyFromPath) {
       return <PolicyPage policyKey={policyKeyFromPath} />;
     }

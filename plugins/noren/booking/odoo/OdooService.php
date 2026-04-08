@@ -36,6 +36,76 @@ class OdooService
         };
     }
 
+    /**
+     * Cancel the existing Odoo order and create a brand-new one from the current
+     * local order state. Used by the admin interface so that ANY change (products,
+     * extras, transfer, boat, dates…) is fully reflected in Odoo.
+     *
+     * Preserves the deposit: if the Odoo order already has a higher deposit
+     * (web payments were registered there), that amount is copied to the new order.
+     */
+    public static function recreateLead(Order $order): array
+    {
+        $odooOrderId = (int) $order->odoo_id;
+        if (!$odooOrderId) {
+            throw new \RuntimeException('Order has no odoo_id');
+        }
+
+        // 1. Read current deposit from Odoo so web-payments are not lost
+        $odooDeposit = 0.0;
+        $odooBoat    = '';
+        try {
+            $odooOrder   = static::getFullOrder($odooOrderId);
+            $odooDeposit = (float) ($odooOrder['x_studio_deposit'] ?? 0);
+            $odooBoat    = $odooOrder['x_studio_boat_name'] ?? '';
+        } catch (\Exception $e) {
+            Log::warning('OdooService::recreateLead — could not read old order', [
+                'odoo_id' => $odooOrderId,
+                'error'   => $e->getMessage(),
+            ]);
+        }
+
+        // 2. Cancel old order
+        static::cancelOrder($odooOrderId);
+
+        // 3. Create new order
+        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
+
+        $data = static::buildOrderData($order);
+        $data['lead']['payment_source'] = static::paymentSource($order);
+
+        $partnerId = static::createOrFindPartner($order);
+        $newOdooId = static::createSaleOrder($data, $partnerId);
+        static::addOrderLines($order, $newOdooId);
+
+        // 4. Restore deposit if Odoo had more (accumulated web payments)
+        $localDeposit = (float) ($order->deposite_summ ?? 0);
+        if ($odooDeposit > $localDeposit) {
+            static::post('/json/2/sale.order/write', [
+                'ids'  => [$newOdooId],
+                'vals' => [
+                    'x_studio_deposit' => $odooDeposit,
+                    'x_studio_collect' => max(0.0, (float) ($order->total_price ?? 0) - $odooDeposit),
+                ],
+            ]);
+        }
+
+        Log::info('OdooService::recreateLead — done', [
+            'old_odoo_id' => $odooOrderId,
+            'new_odoo_id' => $newOdooId,
+            'order_id'    => $order->id,
+            'boat_before' => $odooBoat,
+            'boat_after'  => optional($order->boat)->name ?? '',
+            'deposit_preserved' => $odooDeposit > $localDeposit ? $odooDeposit : null,
+        ]);
+
+        return [
+            'cancelled_odoo_id' => $odooOrderId,
+            'partner_id'        => $partnerId,
+            'order_id'          => $newOdooId,
+        ];
+    }
+
     public static function createLead(Order $order): array
     {
         $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
@@ -51,6 +121,131 @@ class OdooService
             'partner_id' => $partnerId,
             'order_id'   => $odooOrderId,
         ];
+    }
+
+    // ─── Get order collect amount ─────────────────────────────────────────────
+
+    // ─── Search orders in Odoo ───────────────────────────────────────────────
+
+    public static function searchOrders(string $search = '', int $limit = 20, int $offset = 0): array
+    {
+        $domain = [];
+
+        if ($search) {
+            $domain = [
+                '|', '|', '|',
+                ['client_order_ref',   'ilike', $search],
+                ['partner_id.name',    'ilike', $search],
+                ['partner_id.email',   'ilike', $search],
+                ['x_studio_boat_name', 'ilike', $search],
+            ];
+        }
+
+        return static::post('/json/2/sale.order/search_read', [
+            'domain' => $domain,
+            'fields' => [
+                'id', 'name', 'state', 'client_order_ref',
+                'partner_id',
+                'rental_start_date',
+                'x_studio_boat_name',
+                'x_studio_route',
+                'x_studio_adults', 'x_studio_kids', 'x_studio_count_of_people',
+                'x_studio_deposit', 'x_studio_collect',
+            ],
+            'limit'  => $limit,
+            'offset' => $offset,
+            'order'  => 'id desc',
+        ]) ?: [];
+    }
+
+    public static function countOrders(string $search = ''): int
+    {
+        $domain = [];
+
+        if ($search) {
+            $domain = [
+                '|', '|', '|',
+                ['client_order_ref',   'ilike', $search],
+                ['partner_id.name',    'ilike', $search],
+                ['partner_id.email',   'ilike', $search],
+                ['x_studio_boat_name', 'ilike', $search],
+            ];
+        }
+
+        // Use search_read with only 'id' to count — more portable than search_count
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => $domain,
+            'fields' => ['id'],
+            'limit'  => 0, // 0 = no limit → returns all IDs for counting
+        ]);
+
+        return is_array($result) ? count($result) : 0;
+    }
+
+    // ─── Update fields directly on existing Odoo order ───────────────────────
+
+    public static function updateOrderFields(int $odooOrderId, array $fields): void
+    {
+        static::post('/json/2/sale.order/write', [
+            'ids'  => [$odooOrderId],
+            'vals' => $fields,
+        ]);
+
+        Log::info('OdooService::updateOrderFields', [
+            'odoo_id' => $odooOrderId,
+            'fields'  => array_keys($fields),
+        ]);
+    }
+
+    // ─── Get full order data from Odoo ───────────────────────────────────────
+
+    public static function getFullOrder(int $odooOrderId): array
+    {
+        $orders = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => [
+                'id', 'name', 'state', 'client_order_ref',
+                'partner_id', 'company_id',
+                'rental_start_date', 'rental_return_date',
+                'x_studio_boat_name',
+                'x_studio_pickup_address', 'x_studio_drop_off_address',
+                'x_studio_pickup_cars', 'x_studio_drop_off_cars',
+                'x_studio_adults', 'x_studio_kids', 'x_studio_count_of_people',
+                'x_studio_route',
+                'x_studio_deposit', 'x_studio_collect',
+                'x_studio_payment_source', 'x_studio_free_shuttle_bus',
+                'order_line',
+            ],
+            'limit'  => 1,
+        ]);
+
+        if (empty($orders[0])) {
+            throw new \RuntimeException("Odoo order #{$odooOrderId} not found");
+        }
+
+        $order     = $orders[0];
+        $lineIds   = array_filter((array) ($order['order_line'] ?? []));
+        $lines     = [];
+
+        if ($lineIds) {
+            $lines = static::post('/json/2/sale.order.line/search_read', [
+                'domain' => [['id', 'in', array_values($lineIds)]],
+                'fields' => ['id', 'name', 'product_id', 'product_uom_qty', 'price_unit'],
+                'limit'  => 50,
+            ]);
+        }
+
+        $order['lines'] = $lines;
+        return $order;
+    }
+
+    // ─── Cancel order in Odoo ────────────────────────────────────────────────
+
+    public static function cancelOrder(int $odooOrderId): void
+    {
+        static::post('/json/2/sale.order/action_cancel', ['ids' => [$odooOrderId]]);
+
+        Log::info('OdooService::cancelOrder — done', ['odoo_id' => $odooOrderId]);
     }
 
     // ─── Get order collect amount ─────────────────────────────────────────────
