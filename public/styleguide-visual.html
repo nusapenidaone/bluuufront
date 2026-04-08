@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bluuu — Визуальный Styleguide</title>
+<style>
+  :root {
+    --blue: #0073E0;
+    --blue-hover: #007FFF;
+    --blue-soft: #E6F4FF;
+    --blue-light: #60A5FA;
+    --blue-pale: #BFDBFE;
+    --blue-dark: #003459;
+    --bg: #FAFBFB;
+    --white: #FFFFFF;
+    --gray-soft: #F3F5F6;
+    --text-h: #020202;
+    --text-body: #0D0D0D;
+    --text-mute: #607077;
+    --border: #E6EAEC;
+    --shadow: 0 20px 50px rgba(6,18,40,0.08);
+    --dk-bg: #0A1628;
+    --dk-bg2: #0D1F3C;
+    --dk-bg3: #070F1F;
+    --green: #34D399;
+    --green-light: #6EE7B7;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text-body);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 64px 32px 96px; }
+  header.hero {
+    margin-bottom: 64px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    color: var(--blue);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  header.hero h1 {
+    font-size: 72px;
+    line-height: 1.05;
+    font-weight: 700;
+    color: var(--text-h);
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+  }
+  header.hero p { font-size: 16px; color: var(--text-mute); max-width: 720px; margin: 0; }
+
+  section { margin-bottom: 72px; scroll-margin-top: 32px; }
+  section h2 {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-h);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  section h3.sub {
+    font-size: 16px;
+    margin: 32px 0 16px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+  }
+  section .lead { font-size: 16px; color: var(--text-mute); margin: 0 0 32px; max-width: 720px; }
+
+  .grid { display: grid; gap: 24px; }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+
+  .divider {
+    margin: 96px 0 48px;
+    padding: 56px 0 0;
+    border-top: 1px solid var(--border);
+  }
+  .divider .label {
+    display: inline-block;
+    background: linear-gradient(135deg, #0073E0, #6366F1);
+    color: #FFF;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    margin-bottom: 14px;
+  }
+  .divider h2 { font-size: 56px; letter-spacing: -0.02em; margin-top: 8px; }
+
+  .type-row {
+    display: flex; align-items: baseline; gap: 24px;
+    padding: 20px 0; border-bottom: 1px solid var(--border);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .label {
+    width: 220px; flex-shrink: 0;
+    font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-mute); font-weight: 600;
+  }
+  .type-row .meta {
+    width: 180px; flex-shrink: 0;
+    font-size: 12px; color: var(--text-mute);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .type-row .sample { color: var(--text-h); }
+
+  .h1-sample { font-size: 72px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+  .h2-sample { font-size: 40px; font-weight: 700; line-height: 1.1; letter-spacing: -0.01em; }
+  .h3-sample { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .body-sample { font-size: 16px; }
+  .small-sample { font-size: 14px; }
+  .caps-sample { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+  .accent-demo {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+  }
+  .accent-demo .h1 {
+    font-size: 56px;
+    line-height: 1.05;
+    font-weight: 700;
+    color: var(--text-h);
+    margin: 0;
+  }
+  .accent-demo .accent { color: #0073E0; font-style: italic; }
+  .accent-demo .meta {
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--text-mute);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  .swatch {
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+  .swatch .chip { height: 100px; }
+  .swatch .info { padding: 14px 16px; }
+  .swatch .name { font-size: 14px; font-weight: 600; color: var(--text-h); margin: 0 0 4px; }
+  .swatch .hex {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px; color: var(--text-mute); text-transform: uppercase;
+  }
+
+  .radius-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .radius-card .preview {
+    background: var(--blue-soft);
+    border: 1px solid var(--blue);
+    height: 80px;
+    margin-bottom: 12px;
+  }
+  .radius-card .name { font-size: 14px; font-weight: 600; color: var(--text-h); }
+  .radius-card .value {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; color: var(--text-mute); margin-top: 4px;
+  }
+  .r-pill { border-radius: 9999px; }
+  .r-32 { border-radius: 32px; }
+  .r-26 { border-radius: 26px; }
+  .r-24 { border-radius: 24px; }
+  .r-18 { border-radius: 18px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 9999px;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn.glow {
+    box-shadow: 0 16px 32px rgba(0, 115, 224, 0.45),
+                0 0 0 1px rgba(0, 127, 255, 0.4) inset;
+  }
+  .btn.dark { background: var(--blue-dark); }
+
+  .tag {
+    display: inline-block;
+    background: var(--blue-soft);
+    color: var(--blue);
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  .dark-section {
+    background: var(--dk-bg2);
+    color: #FFFFFF;
+    border-radius: 32px;
+    padding: 48px 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow);
+  }
+  .dark-section h3.sub { color: rgba(255,255,255,0.5); }
+
+  .glass-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .glass-pill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px 10px 12px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #FFFFFF;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    isolation: isolate;
+  }
+  .glass-pill::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.06) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+  .glass-pill .dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: #fff;
+    color: #0073E0;
+    font-weight: 700;
+  }
+  .glass-white { background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.45); }
+  .glass-blue { background: rgba(0,127,255,0.18); border: 1px solid rgba(96,165,250,0.45); }
+  .glass-green { background: rgba(16,185,129,0.18); border: 1px solid rgba(110,231,183,0.4); color: #FFF; }
+  .glass-dark { background: rgba(13,26,46,0.92); border: 1px solid rgba(255,255,255,0.08); }
+
+  .dark-form {
+    width: 380px;
+    background: rgba(13,26,46,0.92);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    padding: 28px;
+  }
+  .dark-form h3 { color: #FFFFFF; font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+  .dark-form .sub-text { color: rgba(255,255,255,0.68); font-size: 13px; margin: 0 0 20px; }
+  .dark-form label {
+    display: block; font-size: 13px; font-weight: 600;
+    color: #FFFFFF; margin: 14px 0 6px;
+  }
+  .dark-form input {
+    width: 100%; height: 44px; padding: 0 14px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 10px;
+    color: #FFFFFF; font-size: 14px; outline: none;
+  }
+  .dark-form input::placeholder { color: rgba(255,255,255,0.42); }
+  .dark-form .submit {
+    margin-top: 28px;
+    width: 100%; height: 52px;
+    background: #0073E0;
+    color: #FFFFFF;
+    font-size: 16px; font-weight: 700;
+    border: none; border-radius: 9999px;
+    cursor: pointer;
+    box-shadow: 0 16px 32px rgba(0, 115, 224, 0.45),
+                0 0 0 1px rgba(0, 127, 255, 0.4) inset;
+  }
+  .dark-form .disclaimer {
+    margin-top: 12px; text-align: center;
+    font-size: 12px; color: rgba(255,255,255,0.45);
+  }
+
+  .sku-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .sku-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .sku-card h4 { color: #FFF; margin: 0 0 8px; font-size: 22px; }
+  .sku-card p { color: rgba(255,255,255,0.5); margin: 0 0 14px; font-size: 14px; }
+  .sku-card .price-box {
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    position: relative;
+  }
+  .sku-card .from { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .sku-card .price { font-size: 24px; font-weight: 700; color: #60A5FA; margin: 0 8px; }
+  .sku-card .unit { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .sku-card .glass-tag {
+    position: absolute;
+    top: 10px; right: 10px;
+    padding: 3px 12px;
+    background: rgba(16,185,129,0.18);
+    border: 1px solid rgba(110,231,183,0.4);
+    color: #6EE7B7;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    border-radius: 9999px;
+  }
+  .sku-card .cta {
+    width: 100%; height: 48px;
+    border: none;
+    border-radius: 9999px;
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .sku-card .cta-glass {
+    background: rgba(255,255,255,0.06);
+    backdrop-filter: blur(8px);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .sku-card .cta-glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1.5px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.25) 40%, rgba(255,255,255,0.08) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+  .sku-card .cta-grad {
+    background: linear-gradient(90deg, #3B82F6, #6366F1);
+    box-shadow: 0 4px 20px rgba(59,130,246,0.45);
+  }
+  .sku-card.highlighted {
+    background: linear-gradient(160deg, #0D2151 0%, #0A1A3E 40%, #091628 100%);
+    border: 1px solid transparent;
+    box-shadow:
+      0 0 0 1px rgba(59,130,246,0.5),
+      0 8px 40px rgba(59,130,246,0.2),
+      0 0 60px rgba(59,130,246,0.08);
+  }
+  .sku-card.highlighted::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(96,165,250,0.8), transparent);
+    pointer-events: none;
+  }
+  .sku-card.highlighted::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 25px;
+    padding: 1px;
+    background: linear-gradient(160deg, rgba(96,165,250,0.8) 0%, rgba(59,130,246,0.4) 40%, rgba(99,102,241,0.6) 100%);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .footer-preview {
+    background: #070F1F;
+    border-radius: 32px;
+    padding: 48px;
+    color: rgba(255,255,255,0.5);
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+  .footer-preview .grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 32px;
+  }
+  .footer-preview h4 {
+    color: rgba(255,255,255,0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 16px;
+  }
+  .footer-preview a {
+    display: block;
+    color: rgba(255,255,255,0.5);
+    text-decoration: none;
+    font-size: 14px;
+    padding: 4px 0;
+  }
+  .footer-preview a:hover { color: #60A5FA; }
+  .footer-preview .logo { color: #FFF; font-size: 22px; font-weight: 700; margin-bottom: 20px; }
+
+  .shadow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .shadow-demo {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 36px;
+    text-align: center;
+  }
+  .shadow-demo .name { font-weight: 600; color: var(--text-h); margin-bottom: 4px; }
+  .shadow-demo .meta {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px; color: var(--text-mute);
+  }
+  .shadow-card { box-shadow: 0 20px 50px rgba(6,18,40,0.08); }
+  .shadow-blue {
+    box-shadow: 0 16px 32px rgba(0, 115, 224, 0.45),
+                0 0 0 1px rgba(0, 127, 255, 0.4) inset;
+    background: #0073E0;
+    color: #FFF;
+    border: none;
+  }
+
+  footer.foot {
+    margin-top: 72px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    color: var(--text-mute);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .toc {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 24px 28px;
+    margin-bottom: 64px;
+    box-shadow: var(--shadow);
+  }
+  .toc h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+  }
+  .toc ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24px; }
+  .toc li { padding: 4px 0; font-size: 14px; }
+  .toc a { color: var(--blue); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  details summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-mute);
+    padding: 8px 0;
+  }
+  pre {
+    background: #0D1F3C;
+    color: #BFDBFE;
+    padding: 20px;
+    border-radius: 12px;
+    overflow: auto;
+    font-size: 12px;
+    margin-top: 12px;
+  }
+
+  @media (max-width: 900px) {
+    .wrap { padding: 40px 16px 64px; }
+    header.hero h1 { font-size: 48px; }
+    section h2 { font-size: 32px; }
+    .grid.cols-3, .grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid.cols-2, .sku-row, .shadow-grid { grid-template-columns: 1fr; }
+    .h1-sample { font-size: 48px; }
+    .h2-sample { font-size: 32px; }
+    .h3-sample { font-size: 24px; }
+    .type-row { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .type-row .label, .type-row .meta { width: auto; }
+    .toc ul { columns: 1; }
+    .footer-preview .grid { grid-template-columns: 1fr 1fr; }
+    .dark-form { width: 100%; }
+    .accent-demo .h1 { font-size: 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Bluuu Design System</div>
+    <h1>Визуальный Styleguide</h1>
+    <p>Живой документ на основе <strong>STYLEGUIDE_RU.md</strong>. Включает базовую систему (для светлых страниц) и расширение для <strong>Home2 — Темной темы</strong>.</p>
+  </header>
+
+  <div class="toc">
+    <h3>Содержание</h3>
+    <ul>
+      <li><a href="#typography">1. Типографика</a></li>
+      <li><a href="#radii">2. Радиусы</a></li>
+      <li><a href="#colors">3. Цвета</a></li>
+      <li><a href="#shadows">4. Тени</a></li>
+      <li><a href="#components">5. Базовые компоненты</a></li>
+      <li><a href="#h2">— HOME2: Темная тема —</a></li>
+      <li><a href="#h2-typography">H2.1 Шрифты Home2</a></li>
+      <li><a href="#h2-accent">H2.2 Italic Accent</a></li>
+      <li><a href="#h2-palette">H2.3 Расширенная палитра</a></li>
+      <li><a href="#h2-glass">H2.4 Glass System</a></li>
+      <li><a href="#h2-glow">H2.5 Тени и Blue Glow</a></li>
+      <li><a href="#h2-form">H2.8 Hero Form</a></li>
+      <li><a href="#h2-sku">H2.9 SKU карточки</a></li>
+      <li><a href="#h2-footer">H2.10 Footer dark</a></li>
+    </ul>
+  </div>
+
+  <!-- 1. TYPOGRAPHY -->
+  <section id="typography">
+    <h2>1. Шрифты и размеры</h2>
+    <p class="lead">Petrov Sans · Regular и SemiBold</p>
+    <div class="card">
+      <div class="type-row">
+        <div class="label">H1 — главный</div>
+        <div class="meta">72px / 48px · SemiBold</div>
+        <div class="sample h1-sample">Bluuu Tours</div>
+      </div>
+      <div class="type-row">
+        <div class="label">H2 — секции</div>
+        <div class="meta">40px / 32px · SemiBold</div>
+        <div class="sample h2-sample">Наши маршруты</div>
+      </div>
+      <div class="type-row">
+        <div class="label">H3 — карточки</div>
+        <div class="meta">28px / 24px · SemiBold</div>
+        <div class="sample h3-sample">Nusa Penida West</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Body</div>
+        <div class="meta">16px · Regular</div>
+        <div class="sample body-sample">Откройте лучшие пляжи Бали с лицензированным гидом.</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Small</div>
+        <div class="meta">14px · Regular</div>
+        <div class="sample small-sample">Включено: трансфер, обед, входные билеты</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Caps</div>
+        <div class="meta">12px / 11px · UPPERCASE</div>
+        <div class="sample caps-sample">от · популярное · best price</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. RADII -->
+  <section id="radii">
+    <h2>2. Радиусы (базовые)</h2>
+    <div class="grid cols-4">
+      <div class="radius-card"><div class="preview r-pill"></div><div class="name">Pill</div><div class="value">9999px</div></div>
+      <div class="radius-card"><div class="preview r-32"></div><div class="name">Card</div><div class="value">32px</div></div>
+      <div class="radius-card"><div class="preview r-26"></div><div class="name">Photo</div><div class="value">26px</div></div>
+      <div class="radius-card"><div class="preview r-24"></div><div class="name">Info</div><div class="value">24px</div></div>
+      <div class="radius-card"><div class="preview r-18"></div><div class="name">Input</div><div class="value">18px</div></div>
+    </div>
+  </section>
+
+  <!-- 3. COLORS -->
+  <section id="colors">
+    <h2>3. Цвета (базовые)</h2>
+    <h3 class="sub">Акценты</h3>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#0073E0"></div><div class="info"><div class="name">Главный синий</div><div class="hex">#0073E0</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#007FFF"></div><div class="info"><div class="name">Hover</div><div class="hex">#007FFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#E6F4FF"></div><div class="info"><div class="name">Голубой фон</div><div class="hex">#E6F4FF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#003459"></div><div class="info"><div class="name">Тёмно-синий</div><div class="hex">#003459</div></div></div>
+    </div>
+    <h3 class="sub">Тексты</h3>
+    <div class="grid cols-3">
+      <div class="swatch"><div class="chip" style="background:#020202"></div><div class="info"><div class="name">Заголовки</div><div class="hex">#020202</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0D0D0D"></div><div class="info"><div class="name">Описания</div><div class="hex">#0D0D0D</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#607077"></div><div class="info"><div class="name">Второстепенный</div><div class="hex">#607077</div></div></div>
+    </div>
+  </section>
+
+  <!-- 4. SHADOWS -->
+  <section id="shadows">
+    <h2>4. Тени (базовые)</h2>
+    <div class="shadow-grid">
+      <div class="shadow-demo shadow-card">
+        <div class="name">Card Shadow</div>
+        <div class="meta">#061228 · 8% opacity</div>
+      </div>
+      <div class="shadow-demo">
+        <div class="name">Без тени</div>
+        <div class="meta">для пилюль и минималистичных компонентов</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. COMPONENTS -->
+  <section id="components">
+    <h2>5. Базовые компоненты</h2>
+    <div class="card">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+        <button class="btn">Check Availability →</button>
+        <button class="btn glow">С blue glow →</button>
+        <button class="btn dark">Забронировать</button>
+      </div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:20px;">
+        <span class="tag">Популярное</span>
+        <span class="tag">Best Price</span>
+        <span class="tag">Только сегодня</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================ -->
+  <!-- HOME2 DARK THEME EXTENSION                   -->
+  <!-- ============================================ -->
+
+  <div class="divider" id="h2">
+    <span class="label">Home2 Extension</span>
+    <h2>Темная тема</h2>
+    <p class="lead" style="margin-top:16px;">Расширение базовой системы для страницы <code>/home2</code>. Применяется поверх Petrov Sans и токенов выше.</p>
+  </div>
+
+  <section id="h2-typography">
+    <h2>H2.1 Шрифты Home2</h2>
+    <p class="lead">Те же размеры что и в базе, но font-weight 600 (SemiBold).</p>
+    <div class="card">
+      <div class="type-row">
+        <div class="label">H1 (Hero)</div>
+        <div class="meta">72px / 48px · 600 · lh 1.05</div>
+        <div class="sample h1-sample">Award-winning trip</div>
+      </div>
+      <div class="type-row">
+        <div class="label">H2</div>
+        <div class="meta">40px / 32px · 600</div>
+        <div class="sample h2-sample">Choose your tour type</div>
+      </div>
+      <div class="type-row">
+        <div class="label">H3</div>
+        <div class="meta">28px / 24px · 600</div>
+        <div class="sample h3-sample">Shared Tour</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Overline</div>
+        <div class="meta">13px · letter-spacing 2.4px</div>
+        <div class="sample" style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 2.4px; color: #0073E0;">INCLUDED</div>
+      </div>
+    </div>
+    <p style="margin-top:16px; font-size:13px; color:var(--text-mute); font-family: ui-monospace, monospace;">⚠ Tailwind <code>.overline</code> утилита (text-decoration: overline) перебивается через <code>text-decoration: none</code>.</p>
+  </section>
+
+  <section id="h2-accent">
+    <h2>H2.2 Italic Accent</h2>
+    <p class="lead">Все цветные акценты внутри заголовков — фирменный синий <strong>#0073E0</strong> + курсив. На тёмных секциях — светлый <strong>#60A5FA</strong>.</p>
+    <div class="accent-demo">
+      <p class="h1">Award-winning day trip<br/>to <span class="accent">Nusa Penida</span></p>
+      <div class="meta">.accent { color: #0073E0; font-style: italic; }</div>
+    </div>
+    <div class="accent-demo" style="margin-top:24px; background: #0D1F3C; color: #FFF;">
+      <p class="h1" style="color:#FFF;">Choose your <span class="accent" style="color:#60A5FA;">tour type</span></p>
+      <div class="meta" style="color: rgba(255,255,255,0.5);">.sku-section h2 .accent { color: #60A5FA; font-style: italic; }</div>
+    </div>
+  </section>
+
+  <section id="h2-palette">
+    <h2>H2.3 Расширенная палитра (Dark)</h2>
+
+    <h3 class="sub">Тёмные фоны</h3>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#0A1628"></div><div class="info"><div class="name">Главный dark-bg</div><div class="hex">#0A1628</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0D1F3C"></div><div class="info"><div class="name">Dark секции</div><div class="hex">#0D1F3C</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#070F1F"></div><div class="info"><div class="name">Footer</div><div class="hex">#070F1F</div></div></div>
+      <div class="swatch"><div class="chip" style="background:linear-gradient(160deg, #0D2151 0%, #0A1A3E 40%, #091628 100%)"></div><div class="info"><div class="name">Highlighted card</div><div class="hex">linear-gradient</div></div></div>
+    </div>
+
+    <h3 class="sub">Акцентные синие</h3>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#0073E0"></div><div class="info"><div class="name">Primary</div><div class="hex">#0073E0</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#007FFF"></div><div class="info"><div class="name">Hover</div><div class="hex">#007FFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#60A5FA"></div><div class="info"><div class="name">Light blue</div><div class="hex">#60A5FA</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#BFDBFE"></div><div class="info"><div class="name">Pale blue</div><div class="hex">#BFDBFE</div></div></div>
+    </div>
+
+    <h3 class="sub">Текст на тёмном фоне (rgba)</h3>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#0D1F3C; display:flex; align-items:center; justify-content:center; color:#FFFFFF; font-size:14px; font-weight:600;">Aa heading</div><div class="info"><div class="name">Heading</div><div class="hex">#FFFFFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0D1F3C; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.78); font-size:14px;">Aa body</div><div class="info"><div class="name">Body</div><div class="hex">rgba 0.78</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0D1F3C; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.5); font-size:14px;">Aa muted</div><div class="info"><div class="name">Muted</div><div class="hex">rgba 0.5</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0D1F3C; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.3); font-size:14px;">Aa subtle</div><div class="info"><div class="name">Subtle</div><div class="hex">rgba 0.3</div></div></div>
+    </div>
+
+    <h3 class="sub">Зелёный (success / inclusive)</h3>
+    <div class="grid cols-3">
+      <div class="swatch"><div class="chip" style="background:#34D399"></div><div class="info"><div class="name">Green check</div><div class="hex">#34D399</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#6EE7B7"></div><div class="info"><div class="name">Green light</div><div class="hex">#6EE7B7</div></div></div>
+      <div class="swatch"><div class="chip" style="background:rgba(16,185,129,0.18); border:1px solid rgba(110,231,183,0.4)"></div><div class="info"><div class="name">Glass green bg</div><div class="hex">rgba 0.18</div></div></div>
+    </div>
+  </section>
+
+  <section id="h2-glass">
+    <h2>H2.4 Glass System</h2>
+    <p class="lead">Полупрозрачные пилюли с blur и градиентной маской-обводкой через <code>::before</code>.</p>
+    <div class="dark-section">
+      <h3 class="sub" style="margin-top:0;">4 варианта стекла</h3>
+      <div class="glass-row">
+        <div class="glass-pill glass-white"><span class="dot">G</span> 4.9 ★★★★★ (10,692)</div>
+        <div class="glass-pill glass-blue">🛡 Best Price Guaranteed</div>
+        <div class="glass-pill glass-green">All Inclusive</div>
+        <div class="glass-pill glass-dark">Plan your adventure</div>
+      </div>
+      <h3 class="sub">Тонкий вариант (sku-glass-pill — без тени)</h3>
+      <div class="glass-row">
+        <div class="glass-pill glass-green" style="padding: 3px 14px; font-size: 11px; letter-spacing: 1px; text-transform: uppercase;">All Inclusive</div>
+      </div>
+    </div>
+
+    <details>
+      <summary>CSS gradient mask border</summary>
+      <pre>::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.55) 0%,
+    rgba(255,255,255,0.25) 40%,
+    rgba(255,255,255,0.08) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}</pre>
+    </details>
+  </section>
+
+  <section id="h2-glow">
+    <h2>H2.5 Тени и Blue Glow</h2>
+    <div class="shadow-grid">
+      <button class="shadow-demo shadow-blue" style="font-size:18px; font-weight:700; padding:32px;">Send my inquiry → (Blue Glow)</button>
+      <div class="shadow-demo" style="background:#0D1F3C; color:#FFF; box-shadow: 0 0 0 1px rgba(59,130,246,0.5), 0 8px 40px rgba(59,130,246,0.2), 0 0 60px rgba(59,130,246,0.08);">
+        <div class="name" style="color:#FFF;">Multi-layer Glow</div>
+        <div class="meta" style="color:rgba(255,255,255,0.5);">3 слоя — outline + drop + atmospheric</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="h2-form">
+    <h2>H2.8 Hero Form</h2>
+    <p class="lead">Plan your adventure — тёмное стекло с blur 20px, primary blue glow CTA.</p>
+    <div class="dark-section">
+      <div class="dark-form">
+        <h3>Plan your adventure</h3>
+        <p class="sub-text">Leave your details - we'll reply within 30 minutes.</p>
+        <label>Full Name</label>
+        <input placeholder="e.g. Sarah Mitchell" />
+        <label>Email or WhatsApp Number</label>
+        <input placeholder="e.g. sarah@email.com or +1 555 123 4567" />
+        <button class="submit">Send my inquiry →</button>
+        <div class="disclaimer">No spam. No payment required.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="h2-sku">
+    <h2>H2.9 SKU карточки</h2>
+    <p class="lead">Базовая + Highlighted (с gradient glow border, ::after свечащаяся линия и multi-layer shadow).</p>
+    <div class="dark-section">
+      <div class="sku-row">
+        <div class="sku-card">
+          <h4>Shared Tour</h4>
+          <p>Base · rgba(255,255,255,0.05) · radius 24 · shadow 0 4px 24px rgba(0,0,0,0.3)</p>
+          <div class="price-box">
+            <div class="glass-tag">All Inclusive</div>
+            <span class="from">from</span>
+            <span class="price">$77</span>
+            <span class="unit">/ person</span>
+          </div>
+          <button class="cta cta-glass">See tour details →</button>
+        </div>
+
+        <div class="sku-card highlighted">
+          <h4>Private Charter</h4>
+          <p>Highlighted · gradient bg + ::before glow border + ::after top line + multi-layer shadow</p>
+          <div class="price-box" style="background:rgba(59,130,246,0.12); border-color:rgba(59,130,246,0.3);">
+            <span class="from">from</span>
+            <span class="price">$859</span>
+            <span class="unit">/ entire boat</span>
+          </div>
+          <button class="cta cta-grad">Browse 20+ boats →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="h2-footer">
+    <h2>H2.10 Footer (Dark)</h2>
+    <p class="lead">Bg <code>#070F1F</code>. Цвета rgba ссылок и заголовков по уровням.</p>
+    <div class="footer-preview">
+      <div class="grid">
+        <div>
+          <div class="logo">Bluuu</div>
+          <p style="font-size:14px; line-height:22px;">Award-winning Nusa Penida day tours from Bali. Comfort-first boats, certified guides.</p>
+        </div>
+        <div>
+          <h4>Tours</h4>
+          <a href="#">Private tour</a>
+          <a href="#">Shared tour</a>
+          <a href="#">Reviews</a>
+        </div>
+        <div>
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Payment Policy</a>
+        </div>
+        <div>
+          <h4>Connect</h4>
+          <a href="#">WhatsApp</a>
+          <a href="#">Instagram</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Источник: <strong>STYLEGUIDE_RU.md</strong> · Bluuu Design System · Home2 Dark Theme · 2026
+  </footer>
+
+</div>
+</body>
+</html>
