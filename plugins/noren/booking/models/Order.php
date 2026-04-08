@@ -81,7 +81,7 @@ class Order extends Model
         if ($this->status_id == 4) {
 
             App::after(function () use ($order) {
-                static::dispatchLead($order);
+                KommoDataBuilder::createLead($order->id);
             });
 
         } elseif ($this->status_id == 1) {
@@ -109,6 +109,7 @@ class Order extends Model
 
                 try {
                     static::dispatchLead($order);
+                    //KommoDataBuilder::createLead($order->id);
                     Ga4Service::sendPurchase($order);
                 } catch (\Exception $e) {
                     Log::error("AfterUpdate error #{$order->id}: " . $e->getMessage());
@@ -127,6 +128,7 @@ class Order extends Model
             App::after(function () use ($order) {
 
                 try {
+                    //KommoDataBuilder::createLead($order->id);
                     static::dispatchLead($order);
                     Ga4Service::sendPurchase($order);
                 } catch (\Exception $e) {
@@ -136,6 +138,7 @@ class Order extends Model
             });
         }
     }
+
 
     // =========================
     // LEAD ROUTING
@@ -150,6 +153,8 @@ class Order extends Model
             KommoDataBuilder::createLead($order->id);
         }
     }
+
+
 
     // =========================
     // UNIVERSAL EMAIL METHOD

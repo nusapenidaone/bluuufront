@@ -113,6 +113,15 @@ export default function LeadAdmin() {
   const [recreateResult, setRecreateResult] = useState(null);
   const [actionError, setActionError]       = useState("");
 
+  // Products state (from local DB)
+  const [boats,     setBoats]     = useState([]);
+  const [tours,     setTours]     = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [covers,    setCovers]    = useState([]);
+  const [productForm, setProductForm] = useState({ tours_id: "", boat_id: "", transfer_id: "", cover_id: "" });
+  const [savingProducts, setSavingProducts] = useState(false);
+  const [productSaveStatus, setProductSaveStatus] = useState(null);
+
   // ─── API helper ─────────────────────────────────────────────────────────
 
   const adminFetch = useCallback(async (path, options = {}) => {
@@ -167,6 +176,24 @@ export default function LeadAdmin() {
     if (token && view === "list") loadOrders();
   }, [token, view, page]); // eslint-disable-line
 
+  // ─── Load boats & tours from local DB ────────────────────────────────────
+
+  const loadProducts = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [boatData, tourData, transferData, coverData] = await Promise.all([
+        adminFetch("boats"),
+        adminFetch("tours"),
+        adminFetch("transfers"),
+        adminFetch("covers"),
+      ]);
+      setBoats(Array.isArray(boatData)     ? boatData     : []);
+      setTours(Array.isArray(tourData)     ? tourData     : []);
+      setTransfers(Array.isArray(transferData) ? transferData : []);
+      setCovers(Array.isArray(coverData)   ? coverData    : []);
+    } catch (_) {}
+  }, [token, adminFetch]);
+
   // ─── Load single order from Odoo ─────────────────────────────────────────
 
   const loadOrder = async (odooId) => {
@@ -176,8 +203,12 @@ export default function LeadAdmin() {
     setSaveStatus(null);
     setRecreateResult(null);
     setActionError("");
+    setProductSaveStatus(null);
     try {
-      const data = await adminFetch(`odoo/order/${odooId}`);
+      const [data] = await Promise.all([
+        adminFetch(`odoo/order/${odooId}`),
+        loadProducts(),
+      ]);
       setOdoo(data.odoo);
       setLocal(data.order);
       // Pre-fill edit form from Odoo data
@@ -189,6 +220,17 @@ export default function LeadAdmin() {
         })
       );
       setForm(filled);
+      // Pre-fill product form from local order
+      if (data.order) {
+        setProductForm({
+          tours_id:    data.order.tours_id    ?? "",
+          boat_id:     data.order.boat_id     ?? "",
+          transfer_id: data.order.transfer_id ?? "",
+          cover_id:    data.order.cover_id    ?? "",
+        });
+      } else {
+        setProductForm({ tours_id: "", boat_id: "", transfer_id: "", cover_id: "" });
+      }
     } catch (e) {
       setDetailError(e.message);
     } finally {
@@ -266,6 +308,33 @@ export default function LeadAdmin() {
       setActionError(e.message);
     } finally {
       setRecreating(false);
+    }
+  };
+
+  // ─── Save products (boat / tour) → updates local order + recreates Odoo ──
+
+  const handleSaveProducts = async () => {
+    setSavingProducts(true);
+    setProductSaveStatus(null);
+    setActionError("");
+    try {
+      const payload = {};
+      if (productForm.tours_id    !== "") payload.tours_id    = Number(productForm.tours_id);
+      if (productForm.boat_id     !== "") payload.boat_id     = Number(productForm.boat_id);
+      if (productForm.transfer_id !== "") payload.transfer_id = Number(productForm.transfer_id);
+      if (productForm.cover_id    !== "") payload.cover_id    = Number(productForm.cover_id);
+
+      const data = await adminFetch(`odoo/order/${odoo.id}/products`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      setRecreateResult(data.result);
+      await reloadOdoo(data.result.new_odoo_id);
+      setProductSaveStatus({ ok: true, msg: `Recreated → new Odoo #${data.result.new_odoo_id}` });
+    } catch (e) {
+      setProductSaveStatus({ ok: false, msg: e.message });
+    } finally {
+      setSavingProducts(false);
     }
   };
 
@@ -362,6 +431,7 @@ export default function LeadAdmin() {
                       <th className="px-4 py-3">Customer</th>
                       <th className="px-4 py-3">Date</th>
                       <th className="px-4 py-3">Boat</th>
+                      <th className="px-4 py-3">Tour</th>
                       <th className="px-4 py-3">Route</th>
                       <th className="px-4 py-3">People</th>
                       <th className="px-4 py-3">Deposit</th>
@@ -380,6 +450,7 @@ export default function LeadAdmin() {
                           <td className="px-4 py-3 font-medium text-slate-900">{partner}</td>
                           <td className="px-4 py-3 text-slate-500">{fmtDate(o.rental_start_date)}</td>
                           <td className="px-4 py-3 text-slate-600">{o.x_studio_boat_name || "—"}</td>
+                          <td className="px-4 py-3 text-slate-600 max-w-[140px] truncate">{o.tour_name || "—"}</td>
                           <td className="px-4 py-3 text-slate-500 max-w-[120px] truncate">{o.x_studio_route || "—"}</td>
                           <td className="px-4 py-3 text-center text-slate-600">{o.x_studio_count_of_people ?? "—"}</td>
                           <td className="px-4 py-3 text-slate-600">${o.x_studio_deposit ?? 0}</td>
@@ -488,6 +559,102 @@ export default function LeadAdmin() {
                 </div>
               </div>
             ))}
+
+            {/* Products panel — tour / boat / transfer / cover (requires linked local order) */}
+            {local ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="mb-4 text-sm font-semibold text-slate-900">Products</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-slate-400">Tour</span>
+                    <select
+                      value={productForm.tours_id}
+                      onChange={e => setProductForm(p => ({ ...p, tours_id: e.target.value }))}
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                    >
+                      <option value="">— select tour —</option>
+                      {tours.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}{!t.odoo_id ? " ⚠" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-slate-400">Boat</span>
+                    <select
+                      value={productForm.boat_id}
+                      onChange={e => setProductForm(p => ({ ...p, boat_id: e.target.value }))}
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                    >
+                      <option value="">— select boat —</option>
+                      {boats.map(b => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}{!b.odoo_id ? " ⚠" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-slate-400">Transfer</span>
+                    <select
+                      value={productForm.transfer_id}
+                      onChange={e => setProductForm(p => ({ ...p, transfer_id: e.target.value }))}
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                    >
+                      <option value="">— select transfer —</option>
+                      {transfers.map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}{!t.odoo_id ? " ⚠" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-slate-400">Cover</span>
+                    <select
+                      value={productForm.cover_id}
+                      onChange={e => setProductForm(p => ({ ...p, cover_id: e.target.value }))}
+                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                    >
+                      <option value="">— select cover —</option>
+                      {covers.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}{!c.odoo_id ? " ⚠" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                </div>
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button
+                    onClick={handleSaveProducts}
+                    disabled={savingProducts}
+                    className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                  >
+                    {savingProducts ? "Saving…" : "Save products & recreate Odoo"}
+                  </button>
+                  {productSaveStatus && (
+                    <span className={`text-sm font-medium ${productSaveStatus.ok ? "text-emerald-600" : "text-rose-600"}`}>
+                      {productSaveStatus.msg}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-2 text-xs text-slate-400">
+                  ⚠ — product has no odoo_id and won&apos;t appear as a line in Odoo.
+                  Saving will cancel the current Odoo order and create a new one.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400">
+                Products editing is available only when a local order is linked to this Odoo record.
+              </p>
+            )}
 
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-3">

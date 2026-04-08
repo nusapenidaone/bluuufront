@@ -14,7 +14,6 @@ use Noren\Booking\Models\Route;
 
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PayPalService;
-use Noren\Booking\Classes\OdooService;
 
 use Log;
 
@@ -173,13 +172,9 @@ class PrivateOrderController extends Controller
         $order->pickup_address  = $data['pickupAddress']  ?? null;
         $order->dropoff_address = $data['dropoffAddress'] ?? null;
 
-        $order->save();
+        $order->source_id = 1; // site → Odoo
 
-        try {
-            OdooService::createLead($order);
-        } catch (\Exception $e) {
-            \Log::error('OdooService PrivateOrder error: ' . $e->getMessage());
-        }
+        $order->save();
 
         Session::put('order_id', $order->id);
 
