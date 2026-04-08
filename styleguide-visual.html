@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bluuu — Визуальный Styleguide</title>
+<style>
+  :root {
+    --blue: #0073E0;
+    --blue-hover: #007FFF;
+    --blue-soft: #E6F4FF;
+    --blue-dark: #003459;
+    --bg: #FAFBFB;
+    --white: #FFFFFF;
+    --gray-soft: #F3F5F6;
+    --text-h: #020202;
+    --text-body: #0D0D0D;
+    --text-mute: #607077;
+    --border: #E6EAEC;
+    --shadow: 0 20px 50px rgba(6,18,40,0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text-body);
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 64px 32px 96px;
+  }
+
+  header.hero {
+    margin-bottom: 64px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  header.hero .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    color: var(--blue);
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  header.hero h1 {
+    font-size: 72px;
+    line-height: 1.05;
+    font-weight: 700;
+    color: var(--text-h);
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+  }
+  header.hero p {
+    font-size: 16px;
+    color: var(--text-mute);
+    max-width: 680px;
+    margin: 0;
+  }
+
+  section {
+    margin-bottom: 72px;
+  }
+  section h2 {
+    font-size: 40px;
+    font-weight: 700;
+    color: var(--text-h);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  section .lead {
+    font-size: 16px;
+    color: var(--text-mute);
+    margin: 0 0 32px;
+  }
+
+  .grid {
+    display: grid;
+    gap: 24px;
+  }
+  .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+
+  /* === TYPOGRAPHY === */
+  .type-row {
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-row .label {
+    width: 220px;
+    flex-shrink: 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+  .type-row .meta {
+    width: 160px;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--text-mute);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .type-row .sample { color: var(--text-h); }
+
+  .h1-sample { font-size: 72px; font-weight: 700; line-height: 1.05; letter-spacing: -0.02em; }
+  .h2-sample { font-size: 40px; font-weight: 700; line-height: 1.1;  letter-spacing: -0.01em; }
+  .h3-sample { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  .body-sample { font-size: 16px; }
+  .small-sample { font-size: 14px; }
+  .caps-sample { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+
+  /* === COLOR SWATCHES === */
+  .swatch {
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+  .swatch .chip {
+    height: 110px;
+  }
+  .swatch .info {
+    padding: 16px 18px;
+  }
+  .swatch .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-h);
+    margin: 0 0 4px;
+  }
+  .swatch .hex {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--text-mute);
+    text-transform: uppercase;
+  }
+
+  /* === RADII === */
+  .radius-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .radius-card .preview {
+    background: var(--blue-soft);
+    border: 1px solid var(--blue);
+    height: 90px;
+    margin-bottom: 14px;
+  }
+  .radius-card .name { font-size: 14px; font-weight: 600; color: var(--text-h); }
+  .radius-card .value {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--text-mute);
+    margin-top: 4px;
+  }
+  .r-pill { border-radius: 9999px; }
+  .r-32 { border-radius: 32px; }
+  .r-26 { border-radius: 26px; }
+  .r-24 { border-radius: 24px; }
+  .r-18 { border-radius: 18px; }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    border-radius: 9999px;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  .btn:hover { background: var(--blue-hover); }
+  .btn.secondary {
+    background: var(--white);
+    color: var(--blue);
+    border: 1px solid var(--border);
+  }
+  .btn.dark {
+    background: var(--blue-dark);
+  }
+
+  .tag {
+    display: inline-block;
+    background: var(--blue-soft);
+    color: var(--blue);
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  /* === INPUT === */
+  .input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    font-size: 16px;
+    background: var(--white);
+    color: var(--text-body);
+    outline: none;
+    transition: border-color .15s ease;
+  }
+  .input:focus { border-color: var(--blue); }
+  .input-label {
+    display: block;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  /* === TOUR CARD MOCK === */
+  .tour-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+  }
+  .tour-card .photo {
+    height: 200px;
+    border-radius: 26px;
+    background: linear-gradient(135deg, #66b8ff 0%, #0073E0 60%, #003459 100%);
+    margin-bottom: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .tour-card .photo .pill {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    background: var(--white);
+    color: var(--blue-dark);
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tour-card h3 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-h);
+    margin: 0 0 8px;
+    line-height: 1.2;
+  }
+  .tour-card p { font-size: 14px; color: var(--text-mute); margin: 0 0 18px; }
+  .info-strip {
+    background: var(--gray-soft);
+    border-radius: 24px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+  }
+  .info-strip .from {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+  .info-strip .price {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-h);
+  }
+
+  /* === SHADOW DEMO === */
+  .shadow-demo {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    padding: 36px;
+    box-shadow: 0 20px 50px rgba(6,18,40,0.08);
+    text-align: center;
+  }
+  .shadow-demo .name { font-weight: 600; color: var(--text-h); margin-bottom: 4px; }
+  .shadow-demo .meta {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--text-mute);
+  }
+
+  /* === SPACING === */
+  .space-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .space-row:last-child { border-bottom: none; }
+  .space-row .name {
+    width: 240px;
+    font-weight: 600;
+    color: var(--text-h);
+  }
+  .space-row .bar {
+    background: var(--blue);
+    height: 14px;
+    border-radius: 9999px;
+  }
+  .space-row .val {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--text-mute);
+  }
+
+  /* === ICONS === */
+  .icon-cell {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .icon-cell svg {
+    display: block;
+    margin: 0 auto 12px;
+  }
+  .icon-cell .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+
+  footer.foot {
+    margin-top: 72px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    color: var(--text-mute);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  @media (max-width: 900px) {
+    .wrap { padding: 40px 16px 64px; }
+    header.hero h1 { font-size: 48px; }
+    section h2 { font-size: 32px; }
+    .grid.cols-3, .grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+    .grid.cols-2 { grid-template-columns: 1fr; }
+    .h1-sample { font-size: 48px; }
+    .h2-sample { font-size: 32px; }
+    .h3-sample { font-size: 24px; }
+    .type-row { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .type-row .label, .type-row .meta { width: auto; }
+    .space-row { flex-direction: column; align-items: flex-start; }
+    .space-row .name { width: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Bluuu Design System</div>
+    <h1>Визуальный Styleguide</h1>
+    <p>Живой документ на основе <strong>STYLEGUIDE_RU.md</strong>. Все значения — строгие, без диапазонов. Шрифт проекта: <strong>Petrov Sans</strong> (здесь системный, как fallback).</p>
+  </header>
+
+  <!-- 1. TYPOGRAPHY -->
+  <section>
+    <h2>1. Шрифты и размеры</h2>
+    <p class="lead">Petrov Sans · Regular и SemiBold</p>
+    <div class="card">
+      <div class="type-row">
+        <div class="label">H1 — главный</div>
+        <div class="meta">72px / 48px · SemiBold</div>
+        <div class="sample h1-sample">Bluuu Tours</div>
+      </div>
+      <div class="type-row">
+        <div class="label">H2 — секции</div>
+        <div class="meta">40px / 32px · SemiBold</div>
+        <div class="sample h2-sample">Наши маршруты</div>
+      </div>
+      <div class="type-row">
+        <div class="label">H3 — карточки</div>
+        <div class="meta">28px / 24px · SemiBold</div>
+        <div class="sample h3-sample">Nusa Penida West</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Body — основной</div>
+        <div class="meta">16px · Regular</div>
+        <div class="sample body-sample">Откройте лучшие пляжи Бали с лицензированным гидом и комфортным транспортом.</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Small — в карточках</div>
+        <div class="meta">14px · Regular</div>
+        <div class="sample small-sample">Включено: трансфер, обед, входные билеты</div>
+      </div>
+      <div class="type-row">
+        <div class="label">Caps — метки</div>
+        <div class="meta">12px / 11px · UPPERCASE</div>
+        <div class="sample caps-sample">от · популярное · best price</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. RADII -->
+  <section>
+    <h2>2. Закругления</h2>
+    <p class="lead">Каждый радиус закреплён за конкретным элементом интерфейса.</p>
+    <div class="grid cols-4">
+      <div class="radius-card"><div class="preview r-pill"></div><div class="name">Pill</div><div class="value">9999px · кнопки, метки</div></div>
+      <div class="radius-card"><div class="preview r-32"></div><div class="name">Card</div><div class="value">32px · карточки туров</div></div>
+      <div class="radius-card"><div class="preview r-26"></div><div class="name">Photo</div><div class="value">26px · фото в карточках</div></div>
+      <div class="radius-card"><div class="preview r-24"></div><div class="name">Info strip</div><div class="value">24px · серые плашки</div></div>
+      <div class="radius-card"><div class="preview r-18"></div><div class="name">Input</div><div class="value">18px · поля ввода</div></div>
+    </div>
+  </section>
+
+  <!-- 3. SPACING -->
+  <section>
+    <h2>3. Отступы и поля</h2>
+    <p class="lead">Боковые поля экрана и внутренние padding карточек.</p>
+    <div class="card">
+      <div class="space-row"><div class="name">Боковой отступ — ПК</div><div class="bar" style="width:32px"></div><div class="val">32px</div></div>
+      <div class="space-row"><div class="name">Боковой отступ — Mobile</div><div class="bar" style="width:16px"></div><div class="val">16px</div></div>
+      <div class="space-row"><div class="name">Padding карточки — ПК</div><div class="bar" style="width:24px"></div><div class="val">24px</div></div>
+      <div class="space-row"><div class="name">Padding карточки — Mobile</div><div class="bar" style="width:16px"></div><div class="val">16px</div></div>
+    </div>
+  </section>
+
+  <!-- 4. COLORS -->
+  <section>
+    <h2>4. Цвета</h2>
+    <p class="lead">Палитра проекта — акценты, фоны, тексты, бордеры.</p>
+
+    <h3 style="font-size:18px; margin:8px 0 16px; color:var(--text-mute); text-transform:uppercase; letter-spacing:0.06em;">Акценты</h3>
+    <div class="grid cols-4">
+      <div class="swatch"><div class="chip" style="background:#0073E0"></div><div class="info"><div class="name">Главный синий</div><div class="hex">#0073E0</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#007FFF"></div><div class="info"><div class="name">Синий hover</div><div class="hex">#007FFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#E6F4FF"></div><div class="info"><div class="name">Голубой фон</div><div class="hex">#E6F4FF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#003459"></div><div class="info"><div class="name">Тёмно-синий</div><div class="hex">#003459</div></div></div>
+    </div>
+
+    <h3 style="font-size:18px; margin:32px 0 16px; color:var(--text-mute); text-transform:uppercase; letter-spacing:0.06em;">Фоны</h3>
+    <div class="grid cols-3">
+      <div class="swatch"><div class="chip" style="background:#FAFBFB; border-bottom:1px solid var(--border)"></div><div class="info"><div class="name">Фон сайта</div><div class="hex">#FAFBFB</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#FFFFFF; border-bottom:1px solid var(--border)"></div><div class="info"><div class="name">Карточки</div><div class="hex">#FFFFFF</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#F3F5F6"></div><div class="info"><div class="name">Светло-серый</div><div class="hex">#F3F5F6</div></div></div>
+    </div>
+
+    <h3 style="font-size:18px; margin:32px 0 16px; color:var(--text-mute); text-transform:uppercase; letter-spacing:0.06em;">Тексты</h3>
+    <div class="grid cols-3">
+      <div class="swatch"><div class="chip" style="background:#020202"></div><div class="info"><div class="name">Заголовки</div><div class="hex">#020202</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#0D0D0D"></div><div class="info"><div class="name">Описания</div><div class="hex">#0D0D0D</div></div></div>
+      <div class="swatch"><div class="chip" style="background:#607077"></div><div class="info"><div class="name">Второстепенный</div><div class="hex">#607077</div></div></div>
+    </div>
+
+    <h3 style="font-size:18px; margin:32px 0 16px; color:var(--text-mute); text-transform:uppercase; letter-spacing:0.06em;">Границы</h3>
+    <div class="grid cols-3">
+      <div class="swatch"><div class="chip" style="background:#E6EAEC"></div><div class="info"><div class="name">Бордер карточек</div><div class="hex">#E6EAEC · 1px</div></div></div>
+    </div>
+  </section>
+
+  <!-- 5. SHADOWS -->
+  <section>
+    <h2>5. Тени</h2>
+    <p class="lead">Только мягкие, почти прозрачные тени. Резкие и чёрные — запрещены.</p>
+    <div class="grid cols-2">
+      <div class="shadow-demo">
+        <div class="name">Card Shadow</div>
+        <div class="meta">#061228 · 8% opacity</div>
+      </div>
+      <div class="shadow-demo">
+        <div class="name">Tour Card Shadow</div>
+        <div class="meta">0 20px 50px rgba(6,18,40,0.08)</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. COMPONENTS -->
+  <section>
+    <h2>6. Компоненты</h2>
+    <p class="lead">Кнопки, метки, поля ввода и карточка тура — собраны по правилам гайда.</p>
+
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="input-label" style="margin-bottom:18px">Кнопки и метки</div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+          <button class="btn">Check Availability →</button>
+          <button class="btn secondary">Подробнее</button>
+          <button class="btn dark">Забронировать</button>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:20px;">
+          <span class="tag">Популярное</span>
+          <span class="tag">Best Price</span>
+          <span class="tag">Только сегодня</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="input-label">Полное имя</div>
+        <input class="input" placeholder="Sarah Mitchell" />
+        <div class="input-label" style="margin-top:18px">Email</div>
+        <input class="input" placeholder="sarah@email.com" />
+        <button class="btn" style="margin-top:18px; width:100%; justify-content:center;">Send my inquiry →</button>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;">
+      <div class="grid cols-2">
+        <div class="tour-card">
+          <div class="photo">
+            <span class="pill">Best seller</span>
+          </div>
+          <h3>Nusa Penida West</h3>
+          <p>Kelingking · Broken Beach · Angel's Billabong</p>
+          <div class="info-strip">
+            <span class="from">от</span>
+            <span class="price">$89</span>
+          </div>
+          <button class="btn" style="width:100%; justify-content:center;">Check Availability →</button>
+        </div>
+
+        <div class="tour-card">
+          <div class="photo" style="background:linear-gradient(135deg,#7ad3ff 0%,#0073E0 50%,#003459 100%);">
+            <span class="pill">Private</span>
+          </div>
+          <h3>Nusa Penida East</h3>
+          <p>Diamond Beach · Atuh Beach · Thousand Islands</p>
+          <div class="info-strip">
+            <span class="from">от</span>
+            <span class="price">$120</span>
+          </div>
+          <button class="btn" style="width:100%; justify-content:center;">Забронировать →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. ICONS -->
+  <section>
+    <h2>7. Иконки</h2>
+    <p class="lead">lucide-react · outline · strokeWidth = 2</p>
+    <div class="grid cols-4">
+      <div class="icon-cell">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0073E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        <div class="label">Accent · 24px</div>
+      </div>
+      <div class="icon-cell">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0073E0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <div class="label">Pin · 24px</div>
+      </div>
+      <div class="icon-cell">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#607077" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <div class="label">Mute · 20px</div>
+      </div>
+      <div class="icon-cell">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#99A5AE" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 8.5 22 9.3 17 14 18.2 21 12 17.8 5.8 21 7 14 2 9.3 9 8.5 12 2"/></svg>
+        <div class="label">Soft · 18px</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    Источник: <strong>STYLEGUIDE_RU.md</strong> · Bluuu Design System · 2026
+  </footer>
+
+</div>
+</body>
+</html>
