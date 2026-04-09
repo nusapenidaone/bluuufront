@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
+import { PhoneInput } from 'react-international-phone';
+import 'react-international-phone/style.css';
 import './Home2.css';
 
 const TripAdvisorIcon = ({ size = 22 }) => (
@@ -26,8 +28,9 @@ const AirbnbIcon = ({ size = 20 }) => (
 const Home2 = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
-  const [formData, setFormData] = useState({ name: '', contact: '' });
+  const [formData, setFormData] = useState({ name: '', email: '', whatsapp: '' });
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const heroVideoRef = useRef(null);
 
   // Navbar scroll behavior
@@ -108,14 +111,19 @@ const Home2 = () => {
   };
 
   const handleHeroFormSubmit = () => {
-    const { name, contact } = formData;
-    if (!name || !contact) {
-      alert('Please fill in all fields.');
+    const { name, email, whatsapp } = formData;
+    // Require name and at least one of email or whatsapp
+    const hasContact = (email && email.trim()) || (whatsapp && whatsapp.trim().length > 3);
+    if (!name || !hasContact) {
+      alert('Please enter your name and either email or WhatsApp number.');
       return;
     }
     setFormSubmitted(true);
+    const lines = [`Name: ${name}`];
+    if (email) lines.push(`Email: ${email}`);
+    if (whatsapp) lines.push(`WhatsApp: ${whatsapp}`);
     const msg = encodeURIComponent(
-      `Hi Bluuu! I'd like to book a tour.\n\nName: ${name}\nEmail or WhatsApp: ${contact}`
+      `Hi Bluuu! I'd like to book a tour.\n\n${lines.join('\n')}`
     );
     window.open(`https://wa.me/6281370262777?text=${msg}`, '_blank');
   };
@@ -123,6 +131,73 @@ const Home2 = () => {
   const toggleFaq = (index) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
+
+  const renderPriceStrip = () => (
+    <div className="price-strip-inner">
+      <div className="price-strip-item">
+        <div className="price-strip-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0 -1.4 -8.78 6 6 0 1 0 -10.93 4.78"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="8" y1="13" x2="8" y2="15"/><line x1="16" y1="19" x2="16" y2="21"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="12" y1="15" x2="12" y2="17"/></svg>
+        </div>
+        <div className="price-strip-text">
+          <h4>Weather Guarantee</h4>
+          <p>Bad weather? We reschedule or refund you in full</p>
+        </div>
+      </div>
+      <div className="price-strip-item">
+        <div className="price-strip-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        </div>
+        <div className="price-strip-text">
+          <h4>No hidden fees</h4>
+          <p>What you see is what you pay</p>
+        </div>
+      </div>
+      <div className="price-strip-item">
+        <div className="price-strip-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <div className="price-strip-text">
+          <h4>Website-exclusive perks</h4>
+          <p>Free extras not available on OTAs</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFormBody = (idPrefix) => (
+    <>
+      <div id={`${idPrefix}-inner`} style={{display: formSubmitted ? 'none' : 'block'}}>
+        <h3>Plan your adventure</h3>
+        <p className="form-subtitle">Leave your details - we'll reply within 30 minutes.</p>
+        <div className="form-field">
+          <input aria-label="Full Name" type="text" id={`${idPrefix}-name`} placeholder="Full Name" autoComplete="name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} />
+        </div>
+        <div className="form-field">
+          <input aria-label="Email" type="email" id={`${idPrefix}-email`} placeholder="Email" autoComplete="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} />
+        </div>
+        <div className="form-divider"><span>or</span></div>
+        <div className="form-field">
+          <label htmlFor={`${idPrefix}-whatsapp`}>WhatsApp Number</label>
+          <PhoneInput
+            defaultCountry="us"
+            value={formData.whatsapp}
+            onChange={(phone) => setFormData((prev) => ({ ...prev, whatsapp: phone }))}
+            inputProps={{ id: `${idPrefix}-whatsapp`, autoComplete: 'tel' }}
+            className="hero-phone-input"
+          />
+        </div>
+        <button type="button" className="hero-form-btn" onClick={handleHeroFormSubmit}>
+          Send my inquiry →
+        </button>
+        <p className="form-disclaimer">No spam. No payment required.</p>
+      </div>
+      <div className="form-success" style={{display: formSubmitted ? 'block' : 'none'}}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <h3>Thanks! We'll be in touch.</h3>
+        <p className="form-success-sub">Check your WhatsApp shortly.</p>
+      </div>
+    </>
+  );
 
   return (
     <div className="home2-wrapper">
@@ -148,11 +223,21 @@ const Home2 = () => {
         <defs><clipPath id="navClip"><rect width="140" height="30" fill="white"/></clipPath></defs>
       </svg>
     </a>
-    <div className="nav-right">
-      <a href="#tours" className="nav-link-faq">Tours</a>
-      <a href="#faq" className="nav-link-faq">FAQ</a>
-      <a href="#hero" className="nav-link-faq">Contact</a>
+    <div className={`nav-right ${mobileMenuOpen ? 'is-open' : ''}`}>
+      <a href="#tours" className="nav-link-faq" onClick={() => setMobileMenuOpen(false)}>Tours</a>
+      <a href="#faq" className="nav-link-faq" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
+      <a href="#hero" className="nav-link-faq" onClick={() => setMobileMenuOpen(false)}>Contact</a>
     </div>
+    <button
+      type="button"
+      className={`nav-burger ${mobileMenuOpen ? 'is-open' : ''}`}
+      aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+      onClick={() => setMobileMenuOpen((v) => !v)}
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
 </nav>
 
@@ -170,31 +255,35 @@ const Home2 = () => {
     <div className="hero-left">
 
       <div className="hero-pills-row">
-      <div className="hero-rating-badge">
-        <TripAdvisorIcon size={22} />
-        <GoogleIcon size={20} />
-        <AirbnbIcon size={20} />
-        <span className="badge-rating">4.9</span>
-        <span className="badge-stars">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#F97316" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#F97316" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#F97316" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#F97316" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="#F97316" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-        </span>
-        <span className="badge-count">(10,692)</span>
+        <div className="hero-pill hero-pill--award">
+          <span className="hero-pill__dot"></span>
+          <span>Award-Winning Tours · Bali</span>
+        </div>
+        <div className="hero-pill hero-pill--green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Best Price Guaranteed</span>
+        </div>
+        <div className="hero-pill hero-pill--metric">
+          <span className="hero-pill__metric-icons">
+            <TripAdvisorIcon size={14} />
+            <GoogleIcon size={14} />
+            <AirbnbIcon size={14} />
+          </span>
+          <strong>4.9</strong>
+          <span className="hero-pill__stars">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+          <span className="hero-pill__count">10,692</span>
+        </div>
       </div>
 
-      </div>
-
-      <h1>Award-winning day trip<br />to <span className="accent">Nusa Penida</span></h1>
+      <h1>Discover<br /><span className="accent">Nusa Penida</span></h1>
 
       <div className="hero-trust-row">
-        <div className="hero-trust-item">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-          10,600+ reviews
-        </div>
-        <span className="hero-trust-sep"></span>
         <div className="hero-trust-item">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="16 12 12 8 8 12"/><line x1="12" y1="16" x2="12" y2="8"/></svg>
           TripAdvisor Travelers' Choice
@@ -205,68 +294,56 @@ const Home2 = () => {
           Licensed &amp; Insured
         </div>
       </div>
+
+      {/* Mobile-only secondary pills row — Metric (left) + Best Price (right) at bottom of hero */}
+      <div className="hero-pills-row hero-pills-row--mobile-secondary">
+        <div className="hero-pill hero-pill--metric">
+          <span className="hero-pill__metric-icons">
+            <TripAdvisorIcon size={14} />
+            <GoogleIcon size={14} />
+            <AirbnbIcon size={14} />
+          </span>
+          <strong>4.9</strong>
+          <span className="hero-pill__stars">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </span>
+          <span className="hero-pill__count">10,692</span>
+        </div>
+        <div className="hero-pill hero-pill--green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 12l2 2 4-4"/><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Best Price Guaranteed</span>
+        </div>
+      </div>
     </div>
 
-    <div className="hero-form" id="heroFormCard">
-      <div id="heroFormInner" style={{display: formSubmitted ? 'none' : 'block'}}>
-        <h3>Plan your adventure</h3>
-        <p className="form-subtitle">Leave your details - we'll reply within 30 minutes.</p>
-        <div className="form-field">
-          <label htmlFor="hero-name">Full Name</label>
-          <input type="text" id="hero-name" placeholder="e.g. Sarah Mitchell" autoComplete="name"  value={formData.name} onChange={handleInputChange} />
-        </div>
-        <div className="form-field">
-          <label htmlFor="hero-contact">Email or WhatsApp Number</label>
-          <input type="text" id="hero-contact" placeholder="e.g. sarah@email.com or +1 555 123 4567" autoComplete="email" value={formData.contact} onChange={handleInputChange} />
-        </div>
-        <button type="button" className="hero-form-btn" onClick={handleHeroFormSubmit}>
-          Send my inquiry →
-        </button>
-        <p className="form-disclaimer">No spam. No payment required.</p>
-      </div>
-      <div className="form-success" id="heroFormSuccess" style={{display: formSubmitted ? 'block' : 'none'}}>
-        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="1.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-        <h3>Thanks! We'll be in touch.</h3>
-        <p className="form-success-sub">Check your WhatsApp shortly.</p>
-      </div>
+    <div className="hero-form hero-form--desktop" id="heroFormCard">
+      {renderFormBody('hero')}
     </div>
   </div>
 
-  {/* Value props strip - TripAdvisor style */}
-  <div className="price-strip">
-    <div className="price-strip-inner">
-      <div className="price-strip-item">
-        <div className="price-strip-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-        </div>
-        <div className="price-strip-text">
-          <h4>Best Price Guaranteed</h4>
-          <p>We match or beat any OTA price</p>
-        </div>
-      </div>
-      <div className="price-strip-item">
-        <div className="price-strip-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-        </div>
-        <div className="price-strip-text">
-          <h4>No hidden fees</h4>
-          <p>What you see is what you pay</p>
-        </div>
-      </div>
-      <div className="price-strip-item">
-        <div className="price-strip-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
-        </div>
-        <div className="price-strip-text">
-          <h4>Website-exclusive perks</h4>
-          <p>Free extras not available on OTAs</p>
-        </div>
-      </div>
+  {/* Value props strip - desktop, inside hero */}
+  <div className="price-strip price-strip--desktop">
+    {renderPriceStrip()}
+  </div>
+</section>
+
+{/* Mobile-only Plan your adventure form (shown below hero on mobile) */}
+<section className="mobile-form-section">
+  <div className="container">
+    <div className="hero-form hero-form--mobile">
+      {renderFormBody('mform')}
     </div>
   </div>
 </section>
 
-
+{/* Mobile-only price strip — below the form on mobile */}
+<section className="price-strip price-strip--mobile">
+  {renderPriceStrip()}
+</section>
 
 
 {/* ═══════════════════════════════════════
