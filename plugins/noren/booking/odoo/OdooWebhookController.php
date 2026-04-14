@@ -1,9 +1,10 @@
 <?php namespace Noren\Booking\Odoo;
 
 use Illuminate\Routing\Controller;
-use Noren\Booking\Models\Closeddates;
+use Noren\Booking\Models\CloseddatesTest as Closeddates;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Tours;
+use Noren\Booking\Odoo\OdooService;
 use Input;
 use Log;
 
@@ -40,8 +41,8 @@ class OdooWebhookController extends Controller
         $existing = Closeddates::where('odoo_id', $odooId)->first();
         $found    = $existing ? "found in DB (id={$existing->id})" : "not in DB";
 
-        Log::info("Odoo webhook [DRY-RUN] DELETE | odoo_id={$odooId} | {$found}");
-        // Closeddates::where('odoo_id', $odooId)->delete();
+        Log::info("Odoo webhook DELETE | odoo_id={$odooId} | {$found}");
+        Closeddates::where('odoo_id', $odooId)->delete();
 
         return response()->json(['ok' => true]);
     }
@@ -59,13 +60,18 @@ class OdooWebhookController extends Controller
         }
 
         $boatName = $payload['x_studio_boat_name'] ?? '';
+        $tourType = $payload['x_studio_tour_type'] ?? '';
         $qtty     = (int) ($payload['x_studio_count_of_people'] ?? 0);
-        $lineIds  = array_filter((array) ($payload['order_line'] ?? []));
 
-        $tour = $this->resolveTour($lineIds);
+        if (!$tourType) {
+            $tourType = OdooService::fetchTourType($odooId);
+            Log::info("Odoo webhook | odoo_id={$odooId} | x_studio_tour_type not in payload, fetched from Odoo: '{$tourType}'");
+        }
+
+        $tour = $tourType ? Tours::where('odoo_type', $tourType)->first() : null;
 
         if (!$tour) {
-            Log::info("Odoo webhook [DRY-RUN] SKIP | odoo_id={$odooId} | tour not found in order lines");
+            Log::info("Odoo webhook SKIP | odoo_id={$odooId} | tour not found by odoo_type={$tourType}");
             return response()->json(['ok' => true]);
         }
 
@@ -73,61 +79,18 @@ class OdooWebhookController extends Controller
         $boat      = $boatName ? Boat::where('amo_name', $boatName)->first() : null;
         $newBoatId = $boat?->id;
 
-        return $this->upsertCloseddate($odooId, $date, $type, $newBoatId, $boatName, $qtty, $tour);
+        return $this->upsertCloseddate($odooId, $date, $type, $newBoatId, $boatName, $qtty, $tourType);
     }
 
     // ─── Upsert ───────────────────────────────────────────────────────────────
 
-    protected function upsertCloseddate(int $odooId, string $date, int $type, ?int $boatId, string $boatName, int $qtty, $tour)
+    protected function upsertCloseddate(int $odooId, string $date, int $type, ?int $boatId, string $boatName, int $qtty, string $tourType)
     {
-        $existing = Closeddates::where('odoo_id', $odooId)->first();
-
-        if (!$existing) {
-            $boatInfo = $boatId ? "boat_id={$boatId}" : "boat NOT FOUND (name={$boatName})";
-            Log::info("Odoo webhook [DRY-RUN] CREATE | odoo_id={$odooId} | date={$date} | type={$type} | {$boatInfo} | qtty={$qtty} | tour={$tour->name}");
-        } else {
-            $changed = $existing->date    !== $date
-                || (int) $existing->type    !== $type
-                || (int) $existing->boat_id !== (int) $boatId
-                || (int) $existing->qtty    !== $qtty;
-
-            if (!$changed) {
-                Log::info("Odoo webhook [DRY-RUN] NO CHANGE | odoo_id={$odooId} | date={$date} | type={$type} | boat_id={$boatId} | qtty={$qtty}");
-                return response()->json(['ok' => true]);
-            }
-
-            Log::info("Odoo webhook [DRY-RUN] UPDATE | odoo_id={$odooId} | date: {$existing->date}->{$date} | type: {$existing->type}->{$type} | boat_id: {$existing->boat_id}->{$boatId} | qtty: {$existing->qtty}->{$qtty}");
-        }
-
-        // Closeddates::upsert([
-        //     ['odoo_id' => $odooId, 'date' => $date, 'type' => $type, 'boat_id' => $boatId, 'qtty' => $qtty ?: null],
-        // ], ['odoo_id'], ['date', 'type', 'boat_id', 'qtty']);
+        Closeddates::updateOrCreate(
+            ['odoo_id' => $odooId],
+            ['date' => $date, 'type' => $type, 'boat_id' => $boatId, 'qtty' => $qtty ?: null]
+        );
 
         return response()->json(['ok' => true]);
-    }
-
-    // ─── Resolve tour from order line IDs ────────────────────────────────────
-
-    protected function resolveTour(array $lineIds): ?Tours
-    {
-        if (empty($lineIds)) {
-            return null;
-        }
-
-        $lines = OdooService::post('/json/2/sale.order.line/search_read', [
-            'domain' => [['id', 'in', array_values($lineIds)]],
-            'fields' => ['product_id'],
-            'limit'  => 50,
-        ]);
-
-        foreach ($lines as $line) {
-            $productId = \is_array($line['product_id']) ? (int) $line['product_id'][0] : (int) $line['product_id'];
-            $tour      = Tours::where('odoo_id', $productId)->first();
-            if ($tour) {
-                return $tour;
-            }
-        }
-
-        return null;
     }
 }

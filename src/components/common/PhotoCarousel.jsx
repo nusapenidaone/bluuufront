@@ -134,16 +134,20 @@ export default function PhotoCarousel({
             >
                 {slides.map((slide, i) => {
                     const src = slide?.thumb || slide?.path || slide;
+                    const srcSmall = slide?.thumb_small || null;
                     return (
                         <div key={i} className="flex-[0_0_100%] snap-center relative shrink-0 overflow-hidden">
                             {loaded.has(i) ? (
                                 <img
                                     src={src}
+                                    srcSet={srcSmall ? `${srcSmall} 300w, ${src} 600w` : undefined}
+                                    sizes="(max-width: 640px) 100vw, 50vw"
                                     alt={i === index ? alt : ""}
                                     className={cn(
                                         "absolute inset-0 h-full w-full object-cover transition-transform duration-500",
                                         i === index && "group-hover:scale-[1.03]"
                                     )}
+                                    loading="lazy"
                                     decoding="async"
                                 />
                             ) : (

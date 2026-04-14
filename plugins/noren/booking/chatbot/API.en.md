@@ -1,541 +1,360 @@
-# Bluuu Chatbot API
+# Bluuu Chatbot API — Integration Reference
 
-Base URL: `https://bluuu.tours`
+## 1. Endpoint Details
+
+**Production base URL:** `https://bluuu.tours`
+
+No staging environment. The production API reads live CMS data.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/chatbot/boats/private` | All active private boats + itinerary routes + add-on extras |
+| GET | `/api/chatbot/boats/shared` | All active shared tour boats |
+
+No query parameters — each endpoint returns a full snapshot of all active products.
 
 ---
 
-## Authentication
+## 2. Authentication
 
-All requests require an API key — passed as a header or query parameter:
+All endpoints require an API key on every request. No token expiry — the key is static and rotated manually in `.env`.
 
-```
+| Method | Format |
+|--------|--------|
+| Header (preferred) | `X-Api-Key: <key>` |
+| Query param | `?api_key=<key>` |
+
+**Header example:**
+```http
+GET /api/chatbot/boats/private HTTP/1.1
+Host: bluuu.tours
 X-Api-Key: bluuu-chatbot-2026
 ```
 
-or `?api_key=bluuu-chatbot-2026`
-
-Configured in `.env`: `CHATBOT_API_KEY=bluuu-chatbot-2026`
-
-Invalid key → `401 { "error": "Unauthorized" }`
+**Key rotation:** update `CHATBOT_API_KEY` in `.env` on the server, then notify integration partners. No expiry timer.
 
 ---
 
-## Versions
+## 3. Request Schema
 
-| Version | Prefix | odoo_id |
-|---------|--------|---------|
-| v1 | `/api/chatbot/...` | no |
-| v2 | `/api/v2/chatbot/...` | everywhere |
+Both endpoints are `GET` with no required parameters.
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| — | — | No request parameters |
 
 ---
 
-## GET /api/v2/chatbot/boats/private
+## 4. Pricing Logic
 
-Returns all active private charter tours (classes_id = 8).
+### Private tours — price per boat
 
+**Formula:**
 ```
-GET https://bluuu.tours/api/v2/chatbot/boats/private
-X-Api-Key: bluuu-chatbot-2026
+total = pricelist[N].price + boat_price
 ```
 
-### Response
+- `pricelist[N].price` — the tier value for the matching guest count (from `pricing.packages[].pricelist`)
+- `boat_price` — fixed boat surcharge (`pricing.base_price`)
+
+Both values can be overridden by a seasonal period (see below).
+
+**How to quote for N guests:**
+1. Check `pricing.seasonal_prices[]` — if the booking date falls within a `date_start`/`date_end` range, use that period's `packages.pricelist` as the active pricelist, and its `boat_price` if present
+2. Otherwise use `pricing.packages[0].pricelist` as the active pricelist, and `pricing.base_price` as `boat_price`
+3. Find the highest `members_count` tier where `members_count <= N`
+4. **Total = that tier's `price` + `boat_price`**
+5. Divide by N to show per-person cost if needed
+
+**Seasonal pricing flags:**
+- `low_price: true` → low season rate
+- `flash_sale: true` → promotional rate (display badge)
+
+### Shared tours — price per guest
+
+`pricing.base_price` = price per person. Same seasonal override logic applies.
+
+### Add-ons (extras) — private only
+
+Returned in the top-level `extras` array. Each extra has a flat `price` in IDR. If `has_options: true`, the guest selects from `options[]` (each option has its own price).
+
+### Currency
+
+All prices are in **IDR (Indonesian Rupiah)**. No taxes or fees are added on top — prices shown are final.
+
+---
+
+## 5. Response Format
+
+### GET `/api/chatbot/boats/private` — `200 OK`
 
 ```json
 {
-  "boats": [...],
-  "routes": [...],
-  "extras": [...],
-  "transfers": [...],
-  "covers": [...],
-  "updated_at": "2026-04-06T07:12:00.000000Z"
-}
-```
-
-### boats[]
-
-```json
-{
-  "id": 54,
-  "odoo_id": 1935,
-  "name": "Classic Boat",
-  "slug": "standard-boats",
-  "description": "<p>...</p>",
-  "size": 12,
-  "capacity": 13,
-  "currency": "IDR",
-  "status": "ready",
-  "categories": [],
-  "features": {
-    "shade": "Partial shade",
-    "cabin": false,
-    "ac": false,
-    "sound": null,
-    "toilet": true
-  },
-  "best_for": "budget-friendly groups",
-  "boat_type": "Speedboat",
-  "pricing": {
-    "type": "per_boat",
-    "boat_price": 2250000,
-    "packages": [
-      {
-        "name": "Private Tour Default Pricelist",
-        "pricelist": [
-          { "members_count": "1", "price": "12295000" },
-          { "members_count": "2", "price": "12585000" }
-        ]
-      }
-    ],
-    "seasonal_prices": [
-      {
-        "date_start": "2026-04-01",
-        "date_end": "2026-05-15",
-        "low_price": false,
-        "flash_sale": false,
-        "packages": {
-          "name": "Private Tour Mid Season Prices",
-          "pricelist": [
-            { "members_count": "1", "price": "13025000" }
-          ]
-        }
-      }
-    ]
-  },
   "boats": [
     {
-      "id": 15,
-      "odoo_id": 71,
-      "name": "Riki J",
-      "company": { "id": 18, "odoo_id": 26, "name": "PT Riki J Boat Charters" }
-    },
-    {
-      "id": 18,
-      "odoo_id": 85,
-      "name": "Jayanadi",
-      "company": { "id": 8, "odoo_id": 15, "name": "Jayanadi" }
+      "id": 1,
+      "name": "Classic Boat",
+      "slug": "classic-boat",
+      "description": "Fast, reliable, open-deck boat.",
+      "size": "11M",
+      "capacity": 12,
+      "currency": "IDR",
+      "status": "ready",
+      "categories": ["Boats", "For small group"],
+      "features": {
+        "shade": "Partial shade",
+        "cabin": false,
+        "ac": false,
+        "sound": null,
+        "toilet": false
+      },
+      "best_for": "Small groups, budget-friendly",
+      "boat_type": "speedboat",
+      "pricing": {
+        "type": "per_boat",
+        "base_price": 1550000,
+        "packages": [
+          {
+            "name": "Standard",
+            "pricelist": [
+              { "members_count": 1, "price": 1550000 },
+              { "members_count": 4, "price": 1750000 },
+              { "members_count": 8, "price": 2100000 }
+            ]
+          }
+        ],
+        "seasonal_prices": [
+          {
+            "date_start": "2026-06-01",
+            "date_end": "2026-08-31",
+            "low_price": false,
+            "flash_sale": false,
+            "packages": {
+              "name": "High Season",
+              "pricelist": [
+                { "members_count": 1, "price": 1750000 },
+                { "members_count": 4, "price": 2000000 }
+              ]
+            }
+          }
+        ]
+      },
+      "images": ["https://bluuu.tours/storage/app/uploads/public/..."]
     }
   ],
-  "images": [
-    "https://bluuu.tours/storage/app/uploads/public/.../thumb_600_400.webp"
-  ]
-}
-```
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | int | Tour ID |
-| `odoo_id` | int\|null | Odoo product ID of the tour |
-| `status` | string | `ready` / `busy` / `maintenance` |
-| `pricing.type` | string | Always `per_boat` for private tours |
-| `pricing.boat_price` | int | Base boat surcharge (IDR) |
-| `pricing.packages` | array | Default pricelist — group price by guest count |
-| `pricing.seasonal_prices` | array | Seasonal overrides (future dates only) |
-| `boats` | array | Physical boats with `odoo_id` and `company.odoo_id` |
-
-**Pricing logic:** find the entry in `packages[0].pricelist` where `members_count == guests`. If the date falls within a `seasonal_prices` range — use that pricelist instead. `total = tier_price + boat_price`.
-
-### routes[]
-
-```json
-{
-  "id": 3,
-  "odoo_id": null,
-  "title": "Classic route",
-  "slug": "classic-route",
-  "description": "A comfortable one-day journey...",
-  "map": "https://bluuu.tours/storage/app/uploads/public/.../map.jpg",
-  "restaurant": {
-    "id": 1,
-    "odoo_id": 65,
-    "name": "Amarta Penida",
-    "menu": "<div>...</div>"
-  }
-}
-```
-
-### extras[]
-
-```json
-{
-  "id": 52,
-  "odoo_id": 571,
-  "name": "Beginner Diver 1-Pax Pack",
-  "description": "<p>...</p>",
-  "price": "2420000.00",
-  "currency": "IDR",
-  "category": "Tour Add-ons",
-  "has_options": false,
-  "options": []
-}
-```
-
-With variants (`has_options: true`):
-
-```json
-{
-  "id": 10,
-  "odoo_id": 870,
-  "name": "Snorkeling Equipment",
-  "has_options": true,
-  "options": [
-    { "id": 11, "odoo_id": 871, "name": "Adult set", "price": "150000.00" },
-    { "id": 12, "odoo_id": 872, "name": "Kids set",  "price": "100000.00" }
-  ]
-}
-```
-
-### transfers[]
-
-```json
-{
-  "id": 1,
-  "odoo_id": 22,
-  "name": "Private Pick up",
-  "price": 300000,
-  "bus_price": 600000,
-  "currency": "IDR",
-  "description": "<p>Pick-up or drop-off.</p>"
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `price` | Price for ≤5 guests |
-| `bus_price` | Price for >5 guests (minibus), `null` if not available |
-
-### covers[]
-
-```json
-{
-  "id": 2,
-  "odoo_id": 1523,
-  "name": "Fully Flexible Booking (Private)",
-  "price": 1000000,
-  "currency": "IDR",
-  "description": "<p>100% Refund Cancellation Protection</p>"
-}
-```
-
----
-
-## GET /api/v2/chatbot/boats/shared
-
-Returns all active shared tours (classes_id = 9).
-
-```
-GET https://bluuu.tours/api/v2/chatbot/boats/shared
-X-Api-Key: bluuu-chatbot-2026
-```
-
-### Response
-
-```json
-{
-  "boats": [...],
-  "transfers": [...],
-  "covers": [...],
-  "updated_at": "2026-04-06T07:12:00.000000Z"
-}
-```
-
-> Shared tours do not have a separate `routes[]` or `extras[]` array — route and restaurant are embedded directly in the tour object.
-
-### boats[]
-
-```json
-{
-  "id": 57,
-  "odoo_id": 1933,
-  "name": "Classic Shared Tour",
-  "slug": "classic-shared-tour",
-  "description": "<p>...</p>",
-  "size": 12,
-  "capacity": 14,
-  "currency": "IDR",
-  "status": "ready",
-  "categories": [],
-  "features": {
-    "shade": "Partial shade",
-    "cabin": false,
-    "ac": false,
-    "sound": null,
-    "toilet": false
-  },
-  "pricing": {
-    "type": "per_guest",
-    "packages": [
-      {
-        "name": "Standard Shared Default Prices",
-        "pricelist": [
-          { "members_count": "1", "price": "1390000" },
-          { "members_count": "2", "price": "2780000" },
-          { "members_count": "13", "price": "18070000" }
-        ]
+  "routes": [
+    {
+      "id": 5,
+      "title": "Classic Route",
+      "slug": "classic-route",
+      "description": "All top spots in one action-packed day.",
+      "map": "https://bluuu.tours/storage/app/uploads/public/.../map.webp",
+      "restaurant": {
+        "id": 2,
+        "name": "Amarta Penida Restaurant",
+        "menu": "https://..."
       }
-    ],
-    "seasonal_prices": [
-      {
-        "date_start": "2026-01-01",
-        "date_end": "2026-12-31",
-        "low_price": false,
-        "flash_sale": false,
-        "packages": {
-          "name": "Standard Shared Tier 2",
-          "pricelist": [
-            { "members_count": "1", "price": "1550000" },
-            { "members_count": "13", "price": "20150000" }
-          ]
-        }
-      }
-    ]
-  },
-  "route": {
-    "id": 9,
-    "odoo_id": null,
-    "title": "Classic shared tour",
-    "slug": "classic"
-  },
-  "restaurant": {
-    "id": 1,
-    "odoo_id": 65,
-    "name": "Amarta Penida",
-    "menu": "<div>...</div>"
-  },
-  "boats": [
-    { "id": 15, "odoo_id": 71,  "name": "Riki J",         "company": { "id": 18, "odoo_id": 26, "name": "PT Riki J Boat Charters" } },
-    { "id": 17, "odoo_id": 90,  "name": "Standard Boat",   "company": { "id": 10, "odoo_id": 17, "name": "Weda Dharma" } },
-    { "id": 21, "odoo_id": 88,  "name": "Sweetheart 4",    "company": { "id": 9,  "odoo_id": 16, "name": "PT Bali Boat Tour - Sweetheart 4" } },
-    { "id": 25, "odoo_id": 73,  "name": "Big Sweetheart",  "company": { "id": 5,  "odoo_id": 12, "name": "Sweetheart Nyoman" } },
-    { "id": 27, "odoo_id": 141, "name": "Sanjaya",         "company": { "id": 7,  "odoo_id": 14, "name": "Sanjaya" } },
-    { "id": 28, "odoo_id": 243, "name": "Big Little Star",  "company": { "id": 6,  "odoo_id": 13, "name": "Small Little Star" } },
-    { "id": 34, "odoo_id": 83,  "name": "Sea Dragon",      "company": { "id": 7,  "odoo_id": 14, "name": "Sanjaya" } },
-    { "id": 53, "odoo_id": 355, "name": "Lady Manta",      "company": { "id": 3,  "odoo_id": 3,  "name": "Lady Manta" } }
+    }
   ],
-  "images": [...]
-}
-```
-
-**Pricing logic:** `pricing.type = per_guest`. Find the entry in `pricelist` where `members_count == guests`. If the date falls within a `seasonal_prices` range — use that pricelist. `total = tier_price` (no `boat_price`).
-
----
-
-## POST /api/v2/chatbot/quote
-
-Calculates the price and returns ready-to-use data for creating an order in Odoo.
-
-```
-POST https://bluuu.tours/api/v2/chatbot/quote
-X-Api-Key: bluuu-chatbot-2026
-Content-Type: application/json
-```
-
-### Request parameters
-
-| Field | Type | Required | Description |
-|-------|------|:--------:|-------------|
-| `tour_id` | int | ✓ | Tour ID (from `boats[].id`) |
-| `date` | string | — | Date in `YYYY-MM-DD` format |
-| `adults` | int | — | Number of adults (default: `1`) |
-| `kids` | int | — | Number of children (default: `0`) |
-| `guests` | int | — | Alternative to adults+kids — used if `adults` is not provided |
-| `route_id` | int | — | Route ID (private tours only, from `routes[].id`) |
-| `transfer` | int | — | Transfer ID (from `transfers[].id`) |
-| `insurance` | int | — | Cover ID (from `covers[].id`) |
-| `boat_id` | int | — | Physical boat ID (from `boats[].boats[].id`). If omitted — auto-selected by availability |
-| `pickup_address` | string | — | Pickup address |
-| `dropoff_address` | string | — | Drop-off address |
-| `cars` | int | — | Number of cars |
-| `name` | string | — | Client name |
-| `email` | string | — | Client email |
-| `whatsapp` | string | — | Client WhatsApp |
-| `external_id` | string | — | External ID (CRM lead reference) |
-| `extras` | array | — | `[{ "extra_id": int, "quantity": int }]` |
-
-### Request example
-
-```json
-{
-  "tour_id": 54,
-  "date": "2026-05-20",
-  "adults": 4,
-  "kids": 0,
-  "route_id": 3,
-  "transfer": 1,
-  "insurance": 2,
-  "boat_id": 15,
-  "pickup_address": "Seminyak",
-  "dropoff_address": "",
-  "cars": 1,
-  "name": "John Doe",
-  "email": "john@example.com",
-  "whatsapp": "+1234567890",
-  "external_id": "",
   "extras": [
-    { "extra_id": 52, "quantity": 1 }
-  ]
+    {
+      "id": 10,
+      "name": "Photographer",
+      "description": "Professional underwater photographer.",
+      "price": 750000,
+      "currency": "IDR",
+      "category": "Photography",
+      "has_options": false,
+      "options": []
+    },
+    {
+      "id": 11,
+      "name": "Beers & Cider",
+      "description": "Cold drinks on board.",
+      "price": 55000,
+      "currency": "IDR",
+      "category": "Drinks",
+      "has_options": true,
+      "options": [
+        { "id": 12, "name": "Bali Sip Hard Seltzer", "price": 55000 },
+        { "id": 13, "name": "Bintang Beer", "price": 45000 }
+      ]
+    }
+  ],
+  "updated_at": "2026-03-18T10:00:00.000000Z"
 }
 ```
 
-### Response example
+### GET `/api/chatbot/boats/shared` — `200 OK`
 
 ```json
 {
-  "success": true,
-  "booking_url": "https://bluuu.tours/new/private?date=2026-05-20&adults=4&tour=54&route=3&transfer=1&cover=2",
-  "odoo_data": {
-    "order": {
-      "is_rental_order": true,
-      "rental_start_date": "2026-05-20 01:00:00",
-      "rental_return_date": "2026-05-20 09:00:00",
-      "company_id": 26,
-      "x_studio_boat_name": "Riki J",
-      "x_studio_adults": 4,
-      "x_studio_kids": 0,
-      "x_studio_count_of_people": 4,
-      "x_studio_route": "Classic route",
-      "x_studio_pickup_address": "Seminyak",
-      "x_studio_drop_off_address": "",
-      "x_studio_pickup_cars": 1,
-      "x_studio_drop_off_cars": 1,
-      "x_studio_deposit": 0,
-      "x_studio_collect": 20452000,
-      "client_order_ref": "",
-      "partner_name": "John Doe",
-      "partner_email": "john@example.com",
-      "partner_phone": "+1234567890"
-    },
-    "lines": [
-      { "label": "boat",                            "product_id": 71,   "qty": 1, "price": 0 },
-      { "label": "tour",                            "product_id": 1935, "qty": 1, "price": 16732000 },
-      { "label": "transfer",                        "product_id": 22,   "qty": 1, "price": 300000 },
-      { "label": "cover",                           "product_id": 1523, "qty": 1, "price": 1000000 },
-      { "label": "extra:Beginner Diver 1-Pax Pack", "product_id": 571,  "qty": 1, "price": 2420000 }
-    ]
-  },
-  "currency_idr": {
-    "total_price": 20452000,
-    "price_per_pax": 5113000,
-    "breakdown": {
-      "boat_base_price": 16732000,
-      "transfer": 300000,
-      "insurance": 1000000,
-      "extras_total": 2420000,
-      "extras": [
-        {
-          "extra_id": 52,
-          "odoo_id": 571,
-          "name": "Beginner Diver 1-Pax Pack",
-          "qty": 1,
-          "unit_price_idr": 2420000,
-          "subtotal_idr": 2420000
-        }
-      ],
-      "final_total": 20452000
+  "boats": [
+    {
+      "id": 20,
+      "name": "Classic shared tour",
+      "slug": "classic-shared",
+      "description": "All the top spots in one action-packed day.",
+      "size": "12M",
+      "capacity": 14,
+      "currency": "IDR",
+      "status": "ready",
+      "categories": ["Shared"],
+      "features": { "shade": "Partial shade", "cabin": false, "ac": false, "sound": null, "toilet": false },
+      "pricing": {
+        "type": "per_guest",
+        "base_price": 1390000,
+        "packages": [
+          { "name": "Standard", "pricelist": [{ "members_count": 1, "price": 1390000 }] }
+        ],
+        "seasonal_prices": []
+      },
+      "route": { "id": 5, "title": "Classic Route", "slug": "classic-route" },
+      "restaurant": { "id": 2, "name": "Amarta Penida Restaurant", "menu": "https://..." },
+      "images": ["https://bluuu.tours/storage/..."]
     }
-  },
-  "currency_usd": {
-    "rate": 0.00005878,
-    "total_price": 1202,
-    "price_per_pax": 301,
-    "breakdown": {
-      "boat_base_price": 984,
-      "transfer": 18,
-      "insurance": 59,
-      "extras_total": 142,
-      "final_total": 1202
-    }
-  },
-  "meta": {
-    "tour_id": 54,
-    "tour_name": "Classic Boat",
-    "tour_type": "private",
-    "date": "2026-05-20",
-    "adults": 4,
-    "kids": 0,
-    "guests": 4
-  }
+  ],
+  "updated_at": "2026-03-18T10:00:00.000000Z"
 }
 ```
 
-### Response fields
+### Field definitions
 
-#### odoo_data.order
-
-Ready-to-use fields for `sale.order/create` in Odoo — passed directly to OdooService.
+#### Boat
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `is_rental_order` | bool | Always `true` |
-| `rental_start_date` | string\|null | UTC start datetime (`YYYY-MM-DD HH:MM:SS`), calculated from `date + route.start` (Asia/Makassar → UTC) |
-| `rental_return_date` | string\|null | UTC end datetime (`date + route.end`) |
-| `company_id` | int\|null | Odoo company ID of the boat's company |
-| `x_studio_boat_name` | string | Physical boat name |
-| `x_studio_adults` | int | Number of adults |
-| `x_studio_kids` | int | Number of children |
-| `x_studio_count_of_people` | int | Total guests |
-| `x_studio_route` | string | Route name |
-| `x_studio_pickup_address` | string | Pickup address |
-| `x_studio_drop_off_address` | string | Drop-off address |
-| `x_studio_pickup_cars` | int | Cars for pickup |
-| `x_studio_drop_off_cars` | int | Cars for drop-off (`0` if transfer type = `pickup`) |
-| `x_studio_deposit` | float | Deposit — always `0` (filled in at payment) |
-| `x_studio_collect` | float | Amount to collect = total price in IDR |
-| `client_order_ref` | string | External ID (CRM lead) |
-| `partner_name` | string | Client name (for `res.partner`) |
-| `partner_email` | string | Client email |
-| `partner_phone` | string | Client phone / WhatsApp |
+| `id` | int | Unique boat/tour ID |
+| `name` | string | Product name |
+| `slug` | string | URL identifier |
+| `description` | string | Short description |
+| `size` | string | Boat length e.g. `"12M"` |
+| `capacity` | int | Max guests |
+| `currency` | string | Always `"IDR"` |
+| `status` | string | `"ready"` or `"soon"` |
+| `categories` | string[] | Category labels |
+| `features.shade` | string | `"Full shade + flybridge"` or `"Partial shade"` |
+| `features.cabin` | bool | Private cabin onboard |
+| `features.ac` | bool | Air conditioning |
+| `features.sound` | string\|null | `"Bose sound"` or `null` |
+| `features.toilet` | bool | Toilet onboard |
+| `best_for` | string\|null | Recommended guest type |
+| `boat_type` | string\|null | e.g. `"speedboat"`, `"yacht"` |
+| `pricing` | object | See pricing fields below |
+| `images` | string[] | Up to 3 image URLs (absolute) |
 
-#### odoo_data.lines
-
-Order lines — ready for `sale.order.line/create`.
+#### Pricing
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `label` | string | `boat` / `tour` / `transfer` / `cover` / `extra:<name>` |
-| `product_id` | int | Odoo product ID |
-| `qty` | int | Quantity. For cover: `1` if `per_boat`, otherwise = guest count. For shared tours: guest count |
-| `price` | float | Price in IDR. For `boat` always `0` |
-
-#### currency_idr / currency_usd
-
-| Field | Description |
-|-------|-------------|
-| `total_price` | Total amount |
-| `price_per_pax` | Price per guest |
-| `breakdown.boat_base_price` | Tour cost (tier_price + boat_price for private) |
-| `breakdown.transfer` | Transfer cost. >5 guests → `bus_price` |
-| `breakdown.insurance` | Cover cost |
-| `breakdown.extras_total` | Total cost of all add-ons |
-| `breakdown.extras[].odoo_id` | Odoo ID of each add-on |
-| `currency_usd` | `null` if USD exchange rate is not set in the database |
-
-#### meta
-
-| Field | Description |
-|-------|-------------|
-| `tour_type` | `"private"` or `"shared"` |
-| `adults` | Adults from request |
-| `kids` | Children from request |
-| `guests` | Total (adults + kids) |
+| `pricing.type` | string | `"per_boat"` (private) or `"per_guest"` (shared) |
+| `pricing.boat_price` | int | Fixed boat surcharge in IDR — added on top of `pricelist[N].price` |
+| `pricing.packages[].name` | string | Package label |
+| `pricing.packages[].pricelist` | array | `[{members_count, price}]` tiers |
+| `pricing.seasonal_prices[].date_start` | string | `"YYYY-MM-DD"` |
+| `pricing.seasonal_prices[].date_end` | string | `"YYYY-MM-DD"` |
+| `pricing.seasonal_prices[].boat_price` | int\|null | Override `boat_price` for this period (`null` = use `pricing.base_price`) |
+| `pricing.seasonal_prices[].low_price` | bool | Low season flag |
+| `pricing.seasonal_prices[].flash_sale` | bool | Flash sale flag |
+| `pricing.seasonal_prices[].packages` | object\|null | Override pricelist for this period |
 
 ---
 
-## Errors
+## 6. Error Handling
 
-| HTTP | Body | Reason |
-|------|------|--------|
-| `401` | `{ "error": "Unauthorized" }` | Invalid API key |
-| `404` | `{ "success": false, "error": "Tour not found" }` | `tour_id` not found |
-| `500` | HTML | Server error |
+| HTTP Code | Body | Reason |
+|-----------|------|--------|
+| `401` | `{"error": "Unauthorized"}` | Missing or invalid API key |
+| `500` | Laravel error page | Server error — contact Bluuu |
+
+No retry logic needed — the API has no rate limits. On `500`, wait and retry after a few seconds.
 
 ---
 
-## v1 vs v2 differences
+## 7. Rate Limits & Performance
 
-| | v1 `/api/chatbot/...` | v2 `/api/v2/chatbot/...` |
-|---|---|---|
-| `odoo_id` in boats/routes/extras/transfers/covers | no | yes |
-| `boats[].boats[]` (physical boats) | no | yes |
-| `/quote` → `odoo_data` | no | yes |
-| `/quote` → `adults` / `kids` | `guests` only | `adults` + `kids` (or `guests` as fallback) |
-| `/quote` → boat selection | no | auto-selected by date and availability |
+- **No rate limits** on chatbot endpoints
+- **Expected response time:** < 500 ms (data is read directly from DB, no external calls)
+- No pagination — each response is a full snapshot of all active products
+
+---
+
+## 8. Testing Access
+
+**Endpoint:** `https://bluuu.tours/api/chatbot/boats/private`
+**API key:** `bluuu-chatbot-2026`
+
+```bash
+# Test private boats
+curl https://bluuu.tours/api/chatbot/boats/private \
+  -H "X-Api-Key: bluuu-chatbot-2026"
+
+# Test shared boats
+curl https://bluuu.tours/api/chatbot/boats/shared \
+  -H "X-Api-Key: bluuu-chatbot-2026"
+
+# Via query param
+curl "https://bluuu.tours/api/chatbot/boats/private?api_key=bluuu-chatbot-2026"
+```
+
+No sandbox — test against production. Data is live CMS content.
+
+---
+
+## 9. Mapping Reference
+
+Products are identified by `id` (int) and `slug` (string). Use `id` for reliable mapping — slugs may change if CMS content is edited.
+
+- Private boats: `classes_id = 8` internally
+- Shared tours: `classes_id = 9` internally
+- Routes (itineraries) are shared across private boats — a route `id` from the `/private` response matches `route.id` on any boat
+
+---
+
+## 10. API Versioning
+
+No versioning — the API is a single live endpoint. Breaking changes will be communicated directly before deployment. Non-breaking additions (new fields) may be added at any time without notice.
+
+---
+
+## 11. Security
+
+- HTTPS only (TLS 1.2+)
+- No IP whitelisting currently
+- API key must be kept private — do not expose in client-side code
+- Key rotation: contact Bluuu to request a new key
+
+---
+
+## 12. Scope Confirmation
+
+| Data | Included? |
+|------|-----------|
+| Boat/tour info | ✅ |
+| Pricing (default + seasonal) | ✅ |
+| Add-ons / extras with prices | ✅ (private endpoint only) |
+| Itinerary routes | ✅ (private endpoint only) |
+| Restaurant info | ✅ |
+| Real-time availability | ❌ Not included — prices are returned without date-based availability check |
+| Taxes / fees | ❌ Not applicable — all prices are final, no taxes added |
+| Order creation | ❌ Out of scope for chatbot API |
+
+> **Note on availability:** The chatbot API returns pricing data only. To check if a specific date is available for a specific boat, use the separate availability endpoints (`/api/new/availability/private/{id}` and `/api/new/availability/shared/{id}`) — these are not API-key protected and return per-date availability.
+
+---
+
+## Quick reference
+
+```bash
+# Private boats (+ routes + extras + pricing)
+curl https://bluuu.tours/api/chatbot/boats/private -H "X-Api-Key: bluuu-chatbot-2026"
+
+# Shared boats (+ pricing)
+curl https://bluuu.tours/api/chatbot/boats/shared -H "X-Api-Key: bluuu-chatbot-2026"
+```
+
+**Pricing logic summary:**
+- Private → price is **per boat** (entire boat, split by group)
+- Shared → price is **per guest**
+- Check `seasonal_prices[]` first; if today is within a date range, use that period's pricelist
+- All prices in IDR, taxes included, no additional fees

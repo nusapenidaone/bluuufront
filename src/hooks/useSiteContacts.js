@@ -1,6 +1,37 @@
 import { useEffect, useState } from "react";
 import { apiUrl } from "../api/base";
 
+// ── WhatsApp routing by utm_source ───────────────────────────────────────────
+// number — E.164 без + (для wa.me)
+// message — pre-filled текст (plain, не encoded)
+// Default используется когда utm_source не задан или не в списке
+const WA_DEFAULT = {
+  number:  "6281547483381",
+  message: "Hi Bluuu! I want to book a tour [G]",
+};
+
+const UTM_WHATSAPP_MAP = {
+  meta:    { number: "628213845159",  message: "Hi Bluuu! I want to book a tour [M]" },
+  tiktok:  { number: "628214097657",  message: "Hi Bluuu! I just submitted my inquiry [T]" },
+  google:  { number: "6281547483381", message: "Hi Bluuu! I want to book a tour [G]" },
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildWaEntry({ number, message }) {
+  const link = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+  return { number: `+${number}`, link };
+}
+
+function getUtmWhatsapp() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const source = (params.get("utm_source") || "").toLowerCase().trim();
+    const entry = UTM_WHATSAPP_MAP[source] || WA_DEFAULT;
+    return buildWaEntry(entry);
+  } catch (_) {}
+  return buildWaEntry(WA_DEFAULT);
+}
+
 const DEFAULT_CONTACTS = {
   address: "",
   location: "",
@@ -75,14 +106,19 @@ async function fetchContactsFromApi() {
   throw new Error("Failed to load contacts");
 }
 
+function applyUtmOverride(contacts) {
+  const utmWa = getUtmWhatsapp();
+  return utmWa ? { ...contacts, whatsapp: utmWa } : contacts;
+}
+
 export function useSiteContacts() {
-  const [contacts, setContacts] = useState(cachedContacts || DEFAULT_CONTACTS);
+  const [contacts, setContacts] = useState(() => applyUtmOverride(cachedContacts || DEFAULT_CONTACTS));
 
   useEffect(() => {
     let cancelled = false;
 
     if (cachedContacts) {
-      setContacts(cachedContacts);
+      setContacts(applyUtmOverride(cachedContacts));
       return undefined;
     }
 
@@ -99,7 +135,9 @@ export function useSiteContacts() {
     }
 
     pendingRequest.then((data) => {
-      if (!cancelled) setContacts(data);
+      if (cancelled) return;
+      const utmWa = getUtmWhatsapp();
+      setContacts(utmWa ? { ...data, whatsapp: utmWa } : data);
     });
 
     return () => {

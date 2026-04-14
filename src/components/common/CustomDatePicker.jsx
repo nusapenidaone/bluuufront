@@ -340,6 +340,8 @@ export default function CustomDatePicker({
         monthsShown={monthsToShow}
         dateFormat={isRange ? "MMM d, yyyy" : "MMM d, yyyy"}
         placeholderText={isRange ? "Select date range..." : "Select a date..."}
+        autoComplete="new-password"
+        onKeyDown={(e) => e.preventDefault()}
         showPopperArrow={false}
         popperPlacement="bottom-start"
         inline={inline}

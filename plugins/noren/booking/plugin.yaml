@@ -180,6 +180,10 @@ navigation:
                 label: Calendar
                 url: noren/booking/calendar
                 icon: icon-calendar
+            side-menu-item5:
+                label: Closed (Test)
+                url: noren/booking/closeddatestest
+                icon: icon-flask
 permissions:
     admin:
         tab: Booking

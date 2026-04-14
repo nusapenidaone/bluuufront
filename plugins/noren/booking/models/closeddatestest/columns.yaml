@@ -1,0 +1,50 @@
+columns:
+    id:
+        label: ID
+        type: number
+        searchable: true
+        sortable: true
+    date:
+        label: Date
+        type: date
+        searchable: true
+        sortable: true
+        format: Y-m-d
+    boat_id:
+        label: Boat
+        type: text
+        searchable: true
+        sortable: true
+        select: amo_name
+        relation: boat
+    qtty:
+        label: Qtty
+        type: number
+        searchable: true
+        sortable: true
+    lead_id:
+        label: Lead
+        type: number
+        searchable: true
+        sortable: true
+    odoo_id:
+        label: Odoo ID
+        type: number
+        searchable: true
+        sortable: true
+    type:
+        label: Type
+        type: number
+        sortable: true
+    created_at:
+        label: Created
+        type: datetime
+        searchable: true
+        sortable: true
+        format: 'Y-m-d H:i:s'
+    updated_at:
+        label: Updated
+        type: datetime
+        searchable: true
+        sortable: true
+        format: 'Y-m-d H:i:s'

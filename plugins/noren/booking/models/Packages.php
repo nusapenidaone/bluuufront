@@ -25,7 +25,11 @@ class Packages extends Model
     //    'packagesitems' => PackagesItems::class
     //];
     protected $jsonable = ['pricelist'];
-    
-    
+
+    public function getPricelistSummaryAttribute()
+    {
+        if (empty($this->pricelist)) return '—';
+        return implode(' / ', array_map(fn($row) => ($row['members_count'] ?? '?') . 'p: ' . ($row['price'] ?? '?'), $this->pricelist));
+    }
 
 }

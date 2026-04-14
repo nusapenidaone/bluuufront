@@ -118,9 +118,15 @@ export default function LeadAdmin() {
   const [tours,     setTours]     = useState([]);
   const [transfers, setTransfers] = useState([]);
   const [covers,    setCovers]    = useState([]);
+  const [allExtras, setAllExtras] = useState([]);   // all available extras from DB
   const [productForm, setProductForm] = useState({ tours_id: "", boat_id: "", transfer_id: "", cover_id: "" });
   const [savingProducts, setSavingProducts] = useState(false);
   const [productSaveStatus, setProductSaveStatus] = useState(null);
+
+  // Extras state
+  const [localExtras, setLocalExtras] = useState([]); // [{id, name, qty, price}]
+  const [savingExtras, setSavingExtras] = useState(false);
+  const [extrasSaveStatus, setExtrasSaveStatus] = useState(null);
 
   // ─── API helper ─────────────────────────────────────────────────────────
 
@@ -181,16 +187,18 @@ export default function LeadAdmin() {
   const loadProducts = useCallback(async () => {
     if (!token) return;
     try {
-      const [boatData, tourData, transferData, coverData] = await Promise.all([
+      const [boatData, tourData, transferData, coverData, extrasData] = await Promise.all([
         adminFetch("boats"),
         adminFetch("tours"),
         adminFetch("transfers"),
         adminFetch("covers"),
+        adminFetch("extras"),
       ]);
-      setBoats(Array.isArray(boatData)     ? boatData     : []);
-      setTours(Array.isArray(tourData)     ? tourData     : []);
+      setBoats(Array.isArray(boatData)       ? boatData       : []);
+      setTours(Array.isArray(tourData)       ? tourData       : []);
       setTransfers(Array.isArray(transferData) ? transferData : []);
-      setCovers(Array.isArray(coverData)   ? coverData    : []);
+      setCovers(Array.isArray(coverData)     ? coverData      : []);
+      setAllExtras(Array.isArray(extrasData) ? extrasData     : []);
     } catch (_) {}
   }, [token, adminFetch]);
 
@@ -228,9 +236,12 @@ export default function LeadAdmin() {
           transfer_id: data.order.transfer_id ?? "",
           cover_id:    data.order.cover_id    ?? "",
         });
+        setLocalExtras(Array.isArray(data.order.extras) ? data.order.extras : []);
       } else {
         setProductForm({ tours_id: "", boat_id: "", transfer_id: "", cover_id: "" });
+        setLocalExtras([]);
       }
+      setExtrasSaveStatus(null);
     } catch (e) {
       setDetailError(e.message);
     } finally {
@@ -243,6 +254,15 @@ export default function LeadAdmin() {
       const data = await adminFetch(`odoo/order/${odooId}`);
       setOdoo(data.odoo);
       setLocal(data.order);
+      if (data.order) {
+        setLocalExtras(Array.isArray(data.order.extras) ? data.order.extras : []);
+        setProductForm({
+          tours_id:    data.order.tours_id    ?? "",
+          boat_id:     data.order.boat_id     ?? "",
+          transfer_id: data.order.transfer_id ?? "",
+          cover_id:    data.order.cover_id    ?? "",
+        });
+      }
     } catch (_) {}
   };
 
@@ -336,6 +356,46 @@ export default function LeadAdmin() {
     } finally {
       setSavingProducts(false);
     }
+  };
+
+  // ─── Save extras → updates local order + recreates Odoo ──────────────────
+
+  const handleSaveExtras = async () => {
+    setSavingExtras(true);
+    setExtrasSaveStatus(null);
+    setActionError("");
+    try {
+      const payload = { extras: localExtras.map(e => ({ id: e.id, qty: e.qty })) };
+      const data = await adminFetch(`odoo/order/${odoo.id}/extras`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      });
+      setExtrasSaveStatus({ ok: true, msg: `Recreated → new Odoo #${data.result.new_odoo_id}` });
+      await reloadOdoo(data.result.new_odoo_id);
+    } catch (e) {
+      setExtrasSaveStatus({ ok: false, msg: e.message });
+    } finally {
+      setSavingExtras(false);
+    }
+  };
+
+  const addExtra = (extraId) => {
+    const id = Number(extraId);
+    if (!id) return;
+    const found = allExtras.find(e => e.id === id);
+    if (!found) return;
+    setLocalExtras(prev => {
+      const exists = prev.find(e => e.id === id);
+      if (exists) return prev.map(e => e.id === id ? { ...e, qty: e.qty + 1 } : e);
+      return [...prev, { id: found.id, name: found.name, qty: 1, price: found.price }];
+    });
+  };
+
+  const removeExtra = (id) => setLocalExtras(prev => prev.filter(e => e.id !== id));
+
+  const updateExtraQty = (id, qty) => {
+    const n = Math.max(1, Number(qty) || 1);
+    setLocalExtras(prev => prev.map(e => e.id === id ? { ...e, qty: n } : e));
   };
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -560,101 +620,173 @@ export default function LeadAdmin() {
               </div>
             ))}
 
-            {/* Products panel — tour / boat / transfer / cover (requires linked local order) */}
-            {local ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="mb-4 text-sm font-semibold text-slate-900">Products</div>
-                <div className="grid gap-3 sm:grid-cols-2">
+            {/* Products panel — tour / boat / transfer / cover */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 text-sm font-semibold text-slate-900">Products</div>
+              <div className="grid gap-3 sm:grid-cols-2">
 
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-slate-400">Tour</span>
-                    <select
-                      value={productForm.tours_id}
-                      onChange={e => setProductForm(p => ({ ...p, tours_id: e.target.value }))}
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-                    >
-                      <option value="">— select tour —</option>
-                      {tours.map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}{!t.odoo_id ? " ⚠" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-slate-400">Boat</span>
-                    <select
-                      value={productForm.boat_id}
-                      onChange={e => setProductForm(p => ({ ...p, boat_id: e.target.value }))}
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-                    >
-                      <option value="">— select boat —</option>
-                      {boats.map(b => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}{!b.odoo_id ? " ⚠" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-slate-400">Transfer</span>
-                    <select
-                      value={productForm.transfer_id}
-                      onChange={e => setProductForm(p => ({ ...p, transfer_id: e.target.value }))}
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-                    >
-                      <option value="">— select transfer —</option>
-                      {transfers.map(t => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}{!t.odoo_id ? " ⚠" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-slate-400">Cover</span>
-                    <select
-                      value={productForm.cover_id}
-                      onChange={e => setProductForm(p => ({ ...p, cover_id: e.target.value }))}
-                      className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
-                    >
-                      <option value="">— select cover —</option>
-                      {covers.map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}{!c.odoo_id ? " ⚠" : ""}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                </div>
-                <div className="mt-4 flex flex-wrap items-center gap-3">
-                  <button
-                    onClick={handleSaveProducts}
-                    disabled={savingProducts}
-                    className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-60"
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-slate-400">Tour</span>
+                  <select
+                    value={productForm.tours_id}
+                    onChange={e => setProductForm(p => ({ ...p, tours_id: e.target.value }))}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
                   >
-                    {savingProducts ? "Saving…" : "Save products & recreate Odoo"}
-                  </button>
-                  {productSaveStatus && (
-                    <span className={`text-sm font-medium ${productSaveStatus.ok ? "text-emerald-600" : "text-rose-600"}`}>
-                      {productSaveStatus.msg}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 text-xs text-slate-400">
-                  ⚠ — product has no odoo_id and won&apos;t appear as a line in Odoo.
-                  Saving will cancel the current Odoo order and create a new one.
-                </p>
+                    <option value="">— select tour —</option>
+                    {tours.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{!t.odoo_id ? " ⚠" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-slate-400">Boat</span>
+                  <select
+                    value={productForm.boat_id}
+                    onChange={e => setProductForm(p => ({ ...p, boat_id: e.target.value }))}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                  >
+                    <option value="">— select boat —</option>
+                    {boats.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}{!b.odoo_id ? " ⚠" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-slate-400">Transfer</span>
+                  <select
+                    value={productForm.transfer_id}
+                    onChange={e => setProductForm(p => ({ ...p, transfer_id: e.target.value }))}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                  >
+                    <option value="">— select transfer —</option>
+                    {transfers.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{!t.odoo_id ? " ⚠" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-slate-400">Cover</span>
+                  <select
+                    value={productForm.cover_id}
+                    onChange={e => setProductForm(p => ({ ...p, cover_id: e.target.value }))}
+                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                  >
+                    <option value="">— select cover —</option>
+                    {covers.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}{!c.odoo_id ? " ⚠" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
               </div>
-            ) : (
-              <p className="text-xs text-slate-400">
-                Products editing is available only when a local order is linked to this Odoo record.
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleSaveProducts}
+                  disabled={savingProducts || !local}
+                  title={!local ? "Requires a linked local order" : undefined}
+                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {savingProducts ? "Saving…" : "Save products & recreate Odoo"}
+                </button>
+                {!local && (
+                  <span className="text-xs text-amber-600">No linked local order — saving unavailable</span>
+                )}
+                {productSaveStatus && (
+                  <span className={`text-sm font-medium ${productSaveStatus.ok ? "text-emerald-600" : "text-rose-600"}`}>
+                    {productSaveStatus.msg}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                ⚠ — product has no odoo_id. Saving cancels the current Odoo order and creates a new one.
               </p>
-            )}
+            </div>
+
+            {/* Extras panel */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 text-sm font-semibold text-slate-900">Extras</div>
+
+              {/* Current extras list */}
+              {localExtras.length === 0 ? (
+                <div className="mb-3 text-xs text-slate-400">No extras selected.</div>
+              ) : (
+                <div className="mb-4 space-y-2">
+                  {localExtras.map(e => (
+                    <div key={e.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                      <span className="flex-1 text-sm text-slate-800">{e.name}</span>
+                      <span className="text-xs text-slate-400">${e.price}</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={e.qty}
+                        onChange={ev => updateExtraQty(e.id, ev.target.value)}
+                        className="h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-center text-sm outline-none focus:border-sky-300 focus:ring-2 focus:ring-sky-100"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeExtra(e.id)}
+                        className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-100"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add extra selector */}
+              {allExtras.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <select
+                    defaultValue=""
+                    onChange={e => { addExtra(e.target.value); e.target.value = ""; }}
+                    className="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-100"
+                  >
+                    <option value="">— add extra —</option>
+                    {allExtras
+                      .filter(ex => !localExtras.find(le => le.id === ex.id))
+                      .map(ex => (
+                        <option key={ex.id} value={ex.id}>
+                          {ex.name} — ${ex.price}{!ex.odoo_id ? " ⚠" : ""}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button
+                  onClick={handleSaveExtras}
+                  disabled={savingExtras || !local}
+                  title={!local ? "Requires a linked local order" : undefined}
+                  className="rounded-xl bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {savingExtras ? "Saving…" : "Save extras & recreate Odoo"}
+                </button>
+                {!local && (
+                  <span className="text-xs text-amber-600">No linked local order — saving unavailable</span>
+                )}
+                {extrasSaveStatus && (
+                  <span className={`text-sm font-medium ${extrasSaveStatus.ok ? "text-emerald-600" : "text-rose-600"}`}>
+                    {extrasSaveStatus.msg}
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-slate-400">
+                ⚠ — extra has no odoo_id. Saving will cancel the current Odoo order and create a new one.
+              </p>
+            </div>
 
             {/* Actions */}
             <div className="flex flex-wrap items-center gap-3">
@@ -755,11 +887,27 @@ export default function LeadAdmin() {
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="mb-2 text-sm font-semibold text-slate-900">Local order</div>
                 <div className="divide-y divide-slate-100">
-                  <InfoRow label="ID"    value={`#${local.id}`} />
-                  <InfoRow label="Tour"  value={local.tours?.name} />
-                  <InfoRow label="Boat"  value={local.boat?.name} />
-                  <InfoRow label="Total" value={`$${local.total_price}`} />
+                  <InfoRow label="ID"          value={`#${local.id}`} />
+                  <InfoRow label="Travel date" value={local.travel_date} />
+                  <InfoRow label="Tour"        value={local.tours?.name} />
+                  <InfoRow label="Boat"        value={local.boat?.name} />
+                  <InfoRow label="Transfer"    value={local.transfer?.name} />
+                  <InfoRow label="Cover"       value={local.cover?.name} />
+                  <InfoRow label="Total"       value={`$${local.total_price}`} />
                 </div>
+                {Array.isArray(local.extras) && local.extras.length > 0 && (
+                  <div className="mt-3">
+                    <div className="mb-1.5 text-xs font-semibold text-slate-400">Extras</div>
+                    <div className="space-y-1">
+                      {local.extras.map((e, i) => (
+                        <div key={i} className="flex justify-between text-xs text-slate-600">
+                          <span>{e.name} ×{e.qty}</span>
+                          <span className="text-slate-400">${e.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

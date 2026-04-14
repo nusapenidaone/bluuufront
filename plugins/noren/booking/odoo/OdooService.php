@@ -261,6 +261,17 @@ class OdooService
         return (float) ($result[0]['x_studio_collect'] ?? 0);
     }
 
+    public static function fetchTourType(int $odooOrderId): string
+    {
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['x_studio_tour_type'],
+            'limit'  => 1,
+        ]);
+
+        return (string) ($result[0]['x_studio_tour_type'] ?? '');
+    }
+
     public static function getOrderInfo(int $odooOrderId): array
     {
         $result = static::post('/json/2/sale.order/search_read', [
@@ -349,7 +360,7 @@ class OdooService
 
     public static function buildOrderData(Order $order): array
     {
-        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
+        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant', 'source']);
 
         $tour    = $order->tours;
         $boat    = $order->boat;
@@ -382,6 +393,7 @@ class OdooService
             'transfer_id'      => (int) $order->transfer_id,
             'free_shuttle_bus' => (int) $order->transfer_id === 3,
             'tour_type'        => $tour->odoo_type ?? '',
+            'source_name'      => optional($order->source)->name ?? '',
         ];
 
         // ── Products ──────────────────────────────────────────────────────────
@@ -539,6 +551,7 @@ class OdooService
             'client_order_ref'          => $lead['external_id'],
             'x_studio_free_shuttle_bus' => $lead['free_shuttle_bus'] ?? false,
             'x_studio_tour_type'        => $lead['tour_type'] ?? '',
+            'x_studio_source'           => $lead['source_name'] ?? '',
         ];
 
         if (!empty($lead['company_odoo_id'])) {

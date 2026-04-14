@@ -6,6 +6,7 @@ use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
+use Noren\Booking\Models\Extras;
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Transfer;
@@ -73,6 +74,75 @@ class AdminController extends Controller
 
         $covers = Cover::select('id', 'name', 'odoo_id')->orderBy('name')->get();
         return response()->json($covers);
+    }
+
+    // ─── GET /api/admin/extras ────────────────────────────────────────────────
+
+    public function extras(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $extras = Extras::select('id', 'name', 'price', 'odoo_id')->orderBy('name')->get();
+        return response()->json($extras);
+    }
+
+    // ─── PATCH /api/admin/odoo/order/{odooId}/extras ─────────────────────────
+    // Update extras JSON on the linked local order, then recreate Odoo order
+
+    public function odooUpdateExtras(Request $request, int $odooId)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $local = Order::where('odoo_id', $odooId)->first();
+        if (!$local) {
+            return response()->json(['error' => 'No local order linked to this Odoo ID'], 404);
+        }
+
+        // Expected: [{id: 1, qty: 2}, ...]
+        $items = $request->get('extras', []);
+        if (!is_array($items)) {
+            return response()->json(['error' => 'extras must be an array'], 422);
+        }
+
+        // Build full extras array with name+price from DB
+        $extraRecords = Extras::whereIn('id', array_column($items, 'id'))
+            ->select('id', 'name', 'price', 'odoo_id')
+            ->get()
+            ->keyBy('id');
+
+        $extrasJson = [];
+        foreach ($items as $item) {
+            $id  = (int) ($item['id'] ?? 0);
+            $qty = max(1, (int) ($item['qty'] ?? 1));
+            if (!$id || !$extraRecords->has($id)) continue;
+            $rec = $extraRecords[$id];
+            $extrasJson[] = [
+                'id'    => $rec->id,
+                'name'  => $rec->name,
+                'qty'   => $qty,
+                'price' => (float) $rec->price,
+            ];
+        }
+
+        $local->extras = $extrasJson;
+        $local->saveQuietly();
+
+        try {
+            $result = OdooService::recreateLead($local);
+            Order::where('id', $local->id)->update(['odoo_id' => $result['order_id']]);
+
+            return response()->json([
+                'success' => true,
+                'result'  => [
+                    'action'            => 'recreated',
+                    'cancelled_odoo_id' => $result['cancelled_odoo_id'],
+                    'new_odoo_id'       => $result['order_id'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Admin odooUpdateExtras #{$odooId}: " . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     // ─── GET /api/admin/odoo/orders ──────────────────────────────────────────

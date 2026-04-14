@@ -3,6 +3,13 @@ import { fetchExtras, fetchExtraCategories, fetchPrivateRoutes, fetchSharedRoute
 
 const ExtrasContext = createContext();
 
+function getPageNeeds() {
+    const path = window.location.pathname;
+    const isPrivate = path.includes('/private');
+    const isShared = path.includes('/shared');
+    return { isPrivate, isShared };
+}
+
 export function ExtrasProvider({ children }) {
     const [extras, setExtras] = useState([]);
     const [categories, setCategories] = useState([]);
@@ -13,18 +20,30 @@ export function ExtrasProvider({ children }) {
 
     useEffect(() => {
         async function loadData() {
+            const { isPrivate, isShared } = getPageNeeds();
+
+            // Only fetch what the current page actually needs
+            if (!isPrivate && !isShared) {
+                setLoading(false);
+                return;
+            }
+
             try {
                 setLoading(true);
-                const [extrasData, categoriesData, privateRoutesData, sharedRoutesData] = await Promise.all([
-                    fetchExtras(),
-                    fetchExtraCategories(),
-                    fetchPrivateRoutes(),
-                    fetchSharedRoutes(),
-                ]);
-                setExtras(extrasData);
-                setCategories(categoriesData);
-                setPrivateRoutes(privateRoutesData);
-                setSharedRoutes(sharedRoutesData);
+                const tasks = [];
+                if (isPrivate) {
+                    tasks.push(
+                        fetchExtras().then(d => setExtras(d)),
+                        fetchExtraCategories().then(d => setCategories(d)),
+                        fetchPrivateRoutes().then(d => setPrivateRoutes(d)),
+                    );
+                }
+                if (isShared) {
+                    tasks.push(
+                        fetchSharedRoutes().then(d => setSharedRoutes(d)),
+                    );
+                }
+                await Promise.all(tasks);
                 setError(null);
             } catch (err) {
                 console.error('Error loading extras data:', err);

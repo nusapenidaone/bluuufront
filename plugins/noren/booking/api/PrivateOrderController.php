@@ -178,16 +178,17 @@ class PrivateOrderController extends Controller
 
         // ── Request-only (no deposit) ─────────────────────────────────
         if ($order->deposite == 0) {
-            return response()->json(url('/success/request-success'));
+            return response()->json(url('/new/success') . '?type=request');
         }
 
         // ── Xendit payment ────────────────────────────────────────────
         if ($order->method_id == 1) {
+            $successUrl = url('/new/success') . '?amount=' . $order->deposite_summ . '&currency=IDR&type=private';
             $url = XenditService::createPaymentLink(
                 $order->external_id,
                 $order->deposite_summ,
                 $order->email,
-                url('/success/payment-success'),
+                $successUrl,
                 url('/error'),
                 $order->tours->name ?? 'Private Tour'
             );
@@ -196,11 +197,12 @@ class PrivateOrderController extends Controller
         } else {
             $usd_rate = Rates::find(2)->rate;
             $usd_summ = $usd_rate * $order->deposite_summ;
+            $successUrl = url('/new/success') . '?amount=' . round($usd_summ, 2) . '&currency=USD&type=private';
             $url = PayPalService::createPaymentLink(
                 $order->external_id,
                 $usd_summ,
                 $order->email,
-                url('/success/payment-success'),
+                $successUrl,
                 url('/error'),
                 $order->tours->name ?? 'Private Tour'
             );

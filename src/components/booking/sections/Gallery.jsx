@@ -13,7 +13,10 @@ export function HeroGallery({ images = [] }) {
 
     const items = images.slice(0, 5).map((img, i) => ({
         label: `Gallery image ${i + 1}`,
-        src: typeof img === 'string' ? img : (img.original || img.thumb1 || ""),
+        src:      typeof img === 'string' ? img : (img.thumb1 || img.original || ""),
+        srcSmall: typeof img === 'string' ? null : (img.thumb1_small || null),
+        srcLarge: typeof img === 'string' ? img : (img.thumb2 || img.thumb1 || img.original || ""),
+        original: typeof img === 'string' ? img : (img.original || img.thumb2 || img.thumb1 || ""),
     })).filter(item => item.src);
 
     if (items.length === 0) return null;
@@ -28,12 +31,14 @@ export function HeroGallery({ images = [] }) {
                     >
                         <img
                             src={it.src}
+                            srcSet={it.srcSmall ? `${it.srcSmall} 300w, ${it.src} 600w` : undefined}
+                            sizes="82vw"
                             alt={it.label}
                             loading="lazy"
                             decoding="async"
                             className="h-48 w-full object-cover"
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900 backdrop-blur">
+                        <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900">
                             {it.label}
                         </div>
                     </div>
@@ -42,13 +47,15 @@ export function HeroGallery({ images = [] }) {
             <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[180px]">
                 <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:col-span-2 sm:row-span-2">
                     <img
-                        src={items[0].src}
+                        src={items[0].srcLarge || items[0].src}
+                        srcSet={items[0].srcSmall ? `${items[0].srcSmall} 300w, ${items[0].src} 600w, ${items[0].srcLarge} 900w` : undefined}
+                        sizes="(max-width: 1024px) 100vw, 50vw"
                         alt={items[0].label}
                         loading="lazy"
                         decoding="async"
                         className="h-full w-full object-cover"
                     />
-                    <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900 backdrop-blur">
+                    <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900">
                         {items[0].label}
                     </div>
                 </div>
@@ -60,13 +67,15 @@ export function HeroGallery({ images = [] }) {
                         <div className="h-full min-h-[180px] bg-neutral-50 lg:min-h-0">
                             <img
                                 src={it.src}
+                                srcSet={it.srcSmall ? `${it.srcSmall} 300w, ${it.src} 600w` : undefined}
+                                sizes="(max-width: 1024px) 50vw, 25vw"
                                 alt={it.label}
                                 loading="lazy"
                                 decoding="async"
                                 className="h-full w-full object-cover"
                             />
                         </div>
-                        <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900 backdrop-blur">
+                        <div className="absolute inset-x-0 bottom-0 bg-white/70 backdrop-blur-sm px-3 py-2 text-sm font-semibold text-secondary-900">
                             {it.label}
                         </div>
                     </div>

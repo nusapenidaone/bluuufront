@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
+import { useCurrency } from "./CurrencyContext";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -39,6 +40,16 @@ function formatIDR(value) {
 }
 
 export default function Payment() {
+  const { formatPrice, selectedCurrency, loading: ratesLoading } = useCurrency();
+  const isIDR = selectedCurrency === "IDR";
+
+  const fmt = (value) => {
+    if (ratesLoading && !isIDR) return "…";
+    return isIDR
+      ? formatIDR(value)
+      : formatPrice(value, { fromCurrency: "IDR" });
+  };
+
   // ── Read URL params ──────────────────────────────────────────────────────
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
 
@@ -120,6 +131,7 @@ export default function Payment() {
       ],
       dedupeKey: `ga4:begin_checkout:${window.location.pathname}:${window.location.search}`,
     });
+    trackPixelInitiateCheckout({ value: analyticsTotal, currency: analyticsCurrency });
   }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
 
   // ── UI state ─────────────────────────────────────────────────────────────
@@ -226,6 +238,72 @@ export default function Payment() {
   const methodLabel = method === 2 ? "PayPal" : "Card / Bank transfer";
   const depositLabel = payMode === "part" ? "50% deposit" : "Full payment";
 
+  if (ratesLoading && !isIDR) {
+    return (
+      <div className="min-h-screen bg-neutral-50 text-secondary-900">
+        <div className="border-b border-neutral-200 bg-white shadow-sm">
+          <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
+            <button type="button" onClick={() => window.history.back()}
+              className="inline-flex items-center gap-2 text-sm font-semibold text-secondary-500 transition hover:text-secondary-900">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
+            <div className="text-sm font-bold text-secondary-900">Bluuu · Confirm & Pay</div>
+            <div className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary-400">
+              <Lock className="h-3.5 w-3.5" /> Secure
+            </div>
+          </div>
+        </div>
+        <div className="mx-auto max-w-2xl px-4 py-8 space-y-4">
+          {/* Skeleton card 1 */}
+          <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-lg shadow-neutral-100/40 sm:p-6 space-y-4">
+            <div className="h-5 w-32 rounded-lg bg-neutral-200 animate-pulse" />
+            <div className="flex gap-4">
+              <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
+              <div className="h-4 w-20 rounded-lg bg-neutral-100 animate-pulse" />
+            </div>
+            <div className="border-t border-neutral-100 pt-4 space-y-3">
+              <div className="flex justify-between">
+                <div className="h-4 w-24 rounded-lg bg-neutral-100 animate-pulse" />
+                <div className="h-4 w-16 rounded-lg bg-neutral-200 animate-pulse" />
+              </div>
+              <div className="flex justify-between">
+                <div className="h-4 w-36 rounded-lg bg-neutral-100 animate-pulse" />
+                <div className="h-4 w-16 rounded-lg bg-neutral-200 animate-pulse" />
+              </div>
+              <div className="flex justify-between border-t border-neutral-100 pt-2.5">
+                <div className="h-5 w-12 rounded-lg bg-neutral-200 animate-pulse" />
+                <div className="h-5 w-20 rounded-lg bg-neutral-300 animate-pulse" />
+              </div>
+            </div>
+          </div>
+          {/* Skeleton card 2 */}
+          <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-lg shadow-neutral-100/40 sm:p-6 space-y-4">
+            <div className="h-5 w-28 rounded-lg bg-neutral-200 animate-pulse" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <div className="h-3 w-12 rounded bg-neutral-100 animate-pulse" />
+                <div className="h-5 w-32 rounded-lg bg-neutral-200 animate-pulse" />
+              </div>
+              <div className="space-y-1.5">
+                <div className="h-3 w-12 rounded bg-neutral-100 animate-pulse" />
+                <div className="h-5 w-40 rounded-lg bg-neutral-200 animate-pulse" />
+              </div>
+            </div>
+          </div>
+          {/* Skeleton payment summary */}
+          <div className="rounded-2xl border border-primary-200 bg-primary-50/60 p-5 sm:p-6">
+            <div className="flex items-center justify-between">
+              <div className="h-5 w-28 rounded-lg bg-primary-200/60 animate-pulse" />
+              <div className="h-8 w-24 rounded-lg bg-primary-200/80 animate-pulse" />
+            </div>
+          </div>
+          {/* Skeleton button */}
+          <div className="h-14 w-full rounded-full bg-primary-300/60 animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 text-secondary-900">
       {/* Header */}
@@ -271,21 +349,21 @@ export default function Payment() {
 
             {/* Price breakdown */}
             <div className="mt-4 space-y-2.5 border-t border-neutral-100 pt-4 text-sm">
-              {boatPrice > 0 && (
+              {totalBoatPrice > 0 && (
                 <div className="flex justify-between">
                   <span className="text-secondary-500">{tourType === "shared" ? "Shared tour" : "Private tour"}</span>
-                  <span className="font-semibold text-secondary-900">{formatIDR(boatPrice)}</span>
+                  <span className="font-semibold text-secondary-900">{fmt(totalBoatPrice)}</span>
                 </div>
               )}
               {extras.map((e, i) => (
                 <div key={i} className="flex justify-between text-xs text-secondary-500">
                   <span>{e.name || `Extra #${e.id}`} ×{e.quantity ?? 1}</span>
-                  <span className="font-semibold text-secondary-900">{formatIDR((e.price ?? 0) * (e.quantity ?? 1))}</span>
+                  <span className="font-semibold text-secondary-900">{fmt((e.price ?? 0) * (e.quantity ?? 1))}</span>
                 </div>
               ))}
               <div className="flex justify-between border-t border-neutral-100 pt-2.5 font-bold text-secondary-900">
                 <span>Total</span>
-                <span className="text-base">{formatIDR(fullTotal)}</span>
+                <span className="text-base">{fmt(fullTotal)}</span>
               </div>
             </div>
           </div>
@@ -333,11 +411,11 @@ export default function Payment() {
                 <div className="font-bold text-secondary-900">{depositLabel}</div>
                 {payMode === "part" && (
                   <div className="mt-0.5 text-xs text-secondary-500">
-                    Remaining {formatIDR(fullTotal - depositAmount)} due before the tour
+                    Remaining {fmt(fullTotal - depositAmount)} due before the tour
                   </div>
                 )}
               </div>
-              <div className="text-2xl font-bold text-secondary-900">{formatIDR(depositAmount)}</div>
+              <div className="text-2xl font-bold text-secondary-900">{fmt(depositAmount)}</div>
             </div>
           </div>
 
@@ -360,7 +438,7 @@ export default function Payment() {
                 : "bg-primary-600 hover:bg-primary-700 active:bg-primary-800"
             )}
           >
-            {loading ? "Processing…" : `Confirm & Pay ${formatIDR(depositAmount)}`}
+            {loading ? "Processing…" : `Confirm & Pay ${fmt(depositAmount)}`}
             {!loading && <CreditCard className="h-5 w-5" />}
           </button>
 

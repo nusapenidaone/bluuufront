@@ -10,6 +10,7 @@ Route::get('api/admin/boats',     [AdminController::class, 'boats']);
 Route::get('api/admin/tours',     [AdminController::class, 'tours']);
 Route::get('api/admin/transfers', [AdminController::class, 'transfers']);
 Route::get('api/admin/covers',    [AdminController::class, 'covers']);
+Route::get('api/admin/extras',    [AdminController::class, 'extras']);
 
 // ── Odoo-centric (primary) ─────────────────────────────────────────────────
 
@@ -27,6 +28,9 @@ Route::post('api/admin/odoo/order/{odooId}/recreate', [AdminController::class, '
 
 // Change boat/tour on local order + recreate Odoo order
 Route::patch('api/admin/odoo/order/{odooId}/products', [AdminController::class, 'odooUpdateProducts']);
+
+// Change extras on local order + recreate Odoo order
+Route::patch('api/admin/odoo/order/{odooId}/extras', [AdminController::class, 'odooUpdateExtras']);
 
 // ── Local DB helpers (secondary) ───────────────────────────────────────────
 

@@ -145,13 +145,14 @@ class Order extends Model
     // =========================
     protected static function dispatchLead(Order $order): void
     {
-        if ($order->source_id == 1) {
-            $result = OdooService::createLead($order);
-            $order->odoo_id = $result['order_id'];
-            $order->save();
-        } else {
+        // TEMP: Odoo disabled — all orders go to Kommo
+        // if ($order->source_id == 1) {
+        //     $result = OdooService::createLead($order);
+        //     $order->odoo_id = $result['order_id'];
+        //     $order->save();
+        // } else {
             KommoDataBuilder::createLead($order->id);
-        }
+        // }
     }
 
 

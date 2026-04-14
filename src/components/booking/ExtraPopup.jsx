@@ -143,6 +143,10 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
             <div className="shrink-0 bg-neutral-50 md:w-52 md:flex md:items-start md:justify-center md:self-stretch p-4">
               <img
                 src={imgSrc}
+                srcSet={activeExtra?.images_with_thumbs?.[0]?.thumb_small
+                  ? `${activeExtra.images_with_thumbs[0].thumb_small} 200w, ${imgSrc} 400w`
+                  : undefined}
+                sizes="(max-width: 768px) 100vw, 208px"
                 alt={hasChildren ? (currentItem?.name || activeExtra.name) : activeExtra.name}
                 className="h-44 w-full rounded-xl object-contain md:h-auto md:w-full"
               />
@@ -264,7 +268,11 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                           {addedItems.map((child, idx) => (
                             <div key={child.id} className={cn("flex items-center gap-3 py-3", idx > 0 && "border-t border-neutral-100")}>
                               {child.images_with_thumbs?.[0]?.thumb ? (
-                                <img src={child.images_with_thumbs[0].thumb} alt={child.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                                <img
+                  src={child.images_with_thumbs[0].thumb_small || child.images_with_thumbs[0].thumb}
+                  srcSet={child.images_with_thumbs[0].thumb_small ? `${child.images_with_thumbs[0].thumb_small} 200w, ${child.images_with_thumbs[0].thumb} 400w` : undefined}
+                  sizes="40px"
+                  alt={child.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                               ) : child.emoji ? (
                                 <span className="text-xl">{child.emoji}</span>
                               ) : null}
@@ -347,7 +355,11 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                           <div className="text-[10px] font-bold uppercase tracking-widest text-secondary-400 py-2">Your selection</div>
                           <div className="flex items-center gap-3 py-3">
                             {activeExtra.images_with_thumbs?.[0]?.thumb ? (
-                              <img src={activeExtra.images_with_thumbs[0].thumb} alt={currentItem.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                              <img
+                                src={activeExtra.images_with_thumbs[0].thumb_small || activeExtra.images_with_thumbs[0].thumb}
+                                srcSet={activeExtra.images_with_thumbs[0].thumb_small ? `${activeExtra.images_with_thumbs[0].thumb_small} 200w, ${activeExtra.images_with_thumbs[0].thumb} 400w` : undefined}
+                                sizes="40px"
+                                alt={currentItem.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                             ) : null}
                             <span className="flex-1 truncate text-sm font-medium text-secondary-800">{currentItem.name}</span>
                             <span className="text-sm text-secondary-400">× {singleDraftQty}</span>

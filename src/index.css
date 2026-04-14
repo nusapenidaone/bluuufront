@@ -6,7 +6,7 @@
     font-family: Petrov Sans;
     font-style: normal;
     font-weight: 400;
-    font-display: swap;
+    font-display: optional;
     src: local("Petrov Sans Regular"), url("./assets/fonts/PetrovSans-Regular.woff2") format("woff2"), url("./assets/fonts/PetrovSans-Regular.woff") format("woff");
 }
 
@@ -14,7 +14,7 @@
     font-family: Petrov Sans;
     font-style: normal;
     font-weight: 600;
-    font-display: swap;
+    font-display: optional;
     src: local("Petrov Sans SemiBold"), url("./assets/fonts/PetrovSans-SemiBold.woff2") format("woff2"), url("./assets/fonts/PetrovSans-SemiBold.woff") format("woff");
 }
 

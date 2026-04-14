@@ -108,7 +108,9 @@ export default function GalleryPage() {
                 aria-label={`Open gallery image ${index + 1}`}
               >
                 <img
-                  src={item.thumb || item.src}
+                  src={item.thumb || item.url}
+                  srcSet={item.thumb_small ? `${item.thumb_small} 400w, ${item.thumb || item.url} 800w` : undefined}
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                   alt={item.title || `Gallery image ${index + 1}`}
                   loading="lazy"
                   decoding="async"

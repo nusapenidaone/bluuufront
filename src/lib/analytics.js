@@ -76,3 +76,47 @@ export function trackAddToCart(payload) {
 export function trackBeginCheckout(payload) {
   return pushEcommerceEvent("begin_checkout", payload);
 }
+
+// ── Meta Pixel helpers ────────────────────────────────────────────────────────
+
+function fbq(...args) {
+  if (typeof window !== "undefined" && typeof window.fbq === "function") {
+    window.fbq(...args);
+  }
+}
+
+/**
+ * ViewContent — fire when a tour page loads and tour data is ready.
+ * @param {{ contentName: string, value: number, currency?: string }} param
+ */
+export function trackPixelViewContent({ contentName, value, currency = "IDR" }) {
+  fbq("track", "ViewContent", {
+    content_name: contentName,
+    content_type: "product",
+    value: toNumber(value),
+    currency,
+  });
+}
+
+/**
+ * InitiateCheckout — fire when user lands on the payment page.
+ * @param {{ value: number, currency?: string }} param
+ */
+export function trackPixelInitiateCheckout({ value, currency = "IDR" }) {
+  fbq("track", "InitiateCheckout", {
+    value: toNumber(value),
+    currency,
+  });
+}
+
+/**
+ * Purchase — fire after successful payment redirect.
+ * @param {{ value: number, currency?: string, orderId?: string }} param
+ */
+export function trackPixelPurchase({ value, currency = "IDR", orderId }) {
+  fbq("track", "Purchase", {
+    value: toNumber(value),
+    currency,
+    ...(orderId ? { order_id: String(orderId) } : {}),
+  });
+}

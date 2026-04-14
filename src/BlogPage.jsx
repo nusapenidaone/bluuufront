@@ -45,6 +45,8 @@ function FeaturedCard({ post }) {
         {post.cover_thumb || post.cover ? (
           <img
             src={post.cover_thumb || post.cover}
+            srcSet={post.cover_thumb_small ? `${post.cover_thumb_small} 400w, ${post.cover_thumb || post.cover} 800w` : undefined}
+            sizes="(max-width: 640px) 100vw, 55vw"
             alt={post.title}
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
@@ -110,6 +112,8 @@ function BlogCard({ post, index }) {
         {post.cover_thumb || post.cover ? (
           <img
             src={post.cover_thumb || post.cover}
+            srcSet={post.cover_thumb_small ? `${post.cover_thumb_small} 400w, ${post.cover_thumb || post.cover} 800w` : undefined}
+            sizes="(max-width: 640px) 100vw, 33vw"
             alt={post.title}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
