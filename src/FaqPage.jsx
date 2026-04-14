@@ -113,7 +113,7 @@ export default function FaqPage() {
         )}
         <div className="mt-8 relative flex w-full items-center gap-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
           <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
-            <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
+            <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           </div>
           <div className="flex-1">
             <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-1">Ask an Expert</div>

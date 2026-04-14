@@ -16,6 +16,7 @@ use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Restaurant;
 use System\Models\File as SystemFile;
 use Noren\Booking\Models\Order;
+use Noren\Booking\Models\Boat;
 use Noren\Bluuu\Models\Settings;
 
 class FullController extends Controller
@@ -175,9 +176,12 @@ class FullController extends Controller
         $dateOccupiedBoats = [];
         // Dates blocked by a "closed" boat (boat.closed = true)
         $closedBoatDates = [];
+        // Dates blocked by blocker boats (87/88) with real records (type != 4)
+        $blockerDates = [];
 
         foreach ($tour->boat as $boat) {
             $isClosedBoat = !empty($boat->closed);
+            $isBlockerBoat = !empty($boat->closed);
             foreach ($boat->closeddates as $closed) {
                 // Ignore soft-deleted records
                 if ($closed->deleted_at !== null) {
@@ -193,6 +197,12 @@ class FullController extends Controller
                 // If we have target dates, skip dates we don't care about
                 if (!empty($targetDates) && !in_array($dateStr, $targetDates))
                     continue;
+
+                // Blocker boat (87/88) with real record (not cron) blocks the whole tour
+                if ($isBlockerBoat && (int) $closed->type !== 4) {
+                    $blockerDates[$dateStr] = true;
+                    continue;
+                }
 
                 // Closed boat with any record blocks the whole tour for that date
                 if ($isClosedBoat) {
@@ -212,7 +222,7 @@ class FullController extends Controller
         if (!empty($targetDates)) {
             // Return status for every requested date
             foreach ($targetDates as $dateStr) {
-                if (isset($closedBoatDates[$dateStr])) {
+                if (isset($blockerDates[$dateStr]) || isset($closedBoatDates[$dateStr])) {
                     $dates[$dateStr] = 0;
                     continue;
                 }
@@ -224,6 +234,9 @@ class FullController extends Controller
             }
         } else {
             // No params — return only closed dates (backward compat)
+            foreach ($blockerDates as $dateStr => $_) {
+                $dates[$dateStr] = 0;
+            }
             foreach ($closedBoatDates as $dateStr => $_) {
                 $dates[$dateStr] = 0;
             }
@@ -414,13 +427,20 @@ class FullController extends Controller
                     }
                     if ($isClosedBoat) {
                         $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
+                        if ((int) $cd->type !== 4) {
+                            $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
+                        }
                         continue;
                     }
                     $type = $cd->type;
-                    if ($type === null || $type === '' || in_array((int) $type, [2, 3, 4])) {
+                    if ($type === null || $type === '' || in_array((int) $type, [2, 3])) {
+                        $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
+                        $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
+                    } elseif ((int) $type === 4) {
                         $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
                     } elseif ((int) $type === 1) {
                         $boatIndex[$boat->id]['dates'][$dateStr]['qtty'] += (int) ($cd->qtty ?? 0);
+                        $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
                     }
                 }
             }
@@ -466,9 +486,23 @@ class FullController extends Controller
 
         foreach ($tours as $tour) {
             $boats = $tour->boat->all();
+            // ID лодок тура с closed=true — их не-крон записи блокируют весь тур
+            $blockerBoatIds = $tour->boat->filter(fn($b) => !empty($b->closed))->pluck('id')->toArray();
 
             // Requested date range
             foreach ($dates as $date) {
+                // Если у closed=true лодки тура есть не-крон запись на эту дату — тур закрыт
+                $isBlocked = false;
+                foreach ($blockerBoatIds as $bId) {
+                    if (!empty($boatIndex[$bId]['dates'][$date]['real_record'])) {
+                        $isBlocked = true;
+                        break;
+                    }
+                }
+                if ($isBlocked) {
+                    $result[] = ['tour_id' => $tour->id, 'date' => $date, 'available_seats' => 0, 'available' => 0, 'boat_id' => null];
+                    continue;
+                }
                 $avail = $calcDate($boats, $date);
                 $result[] = array_merge(['tour_id' => $tour->id, 'date' => $date], $avail);
             }
@@ -544,8 +578,9 @@ class FullController extends Controller
             $payload['map'] = $mapFile ? $mapFile->getPath() : null;
 
             $payload['photos'] = $route->photos->map(fn($p) => [
-                'path' => $p->getPath(),
-                'thumb' => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp']),
+                'path'        => $p->getPath(),
+                'thumb'       => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
             ])->toArray();
 
             $payload['tour_images'] = [];
@@ -661,6 +696,7 @@ class FullController extends Controller
             'short_description' => $t->short_description,
             'amo_name'          => $t->amo_name,
             'image'             => $t->image_url,
+            'image_small'       => $t->image_url_small,
         ];
     }
 
@@ -706,15 +742,22 @@ class FullController extends Controller
 
     private function resolveBlogImages($post, int $thumbW = 800, int $thumbH = 450): array
     {
+        $smallW = (int) round($thumbW / 2);
+        $smallH = (int) round($thumbH / 2);
         try {
-            return $post->images->sortBy('sort_order')->map(function ($img) use ($thumbW, $thumbH) {
+            return $post->images->sortBy('sort_order')->map(function ($img) use ($thumbW, $thumbH, $smallW, $smallH) {
                 $url = $img->path ?? $img->getPath();
                 try {
-                    $thumb = $img->getThumb($thumbW, $thumbH);
+                    $thumb = $img->getThumb($thumbW, $thumbH, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]);
                 } catch (\Throwable $e) {
                     $thumb = $url;
                 }
-                return ['id' => $img->id, 'url' => $url, 'thumb' => $thumb];
+                try {
+                    $thumbSmall = $img->getThumb($smallW, $smallH, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]);
+                } catch (\Throwable $e) {
+                    $thumbSmall = $thumb;
+                }
+                return ['id' => $img->id, 'url' => $url, 'thumb' => $thumb, 'thumb_small' => $thumbSmall];
             })->values()->toArray();
         } catch (\Throwable $e) {
             return [];
@@ -735,13 +778,14 @@ class FullController extends Controller
             $coverThumb  = $images[0]['thumb'] ?? null;
 
             return [
-                'id'          => $p->id,
-                'title'       => $p->title,
-                'description' => $p->description,
-                'slug'        => $p->slug,
-                'created_at'  => $p->created_at,
-                'cover'       => $cover,
-                'cover_thumb' => $coverThumb,
+                'id'                => $p->id,
+                'title'             => $p->title,
+                'description'       => $p->description,
+                'slug'              => $p->slug,
+                'created_at'        => $p->created_at,
+                'cover'             => $cover,
+                'cover_thumb'       => $coverThumb,
+                'cover_thumb_small' => $images[0]['thumb_small'] ?? null,
             ];
         }));
     }
@@ -795,10 +839,11 @@ class FullController extends Controller
             // Flatten: each gallery record may have many images
             $flat = $items->flatMap(fn($item) =>
                 $item->images->map(fn($img) => [
-                    'id'    => $img->id,
-                    'title' => $item->title,
-                    'url'   => $img->getPath(),
-                    'thumb' => $img->getThumb(800, 600),
+                    'id'          => $img->id,
+                    'title'       => $item->title,
+                    'url'         => $img->getPath(),
+                    'thumb'       => $img->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                    'thumb_small' => $img->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
                 ])
             )->filter(fn($img) => !empty($img['url']))->values();
 

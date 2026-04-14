@@ -261,6 +261,17 @@ class OdooService
         return (float) ($result[0]['x_studio_collect'] ?? 0);
     }
 
+    public static function fetchTourType(int $odooOrderId): string
+    {
+        $result = static::post('/json/2/sale.order/search_read', [
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['x_studio_tour_type'],
+            'limit'  => 1,
+        ]);
+
+        return (string) ($result[0]['x_studio_tour_type'] ?? '');
+    }
+
     public static function getOrderInfo(int $odooOrderId): array
     {
         $result = static::post('/json/2/sale.order/search_read', [
@@ -349,7 +360,7 @@ class OdooService
 
     public static function buildOrderData(Order $order): array
     {
-        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
+        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant', 'source']);
 
         $tour    = $order->tours;
         $boat    = $order->boat;
@@ -381,6 +392,8 @@ class OdooService
             'order_id'        => $order->id,
             'transfer_id'      => (int) $order->transfer_id,
             'free_shuttle_bus' => (int) $order->transfer_id === 3,
+            'tour_type'        => $tour->odoo_type ?? '',
+            'source_name'      => optional($order->source)->name ?? '',
         ];
 
         // ── Products ──────────────────────────────────────────────────────────
@@ -525,8 +538,9 @@ class OdooService
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_boat_name'        => $lead['boat_name'],
-            'x_studio_pickup_cars'      => $lead['transfer_type'] === 'dropoff'  ? 0 : $lead['cars'],
-            'x_studio_drop_off_cars'    => $lead['transfer_id'] === 2 ? $lead['cars'] : 0,
+            'x_studio_pickup_cars'      => in_array((int)$lead['transfer_id'], [1, 2]) ? 1 : 0,
+            'x_studio_drop_off_cars'    => (int)$lead['transfer_id'] === 2 ? 1 : 0,
+            'x_studio_car_type'         => static::resolveCarType((int)$lead['transfer_id'], (int)$lead['members']),
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
@@ -536,6 +550,8 @@ class OdooService
             'x_studio_payment_source'   => $lead['payment_source'] ?? '',
             'client_order_ref'          => $lead['external_id'],
             'x_studio_free_shuttle_bus' => $lead['free_shuttle_bus'] ?? false,
+            'x_studio_tour_type'        => $lead['tour_type'] ?? '',
+            'x_studio_source'           => $lead['source_name'] ?? '',
         ];
 
         if (!empty($lead['company_odoo_id'])) {
@@ -666,6 +682,17 @@ class OdooService
         if (empty($vals)) return;
 
         static::post('/json/2/sale.order.line/create', ['vals_list' => $vals]);
+    }
+
+    // ─── Resolve car type for Odoo ────────────────────────────────────────────
+
+    protected static function resolveCarType(int $transferId, int $members): mixed
+    {
+        if ($transferId === 3) return 'Free Shuttle Bus';
+        if (in_array($transferId, [1, 2])) {
+            return $members > 5 ? 'Private Hi-Ace' : 'Private Car';
+        }
+        return false;
     }
 
     // ─── HTTP helper ──────────────────────────────────────────────────────────

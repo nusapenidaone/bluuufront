@@ -52,11 +52,8 @@ class Extras extends Model
 
         return $this->images->map(function ($image) {
             return [
-                //'original' => $image->getPath(),
-                'thumb' => $image->getThumb(400, 400, [
-                    'mode' => 'crop',
-                    'extension' => 'webp',
-                ]),
+                'thumb'       => $image->getThumb(400, 400, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb_small' => $image->getThumb(200, 200, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
             ];
         })->toArray();
     }

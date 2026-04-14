@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
 import {
   ArrowLeft,
   Calendar,
@@ -97,6 +97,7 @@ export default function Checkout() {
       ],
       dedupeKey: `ga4:begin_checkout:${window.location.pathname}:${window.location.search}`,
     });
+    trackPixelInitiateCheckout({ value: analyticsTotal, currency: analyticsCurrency });
   }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
 
   // ── Form state ───────────────────────────────────────────────────────────

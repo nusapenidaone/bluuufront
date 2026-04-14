@@ -13,7 +13,6 @@ import { useSiteContacts } from "./hooks/useSiteContacts";
 import { useSEO } from "./hooks/useSEO";
 import Footer from "./components/common/Footer";
 import LogoSlider from "./components/common/LogoSlider";
-import PhotoCarousel from "./components/common/PhotoCarousel";
 import { getBoatFeatures } from "./utils/boatFeatures";
 import { getBoatLength, sanitizeDisplayText } from "./utils/displayUtils";
 
@@ -101,7 +100,7 @@ const BRAND = {
 const ACCENT = "#045cff";
 const ACCENT_DARK = "#0a4deb";
 const PAGE_BG = "#FFFFFF";
-const HERO_BACKGROUND_IMAGE = "https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp";
+const HERO_BACKGROUND_IMAGE = "https://bluuu.tours/storage/app/media/shared.webp";
 
 const SECTIONS = [
   { id: "tours", label: "Tours" },
@@ -304,6 +303,7 @@ function GalleryBlock() {
         id: g.id,
         src: g.url,
         thumb: g.thumb || g.url,
+        thumbSmall: g.thumb_small || null,
         title: g.title || "",
       }));
     }
@@ -314,6 +314,7 @@ function GalleryBlock() {
         id: i,
         src: img.original || img.thumb1 || img,
         thumb: img.thumb1 || img.original || img,
+        thumbSmall: img.thumb1_small || null,
         title: "",
       }));
   }, [apiGallery, privateTours]);
@@ -362,6 +363,8 @@ function GalleryBlock() {
               >
                 <img
                   src={previewMob[0].thumb}
+                  srcSet={previewMob[0].thumbSmall ? `${previewMob[0].thumbSmall} 400w, ${previewMob[0].thumb} 800w` : undefined}
+                  sizes="100vw"
                   alt={previewMob[0].title || "Gallery"}
                   loading="lazy"
                   className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
@@ -382,6 +385,8 @@ function GalleryBlock() {
                     >
                       <img
                         src={item.thumb}
+                        srcSet={item.thumbSmall ? `${item.thumbSmall} 400w, ${item.thumb} 800w` : undefined}
+                        sizes="50vw"
                         alt={item.title || "Gallery"}
                         loading="lazy"
                         className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
@@ -549,6 +554,16 @@ function TourPicker({ activeTourId, onSelectTour }) {
   );
 }
 
+const VIDEO_MD = "https://bluuu.tours/storage/app/media/video-md";
+const VIDEO_XL = "https://bluuu.tours/storage/app/media/video-xl";
+
+function getVideoSrc() {
+  const isMobile = window.innerWidth < 768;
+  const base = isMobile ? VIDEO_MD : VIDEO_XL;
+  const supportsWebm = document.createElement("video").canPlayType("video/webm") !== "";
+  return base + (supportsWebm ? ".webm" : ".mp4");
+}
+
 function Hero() {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -556,6 +571,8 @@ function Hero() {
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+    el.src = getVideoSrc();
+    el.load();
     const onScroll = () => {
       const rect = el.getBoundingClientRect();
       const inView = rect.top < window.innerHeight && rect.bottom > 0;
@@ -583,7 +600,7 @@ function Hero() {
   };
 
   return (
-    <section className="relative overflow-hidden pt-12 sm:pt-20">
+    <section className="relative pt-12 sm:pt-20 min-h-[600px] sm:min-h-[700px]">
       <div className="container">
         <div className="flex flex-col items-center text-center">
           <motion.div
@@ -630,11 +647,11 @@ function Hero() {
           <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
-              src="https://bluuu.tours/storage/app/media/video-xl.webm"
-              poster="https://bluuu.tours/storage/app/media/image-30-1.jpg"
+              poster="https://bluuu.tours/storage/app/media/poster.webp"
               muted
               loop
               playsInline
+              fetchPriority="high"
               className="h-full w-full object-cover"
             />
             {!playing && (
@@ -764,7 +781,7 @@ function LegacyTourTypeCards() {
             ★ Best value
           </div>
           <img
-            src="https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp"
+            src="https://bluuu.tours/storage/app/media/shared.webp"
             alt="Shared group tour"
             loading="lazy" decoding="async"
             className="h-200 w-full object-cover"
@@ -844,7 +861,7 @@ function LegacyTourTypeCards() {
             ✦ Most popular
           </div>
           <img
-            src="https://bluuu.tours/storage/app/media/image-30-1.jpg"
+            src="https://bluuu.tours/storage/app/media/private.webp"
             alt="Private charter"
             loading="lazy" decoding="async"
             className="h-200 w-full object-cover rounded-xl"
@@ -1037,7 +1054,7 @@ function TourTypeCards() {
     <TourTypeCardShell
       badge="Best value"
       badgeIcon={Star}
-      imageSrc="https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp"
+      imageSrc="https://bluuu.tours/storage/app/media/shared.webp"
       imageAlt="Shared group tour"
     >
       <div>
@@ -1104,7 +1121,7 @@ function TourTypeCards() {
       badge="Most popular"
       badgeIcon={Sparkles}
       badgeTone="blue"
-      imageSrc="https://bluuu.tours/storage/app/media/image-30-1.jpg"
+      imageSrc="https://bluuu.tours/storage/app/media/private.webp"
       imageAlt="Private charter"
     >
       <div>
@@ -1184,7 +1201,7 @@ function TourTypeCards() {
 
   return (
     <section id="tours" className="relative scroll-mt-24 py-16 sm:py-24">
-      <div className="absolute inset-x-0 top-0 -z-10 h-full bg-[radial-gradient(60%_55%_at_50%_0%,rgba(0,127,255,0.09),transparent_70%)]" />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(60%_55%_at_50%_0%,rgba(0,127,255,0.09),transparent_70%)]" />
       <div className="container">
         <div className="mb-8 text-center sm:mb-12">
           <p className="mb-3 text-2xs font-semibold uppercase tracking-wide-4xl text-primary-600">Two ways to explore</p>
@@ -1249,7 +1266,7 @@ function TourTypeCards() {
             {/* 2. Image */}
             <div className="rounded-b-xl bg-brand-dark">
               <div className="relative overflow-hidden rounded-xl">
-                <img src="https://bluuu.tours/storage/app/uploads/public/689/100/4eb/6891004eb5ab4353781057.webp" alt="Shared group tour" loading="lazy" decoding="async" className="h-[220px] w-full object-cover transition duration-700 hover:scale-[1.03]" />
+                <img src="https://bluuu.tours/storage/app/media/shared.webp" alt="Shared group tour" loading="lazy" decoding="async" className="h-[220px] w-full object-cover transition duration-700 hover:scale-[1.03]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/20 to-transparent" />
               </div>
             </div>
@@ -1309,7 +1326,7 @@ function TourTypeCards() {
             {/* 2. Image */}
             <div className="rounded-b-xl bg-primary-600">
               <div className="relative overflow-hidden rounded-xl">
-                <img src="https://bluuu.tours/storage/app/media/image-30-1.jpg" alt="Private charter" loading="lazy" decoding="async" className="h-[220px] w-full object-cover transition duration-700 hover:scale-[1.03]" />
+                <img src="https://bluuu.tours/storage/app/media/private.webp" alt="Private charter" loading="lazy" decoding="async" className="h-[220px] w-full object-cover transition duration-700 hover:scale-[1.03]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/20 to-transparent" />
               </div>
             </div>
@@ -1426,7 +1443,7 @@ function RouteCardSkeleton() {
 function RouteCard({ route, bookHref }) {
   const tourImages = (route.tour_images || []).map(img => img.thumb1 || img.original).filter(Boolean);
   const displayImages = tourImages.length ? tourImages : (route.photos || []);
-  const coverImg = typeof displayImages[0] === "string" ? displayImages[0] : displayImages[0]?.path;
+  const coverImg = typeof displayImages[0] === "string" ? displayImages[0] : (displayImages[0]?.thumb || displayImages[0]?.path);
 
   const chips = route.highlights || [];
   const bestFor = route.best_for || route.bestFor;
@@ -2144,7 +2161,7 @@ function FAQ() {
 
           <div className="relative flex w-full items-center gap-5 overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
-              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
+              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </div>
             <div className="flex-1">
               <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-1">Ask an Expert</div>
@@ -2852,13 +2869,17 @@ function BoatsHomeBlock() {
                   className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white hover:border-neutral-300 transition-all"
                 >
                   {/* Image */}
-                  <div className="relative w-full overflow-hidden">
-                    <PhotoCarousel
-                      className="aspect-video"
-                      images={boat.images?.length ? boat.images : [boat.cover]}
-                      alt={boat.name}
-                    />
-                  </div>
+                  {(boat.cover || boat.images?.[0]) && (
+                    <div className="relative w-full overflow-hidden aspect-video">
+                      <img
+                        src={boat.cover || boat.images?.[0]}
+                        alt={boat.name}
+                        loading="lazy"
+                        decoding="async"
+                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                      />
+                    </div>
+                  )}
 
                   {/* Info */}
                   <div className="flex flex-1 flex-col p-5 pt-4">

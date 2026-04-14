@@ -64,6 +64,7 @@ export default function PhoneInput({ value, onChange }) {
     <IntlPhoneInput
       value={value}
       onChange={onChange}
+      disableDialCodePrefill
     />
   );
 }

@@ -1,0 +1,34 @@
+/* Google Translate — hide default UI elements */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+.skiptranslate,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+.goog-te-menu-frame,
+.translation-icons,
+.goog-tooltip,
+.goog-tooltip:hover {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  width: 0 !important;
+}
+
+html:not(.with-fancybox) body:not([style*="position: fixed"]) {
+  top: 0px !important;
+}
+
+.goog-text-highlight {
+  background: transparent !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+}
+
+#goog-gt-tt {
+  display: none !important;
+}
+
+.goog-te-spinner-pos {
+  display: none !important;
+}

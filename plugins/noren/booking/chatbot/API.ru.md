@@ -1,541 +1,426 @@
-# Bluuu Chatbot API
+# Bluuu Chatbot API — Документация по интеграции
 
-Базовый URL: `https://bluuu.tours`
+## 1. Эндпоинты
+
+**Базовый URL (production):** `https://bluuu.tours`
+
+Staging-окружения нет. API работает с живыми данными CMS.
+
+| Метод | Эндпоинт | Описание |
+|-------|----------|----------|
+| GET | `/api/chatbot/boats/private` | Все активные приватные лодки + маршруты + дополнения |
+| GET | `/api/chatbot/boats/shared` | Все активные лодки на групповых турах |
+| POST | `/api/chatbot/quote` | Расчёт итоговой цены по выбранным параметрам |
 
 ---
 
-## Аутентификация
+## 2. Аутентификация
 
-Все запросы требуют API-ключ — передаётся заголовком или query-параметром:
+Все запросы требуют API-ключ. Срока действия нет — ключ статический, меняется вручную.
 
-```
+| Способ | Формат |
+|--------|--------|
+| Заголовок (рекомендуется) | `X-Api-Key: <ключ>` |
+| Query-параметр | `?api_key=<ключ>` |
+
+**Пример:**
+```http
+GET /api/chatbot/boats/private HTTP/1.1
+Host: bluuu.tours
 X-Api-Key: bluuu-chatbot-2026
 ```
 
-или `?api_key=bluuu-chatbot-2026`
-
-Задаётся в `.env`: `CHATBOT_API_KEY=bluuu-chatbot-2026`
-
-При неверном ключе → `401 { "error": "Unauthorized" }`
+**Смена ключа:** обновить `CHATBOT_API_KEY` в файле `.env` на сервере.
 
 ---
 
-## Версии
+## 3. Логика ценообразования
 
-| Версия | Префикс | odoo_id |
-|--------|---------|---------|
-| v1 | `/api/chatbot/...` | нет |
-| v2 | `/api/v2/chatbot/...` | везде |
+### Приватные туры — цена за лодку
+
+**Формула:**
+```
+итого = pricelist[N].price + boat_price
+```
+
+- `pricelist[N].price` — значение из тарифной сетки для нужного количества гостей
+- `boat_price` — фиксированная надбавка за лодку (`pricing.boat_price`)
+
+**Как рассчитать для N гостей:**
+1. Проверить `pricing.seasonal_prices[]` — если дата бронирования в диапазоне `date_start`/`date_end`, использовать `pricelist` и `boat_price` этого периода
+2. Иначе — использовать `pricing.packages[0].pricelist` и `pricing.boat_price`
+3. Найти строку с максимальным `members_count <= N`
+4. **Итого = `price` этой строки + `boat_price`**
+5. Разделить на N для цены на человека
+
+**Флаги:**
+- `low_price: true` → низкий сезон
+- `flash_sale: true` → акционная цена
+
+### Групповые туры — цена за гостя
+
+Цена берётся из `pricelist[N].price` (та же логика, без `boat_price`).
+
+### Дополнения (extras) — только для приватных
+
+Корневой массив `extras`. Плоская цена `price` в IDR. Если `has_options: true` — выбор из `options[]`.
+
+### Валюта
+
+Все цены в **IDR**. Налоги не добавляются — цены финальные.
+Эндпоинт `/quote` возвращает также пересчёт в **USD** (по актуальному курсу из CMS).
 
 ---
 
-## GET /api/v2/chatbot/boats/private
+## 4. GET `/api/chatbot/boats/private`
 
-Возвращает все активные туры типа «приватная аренда» (classes_id = 8).
+Возвращает все активные приватные лодки + маршруты + дополнения.
 
+```bash
+curl https://bluuu.tours/api/chatbot/boats/private \
+  -H "X-Api-Key: bluuu-chatbot-2026"
 ```
-GET https://bluuu.tours/api/v2/chatbot/boats/private
-X-Api-Key: bluuu-chatbot-2026
-```
 
-### Ответ
-
+**Ответ `200 OK`:**
 ```json
 {
-  "boats": [...],
-  "routes": [...],
-  "extras": [...],
-  "transfers": [...],
-  "covers": [...],
-  "updated_at": "2026-04-06T07:12:00.000000Z"
-}
-```
-
-### boats[]
-
-```json
-{
-  "id": 54,
-  "odoo_id": 1935,
-  "name": "Classic Boat",
-  "slug": "standard-boats",
-  "description": "<p>...</p>",
-  "size": 12,
-  "capacity": 13,
-  "currency": "IDR",
-  "status": "ready",
-  "categories": [],
-  "features": {
-    "shade": "Partial shade",
-    "cabin": false,
-    "ac": false,
-    "sound": null,
-    "toilet": true
-  },
-  "best_for": "budget-friendly groups",
-  "boat_type": "Speedboat",
-  "pricing": {
-    "type": "per_boat",
-    "boat_price": 2250000,
-    "packages": [
-      {
-        "name": "Private Tour Default Pricelist",
-        "pricelist": [
-          { "members_count": "1", "price": "12295000" },
-          { "members_count": "2", "price": "12585000" }
-        ]
-      }
-    ],
-    "seasonal_prices": [
-      {
-        "date_start": "2026-04-01",
-        "date_end": "2026-05-15",
-        "low_price": false,
-        "flash_sale": false,
-        "packages": {
-          "name": "Private Tour Mid Season Prices",
-          "pricelist": [
-            { "members_count": "1", "price": "13025000" }
-          ]
-        }
-      }
-    ]
-  },
   "boats": [
     {
-      "id": 15,
-      "odoo_id": 71,
-      "name": "Riki J",
-      "company": { "id": 18, "odoo_id": 26, "name": "PT Riki J Boat Charters" }
-    },
-    {
-      "id": 18,
-      "odoo_id": 85,
-      "name": "Jayanadi",
-      "company": { "id": 8, "odoo_id": 15, "name": "Jayanadi" }
+      "id": 1,
+      "name": "Classic Boat",
+      "slug": "classic-boat",
+      "description": "Fast, reliable, open-deck boat.",
+      "size": "11M",
+      "capacity": 12,
+      "currency": "IDR",
+      "status": "ready",
+      "categories": ["Boats", "For small group"],
+      "features": {
+        "shade": "Partial shade",
+        "cabin": false,
+        "ac": false,
+        "sound": null,
+        "toilet": false
+      },
+      "best_for": "Small groups, budget-friendly",
+      "boat_type": "speedboat",
+      "pricing": {
+        "type": "per_boat",
+        "boat_price": 200000,
+        "packages": [
+          {
+            "name": "Standard",
+            "pricelist": [
+              { "members_count": 1, "price": 1550000 },
+              { "members_count": 4, "price": 1750000 },
+              { "members_count": 8, "price": 2100000 }
+            ]
+          }
+        ],
+        "seasonal_prices": [
+          {
+            "date_start": "2026-06-01",
+            "date_end": "2026-08-31",
+            "boat_price": 250000,
+            "low_price": false,
+            "flash_sale": false,
+            "packages": {
+              "name": "High Season",
+              "pricelist": [
+                { "members_count": 1, "price": 1750000 },
+                { "members_count": 4, "price": 2000000 }
+              ]
+            }
+          }
+        ]
+      },
+      "images": ["https://bluuu.tours/storage/..."]
     }
   ],
-  "images": [
-    "https://bluuu.tours/storage/app/uploads/public/.../thumb_600_400.webp"
-  ]
+  "routes": [
+    {
+      "id": 5,
+      "title": "Classic Route",
+      "slug": "classic-route",
+      "description": "All top spots in one action-packed day.",
+      "map": "https://bluuu.tours/storage/.../map.webp",
+      "restaurant": {
+        "id": 2,
+        "name": "Amarta Penida Restaurant",
+        "menu": "https://..."
+      }
+    }
+  ],
+  "extras": [
+    {
+      "id": 10,
+      "name": "Photographer",
+      "description": "Professional underwater photographer.",
+      "price": 750000,
+      "currency": "IDR",
+      "category": "Photography",
+      "has_options": false,
+      "options": []
+    },
+    {
+      "id": 11,
+      "name": "Beers & Cider",
+      "price": 55000,
+      "currency": "IDR",
+      "category": "Drinks",
+      "has_options": true,
+      "options": [
+        { "id": 12, "name": "Bali Sip Hard Seltzer", "price": 55000 },
+        { "id": 13, "name": "Bintang Beer", "price": 45000 }
+      ]
+    }
+  ],
+  "updated_at": "2026-03-18T10:00:00.000000Z"
 }
 ```
+
+### Поля лодки
 
 | Поле | Тип | Описание |
 |------|-----|----------|
-| `id` | int | ID тура |
-| `odoo_id` | int\|null | Odoo product ID тура |
-| `status` | string | `ready` / `busy` / `maintenance` |
-| `pricing.type` | string | Всегда `per_boat` для приватных туров |
-| `pricing.boat_price` | int | Базовая доплата за лодку (IDR) |
-| `pricing.packages` | array | Основной прайслист — цена за группу по количеству гостей |
-| `pricing.seasonal_prices` | array | Сезонные переопределения (только будущие даты) |
-| `boats` | array | Физические лодки с `odoo_id` и `company.odoo_id` |
+| `id` | int | Уникальный ID |
+| `name` | string | Название |
+| `slug` | string | URL-идентификатор |
+| `size` | string | Длина, напр. `"12M"` |
+| `capacity` | int | Максимум гостей |
+| `currency` | string | Всегда `"IDR"` |
+| `status` | string | `"ready"` или `"soon"` |
+| `categories` | string[] | Категории |
+| `features.shade` | string | `"Full shade + flybridge"` или `"Partial shade"` |
+| `features.cabin` | bool | Каюта |
+| `features.ac` | bool | Кондиционер |
+| `features.sound` | string\|null | `"Bose sound"` или `null` |
+| `features.toilet` | bool | Туалет |
+| `best_for` | string\|null | Рекомендуемый тип группы |
+| `boat_type` | string\|null | Тип лодки |
+| `pricing` | object | Ценообразование |
+| `images` | string[] | До 3 URL изображений |
 
-**Логика расчёта цены:** из `packages[0].pricelist` берётся запись с `members_count == guests`. Если дата попадает в `seasonal_prices` — используется тот прайслист. `total = tier_price + boat_price`.
+### Поля pricing
 
-### routes[]
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `pricing.type` | string | `"per_boat"` |
+| `pricing.boat_price` | int | Надбавка за лодку в IDR |
+| `pricing.packages[].name` | string | Название пакета |
+| `pricing.packages[].pricelist` | array | `[{members_count, price}]` |
+| `pricing.seasonal_prices[].date_start` | string | `"YYYY-MM-DD"` |
+| `pricing.seasonal_prices[].date_end` | string | `"YYYY-MM-DD"` |
+| `pricing.seasonal_prices[].low_price` | bool | Низкий сезон |
+| `pricing.seasonal_prices[].flash_sale` | bool | Акция |
+| `pricing.seasonal_prices[].packages` | object\|null | Переопределённый пакет |
 
+---
+
+## 5. GET `/api/chatbot/boats/shared`
+
+Возвращает все активные групповые туры.
+
+```bash
+curl https://bluuu.tours/api/chatbot/boats/shared \
+  -H "X-Api-Key: bluuu-chatbot-2026"
+```
+
+**Ответ `200 OK`:**
 ```json
 {
-  "id": 3,
-  "odoo_id": null,
-  "title": "Classic route",
-  "slug": "classic-route",
-  "description": "A comfortable one-day journey...",
-  "map": "https://bluuu.tours/storage/app/uploads/public/.../map.jpg",
-  "restaurant": {
-    "id": 1,
-    "odoo_id": 65,
-    "name": "Amarta Penida",
-    "menu": "<div>...</div>"
-  }
+  "boats": [
+    {
+      "id": 20,
+      "name": "Classic shared tour",
+      "slug": "classic-shared",
+      "size": "12M",
+      "capacity": 14,
+      "currency": "IDR",
+      "status": "ready",
+      "categories": ["Shared"],
+      "features": { "shade": "Partial shade", "cabin": false, "ac": false, "sound": null, "toilet": false },
+      "pricing": {
+        "type": "per_guest",
+        "boat_price": 0,
+        "packages": [
+          { "name": "Standard", "pricelist": [{ "members_count": 1, "price": 1390000 }] }
+        ],
+        "seasonal_prices": []
+      },
+      "route": { "id": 5, "title": "Classic Route", "slug": "classic-route" },
+      "restaurant": { "id": 2, "name": "Amarta Penida Restaurant", "menu": "https://..." },
+      "images": ["https://bluuu.tours/storage/..."]
+    }
+  ],
+  "updated_at": "2026-03-18T10:00:00.000000Z"
 }
 ```
 
-### extras[]
-
-```json
-{
-  "id": 52,
-  "odoo_id": 571,
-  "name": "Beginner Diver 1-Pax Pack",
-  "description": "<p>...</p>",
-  "price": "2420000.00",
-  "currency": "IDR",
-  "category": "Tour Add-ons",
-  "has_options": false,
-  "options": []
-}
-```
-
-С вариантами (`has_options: true`):
-
-```json
-{
-  "id": 10,
-  "odoo_id": 870,
-  "name": "Snorkeling Equipment",
-  "has_options": true,
-  "options": [
-    { "id": 11, "odoo_id": 871, "name": "Adult set", "price": "150000.00" },
-    { "id": 12, "odoo_id": 872, "name": "Kids set",  "price": "100000.00" }
-  ]
-}
-```
-
-### transfers[]
-
-```json
-{
-  "id": 1,
-  "odoo_id": 22,
-  "name": "Private Pick up",
-  "price": 300000,
-  "bus_price": 600000,
-  "currency": "IDR",
-  "description": "<p>Pick-up or drop-off.</p>"
-}
-```
+Поля те же, что у приватных, кроме:
 
 | Поле | Описание |
 |------|----------|
-| `price` | Цена для ≤5 гостей |
-| `bus_price` | Цена для >5 гостей (автобус), `null` если не предусмотрен |
-
-### covers[]
-
-```json
-{
-  "id": 2,
-  "odoo_id": 1523,
-  "name": "Fully Flexible Booking (Private)",
-  "price": 1000000,
-  "currency": "IDR",
-  "description": "<p>100% Refund Cancellation Protection</p>"
-}
-```
+| `pricing.type` | `"per_guest"` — цена за человека |
+| `route` | Привязанный маршрут |
+| `restaurant` | Ресторан для обеда |
 
 ---
 
-## GET /api/v2/chatbot/boats/shared
+## 6. POST `/api/chatbot/quote`
 
-Возвращает все активные групповые туры (classes_id = 9).
+Расчёт итоговой стоимости по выбранным параметрам. Возвращает цены в **IDR и USD**.
 
-```
-GET https://bluuu.tours/api/v2/chatbot/boats/shared
-X-Api-Key: bluuu-chatbot-2026
-```
-
-### Ответ
-
-```json
-{
-  "boats": [...],
-  "transfers": [...],
-  "covers": [...],
-  "updated_at": "2026-04-06T07:12:00.000000Z"
-}
-```
-
-> Групповые туры не содержат отдельный массив `routes[]` и `extras[]` — маршрут и ресторан вложены прямо в объект тура.
-
-### boats[]
-
-```json
-{
-  "id": 57,
-  "odoo_id": 1933,
-  "name": "Classic Shared Tour",
-  "slug": "classic-shared-tour",
-  "description": "<p>...</p>",
-  "size": 12,
-  "capacity": 14,
-  "currency": "IDR",
-  "status": "ready",
-  "categories": [],
-  "features": {
-    "shade": "Partial shade",
-    "cabin": false,
-    "ac": false,
-    "sound": null,
-    "toilet": false
-  },
-  "pricing": {
-    "type": "per_guest",
-    "packages": [
-      {
-        "name": "Standard Shared Default Prices",
-        "pricelist": [
-          { "members_count": "1", "price": "1390000" },
-          { "members_count": "2", "price": "2780000" },
-          { "members_count": "13", "price": "18070000" }
-        ]
-      }
-    ],
-    "seasonal_prices": [
-      {
-        "date_start": "2026-01-01",
-        "date_end": "2026-12-31",
-        "low_price": false,
-        "flash_sale": false,
-        "packages": {
-          "name": "Standard Shared Tier 2",
-          "pricelist": [
-            { "members_count": "1", "price": "1550000" },
-            { "members_count": "13", "price": "20150000" }
-          ]
-        }
-      }
+```bash
+curl -X POST https://bluuu.tours/api/chatbot/quote \
+  -H "X-Api-Key: bluuu-chatbot-2026" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tour_id": 1,
+    "date": "2026-06-15",
+    "guests": 4,
+    "transfer": 2,
+    "insurance": null,
+    "extras": [
+      { "extra_id": 10, "quantity": 1 }
     ]
-  },
-  "route": {
-    "id": 9,
-    "odoo_id": null,
-    "title": "Classic shared tour",
-    "slug": "classic"
-  },
-  "restaurant": {
-    "id": 1,
-    "odoo_id": 65,
-    "name": "Amarta Penida",
-    "menu": "<div>...</div>"
-  },
-  "boats": [
-    { "id": 15, "odoo_id": 71,  "name": "Riki J",         "company": { "id": 18, "odoo_id": 26, "name": "PT Riki J Boat Charters" } },
-    { "id": 17, "odoo_id": 90,  "name": "Standard Boat",   "company": { "id": 10, "odoo_id": 17, "name": "Weda Dharma" } },
-    { "id": 21, "odoo_id": 88,  "name": "Sweetheart 4",    "company": { "id": 9,  "odoo_id": 16, "name": "PT Bali Boat Tour - Sweetheart 4" } },
-    { "id": 25, "odoo_id": 73,  "name": "Big Sweetheart",  "company": { "id": 5,  "odoo_id": 12, "name": "Sweetheart Nyoman" } },
-    { "id": 27, "odoo_id": 141, "name": "Sanjaya",         "company": { "id": 7,  "odoo_id": 14, "name": "Sanjaya" } },
-    { "id": 28, "odoo_id": 243, "name": "Big Little Star",  "company": { "id": 6,  "odoo_id": 13, "name": "Small Little Star" } },
-    { "id": 34, "odoo_id": 83,  "name": "Sea Dragon",      "company": { "id": 7,  "odoo_id": 14, "name": "Sanjaya" } },
-    { "id": 53, "odoo_id": 355, "name": "Lady Manta",      "company": { "id": 3,  "odoo_id": 3,  "name": "Lady Manta" } }
-  ],
-  "images": [...]
-}
-```
-
-**Логика расчёта цены:** `pricing.type = per_guest`. Из `pricelist` берётся запись с `members_count == guests`. Если дата попадает в `seasonal_prices` — используется тот прайслист. `total = tier_price` (без `boat_price`).
-
----
-
-## POST /api/v2/chatbot/quote
-
-Рассчитывает стоимость и возвращает готовые данные для создания заказа в Odoo.
-
-```
-POST https://bluuu.tours/api/v2/chatbot/quote
-X-Api-Key: bluuu-chatbot-2026
-Content-Type: application/json
+  }'
 ```
 
 ### Параметры запроса
 
 | Поле | Тип | Обязательный | Описание |
-|------|-----|:---:|----------|
-| `tour_id` | int | ✓ | ID тура (из `boats[].id`) |
-| `date` | string | — | Дата в формате `YYYY-MM-DD` |
-| `adults` | int | — | Количество взрослых (по умолчанию: `1`) |
-| `kids` | int | — | Количество детей (по умолчанию: `0`) |
-| `guests` | int | — | Альтернатива adults+kids — используется если `adults` не передан |
-| `route_id` | int | — | ID маршрута (только для приватных туров, из `routes[].id`) |
-| `transfer` | int | — | ID трансфера (из `transfers[].id`) |
-| `insurance` | int | — | ID страховки/покрытия (из `covers[].id`) |
-| `boat_id` | int | — | ID физической лодки (из `boats[].boats[].id`). Если не передан — выбирается автоматически |
-| `pickup_address` | string | — | Адрес подачи |
-| `dropoff_address` | string | — | Адрес высадки |
-| `cars` | int | — | Количество машин |
-| `name` | string | — | Имя клиента |
-| `email` | string | — | Email клиента |
-| `whatsapp` | string | — | WhatsApp клиента |
-| `external_id` | string | — | Внешний ID (ссылка на лид в CRM) |
-| `extras` | array | — | `[{ "extra_id": int, "quantity": int }]` |
+|------|-----|-------------|----------|
+| `tour_id` | int | ✅ | ID тура из `/boats/private` или `/boats/shared` |
+| `date` | string | ✅ | Дата бронирования `"YYYY-MM-DD"` |
+| `guests` | int | ✅ | Количество гостей |
+| `route_id` | int\|null | ❌ | ID маршрута (только приватные туры, из `routes[]` в `/boats/private`) |
+| `transfer` | int\|null | ❌ | ID трансфера (из `/api/new/transfers`) |
+| `insurance` | int\|null | ❌ | ID страховки (из `/api/new/covers`) |
+| `extras` | array | ❌ | Дополнения `[{extra_id, quantity}]` |
 
-### Пример запроса
+> Если `transfer` или `insurance` переданы, они будут включены в `booking_url`.
 
-```json
-{
-  "tour_id": 54,
-  "date": "2026-05-20",
-  "adults": 4,
-  "kids": 0,
-  "route_id": 3,
-  "transfer": 1,
-  "insurance": 2,
-  "boat_id": 15,
-  "pickup_address": "Seminyak",
-  "dropoff_address": "",
-  "cars": 1,
-  "name": "John Doe",
-  "email": "john@example.com",
-  "whatsapp": "+1234567890",
-  "external_id": "",
-  "extras": [
-    { "extra_id": 52, "quantity": 1 }
-  ]
-}
-```
-
-### Пример ответа
+### Ответ `200 OK`
 
 ```json
 {
   "success": true,
-  "booking_url": "https://bluuu.tours/new/private?date=2026-05-20&adults=4&tour=54&route=3&transfer=1&cover=2",
-  "odoo_data": {
-    "order": {
-      "is_rental_order": true,
-      "rental_start_date": "2026-05-20 01:00:00",
-      "rental_return_date": "2026-05-20 09:00:00",
-      "company_id": 26,
-      "x_studio_boat_name": "Riki J",
-      "x_studio_adults": 4,
-      "x_studio_kids": 0,
-      "x_studio_count_of_people": 4,
-      "x_studio_route": "Classic route",
-      "x_studio_pickup_address": "Seminyak",
-      "x_studio_drop_off_address": "",
-      "x_studio_pickup_cars": 1,
-      "x_studio_drop_off_cars": 1,
-      "x_studio_deposit": 0,
-      "x_studio_collect": 20452000,
-      "client_order_ref": "",
-      "partner_name": "John Doe",
-      "partner_email": "john@example.com",
-      "partner_phone": "+1234567890"
-    },
-    "lines": [
-      { "label": "boat",                            "product_id": 71,   "qty": 1, "price": 0 },
-      { "label": "tour",                            "product_id": 1935, "qty": 1, "price": 16732000 },
-      { "label": "transfer",                        "product_id": 22,   "qty": 1, "price": 300000 },
-      { "label": "cover",                           "product_id": 1523, "qty": 1, "price": 1000000 },
-      { "label": "extra:Beginner Diver 1-Pax Pack", "product_id": 571,  "qty": 1, "price": 2420000 }
-    ]
-  },
+  "booking_url": "https://bluuu.tours/new/private?date=2026-06-15&adults=4&tour=1&route=5&transfer=3&cover=2",
   "currency_idr": {
-    "total_price": 20452000,
-    "price_per_pax": 5113000,
+    "total_price": 2700000,
+    "price_per_pax": 675000,
     "breakdown": {
-      "boat_base_price": 16732000,
-      "transfer": 300000,
-      "insurance": 1000000,
-      "extras_total": 2420000,
+      "boat_base_price": 1950000,
+      "transfer": 0,
+      "insurance": 0,
+      "extras_total": 750000,
       "extras": [
-        {
-          "extra_id": 52,
-          "odoo_id": 571,
-          "name": "Beginner Diver 1-Pax Pack",
-          "qty": 1,
-          "unit_price_idr": 2420000,
-          "subtotal_idr": 2420000
-        }
+        { "extra_id": 10, "name": "Photographer", "qty": 1, "unit_price_idr": 750000, "subtotal_idr": 750000 }
       ],
-      "final_total": 20452000
+      "final_total": 2700000
     }
   },
   "currency_usd": {
-    "rate": 0.00005878,
-    "total_price": 1202,
-    "price_per_pax": 301,
+    "rate": 16200,
+    "total_price": 167,
+    "price_per_pax": 42,
     "breakdown": {
-      "boat_base_price": 984,
-      "transfer": 18,
-      "insurance": 59,
-      "extras_total": 142,
-      "final_total": 1202
+      "boat_base_price": 120,
+      "transfer": 0,
+      "insurance": 0,
+      "extras_total": 46,
+      "final_total": 167
     }
   },
   "meta": {
-    "tour_id": 54,
+    "tour_id": 1,
     "tour_name": "Classic Boat",
     "tour_type": "private",
-    "date": "2026-05-20",
-    "adults": 4,
-    "kids": 0,
+    "date": "2026-06-15",
     "guests": 4
   }
 }
 ```
 
-### Поля ответа
+> `currency_usd` = `null` если курс USD не настроен в CMS.
+> `booking_url` — прямая ссылка на страницу бронирования с предзаполненными параметрами.
 
-#### odoo_data.order
-
-Готовые поля для `sale.order/create` в Odoo — передаются напрямую в OdooService.
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `is_rental_order` | bool | Всегда `true` |
-| `rental_start_date` | string\|null | Дата и время начала в UTC (`YYYY-MM-DD HH:MM:SS`), рассчитывается из `date + route.start` (Asia/Makassar → UTC) |
-| `rental_return_date` | string\|null | Дата и время окончания в UTC (`date + route.end`) |
-| `company_id` | int\|null | Odoo ID компании лодки |
-| `x_studio_boat_name` | string | Название физической лодки |
-| `x_studio_adults` | int | Количество взрослых |
-| `x_studio_kids` | int | Количество детей |
-| `x_studio_count_of_people` | int | Итого гостей |
-| `x_studio_route` | string | Название маршрута |
-| `x_studio_pickup_address` | string | Адрес подачи |
-| `x_studio_drop_off_address` | string | Адрес высадки |
-| `x_studio_pickup_cars` | int | Количество машин на подачу |
-| `x_studio_drop_off_cars` | int | Количество машин на высадку (`0` если тип трансфера = `pickup`) |
-| `x_studio_deposit` | float | Депозит — всегда `0` (заполняется при оплате) |
-| `x_studio_collect` | float | Сумма к сбору = итоговая цена в IDR |
-| `client_order_ref` | string | Внешний ID (лид из CRM) |
-| `partner_name` | string | Имя клиента (для `res.partner`) |
-| `partner_email` | string | Email клиента |
-| `partner_phone` | string | Телефон / WhatsApp клиента |
-
-#### odoo_data.lines
-
-Строки заказа — готовы для `sale.order.line/create`.
-
-| Поле | Тип | Описание |
-|------|-----|----------|
-| `label` | string | `boat` / `tour` / `transfer` / `cover` / `extra:<название>` |
-| `product_id` | int | Odoo product ID |
-| `qty` | int | Количество. Для cover: `1` если `per_boat`, иначе = количество гостей. Для групповых туров: количество гостей |
-| `price` | float | Цена в IDR. Для `boat` всегда `0` |
-
-#### currency_idr / currency_usd
-
-| Поле | Описание |
-|------|----------|
-| `total_price` | Итоговая сумма |
-| `price_per_pax` | Цена на 1 гостя |
-| `breakdown.boat_base_price` | Стоимость тура (tier_price + boat_price для приватных туров) |
-| `breakdown.transfer` | Стоимость трансфера. При >5 гостях → `bus_price` |
-| `breakdown.insurance` | Стоимость страховки/покрытия |
-| `breakdown.extras_total` | Суммарная стоимость всех доп. услуг |
-| `breakdown.extras[].odoo_id` | Odoo ID каждой доп. услуги |
-| `currency_usd` | `null` если курс USD не задан в базе данных |
-
-#### meta
-
-| Поле | Описание |
-|------|----------|
-| `tour_type` | `"private"` или `"shared"` |
-| `adults` | Взрослые из запроса |
-| `kids` | Дети из запроса |
-| `guests` | Итого (adults + kids) |
+**Формула `boat_base_price`:**
+- Находим активный `pricelist` (с учётом сезонных цен по дате)
+- Берём тир с максимальным `members_count <= guests`
+- `boat_base_price = tir.price + boat_price`
 
 ---
 
-## Ошибки
+## 7. Ошибки
 
-| HTTP | Тело | Причина |
-|------|------|---------|
-| `401` | `{ "error": "Unauthorized" }` | Неверный API-ключ |
-| `404` | `{ "success": false, "error": "Tour not found" }` | Тур с указанным `tour_id` не найден |
-| `500` | HTML | Серверная ошибка |
+| HTTP-код | Тело | Причина |
+|----------|------|---------|
+| `401` | `{"error": "Unauthorized"}` | Неверный или отсутствующий API-ключ |
+| `404` | `{"success": false, "error": "Tour not found"}` | Тур не найден (только `/quote`) |
+| `500` | Страница ошибки | Серверная ошибка — обратитесь в Bluuu |
 
 ---
 
-## Отличия v1 от v2
+## 8. Производительность
 
-| | v1 `/api/chatbot/...` | v2 `/api/v2/chatbot/...` |
-|---|---|---|
-| `odoo_id` в boats/routes/extras/transfers/covers | нет | есть |
-| `boats[].boats[]` (физические лодки) | нет | есть |
-| `/quote` → `odoo_data` | нет | есть |
-| `/quote` → `adults` / `kids` | только `guests` | `adults` + `kids` (или `guests` как запасной вариант) |
-| `/quote` → выбор лодки | нет | автоматически по дате и доступности |
+- **Rate limit отсутствует**
+- **Время ответа:** < 500 мс
+- Пагинации нет — полный снимок данных за один запрос
+
+---
+
+## 9. Тестирование
+
+**API-ключ:** `bluuu-chatbot-2026`
+
+```bash
+# Приватные лодки
+curl https://bluuu.tours/api/chatbot/boats/private -H "X-Api-Key: bluuu-chatbot-2026"
+
+# Групповые туры
+curl https://bluuu.tours/api/chatbot/boats/shared -H "X-Api-Key: bluuu-chatbot-2026"
+
+# Расчёт цены
+curl -X POST https://bluuu.tours/api/chatbot/quote \
+  -H "X-Api-Key: bluuu-chatbot-2026" \
+  -H "Content-Type: application/json" \
+  -d '{"tour_id":1,"date":"2026-06-15","guests":4,"extras":[{"extra_id":10,"quantity":1}]}'
+```
+
+Sandbox отсутствует — тестирование на production. Данные живые.
+
+---
+
+## 10. Идентификаторы
+
+- Используйте `id` (int) — `slug` может измениться при редактировании в CMS
+- Приватные лодки: `classes_id = 8` внутри системы
+- Групповые туры: `classes_id = 9`
+- Маршруты общие — `id` маршрута из `/boats/private` совпадает с `route.id` у лодок
+
+---
+
+## 11. Безопасность
+
+- Только HTTPS (TLS 1.2+)
+- IP-вайтлистинг не применяется
+- Ключ приватный — не публиковать в клиентском коде
+- Смена ключа: обратитесь в Bluuu
+
+---
+
+## 12. Что включено
+
+| Данные | Включено? |
+|--------|-----------|
+| Информация о лодках/турах | ✅ |
+| Цены (стандартные + сезонные) | ✅ |
+| Дополнения (extras) с ценами | ✅ (только приватный эндпоинт) |
+| Маршруты (itineraries) | ✅ (только приватный эндпоинт) |
+| Рестораны | ✅ |
+| Расчёт итоговой цены (IDR + USD) | ✅ `/quote` |
+| Доступность по датам | ❌ — используйте `/api/new/availability/private/{id}` |
+| Налоги / сборы | ❌ — цены финальные |
+| Создание заказов | ❌ |

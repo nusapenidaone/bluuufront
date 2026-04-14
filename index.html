@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
   <title>tmp-vite</title>
+  <link rel="preload" as="image" href="https://bluuu.tours/storage/app/media/poster.webp" fetchpriority="high" />
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
   new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -14,8 +15,7 @@
   'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
   })(window,document,'script','dataLayer','GTM-5J8KXLX2');</script>
   <!-- End Google Tag Manager -->
-  <script src="https://elfsightcdn.com/platform.js" async></script>
-  <script type="text/javascript">
+  <script>
     function googleTranslateElementInit() {
       new google.translate.TranslateElement({
         pageLanguage: 'en',
@@ -23,46 +23,18 @@
         autoDisplay: false,
       }, 'google_translate_element');
     }
+
+    // Elfsight (виджет отзывов) грузим после загрузки страницы + 3 секунды
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var elfsight = document.createElement('script');
+        elfsight.src = 'https://elfsightcdn.com/platform.js';
+        elfsight.async = true;
+        document.head.appendChild(elfsight);
+      }, 3000);
+    });
   </script>
-  <script type="text/javascript"
-    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-  <style>
-    /* Extremely aggressive hiding of Google Translate elements */
-    .goog-te-banner-frame.skiptranslate,
-    .goog-te-banner-frame,
-    .skiptranslate,
-    #goog-gt-tt,
-    .goog-te-balloon-frame,
-    .goog-te-menu-frame,
-
-    .translation-icons,
-    .goog-tooltip,
-    .goog-tooltip:hover {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      height: 0 !important;
-      width: 0 !important;
-    }
-
-    html:not(.with-fancybox) body:not([style*="position: fixed"]) {
-      top: 0px !important;
-    }
-
-    .goog-text-highlight {
-      background: transparent !important;
-      box-shadow: none !important;
-      box-sizing: border-box !important;
-    }
-
-    #goog-gt-tt {
-      display: none !important;
-    }
-
-    .goog-te-spinner-pos {
-      display: none !important;
-    }
-  </style>
+  <script async src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 
 

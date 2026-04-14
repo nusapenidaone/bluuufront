@@ -26,6 +26,7 @@ function estimateReadTime(post) {
 
 function imgUrl(img) { return img?.url || img?.path || null; }
 function imgThumb(img) { return img?.thumb || img?.url || img?.path || null; }
+function imgThumbSmall(img) { return img?.thumb_small || null; }
 
 const PROSE = [
   "text-base leading-relaxed text-secondary-700",
@@ -63,7 +64,10 @@ function PhotoGallery({ images }) {
     return (
       <a href={src} data-fancybox="gallery"
         className="my-10 block overflow-hidden rounded-2xl shadow-lg ring-1 ring-black/5 cursor-zoom-in">
-        <img src={thumb || src} alt=""
+        <img src={thumb || src}
+          srcSet={imgThumbSmall(images[0]) ? `${imgThumbSmall(images[0])} 400w, ${thumb || src} 800w` : undefined}
+          sizes="100vw"
+          alt=""
           className="w-full object-cover transition-transform duration-500 hover:scale-[1.02]"
           style={{ maxHeight: 500 }} />
       </a>
@@ -79,7 +83,10 @@ function PhotoGallery({ images }) {
           return (
             <a key={img.id} href={src} data-fancybox="gallery"
               className="group overflow-hidden rounded-xl shadow-md ring-1 ring-black/5 cursor-zoom-in">
-              <img src={thumb || src} alt=""
+              <img src={thumb || src}
+                srcSet={imgThumbSmall(img) ? `${imgThumbSmall(img)} 400w, ${thumb || src} 800w` : undefined}
+                sizes="50vw"
+                alt=""
                 className="aspect-[4/3] w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
             </a>
           );
@@ -97,7 +104,10 @@ function PhotoGallery({ images }) {
       {firstSrc && (
         <a href={firstSrc} data-fancybox="gallery"
           className="group block overflow-hidden rounded-xl shadow-lg ring-1 ring-black/5 cursor-zoom-in">
-          <img src={firstThumb || firstSrc} alt=""
+          <img src={firstThumb || firstSrc}
+            srcSet={imgThumbSmall(first) ? `${imgThumbSmall(first)} 400w, ${firstThumb || firstSrc} 800w` : undefined}
+            sizes="100vw"
+            alt=""
             className="w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             style={{ maxHeight: 420 }} />
         </a>
@@ -109,7 +119,10 @@ function PhotoGallery({ images }) {
           return (
             <a key={img.id} href={src} data-fancybox="gallery"
               className="group overflow-hidden rounded-xl shadow-sm ring-1 ring-black/5 cursor-zoom-in">
-              <img src={thumb || src} alt=""
+              <img src={thumb || src}
+                srcSet={imgThumbSmall(img) ? `${imgThumbSmall(img)} 400w, ${thumb || src} 800w` : undefined}
+                sizes="(max-width: 640px) 50vw, 33vw"
+                alt=""
                 className="aspect-[4/3] w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
             </a>
           );
@@ -171,7 +184,10 @@ function RelatedCard({ post }) {
       className="group flex gap-4 rounded-xl border border-neutral-100 bg-white p-4 shadow-sm transition hover:shadow-md hover:border-primary-200">
       <div className="h-16 w-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
         {hasCover && (
-          <img src={post.cover_thumb || post.cover} alt={post.title}
+          <img src={post.cover_thumb || post.cover}
+            srcSet={post.cover_thumb_small ? `${post.cover_thumb_small} 400w, ${post.cover_thumb || post.cover} 800w` : undefined}
+            sizes="80px"
+            alt={post.title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
         )}
       </div>
@@ -232,6 +248,7 @@ export default function BlogPostPage({ slug }) {
   const images = post?.images?.filter((img) => imgUrl(img)) || [];
   const coverSrc = post?.cover || imgUrl(images[0]);
   const coverThumb = post?.cover_thumb || imgThumb(images[0]) || coverSrc;
+  const coverThumbSmall = post?.cover_thumb_small || null;
   const readTime = post ? estimateReadTime(post) : 0;
   const { blockImages } = distributeImages(images, htmlBlocks.length);
 
@@ -258,6 +275,8 @@ export default function BlogPostPage({ slug }) {
           <div className="relative w-full overflow-hidden bg-neutral-900" style={{ minHeight: 460 }}>
             {coverSrc ? (
               <img src={coverThumb || coverSrc} alt={post.title}
+                srcSet={coverThumbSmall ? `${coverThumbSmall} 400w, ${coverThumb || coverSrc} 800w` : undefined}
+                sizes="100vw"
                 className="absolute inset-0 h-full w-full object-cover opacity-60" />
             ) : (
               <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#1d4ed8,#0ea5e9)" }} />

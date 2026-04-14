@@ -21,7 +21,7 @@ import { useRules } from "./contexts/RulesContext";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, trackAddToCart } from "./lib/analytics";
+import { buildTourAnalyticsItem, trackAddToCart, trackPixelViewContent } from "./lib/analytics";
 
 // Shared Components & Utils
 import {
@@ -613,7 +613,7 @@ function BookingCard({
           </div>
           <div className="relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
-              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
+              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" loading="lazy" decoding="async" className="h-full w-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-0.5">Ask an Expert</div>
@@ -685,7 +685,10 @@ function HeroGallery({ images = [] }) {
   // Create an array format expected by the gallery, defaulting labels
   const items = images.slice(0, 5).map((img, i) => ({
     label: `Gallery image ${i + 1}`,
-    src: typeof img === 'string' ? img : (img.original || img.thumb1 || ""),
+    src:      typeof img === 'string' ? img : (img.thumb1 || img.original || ""),
+    srcSmall: typeof img === 'string' ? null : (img.thumb1_small || null),
+    srcLarge: typeof img === 'string' ? img : (img.thumb2 || img.thumb1 || img.original || ""),
+    original: typeof img === 'string' ? img : (img.original || img.thumb2 || img.thumb1 || ""),
   })).filter(item => item.src);
 
   if (items.length === 0) return null;
@@ -700,6 +703,8 @@ function HeroGallery({ images = [] }) {
           >
             <img
               src={it.src}
+              srcSet={it.srcSmall ? `${it.srcSmall} 300w, ${it.src} 600w` : undefined}
+              sizes="82vw"
               alt={it.label}
               loading="lazy"
               decoding="async"
@@ -714,7 +719,9 @@ function HeroGallery({ images = [] }) {
       <div className="hidden gap-4 sm:grid sm:grid-cols-2 lg:grid-cols-4 lg:auto-rows-180">
         <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-card sm:col-span-2 sm:row-span-2">
           <img
-            src={items[0].src}
+            src={items[0].srcLarge || items[0].src}
+            srcSet={items[0].srcSmall ? `${items[0].srcSmall} 300w, ${items[0].src} 600w, ${items[0].srcLarge} 900w` : undefined}
+            sizes="(max-width: 1024px) 100vw, 50vw"
             alt={items[0].label}
             loading="lazy"
             decoding="async"
@@ -732,6 +739,8 @@ function HeroGallery({ images = [] }) {
             <div className="h-full min-h-180 bg-neutral-50 lg:min-h-0">
               <img
                 src={it.src}
+                srcSet={it.srcSmall ? `${it.srcSmall} 300w, ${it.src} 600w` : undefined}
+                sizes="(max-width: 1024px) 50vw, 25vw"
                 alt={it.label}
                 loading="lazy"
                 decoding="async"
@@ -1215,13 +1224,15 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                         <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto pb-2 pr-10 scroll-smooth [-webkit-overflow-scrolling:touch]">
                           {activeVibe.photos.map((photo, idx) => (
                             <button
-                              key={photo}
+                              key={photo?.thumb || photo?.path || photo}
                               type="button"
                               onClick={() => setLightboxIndex(idx)}
                               className="group relative aspect-4/3 w-70 shrink-0 snap-start overflow-hidden rounded-full bg-neutral-50 shadow-none ring-1 ring-neutral-200 transition duration-200 hover:ring-border-strong md:w-80 lg:w-90"
                             >
                               <img
-                                src={photo}
+                                src={photo?.thumb || photo?.path || photo}
+                                srcSet={photo?.thumb_small ? `${photo.thumb_small} 200w, ${photo.thumb || photo?.path} 400w` : undefined}
+                                sizes="280px"
                                 alt={`${activeVibe.title} gallery ${idx + 1}`}
                                 loading="lazy"
                                 decoding="async"
@@ -1775,6 +1786,13 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
     </PremiumSection>
   );
 }
+function getVideoSrc() {
+  const isMobile = window.innerWidth < 768;
+  const base = "https://bluuu.tours/storage/app/media/" + (isMobile ? "video-md" : "video-xl");
+  const supportsWebm = document.createElement("video").canPlayType("video/webm") !== "";
+  return base + (supportsWebm ? ".webm" : ".mp4");
+}
+
 function Hero() {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -1787,6 +1805,8 @@ function Hero() {
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
+    el.src = getVideoSrc();
+    el.load();
     const onScroll = () => {
       const rect = el.getBoundingClientRect();
       const inView = rect.top < window.innerHeight && rect.bottom > 0;
@@ -1858,8 +1878,7 @@ function Hero() {
           <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
-              src="https://bluuu.tours/storage/app/media/video-xl.webm"
-              poster="https://bluuu.tours/storage/app/media/image-30-1.jpg"
+              poster="https://bluuu.tours/storage/app/media/poster.webp"
               muted
               loop
               playsInline
@@ -2994,8 +3013,8 @@ function StepTwo({
           </div>
         )}
         <div
-          className={cn("flex h-full flex-col", isPickDayMode && "invisible pointer-events-none", isUnavailable && "opacity-40 pointer-events-none select-none")}
-          aria-hidden={isPickDayMode}
+          className={cn("flex h-full flex-col", isUnavailable && "opacity-40 pointer-events-none select-none")}
+          aria-hidden={false}
         >
           {/* Image */}
           <div className="relative w-full overflow-hidden" style={stripColor ? { backgroundColor: stripColor } : undefined}>
@@ -3003,10 +3022,9 @@ function StepTwo({
               className="aspect-video cursor-pointer"
               images={boat.images?.length ? boat.images : [boat.cover]}
               alt={boat.name}
-              isLocked={isPickDayMode}
               onOpenGallery={(startIndex) => {
                 const slides = boat.images?.length ? boat.images : [boat.cover];
-                Fancybox.show(slides.map(src => ({ src, type: "image" })), { startIndex: startIndex || 0 });
+                Fancybox.show(slides.map(img => ({ src: img?.path || img, type: "image" })), { startIndex: startIndex || 0 });
               }}
             />
             {isSelected && (
@@ -3069,7 +3087,9 @@ function StepTwo({
               <span className="text-2xl font-black tracking-tight text-secondary-900">
                 {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
               </span>
-              <span className="text-sm font-medium text-secondary-500">/ person</span>
+              <span className="text-sm font-medium text-secondary-500">
+                {`/ ${Math.max(1, groupSize)} person${groupSize > 1 ? "s" : ""}`}
+              </span>
             </div>
 
             {/* Select button */}
@@ -3173,14 +3193,14 @@ function StepTwo({
           {isPickDayMode && (
             <>
               <div
-                className="fixed inset-0 z-40 bg-black/40 sm:hidden"
+                className="fixed inset-0 z-40 bg-black/40"
                 onClick={closePickDayMode}
               />
             <motion.div
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-85vh flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-xl sm:absolute sm:inset-0 sm:z-20 sm:max-h-none sm:rounded-xl sm:p-6 sm:shadow-none"
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-2xl sm:inset-0 sm:m-auto sm:h-fit sm:w-[420px] sm:rounded-2xl sm:p-6"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="space-y-0.5">
@@ -3233,7 +3253,7 @@ function StepTwo({
                           </span>
                           <span
                             className={cn(
-                              "mt-0.5 text-2xs font-bold leading-none",
+                              "mt-0.5 text-sm font-bold leading-none",
                               isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400"
                             )}
                           >
@@ -3246,7 +3266,7 @@ function StepTwo({
                                 isPicked ? "text-primary-500" : isAvailable ? "text-secondary-400" : "text-secondary-300"
                               )}
                             >
-                              {dateSeatsMap[date] > 0 ? `${dateSeatsMap[date]} left` : "full"}
+                              {dateSeatsMap[date] > 0 ? (dateSeatsMap[date] > 10 ? "10+" : `${dateSeatsMap[date]} left`) : "full"}
                             </span>
                           )}
                         </button>
@@ -3270,8 +3290,8 @@ function StepTwo({
                       <span className="text-lg font-black text-secondary-900 tracking-tight">
                         {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
                       </span>
-                      <span className="text-2xs font-bold uppercase tracking-widest text-secondary-300">
-                        {boat.id === "angels" ? "/ 2 boats" : `/ ${Math.max(1, groupSize)} passenger${groupSize > 1 ? "s" : ""}`}
+                      <span className="text-sm font-medium text-secondary-500">
+                        {boat.id === "angels" ? "/ 2 boats" : `/ ${Math.max(1, groupSize)} person${groupSize > 1 ? "s" : ""}`}
                       </span>
                     </div>
                   </div>
@@ -3420,10 +3440,10 @@ function StepTwo({
       >
         {confirmModalData ? (
           <div className="relative flex flex-col">
-            {(confirmModalData.boat.images?.[0] || confirmModalData.boat.cover) && (
+            {(confirmModalData.boat.cover || confirmModalData.boat.images?.[0]) && (
               <div className="hidden sm:block">
                 <img
-                  src={confirmModalData.boat.images?.[0] || confirmModalData.boat.cover}
+                  src={confirmModalData.boat.cover || confirmModalData.boat.images?.[0]?.thumb || confirmModalData.boat.images?.[0]?.path}
                   alt={confirmModalData.boat.name}
                   className="h-52 w-full object-cover rounded-t-xl"
                 />
@@ -3456,7 +3476,7 @@ function StepTwo({
                 <span className="text-xl font-black tracking-tight text-secondary-900">
                   {formatIDR(confirmModalData.boat.priceValue)}
                 </span>
-                <span className="text-xs font-semibold text-secondary-400">{confirmModalData.boat.priceSuffix || "/ guest"}</span>
+                <span className="text-xs font-semibold text-secondary-400">{`/ ${Math.max(1, confirmModalData.adults + (confirmModalData.kids || 0))} person${(confirmModalData.adults + (confirmModalData.kids || 0)) > 1 ? "s" : ""}`}</span>
               </div>
             </div>
 
@@ -3668,7 +3688,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
       // Prefer tour photos: find the matching vibe (tour) by slug/id
       const matchedVibe = vibes.find(v => v.id === style.slug || v.id === String(style.id));
       const tourImages = matchedVibe
-        ? [matchedVibe.hero, ...(matchedVibe.photos || [])].filter(Boolean)
+        ? [matchedVibe.hero, ...(matchedVibe.photos || []).map(p => p?.thumb || p?.path || p)].filter(Boolean)
         : [];
 
       const images = tourImages.length
@@ -3677,7 +3697,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
 
       if (!images.length) {
         // Last resort: pool from all vibes
-        const pool = vibes.flatMap((vibe) => [vibe.hero, ...(vibe.photos || [])]).filter(Boolean);
+        const pool = vibes.flatMap((vibe) => [vibe.hero, ...(vibe.photos || []).map(p => p?.thumb || p?.path || p)]).filter(Boolean);
         if (pool.length) {
           const start = (styles.indexOf(style) * 3) % pool.length;
           for (let i = 0; i < Math.min(6, pool.length); i += 1) {
@@ -4834,6 +4854,8 @@ function StepExtras({
                 extraImageById[extra.name?.toLowerCase().replace(/\s+/g, "-")] ||
                 extraFallbackImage
               }
+              srcSet={extra.images_with_thumbs?.[0]?.thumb_small ? `${extra.images_with_thumbs[0].thumb_small} 200w, ${extra.images_with_thumbs[0].thumb} 400w` : undefined}
+              sizes="56px"
               alt={extra.name}
               className="h-full w-full object-cover transition duration-200 ease-out group-hover:saturate-110"
               loading="lazy"
@@ -5627,7 +5649,7 @@ function StepFive({
                                         <>
                                           <span className="day-number">{dayOfMonth}</span>
                                           {seats !== undefined && (
-                                            <span className="day-sub">{seats > 0 ? `${seats} left` : "full"}</span>
+                                            <span className="day-sub">{seats > 0 ? (seats > 10 ? "10+" : `${seats} left`) : "full"}</span>
                                           )}
                                         </>
                                       );
@@ -5766,7 +5788,7 @@ function StepFive({
             <div className="mt-4 space-y-3">
               <div className="relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
                 <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
-                  <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" className="h-full w-full object-cover" />
+                  <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-0.5">Ask an Expert</div>
@@ -5971,6 +5993,8 @@ function ChooseBoatSection({
         <div className="relative overflow-hidden rounded-xl border border-neutral-200">
           <img
             src={yacht.cover}
+            srcSet={yacht.cover_small ? `${yacht.cover_small} 300w, ${yacht.cover} 600w` : undefined}
+            sizes="(max-width: 640px) 100vw, 260px"
             alt={`${yacht.name} yacht`}
             loading="lazy"
             decoding="async"
@@ -6112,7 +6136,7 @@ function ChooseBoatSection({
                   alt={activeYacht.name}
                   className="h-200 sm:h-65"
                   onOpenGallery={(idx) => {
-                    Fancybox.show(activeYacht.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
+                    Fancybox.show(activeYacht.images.map(img => ({ src: img?.path || img, type: "image" })), { startIndex: idx || 0 });
                   }}
                 />
               </div>
@@ -6619,7 +6643,7 @@ function DayPlan() {
                 alt={infoItem.title}
                 className="h-200 sm:h-60"
                 onOpenGallery={(idx) => {
-                  Fancybox.show(infoItem.images.map(src => ({ src, type: "image" })), { startIndex: idx || 0 });
+                  Fancybox.show(infoItem.images.map(img => ({ src: img?.path || img, type: "image" })), { startIndex: idx || 0 });
                 }}
               />
             </div>
@@ -7558,6 +7582,11 @@ export default function Shared_tour_01() {
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedLiability, setAgreedLiability] = useState(false);
   const { fetchTourDetail } = useTours();
+
+  useEffect(() => {
+    trackPixelViewContent({ contentName: "Shared Tour", value: 0, currency: "IDR" });
+  }, []);
+
   const yachtOptions = useMemo(() => {
     // Backend already filters by classes_id=9 (shared tours)
     const validTours = sharedTours || [];
@@ -7616,7 +7645,8 @@ export default function Shared_tour_01() {
         people: Number(tour.capacity) || 14,
         lengthMeters: getBoatLength(tour),
         cover: tour.images_with_thumbs?.[0]?.thumb1 || tour.images_with_thumbs?.[0]?.original || "",
-        images: tour.images_with_thumbs?.map(img => img.original || img.thumb1) || [],
+        cover_small: tour.images_with_thumbs?.[0]?.thumb1_small || "",
+        images: tour.images_with_thumbs?.map(img => ({ path: img.original || img.thumb1 || "", thumb: img.thumb1 || img.original || "", thumb_small: img.thumb1_small || "" })) || [],
         description: tour.description || "",
         listItems,
         packages: tour.packages,
@@ -7882,7 +7912,8 @@ export default function Shared_tour_01() {
           : ["other"]
       ),
       categoryName: cat?.name || e.ecategories?.[0]?.name || "",
-      image: e.images_with_thumbs?.[0]?.thumb1 || e.images_with_thumbs?.[0]?.original || "",
+      image: e.images_with_thumbs?.[0]?.thumb || e.images_with_thumbs?.[0]?.thumb1 || e.images_with_thumbs?.[0]?.original || "",
+      image_small: e.images_with_thumbs?.[0]?.thumb_small || "",
       images_with_thumbs: e.images_with_thumbs,
       // Parent/child extras nesting
       children: (e.children || []).map(child => ({
@@ -7890,7 +7921,8 @@ export default function Shared_tour_01() {
         name: child.name || child.title || "Extra",
         price: Number(child.show_price || child.price || 0),
         available: child.available != null ? Number(child.available) : null,
-        image: child.images_with_thumbs?.[0]?.thumb1 || child.images_with_thumbs?.[0]?.original || "",
+        image: child.images_with_thumbs?.[0]?.thumb || child.images_with_thumbs?.[0]?.thumb1 || child.images_with_thumbs?.[0]?.original || "",
+        image_small: child.images_with_thumbs?.[0]?.thumb_small || "",
         images_with_thumbs: child.images_with_thumbs,
         description: child.description || "",
       })),
@@ -8910,6 +8942,7 @@ function StepCheckout({
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Name*</label>
                     <input
                       type="text"
+                      autoComplete="new-password"
                       value={contactName}
                       onChange={(e) => handleChange("contactName", e.target.value, onSetName)}
                       placeholder="Enter your full name"
@@ -8954,6 +8987,7 @@ function StepCheckout({
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address*</label>
                     <input
                       type="text"
+                      autoComplete="new-password"
                       value={pickupAddress}
                       onChange={(e) => handlePickupChange(e.target.value)}
                       placeholder="Enter your hotel or villa address"
@@ -8967,6 +9001,7 @@ function StepCheckout({
                     {!sameAddress && (
                       <input
                         type="text"
+                        autoComplete="new-password"
                         value={dropoffAddress}
                         onChange={(e) => onSetDropoffAddress(e.target.value)}
                         placeholder="Enter your dropoff address"

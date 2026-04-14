@@ -2,3 +2,7 @@ columns:
     name:
         label: Name
         type: text
+    pricelist_summary:
+        label: Pricelist
+        type: text
+        sortable: false

@@ -1,20 +1,20 @@
 import "./index.css";
-import LeadAdmin from "./LeadAdmin.jsx";
-import Home from "./home.jsx";
-import Home1 from "./home1.jsx";
-import Home2 from "./Home2.jsx";
-import Private from "./private.jsx";
-import Shared from "./shared.jsx";
-import Checkout from "./Checkout.jsx";
-import Payment from "./Payment.jsx";
-import PolicyPage from "./PolicyPage.jsx";
-import ReviewsPage from "./ReviewsPage.jsx";
-import GalleryPage from "./GalleryPage.jsx";
-import AboutPage from "./AboutPage.jsx";
-import FaqPage from "./FaqPage.jsx";
-import BlogPage from "./BlogPage.jsx";
-import BlogPostPage from "./BlogPostPage.jsx";
+import React, { Suspense, lazy } from "react";
 import GlobalImagePreloader from "./components/common/GlobalImagePreloader.jsx";
+
+const LeadAdmin = lazy(() => import("./LeadAdmin.jsx"));
+const Private = lazy(() => import("./private.jsx"));
+const Shared = lazy(() => import("./shared.jsx"));
+const Checkout = lazy(() => import("./Checkout.jsx"));
+const Payment = lazy(() => import("./Payment.jsx"));
+const PolicyPage = lazy(() => import("./PolicyPage.jsx"));
+const ReviewsPage = lazy(() => import("./ReviewsPage.jsx"));
+const GalleryPage = lazy(() => import("./GalleryPage.jsx"));
+const AboutPage = lazy(() => import("./AboutPage.jsx"));
+const FaqPage = lazy(() => import("./FaqPage.jsx"));
+const BlogPage = lazy(() => import("./BlogPage.jsx"));
+const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
+const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
 
 import { CurrencyProvider } from "./CurrencyContext.jsx";
 import { ToursProvider } from "./ToursContext.jsx";
@@ -93,6 +93,10 @@ export default function App() {
       return <Payment />;
     }
 
+    if (path === "/success") {
+      return <SuccessPage />;
+    }
+
     if (path === "/reviews") {
       return <ReviewsPage />;
     }
@@ -118,15 +122,7 @@ export default function App() {
       return <BlogPostPage slug={blogPostMatch[1]} />;
     }
 
-    if (path === "/home1") {
-      return <Home1 />;
-    }
-
-    if (path === "/home2") {
-      return <Home2 />;
-    }
-
-    return <Home />;
+    return null;
   })();
 
   return (
@@ -136,7 +132,9 @@ export default function App() {
           <RulesProvider>
             <GlobalImagePreloader />
             <UnifiedSwitcher showFloatingButton={false} />
-            {content}
+            <Suspense fallback={null}>
+              {content}
+            </Suspense>
           </RulesProvider>
         </ExtrasProvider>
       </ToursProvider>

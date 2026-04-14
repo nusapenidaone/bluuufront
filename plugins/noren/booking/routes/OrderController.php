@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Session;
 
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Rates;
+use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Closeddates;
 
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PayPalService;
@@ -34,6 +36,7 @@ class OrderController extends Controller
             $order->payment_status_id=5; //not paid
         }
         
+        
 		if (Session::has('utm')) {
 		    $order->utm=Session::get('utm');
 		    Session::forget('utm');
@@ -42,6 +45,13 @@ class OrderController extends Controller
         $order->ga_client_id=$data['ga_client_id'] ?? null;
         $order->amo_lead_id=$data['leadId'];
         $order->tours_id=$data['tourId'];
+
+        $order->boat_id=$this->selectBoatForOrder(
+            (int) $data['tourId'],
+            $data['travelDate'],
+            ($data['adults'] ?? 0) + ($data['kids'] ?? 0)
+        );
+
         $order->travel_date=$data['travelDate'];
         $order->adults=$data['adults'];
         $order->children=$data['children'];
@@ -122,7 +132,49 @@ class OrderController extends Controller
         
         return response()->json($url);
     }
-    
 
+    /**
+     * Select the best available boat for an order.
+     *
+     * Private (classes_id=8): first boat with no closeddates on the date.
+     *   - Any closeddate (shared/private/manual/cron) blocks the boat.
+     *
+     * Shared (classes_id=9): first boat (by sort_order) with enough free capacity.
+     *   - type=1 records count against capacity; type=2/3/4 fully block the boat.
+     */
+    protected function selectBoatForOrder(int $tourId, string $date, int $members): ?int
+    {
+        $tour = Tours::with(['boat' => function ($q) {
+            $q->orderBy('sort_order')->orderBy('id');
+        }])->find($tourId);
 
+        if (!$tour || $tour->boat->isEmpty()) return null;
+
+        $isPrivate = (int) $tour->types_id !== 1;
+
+        foreach ($tour->boat as $boat) {
+            if (!empty($boat->closed)) continue;
+
+            $records = Closeddates::where('boat_id', $boat->id)
+                ->where('date', $date)
+                ->whereNull('deleted_at')
+                ->get();
+
+            // type 2/3/4 fully blocks the boat for both private and shared
+            $blocked = $records->contains(fn($r) => in_array((int) $r->type, [2, 3, 4]));
+            if ($blocked) continue;
+
+            if ($isPrivate) {
+                // Private: boat must have zero closeddates (shared bookings also block it)
+                if ($records->isEmpty()) return $boat->id;
+            } else {
+                // Shared: check remaining capacity
+                $booked = $records->where('type', 1)->sum('qtty');
+                $available = max(0, (int) $boat->capacity - (int) $booked);
+                if ($available >= $members) return $boat->id;
+            }
+        }
+
+        return null;
+    }
 }

@@ -588,8 +588,10 @@ class ChatbotControllerV2 extends ChatbotController
             'x_studio_route'            => $routeName,
             'x_studio_pickup_address'   => $pickupAddress,
             'x_studio_drop_off_address' => $dropoffAddress,
-            'x_studio_pickup_cars'      => $transferType === 'dropoff'  ? 0 : $cars,
-            'x_studio_drop_off_cars'    => $transferType === 'pickup'  ? 0 : $cars,
+            'x_studio_pickup_cars'      => in_array($transfer?->id, [1, 2]) ? 1 : 0,
+            'x_studio_drop_off_cars'    => $transfer?->id === 2 ? 1 : 0,
+            'x_studio_car_type'         => $this->resolveCarTypeFromTransfer($transfer, $guests),
+            'x_studio_tour_type'        => $tour->odoo_type ?? '',
             'x_studio_deposit'          => 0.0,
             'x_studio_collect'          => (float) $totalPrice,
             'client_order_ref'          => $externalId,
@@ -665,5 +667,15 @@ class ChatbotControllerV2 extends ChatbotController
             'order' => $order,
             'lines' => $lines,
         ];
+    }
+
+    private function resolveCarTypeFromTransfer($transfer, int $guests): mixed
+    {
+        if (!$transfer) return false;
+        if ((int) $transfer->id === 3) return 'Free Shuttle Bus';
+        if (in_array((int) $transfer->id, [1, 2])) {
+            return $guests > 5 ? 'Private Hi-Ace' : 'Private Car';
+        }
+        return false;
     }
 }

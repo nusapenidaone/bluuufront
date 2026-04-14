@@ -63,6 +63,23 @@ tabs:
             span: auto
             type: relation
             tab: Main
+            
+        odoo_type:
+            type: dropdown
+            label: Odoo type
+            tab: Main
+            span: auto
+            options:
+                "Standard Shared" : "Standard Shared" 
+                "Premium Shared" : "Premium Shared" 
+                "First Class Shared" : "First Class Shared" 
+                
+                "Standard Private" : "Standard Private" 
+                "Premium Private" : "Premium Private" 
+                "Premium for Couples" : "Premium for Couples" 
+                "Private Diving" : "Private Diving" 
+                "Professional Fishing" : "Professional Fishing" 
+
         classes:
             label: Class
             span: auto

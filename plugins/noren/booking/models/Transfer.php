@@ -40,9 +40,12 @@ class Transfer extends Model
     public function getImageUrlAttribute()
     {
         if (!$this->image) return null;
-        return $this->image->getThumb(800, 500, [
-            'mode' => 'crop',
-            'extension' => 'webp',
-        ]);
+        return $this->image->getThumb(800, 500, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]);
+    }
+
+    public function getImageUrlSmallAttribute()
+    {
+        if (!$this->image) return null;
+        return $this->image->getThumb(400, 250, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]);
     }
 }

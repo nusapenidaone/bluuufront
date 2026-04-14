@@ -17,6 +17,27 @@ const ToursContext = createContext();
 
 export const useTours = () => useContext(ToursContext);
 
+// Detect which data is needed for the current page
+function getPageNeeds() {
+    const raw = typeof window !== "undefined" ? window.location.pathname : "/";
+    const path = raw.replace(/\/+$/, "").replace(/^\/[^/]+(?=\/)/, "") || "/";
+    const isHome = path === "/";
+    const isPrivate = path === "/private";
+    const isShared = path === "/shared";
+    const isFaq = path === "/faq";
+    const isGallery = path === "/gallery";
+    return {
+        sharedTours:      isHome || isShared,
+        privateTours:     isHome || isPrivate || isGallery,
+        privateTransfers: isPrivate,
+        sharedTransfers:  isShared,
+        privateCovers:    isPrivate,
+        sharedCovers:     isShared,
+        faqs:             isHome || isPrivate || isFaq,
+        gallery:          isHome || isGallery,
+    };
+}
+
 export const ToursProvider = ({ children }) => {
     const [sharedTours, setSharedTours] = useState([]);
     const [privateTours, setPrivateTours] = useState([]);
@@ -30,75 +51,52 @@ export const ToursProvider = ({ children }) => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const fetchAllData = async () => {
+        const needs = getPageNeeds();
+
+        // Build fetch list — only what this page actually needs
+        const tasks = [];
+        if (needs.sharedTours)      tasks.push({ key: "sharedTours",      fn: apiFetchSharedTours });
+        if (needs.privateTours)     tasks.push({ key: "privateTours",     fn: apiFetchPrivateTours });
+        if (needs.privateTransfers) tasks.push({ key: "privateTransfers", fn: apiFetchPrivateTransfers });
+        if (needs.sharedTransfers)  tasks.push({ key: "sharedTransfers",  fn: apiFetchSharedTransfers });
+        if (needs.privateCovers)    tasks.push({ key: "privateCovers",    fn: apiFetchPrivateCovers });
+        if (needs.sharedCovers)     tasks.push({ key: "sharedCovers",     fn: apiFetchSharedCovers });
+        if (needs.faqs)             tasks.push({ key: "faqs",             fn: apiFetchFaq });
+        if (needs.gallery)          tasks.push({ key: "gallery",          fn: apiFetchGallery });
+
+        if (tasks.length === 0) {
+            setLoading(false);
+            return;
+        }
+
+        const fetchData = async () => {
             try {
-                const [sharedRes, privateRes, privateTransfersRes, sharedTransfersRes, privateCoversRes, sharedCoversRes, faqRes, galleryRes] = await Promise.allSettled([
-                    apiFetchSharedTours(),
-                    apiFetchPrivateTours(),
-                    apiFetchPrivateTransfers(),
-                    apiFetchSharedTransfers(),
-                    apiFetchPrivateCovers(),
-                    apiFetchSharedCovers(),
-                    apiFetchFaq(),
-                    apiFetchGallery(),
-                ]);
-
-                // Handle shared tours (classes_id=9)
-                if (sharedRes.status === "fulfilled") {
-                    const data = sharedRes.value;
-                    const unique = Array.from(new Map(data.map(item => [String(item.id), item])).values());
-                    setSharedTours(unique);
-                } else {
-                    console.warn("Failed to fetch shared tours:", sharedRes.reason);
-                }
-
-                // Handle private tours (classes_id=8)
-                if (privateRes.status === "fulfilled") {
-                    const data = privateRes.value;
-                    const unique = Array.from(new Map(data.map(item => [String(item.id), item])).values());
-                    setPrivateTours(unique);
-                } else {
-                    console.warn("Failed to fetch private tours:", privateRes.reason);
-                }
-
-                // Handle transfers
-                if (privateTransfersRes.status === "fulfilled") {
-                    setPrivateTransfers(privateTransfersRes.value);
-                } else {
-                    console.warn("Failed to fetch private transfers:", privateTransfersRes.reason);
-                }
-                if (sharedTransfersRes.status === "fulfilled") {
-                    setSharedTransfers(sharedTransfersRes.value);
-                } else {
-                    console.warn("Failed to fetch shared transfers:", sharedTransfersRes.reason);
-                }
-
-                // Handle covers
-                if (privateCoversRes.status === "fulfilled") {
-                    setPrivateCovers(privateCoversRes.value);
-                } else {
-                    console.warn("Failed to fetch private covers:", privateCoversRes.reason);
-                }
-                if (sharedCoversRes.status === "fulfilled") {
-                    setSharedCovers(sharedCoversRes.value);
-                } else {
-                    console.warn("Failed to fetch shared covers:", sharedCoversRes.reason);
-                }
-
-                // Handle FAQs
-                if (faqRes.status === "fulfilled") {
-                    setFaqs(faqRes.value);
-                } else {
-                    console.warn("Failed to fetch FAQs:", faqRes.reason);
-                }
-
-                // Handle Gallery
-                if (galleryRes.status === "fulfilled") {
-                    setGallery(galleryRes.value);
-                } else {
-                    console.warn("Failed to fetch gallery:", galleryRes.reason);
-                }
-
+                const results = await Promise.allSettled(tasks.map(t => t.fn()));
+                results.forEach((res, i) => {
+                    const key = tasks[i].key;
+                    if (res.status !== "fulfilled") {
+                        console.warn(`Failed to fetch ${key}:`, res.reason);
+                        return;
+                    }
+                    const data = res.value;
+                    if (key === "sharedTours") {
+                        setSharedTours(Array.from(new Map(data.map(item => [String(item.id), item])).values()));
+                    } else if (key === "privateTours") {
+                        setPrivateTours(Array.from(new Map(data.map(item => [String(item.id), item])).values()));
+                    } else if (key === "privateTransfers") {
+                        setPrivateTransfers(data);
+                    } else if (key === "sharedTransfers") {
+                        setSharedTransfers(data);
+                    } else if (key === "privateCovers") {
+                        setPrivateCovers(data);
+                    } else if (key === "sharedCovers") {
+                        setSharedCovers(data);
+                    } else if (key === "faqs") {
+                        setFaqs(data);
+                    } else if (key === "gallery") {
+                        setGallery(data);
+                    }
+                });
             } catch (err) {
                 console.error("Error fetching tours:", err);
                 setError(err.message);
@@ -107,7 +105,7 @@ export const ToursProvider = ({ children }) => {
             }
         };
 
-        fetchAllData();
+        fetchData();
     }, []);
 
     // Fetch tour detail with pricing

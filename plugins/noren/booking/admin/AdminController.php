@@ -4,7 +4,12 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
+use Noren\Booking\Models\Boat;
+use Noren\Booking\Models\Cover;
+use Noren\Booking\Models\Extras;
 use Noren\Booking\Models\Order;
+use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Transfer;
 use Noren\Booking\Odoo\OdooService;
 
 class AdminController extends Controller
@@ -31,6 +36,115 @@ class AdminController extends Controller
     // ODOO-CENTRIC ENDPOINTS (primary)
     // =========================================================================
 
+    // ─── GET /api/admin/boats ─────────────────────────────────────────────────
+
+    public function boats(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $boats = Boat::select('id', 'name', 'odoo_id')->orderBy('name')->get();
+        return response()->json($boats);
+    }
+
+    // ─── GET /api/admin/tours ─────────────────────────────────────────────────
+
+    public function tours(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $tours = Tours::select('id', 'name', 'odoo_id')->orderBy('name')->get();
+        return response()->json($tours);
+    }
+
+    // ─── GET /api/admin/transfers ─────────────────────────────────────────────
+
+    public function transfers(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $transfers = Transfer::select('id', 'name', 'odoo_id')->orderBy('name')->get();
+        return response()->json($transfers);
+    }
+
+    // ─── GET /api/admin/covers ────────────────────────────────────────────────
+
+    public function covers(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $covers = Cover::select('id', 'name', 'odoo_id')->orderBy('name')->get();
+        return response()->json($covers);
+    }
+
+    // ─── GET /api/admin/extras ────────────────────────────────────────────────
+
+    public function extras(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $extras = Extras::select('id', 'name', 'price', 'odoo_id')->orderBy('name')->get();
+        return response()->json($extras);
+    }
+
+    // ─── PATCH /api/admin/odoo/order/{odooId}/extras ─────────────────────────
+    // Update extras JSON on the linked local order, then recreate Odoo order
+
+    public function odooUpdateExtras(Request $request, int $odooId)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $local = Order::where('odoo_id', $odooId)->first();
+        if (!$local) {
+            return response()->json(['error' => 'No local order linked to this Odoo ID'], 404);
+        }
+
+        // Expected: [{id: 1, qty: 2}, ...]
+        $items = $request->get('extras', []);
+        if (!is_array($items)) {
+            return response()->json(['error' => 'extras must be an array'], 422);
+        }
+
+        // Build full extras array with name+price from DB
+        $extraRecords = Extras::whereIn('id', array_column($items, 'id'))
+            ->select('id', 'name', 'price', 'odoo_id')
+            ->get()
+            ->keyBy('id');
+
+        $extrasJson = [];
+        foreach ($items as $item) {
+            $id  = (int) ($item['id'] ?? 0);
+            $qty = max(1, (int) ($item['qty'] ?? 1));
+            if (!$id || !$extraRecords->has($id)) continue;
+            $rec = $extraRecords[$id];
+            $extrasJson[] = [
+                'id'    => $rec->id,
+                'name'  => $rec->name,
+                'qty'   => $qty,
+                'price' => (float) $rec->price,
+            ];
+        }
+
+        $local->extras = $extrasJson;
+        $local->saveQuietly();
+
+        try {
+            $result = OdooService::recreateLead($local);
+            Order::where('id', $local->id)->update(['odoo_id' => $result['order_id']]);
+
+            return response()->json([
+                'success' => true,
+                'result'  => [
+                    'action'            => 'recreated',
+                    'cancelled_odoo_id' => $result['cancelled_odoo_id'],
+                    'new_odoo_id'       => $result['order_id'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Admin odooUpdateExtras #{$odooId}: " . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
     // ─── GET /api/admin/odoo/orders ──────────────────────────────────────────
     // List sale.orders directly from Odoo with search + pagination
 
@@ -46,6 +160,25 @@ class AdminController extends Controller
         try {
             $orders = OdooService::searchOrders($search, $limit, $offset);
             $total  = OdooService::countOrders($search);
+
+            // Enrich with tour names from local DB
+            if (!empty($orders)) {
+                $odooIds = array_filter(array_column($orders, 'id'));
+                $refs    = array_filter(array_column($orders, 'client_order_ref'));
+
+                $localOrders = Order::with('tours')
+                    ->whereIn('odoo_id', $odooIds)
+                    ->get();
+
+                $byOdooId = $localOrders->keyBy('odoo_id');
+
+                foreach ($orders as &$order) {
+                    $local = $byOdooId->get($order['id']);
+                    $order['tour_name'] = $local ? optional($local->tours)->name : null;
+                    $order['local_id']  = $local ? $local->id : null;
+                }
+                unset($order);
+            }
 
             return response()->json([
                 'data'         => $orders,
@@ -144,6 +277,49 @@ class AdminController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error("Admin odooRecreate #{$odooId}: " . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ─── PATCH /api/admin/odoo/order/{odooId}/products ───────────────────────
+    // Change boat and/or tour on the linked local order, then recreate Odoo order
+
+    public function odooUpdateProducts(Request $request, int $odooId)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $local = Order::where('odoo_id', $odooId)->first();
+        if (!$local) {
+            return response()->json(['error' => 'No local order linked to this Odoo ID'], 404);
+        }
+
+        $boatId     = $request->get('boat_id');
+        $toursId    = $request->get('tours_id');
+        $transferId = $request->get('transfer_id');
+        $coverId    = $request->get('cover_id');
+
+        if ($boatId     !== null) $local->boat_id     = (int) $boatId;
+        if ($toursId    !== null) $local->tours_id    = (int) $toursId;
+        if ($transferId !== null) $local->transfer_id = (int) $transferId;
+        if ($coverId    !== null) $local->cover_id    = (int) $coverId;
+
+        $local->saveQuietly();
+
+        try {
+            $result = OdooService::recreateLead($local);
+            Order::where('id', $local->id)->update(['odoo_id' => $result['order_id']]);
+
+            return response()->json([
+                'success' => true,
+                'result'  => [
+                    'action'            => 'recreated',
+                    'cancelled_odoo_id' => $result['cancelled_odoo_id'],
+                    'new_odoo_id'       => $result['order_id'],
+                    'partner_id'        => $result['partner_id'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Admin odooUpdateProducts #{$odooId}: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

@@ -93,15 +93,10 @@ class Tours extends Model
 
         return $this->images->map(function ($image) {
             return [
-                'original' => $image->getPath(),
-                //'thumb' => $image->getThumb(400, 400, [
-                //    'mode' => 'crop',
-                //    'extension' => 'webp',
-                //]),
-                'thumb1' => $image->getThumb(600, 400, [
-                    'mode' => 'crop',
-                    'extension' => 'webp',
-                ]),
+                'original'    => $image->getPath(),
+                'thumb1'      => $image->getThumb(600, 400, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb1_small'=> $image->getThumb(300, 200, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
+                'thumb2'      => $image->getThumb(900, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
             ];
         })->toArray();
     }

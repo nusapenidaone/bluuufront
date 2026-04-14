@@ -5,6 +5,7 @@ use Carbon\Carbon;
 use Validator;
 use Input;
 use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Closeddates;
 use Log;
 
 class ToursController extends Controller
@@ -21,6 +22,18 @@ public function getTourClosedDates($id)
 
     $dates = [];
     $tomorrow = Carbon::tomorrow('Asia/Makassar')->startOfDay()->format('Y-m-d');
+
+    // Если у тура есть лодка с closed=true и на неё есть не-крон запись на дату — тур закрыт
+    foreach ($tour->boat->filter(fn($b) => !empty($b->closed)) as $blockerBoat) {
+        foreach ($blockerBoat->closeddates as $closed) {
+            if ($closed->type == 4) continue;
+            if ($closed->deleted_at !== null) continue;
+            $d = Carbon::parse($closed->date)->format('Y-m-d');
+            if ($d >= $tomorrow) {
+                $dates[$d] = 0;
+            }
+        }
+    }
 
     if ($tour->types_id == 1) {
 
@@ -60,6 +73,7 @@ public function getTourClosedDates($id)
 
         // Рассчитываем общее количество доступных мест по всем лодкам
         foreach ($allDates as $dateStr => $boatsData) {
+            if (isset($dates[$dateStr]) && $dates[$dateStr] === 0) continue;
             $totalAvailable = 0;
             $hasClosedBoatActive = false; // если хоть одна закрытая лодка участвует в этой дате
 
@@ -134,8 +148,9 @@ public function getTourClosedDates($id)
 
         $boatCount = count($tour->boat);
         foreach ($allDateKeys as $dateStr => $info) {
+            if (isset($dates[$dateStr]) && $dates[$dateStr] === 0) continue;
             if ($info['has_closed_boat']) {
-                $dates[$dateStr] = 0; // если есть закрытая лодка
+                $dates[$dateStr] = 0;
             } else {
                 $dates[$dateStr] = ($info['occupied'] == $boatCount) ? 0 : $tour->capacity;
             }
@@ -395,10 +410,21 @@ public function getTourClosedDates($id)
 	{
 	    $date = Carbon::parse($date)->format('Y-m-d');
 	    $available = 0;
-	
+
 	    // Если у тура нет лодок — доступность 0
 	    if (!$tour->boat || $tour->boat->isEmpty()) {
 	        return 0;
+	    }
+
+	    // Если у тура есть лодка с closed=true и на неё есть не-крон запись на эту дату — тур закрыт
+	    foreach ($tour->boat->filter(fn($b) => !empty($b->closed)) as $blockerBoat) {
+	        $hasRecord = $blockerBoat->closeddates
+	            ->where('type', '!=', 4)
+	            ->filter(fn($c) => Carbon::parse($c->date)->format('Y-m-d') === $date)
+	            ->isNotEmpty();
+	        if ($hasRecord) {
+	            return 0;
+	        }
 	    }
 	
 	
