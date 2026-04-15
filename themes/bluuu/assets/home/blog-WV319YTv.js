@@ -1,0 +1,1 @@
+import{c as r}from"./index-1rT3aUYS.js";async function e(){const o=await fetch(r("blog"));if(!o.ok)throw new Error("Failed to fetch blog posts");return o.json()}async function n(o){const t=await fetch(r(`blog/${o}`));if(!t.ok)throw new Error("Failed to fetch blog post");return t.json()}export{n as a,e as f};

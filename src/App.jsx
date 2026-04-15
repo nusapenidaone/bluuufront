@@ -1,6 +1,5 @@
 import "./index.css";
-import React, { Suspense, lazy } from "react";
-import GlobalImagePreloader from "./components/common/GlobalImagePreloader.jsx";
+import { Suspense, lazy } from "react";
 
 const Home = lazy(() => import("./home.jsx"));
 const Private = lazy(() => import("./private.jsx"));
@@ -16,6 +15,7 @@ const FaqPage = lazy(() => import("./FaqPage.jsx"));
 const BlogPage = lazy(() => import("./BlogPage.jsx"));
 const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
+const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImagePreloader.jsx"));
 
 function NotFound() {
   return (
@@ -52,7 +52,6 @@ import { ToursProvider } from "./ToursContext.jsx";
 import { ExtrasProvider } from "./contexts/ExtrasContext.jsx";
 import { RulesProvider } from "./contexts/RulesContext.jsx";
 import UnifiedSwitcher from "./components/UnifiedSwitcher.jsx";
-import WelcomeModal from "./components/WelcomeModal.jsx";
 
 const POLICY_PATH_MAP = {
   privacy: "privacy",

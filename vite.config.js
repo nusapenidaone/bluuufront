@@ -53,6 +53,11 @@ export default defineConfig(({ command }) => ({
     outDir: ASSETS_DIR,
     emptyOutDir: true,
     assetsDir: '',
+    // Don't preload heavy lazy-only chunks in the initial HTML
+    modulePreload: {
+      resolveDependencies: (_filename, deps) =>
+        deps.filter(d => !d.includes('vendor-motion') && !d.includes('vendor-datepicker') && !d.includes('fancybox')),
+    },
     rollupOptions: {
       output: {
         manualChunks: {
