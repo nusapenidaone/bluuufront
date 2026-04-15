@@ -1,8 +1,4 @@
-import React from "react";
-import { PhoneInput as IntlPhoneInput } from "react-international-phone";
-import "react-international-phone/style.css";
-
-const PHONE_STYLE = `
+import{j as t}from"./vendor-motion-wRSbqP8r.js";import{Y as a}from"./vendor-phone-SWYFwGOa.js";const i=`
 .react-international-phone-input-container {
   width: 100%;
   display: flex;
@@ -48,25 +44,4 @@ const PHONE_STYLE = `
   box-shadow: 0 4px 24px rgba(0,0,0,.08);
   z-index: 50;
 }
-`;
-
-let styleInjected = false;
-
-export default function PhoneInput({ value, onChange }) {
-  if (!styleInjected && typeof document !== "undefined") {
-    const style = document.createElement("style");
-    style.textContent = PHONE_STYLE;
-    document.head.appendChild(style);
-    styleInjected = true;
-  }
-
-  return (
-    <IntlPhoneInput
-      value={value}
-      type="tel"
-      name="phone"
-      onChange={onChange}
-      disableDialCodePrefill
-    />
-  );
-}
+`;let n=!1;function p({value:r,onChange:o}){if(!n&&typeof document<"u"){const e=document.createElement("style");e.textContent=i,document.head.appendChild(e),n=!0}return t.jsx(a,{value:r,type:"tel",name:"phone",onChange:o,disableDialCodePrefill:!0})}export{p as P};

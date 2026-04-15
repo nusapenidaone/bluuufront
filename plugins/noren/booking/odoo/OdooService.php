@@ -538,8 +538,8 @@ class OdooService
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_boat_name'        => $lead['boat_name'],
-            'x_studio_pickup_cars'      => in_array((int)$lead['transfer_id'], [1, 2]) ? 1 : 0,
-            'x_studio_drop_off_cars'    => (int)$lead['transfer_id'] === 2 ? 1 : 0,
+            'x_studio_pickup_cars'      => in_array((int)$lead['transfer_id'], [1, 2]) ? (int)$lead['cars'] : 0,
+            'x_studio_drop_off_cars'    => (int)$lead['transfer_id'] === 2 ? (int)$lead['cars'] : 0,
             'x_studio_car_type'         => static::resolveCarType((int)$lead['transfer_id'], (int)$lead['members']),
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_adults'           => $lead['adults'],
@@ -690,7 +690,7 @@ class OdooService
     {
         if ($transferId === 3) return 'Free Shuttle Bus';
         if (in_array($transferId, [1, 2])) {
-            return $members > 5 ? 'Private Hi-Ace' : 'Private Car';
+            return 'Private Car';
         }
         return false;
     }

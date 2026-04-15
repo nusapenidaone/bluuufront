@@ -53,5 +53,16 @@ export default defineConfig(({ command }) => ({
     outDir: ASSETS_DIR,
     emptyOutDir: true,
     assetsDir: '',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-datepicker': ['react-datepicker'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-phone': ['react-international-phone'],
+        },
+      },
+    },
   },
 }))

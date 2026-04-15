@@ -363,13 +363,24 @@ function BookingCard({
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }, []);
 
-  const [date, setDate] = useState(todayISO);
+  const [date, setDate] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") || todayISO;
+  });
   const pricing = usePricing(date);
   const remainingSeats = selectedYacht?.priceValue ? null : pricing.remainingSeats;
   const maxGuests = Math.min(MAX_GUESTS, remainingSeats ?? MAX_GUESTS);
   const isSoldOut = remainingSeats !== null && remainingSeats <= 0;
-  const [adults, setAdults] = useState(1);
-  const [kids, setKids] = useState(0);
+  const [adults, setAdults] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("adults") || "1", 10);
+    return isNaN(n) || n < 1 ? 1 : n;
+  });
+  const [kids, setKids] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("kids") || "0", 10);
+    return isNaN(n) || n < 0 ? 0 : n;
+  });
   useEffect(() => {
     if (remainingSeats === null || maxGuests <= 0) return;
     if (adults > maxGuests) {
@@ -443,6 +454,12 @@ function BookingCard({
         )
       );
     }
+    const backParams = new URLSearchParams(window.location.search);
+    backParams.set("date", date);
+    backParams.set("adults", String(adults));
+    backParams.set("kids", String(kids));
+    if (selectedYacht?.tourId) backParams.set("tour", String(selectedYacht.tourId));
+    history.replaceState(null, "", `?${backParams.toString()}`);
     window.location.href = `/new/checkout?${params.toString()}`;
   };
   return (
@@ -1311,6 +1328,8 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                         <div className="flex shrink-0">
                                           <img
                                             src={extra.image}
+                                            srcSet={extra.image_small ? `${extra.image_small} 200w, ${extra.image} 400w` : undefined}
+                                            sizes="72px"
                                             alt={extra.title}
                                             loading="lazy"
                                             decoding="async"
@@ -1498,6 +1517,8 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                     <div key={extra.id} className="grid grid-cols-body-layout items-center gap-4 px-4 py-4">
                       <img
                         src={extra.image}
+                        srcSet={extra.image_small ? `${extra.image_small} 200w, ${extra.image} 400w` : undefined}
+                        sizes="56px"
                         alt={extra.title}
                         loading="lazy"
                         decoding="async"
@@ -3444,6 +3465,8 @@ function StepTwo({
               <div className="hidden sm:block">
                 <img
                   src={confirmModalData.boat.cover || confirmModalData.boat.images?.[0]?.thumb || confirmModalData.boat.images?.[0]?.path}
+                  srcSet={confirmModalData.boat.cover_small ? `${confirmModalData.boat.cover_small} 300w, ${confirmModalData.boat.cover} 600w` : undefined}
+                  sizes="(max-width: 640px) 100vw, 480px"
                   alt={confirmModalData.boat.name}
                   className="h-52 w-full object-cover rounded-t-xl"
                 />
@@ -3605,17 +3628,23 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
         style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" }}
         onScroll={handleScroll}
       >
-        {images.map((src, i) => (
-          <div key={i} className="flex-none w-full snap-center relative shrink-0 h-250 overflow-hidden">
-            <img
-              src={src}
-              alt={i === activeIndex ? "Day style preview" : ""}
-              loading={Math.abs(i - activeIndex) <= 1 ? "eager" : "lazy"}
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          </div>
-        ))}
+        {images.map((img, i) => {
+          const src = typeof img === "string" ? img : (img?.thumb || img?.path);
+          const srcSmall = typeof img === "string" ? null : (img?.thumb_small || null);
+          return (
+            <div key={i} className="flex-none w-full snap-center relative shrink-0 h-250 overflow-hidden">
+              <img
+                src={src}
+                srcSet={srcSmall ? `${srcSmall} 300w, ${src} 600w` : undefined}
+                sizes="(max-width: 640px) 100vw, 50vw"
+                alt={i === activeIndex ? "Day style preview" : ""}
+                loading={Math.abs(i - activeIndex) <= 1 ? "eager" : "lazy"}
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+          );
+        })}
       </div>
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent rounded-xl" />
@@ -3688,16 +3717,16 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
       // Prefer tour photos: find the matching vibe (tour) by slug/id
       const matchedVibe = vibes.find(v => v.id === style.slug || v.id === String(style.id));
       const tourImages = matchedVibe
-        ? [matchedVibe.hero, ...(matchedVibe.photos || []).map(p => p?.thumb || p?.path || p)].filter(Boolean)
+        ? [matchedVibe.hero, ...(matchedVibe.photos || []).map(p => p)].filter(Boolean)
         : [];
 
       const images = tourImages.length
         ? tourImages
-        : (style.photos || []).map(p => p.thumb || p.path);
+        : (style.photos || []).map(p => p);
 
       if (!images.length) {
         // Last resort: pool from all vibes
-        const pool = vibes.flatMap((vibe) => [vibe.hero, ...(vibe.photos || []).map(p => p?.thumb || p?.path || p)]).filter(Boolean);
+        const pool = vibes.flatMap((vibe) => [vibe.hero, ...(vibe.photos || []).map(p => p)]).filter(Boolean);
         if (pool.length) {
           const start = (styles.indexOf(style) * 3) % pool.length;
           for (let i = 0; i < Math.min(6, pool.length); i += 1) {
@@ -3710,10 +3739,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     }, {});
   }, [vibes, styles]);
 
-  const heroUrls = useMemo(() => styles.map((s) => (styleImages[s.id || s.slug] || [])[0]).filter(Boolean), [styles, styleImages]);
+  const heroUrls = useMemo(() => styles.map((s) => { const img = (styleImages[s.id || s.slug] || [])[0]; return typeof img === "string" ? img : (img?.thumb || img?.path); }).filter(Boolean), [styles, styleImages]);
   const imagesReady = useImagePreload(heroUrls);
   const routeSkeletonCount = Math.max(3, Math.min(styles.length || 3, 6));
-  const showRoutesSkeleton = extrasLoading || (styles.length > 0 && !imagesReady);
+  const showRoutesSkeleton = extrasLoading;
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 639px)");
@@ -4218,18 +4247,15 @@ function StepTransfers({
       </label>
       {/* Transfer Options */}
       {transfers && transfers.map((transfer) => {
-        const isLargeGroup = totalGuests > 5;
-        const unitPrice = (isLargeGroup && transfer.bus_price)
-          ? Number(transfer.bus_price)
-          : Number(transfer.price || 0);
+        const unitPrice = Number(transfer.price || 0);
+        const cars = unitPrice > 0 ? Math.ceil(totalGuests / 5) : 0;
+        const totalTransferPrice = unitPrice * (cars || 1);
         const isSelected = String(selectedTransferId) === String(transfer.id);
         const finalName = transfer.name;
         const transferName = String(transfer.name || "").toLowerCase();
         const isPickupDropoffTransfer = /pick[\s-]?up|drop[\s-]?off/.test(transferName);
-        const transferCapacityHint = isPickupDropoffTransfer
-          ? (isLargeGroup
-            ? "6+ guests: minivan price is applied. Up to 5 guests use car price."
-            : "Up to 5 guests: car price. For 6+ guests, minivan price is applied.")
+        const transferCapacityHint = isPickupDropoffTransfer && cars > 1
+          ? `${cars} cars for ${totalGuests} guests`
           : "";
         const transferDetails = buildOptionDetails(transfer, {
           extraDescription: transferCapacityHint,
@@ -4260,7 +4286,7 @@ function StepTransfers({
                   <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                      {formatIDR(unitPrice)}
+                      {formatIDR(totalTransferPrice)}
                     </span>
                     <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
                   </div>
@@ -4751,15 +4777,15 @@ function StepExtras({
     if (!selectedTransferId) return null;
     const transfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
     if (!transfer) return null;
-    const isLargeGroup = totalGuests > 5;
-    const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
+    const price = Number(transfer.price || 0);
+    const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
     return {
       id: `transfer-${transfer.id}`,
       kind: "transfer",
       name: transfer.name,
       price,
       pricingType: "per_booking",
-      quantity: 1,
+      quantity,
     };
   }, [selectedTransferId, transfers, totalGuests]);
   const selectedCoverItem = useMemo(() => {
@@ -5175,6 +5201,9 @@ function StepExtras({
             extraImageById[activeExtraForPopup.id] ||
             extraImageById[activeExtraForPopup.name?.toLowerCase().replace(/\s+/g, "-")] ||
             extraFallbackImage;
+          const imgSrcSmall = (hasChildren && currentItem?.images_with_thumbs?.[0]?.thumb_small) ||
+            activeExtraForPopup.images_with_thumbs?.[0]?.thumb_small ||
+            null;
           const addedItems = hasChildren
             ? activeExtraForPopup.children.filter(c => (draftQuantities[c.id] ?? 0) > 0)
             : [];
@@ -5205,6 +5234,8 @@ function StepExtras({
                 <div className="relative overflow-hidden">
                   <img
                     src={imgSrc}
+                    srcSet={imgSrcSmall ? `${imgSrcSmall} 300w, ${imgSrc} 600w` : undefined}
+                    sizes="(max-width: 640px) 100vw, 480px"
                     alt={hasChildren ? (currentItem?.name || activeExtraForPopup.name) : activeExtraForPopup.name}
                     className="aspect-video w-full object-cover"
                   />
@@ -5286,7 +5317,7 @@ function StepExtras({
                           {addedItems.map((child, idx) => (
                             <div key={child.id} className={cn("flex items-center gap-3 py-3", idx > 0 && "border-t border-neutral-100")}>
                               {child.images_with_thumbs?.[0]?.thumb ? (
-                                <img src={child.images_with_thumbs[0].thumb} alt={child.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                                <img src={child.images_with_thumbs[0].thumb} srcSet={child.images_with_thumbs[0].thumb_small ? `${child.images_with_thumbs[0].thumb_small} 200w, ${child.images_with_thumbs[0].thumb} 400w` : undefined} sizes="40px" alt={child.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                               ) : child.emoji ? (
                                 <span className="text-xl">{child.emoji}</span>
                               ) : null}
@@ -7692,6 +7723,17 @@ export default function Shared_tour_01() {
       urlCoverAppliedRef.current = true;
     }
   }, [covers]);
+  // Keep URL in sync with selections so browser back restores state
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (exactDate) p.set("date", exactDate); else p.delete("date");
+    p.set("adults", String(adults));
+    p.set("kids", String(kids));
+    if (selectedBoatId) p.set("tour", selectedBoatId); else p.delete("tour");
+    if (selectedTransferId) p.set("transfer", String(selectedTransferId)); else p.delete("transfer");
+    if (selectedCoverId) p.set("cover", String(selectedCoverId)); else p.delete("cover");
+    history.replaceState(null, "", `?${p.toString()}`);
+  }, [exactDate, adults, kids, selectedBoatId, selectedTransferId, selectedCoverId]);
   // Fetch availability from backend when user selects a date or date range
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
@@ -7988,9 +8030,9 @@ export default function Shared_tour_01() {
     if (selectedTransferId) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const isLargeGroup = totalGuests > 5;
-        const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
-        sum += price;
+        const price = Number(transfer.price || 0);
+        const cars = price > 0 ? Math.ceil(totalGuests / 5) : 1;
+        sum += price * cars;
       }
     }
     // Add selected cover
@@ -8016,14 +8058,14 @@ export default function Shared_tour_01() {
     if (selectedTransferId) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const isLargeGroup = totalGuests > 5;
-        const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
+        const price = Number(transfer.price || 0);
+        const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
         summary.push({
           id: `transfer-${transfer.id}`,
           name: transfer.name,
-          price: price,
+          price,
           pricingType: "per_booking",
-          quantity: 1
+          quantity,
         });
       }
     }
@@ -8942,7 +8984,7 @@ function StepCheckout({
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Name*</label>
                     <input
                       type="text"
-                      autoComplete="new-password"
+                      
                       value={contactName}
                       onChange={(e) => handleChange("contactName", e.target.value, onSetName)}
                       placeholder="Enter your full name"
@@ -8987,7 +9029,7 @@ function StepCheckout({
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address*</label>
                     <input
                       type="text"
-                      autoComplete="new-password"
+                      
                       value={pickupAddress}
                       onChange={(e) => handlePickupChange(e.target.value)}
                       placeholder="Enter your hotel or villa address"

@@ -2,9 +2,10 @@ import "./index.css";
 import React, { Suspense, lazy } from "react";
 import GlobalImagePreloader from "./components/common/GlobalImagePreloader.jsx";
 
-const LeadAdmin = lazy(() => import("./LeadAdmin.jsx"));
+const Home = lazy(() => import("./home.jsx"));
 const Private = lazy(() => import("./private.jsx"));
 const Shared = lazy(() => import("./shared.jsx"));
+const LeadAdmin = lazy(() => import("./LeadAdmin.jsx"));
 const Checkout = lazy(() => import("./Checkout.jsx"));
 const Payment = lazy(() => import("./Payment.jsx"));
 const PolicyPage = lazy(() => import("./PolicyPage.jsx"));
@@ -15,6 +16,36 @@ const FaqPage = lazy(() => import("./FaqPage.jsx"));
 const BlogPage = lazy(() => import("./BlogPage.jsx"));
 const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
+
+function NotFound() {
+  return (
+    <div style={{
+      background: "#0a0a0a",
+      color: "#fff",
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      textAlign: "center",
+    }}>
+      <div>
+        <h1 style={{ fontSize: "8rem", fontWeight: 700, color: "#1a9fd4", lineHeight: 1 }}>404</h1>
+        <p style={{ fontSize: "1.5rem", color: "#aaa", marginTop: "1rem" }}>Page not found</p>
+        <a href="/new/private" style={{
+          display: "inline-block",
+          marginTop: "2rem",
+          padding: "0.75rem 2rem",
+          background: "#1a9fd4",
+          color: "#fff",
+          textDecoration: "none",
+          borderRadius: "8px",
+          fontSize: "1rem",
+        }}>Go to booking</a>
+      </div>
+    </div>
+  );
+}
 
 import { CurrencyProvider } from "./CurrencyContext.jsx";
 import { ToursProvider } from "./ToursContext.jsx";
@@ -77,6 +108,10 @@ export default function App() {
       return <PolicyPage policyKey={policyKeyFromPath} />;
     }
 
+    if (path === "/") {
+      return <Home />;
+    }
+
     if (path === "/private") {
       return <Private />;
     }
@@ -122,7 +157,7 @@ export default function App() {
       return <BlogPostPage slug={blogPostMatch[1]} />;
     }
 
-    return null;
+    return <NotFound />;
   })();
 
   return (
