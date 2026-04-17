@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, getUtmParams, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
 import PhoneInput from "./components/common/PhoneInput";
 import {
   ArrowLeft,
@@ -183,6 +183,7 @@ export default function Checkout() {
       pickupAddress: null,
       dropoffAddress: null,
       ga_client_id: getGaClientId(),
+      utm: getUtmParams(),
       leadId: null,
     };
 

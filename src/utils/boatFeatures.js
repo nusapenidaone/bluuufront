@@ -22,7 +22,7 @@ export const getBoatFeatures = (boatFeatures) => {
     },
     {
       label: bfOn(bf.sound) ? "In-built Sound System " : "JBL Speaker",
-      present: bfOn(bf.sound),
+      present: true,
       Icon: Music,
     },
     {

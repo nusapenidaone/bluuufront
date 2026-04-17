@@ -1,5 +1,5 @@
 import React from "react";
-import { PhoneInput as IntlPhoneInput } from "react-international-phone";
+import { PhoneInput } from "react-international-phone";
 import "react-international-phone/style.css";
 
 const PHONE_STYLE = `
@@ -8,51 +8,39 @@ const PHONE_STYLE = `
   display: flex;
 }
 .react-international-phone-input-container .react-international-phone-input {
-  height: 2.625rem;
+  height: 2.75rem;
   width: 100%;
-  border-radius: 0 0.5rem 0.5rem 0;
-  border: 1px solid #e5e5e5;
+  border-radius: 0 0.75rem 0.75rem 0;
+  border: 1px solid #e5e7eb;
   border-left: none;
-  background: #fafafa;
+  background: #ffffff;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  color: #1a1a2e;
+  color: #111827;
   padding: 0.625rem 0.75rem;
   outline: none;
   box-shadow: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: all 0.2s;
 }
 .react-international-phone-input-container .react-international-phone-input:focus {
-  border-color: var(--color-primary-600, #2563eb);
-  box-shadow: 0 0 0 1px var(--color-primary-600, #2563eb);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
 }
+
 .react-international-phone-input-container .react-international-phone-country-selector-button {
-  height: 2.625rem;
-  border-radius: 0.5rem 0 0 0.5rem;
-  border: 1px solid #e5e5e5;
-  border-right: 1px solid #e5e5e5;
-  background: #fafafa;
+  height: 2.75rem;
+  border-radius: 0.75rem 0 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
   padding: 0 0.5rem 0 0.75rem;
-  transition: background 0.15s;
-}
-.react-international-phone-input-container .react-international-phone-country-selector-button:hover {
-  background: #f0f0f0;
-}
-.react-international-phone-input-container .react-international-phone-country-selector-button--active {
-  border-color: var(--color-primary-600, #2563eb);
-  box-shadow: 0 0 0 1px var(--color-primary-600, #2563eb);
-}
-.react-international-phone-input-container .react-international-phone-country-selector-dropdown {
-  border-radius: 0.5rem;
-  border: 1px solid #e5e5e5;
-  box-shadow: 0 4px 24px rgba(0,0,0,.08);
-  z-index: 50;
+  transition: all 0.2s;
 }
 `;
 
 let styleInjected = false;
 
-export default function PhoneInput({ value, onChange }) {
+export default function PhoneInputComponent({ value, onChange }) {
   if (!styleInjected && typeof document !== "undefined") {
     const style = document.createElement("style");
     style.textContent = PHONE_STYLE;
@@ -61,12 +49,12 @@ export default function PhoneInput({ value, onChange }) {
   }
 
   return (
-    <IntlPhoneInput
-      value={value}
-      type="tel"
+    <PhoneInput
       name="phone"
+      type="tel"
+      defaultCountry="id"
+      value={value}
       onChange={onChange}
-      disableDialCodePrefill
     />
   );
 }

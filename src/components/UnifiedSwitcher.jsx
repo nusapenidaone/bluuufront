@@ -73,9 +73,11 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
             }
             document.body.style.top = "0";
         };
-        const interval = setInterval(hideBanner, 500);
+        hideBanner();
+        const observer = new MutationObserver(hideBanner);
+        observer.observe(document.body, { childList: true, subtree: false });
         return () => {
-            clearInterval(interval);
+            observer.disconnect();
             window.removeEventListener("open-settings", handleOpenSettings);
         };
     }, []);

@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useSEO } from "./hooks/useSEO";
 import { ChevronLeft, CircleHelp, Mail, MessageCircle, Phone, Plus } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import { useTours } from "./ToursContext";
@@ -37,18 +36,18 @@ function FaqItem({ question, answer }) {
           <Plus className="h-3.5 w-3.5" />
         </span>
       </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="px-6 pb-5 pr-12 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: answer }} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: open ? "1fr" : "0fr",
+          opacity: open ? 1 : 0,
+          transition: "grid-template-rows 0.22s ease-out, opacity 0.22s ease-out",
+        }}
+      >
+        <div style={{ overflow: "hidden" }}>
+          <div className="px-6 pb-5 pr-12 text-sm leading-relaxed text-secondary-600" dangerouslySetInnerHTML={{ __html: answer }} />
+        </div>
+      </div>
     </div>
   );
 }
@@ -72,11 +71,11 @@ export default function FaqPage() {
 
       <main className="container flex-1 py-8 sm:py-12">
         <a
-          href="/new/private"
+          href="/"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-500 transition hover:text-primary-600"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to private tour
+          Back to home
         </a>
 
         <div className="max-w-3xl">

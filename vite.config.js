@@ -56,13 +56,12 @@ export default defineConfig(({ command }) => ({
     // Don't preload heavy lazy-only chunks in the initial HTML
     modulePreload: {
       resolveDependencies: (_filename, deps) =>
-        deps.filter(d => !d.includes('vendor-motion') && !d.includes('vendor-datepicker') && !d.includes('fancybox')),
+        deps.filter(d => !d.includes('vendor-datepicker') && !d.includes('fancybox')),
     },
     rollupOptions: {
       output: {
         manualChunks: {
           'vendor-react': ['react', 'react-dom'],
-          'vendor-motion': ['framer-motion'],
           'vendor-datepicker': ['react-datepicker'],
           'vendor-icons': ['lucide-react'],
           'vendor-phone': ['react-international-phone'],

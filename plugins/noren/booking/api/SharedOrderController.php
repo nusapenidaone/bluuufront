@@ -105,10 +105,9 @@ class SharedOrderController extends Controller
                 $order->payment_status_id = 5;   // not paid
             }
 
-            // ── UTM from session ──────────────────────────────────────────
-            if (Session::has('utm')) {
-                $order->utm = Session::get('utm');
-                Session::forget('utm');
+            // ── UTM from request ──────────────────────────────────────────
+            if (!empty($data['utm']) && is_array($data['utm'])) {
+                $order->utm = $data['utm'];
             }
 
             // ── Analytics ─────────────────────────────────────────────────

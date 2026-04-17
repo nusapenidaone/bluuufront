@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Plus, Phone, Mail, MessageCircle } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import { PremiumSection as Section } from "../ui/Section";
 import { cn } from "../../../lib/utils";
 import { useTours } from "../../../ToursContext";
@@ -25,21 +24,21 @@ function FAQItem({ q, a }) {
                     <Plus className="h-3.5 w-3.5" />
                 </span>
             </button>
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                    >
-                        <div
-                            className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
-                            dangerouslySetInnerHTML={{ __html: a }}
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateRows: isOpen ? "1fr" : "0fr",
+                    opacity: isOpen ? 1 : 0,
+                    transition: "grid-template-rows 0.22s ease-out, opacity 0.22s ease-out",
+                }}
+            >
+                <div style={{ overflow: "hidden" }}>
+                    <div
+                        className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
+                        dangerouslySetInnerHTML={{ __html: a }}
+                    />
+                </div>
+            </div>
         </div>
     );
 }

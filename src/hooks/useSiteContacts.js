@@ -22,14 +22,25 @@ function buildWaEntry({ number, message }) {
   return { number: `+${number}`, link };
 }
 
-function getUtmWhatsapp() {
+function getUtmSource() {
   try {
-    const params = new URLSearchParams(window.location.search);
-    const source = (params.get("utm_source") || "").toLowerCase().trim();
-    const entry = UTM_WHATSAPP_MAP[source] || WA_DEFAULT;
-    return buildWaEntry(entry);
+    // URL первичен (начальная загрузка с меткой)
+    const fromUrl = new URLSearchParams(window.location.search).get("utm_source");
+    if (fromUrl) return fromUrl.toLowerCase().trim();
+    // Fallback: sessionStorage (после внутренней навигации без UTM в URL)
+    const raw = sessionStorage.getItem("bluuu_utm");
+    if (raw) {
+      const saved = JSON.parse(raw);
+      if (saved?.utm_source) return saved.utm_source.toLowerCase().trim();
+    }
   } catch (_) {}
-  return buildWaEntry(WA_DEFAULT);
+  return "";
+}
+
+function getUtmWhatsapp() {
+  const source = getUtmSource();
+  const entry = UTM_WHATSAPP_MAP[source] || WA_DEFAULT;
+  return buildWaEntry(entry);
 }
 
 const DEFAULT_CONTACTS = {

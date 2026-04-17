@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import DatePicker from "react-datepicker";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
@@ -198,7 +198,7 @@ const DATEPICKER_STYLES = `
           .premium-datepicker-wrapper .react-datepicker {
             flex-direction: column;
             width: 100% !important;
-            max-width: 300px;
+            max-width: 340px;
           }
 
           .premium-datepicker-wrapper .react-datepicker__month-container {
@@ -216,29 +216,29 @@ const DATEPICKER_STYLES = `
           }
 
           .premium-datepicker-wrapper .react-datepicker__day-name {
-            width: 32px;
-            font-size: 0.625rem;
+            width: 40px;
+            font-size: 0.6875rem;
           }
 
           .premium-datepicker-wrapper .react-datepicker__day {
-            width: 32px;
-            height: 32px;
-            line-height: 32px;
-            font-size: 0.75rem;
-            margin: 1px;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            font-size: 0.875rem;
+            margin: 2px;
           }
 
           .premium-datepicker-wrapper.has-custom-days .react-datepicker__day {
-            height: 42px;
+            height: 48px;
             line-height: normal;
           }
 
           .premium-datepicker-wrapper .day-number {
-            font-size: 0.75rem;
+            font-size: 0.875rem;
           }
 
           .premium-datepicker-wrapper .day-sub {
-            font-size: 0.5rem;
+            font-size: 0.5625rem;
           }
         }
 
@@ -255,6 +255,10 @@ const DATEPICKER_STYLES = `
  * Premium Custom Date Picker using react-datepicker
  * Dropdown style with luxury Bluuu aesthetic.
  */
+const ReadOnlyInput = forwardRef((props, ref) => (
+  <input {...props} ref={ref} readOnly />
+));
+
 export default function CustomDatePicker({
   mode = "single", // "single" | "range"
   selected, // Date for single, { from, to } for range
@@ -347,6 +351,7 @@ export default function CustomDatePicker({
         placeholderText={isRange ? "Select date range..." : "Select a date..."}
         autoComplete="new-password"
         onKeyDown={(e) => e.preventDefault()}
+        customInput={isMobile ? <ReadOnlyInput /> : undefined}
         showPopperArrow={false}
         popperPlacement="bottom-start"
         inline={inline}

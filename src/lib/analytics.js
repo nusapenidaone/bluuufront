@@ -9,6 +9,36 @@ function readCookie(name) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_referrer"];
+const UTM_STORAGE_KEY = "bluuu_utm";
+
+export function captureUtm() {
+  const params = new URLSearchParams(window.location.search);
+  const found = {};
+  UTM_KEYS.forEach((k) => {
+    const v = params.get(k);
+    if (v) found[k] = v;
+  });
+  if (Object.keys(found).length > 0) {
+    sessionStorage.setItem(UTM_STORAGE_KEY, JSON.stringify(found));
+  }
+}
+
+export function getUtmParams() {
+  try {
+    const raw = sessionStorage.getItem(UTM_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function getUtmQueryString() {
+  const utm = getUtmParams();
+  if (!utm || Object.keys(utm).length === 0) return "";
+  return new URLSearchParams(utm).toString();
+}
+
 export function getGaClientId() {
   const rawValue = readCookie("_ga");
   if (!rawValue) return null;

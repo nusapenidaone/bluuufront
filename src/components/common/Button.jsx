@@ -1,6 +1,3 @@
-import React from "react";
-import { motion } from "framer-motion";
-
 const Button = ({
     children,
     variant = "primary",
@@ -29,11 +26,7 @@ const Button = ({
         icon: "p-2 rounded-full"
     };
 
-    const content = (
-        <>
-            {children}
-        </>
-    );
+    const content = <>{children}</>;
 
     if (href) {
         return (
@@ -48,17 +41,15 @@ const Button = ({
     }
 
     return (
-        <motion.button
+        <button
             type={type}
-            whileHover={{}}
-            whileTap={{ scale: 0.98 }}
             onClick={onClick}
             disabled={disabled}
             className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
             {...props}
         >
             {content}
-        </motion.button>
+        </button>
     );
 };
 

@@ -1,6 +1,7 @@
 <?php
 
 use Noren\Booking\Api\FullController;
+use Noren\Booking\Api\MarketingController;
 use Noren\Booking\Api\PrivateOrderController;
 use Noren\Booking\Api\SharedOrderController;
 // Tours
@@ -12,16 +13,22 @@ Route::get('api/new/tour/{slug}',   [FullController::class, 'getTourDetail']);
 Route::get('api/new/availability/private/{id}', [FullController::class, 'getPrivateAvailability']);
 Route::get('api/new/availability/shared/{id}',  [FullController::class, 'getSharedAvailability']);
 
+// Marketing leads
+Route::post('api/new/marketing/lead', [MarketingController::class, 'lead']);
+
 // Orders
-// TODO: restore ->middleware('web') before production (re-enables CSRF)
 Route::options('api/new/order/{any}', function () {
     return response('', 200)
         ->header('Access-Control-Allow-Origin', '*')
         ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         ->header('Access-Control-Allow-Headers', '*');
 })->where('any', '.*');
-Route::post('api/new/order/private', [PrivateOrderController::class, 'createOrder']);
-Route::post('api/new/order/shared',  [SharedOrderController::class, 'createOrder']);
+Route::middleware([
+    \Illuminate\Session\Middleware\StartSession::class,
+])->group(function () {
+    Route::post('api/new/order/private', [PrivateOrderController::class, 'createOrder']);
+    Route::post('api/new/order/shared',  [SharedOrderController::class, 'createOrder']);
+});
 
 // Routes
 Route::get('api/new/routes/private', [FullController::class, 'getPrivateRoutes']);
