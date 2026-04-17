@@ -3354,46 +3354,37 @@ function StepTwo({
               </div>
               <div className="mt-5 flex-1 overflow-y-auto">
                 {hasRange ? (
-                  <div className="grid grid-cols-5 gap-2 pr-1">
+                  <div className="flex flex-col gap-2 pr-1">
                     {rangeDates.map((date) => {
                       const isAvailable = availableDates.includes(date);
                       const isPicked = draftFlexDate === date;
                       const parsed = new Date(`${date}T00:00:00`);
-                      const monthLabel = parsed.toLocaleString("en-US", { month: "short" });
-                      const dayLabel = Number.isNaN(parsed.getTime()) ? "" : String(parsed.getDate());
+                      const weekdayLabel = Number.isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString("en-US", { weekday: "long" });
+                      const dayMonthLabel = Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString("en-US", { month: "long", day: "numeric" });
+                      const priceForDate = typeof calculateBoatPrice === 'function' && privateTours
+                        ? calculateBoatPrice(boat.tourId, date, groupSize, privateTours)
+                        : null;
+                      const priceDisplay = boat.id === "angels" ? formatIDR(33000000) : formatIDR(priceForDate ?? boat.priceValue);
                       return (
                         <button
                           key={date}
                           type="button"
-                          onClick={() => {
-                            if (!isAvailable) return;
-                            setDraftFlexDate(date);
-                          }}
+                          onClick={() => { if (!isAvailable) return; setDraftFlexDate(date); }}
                           className={cn(
-                            "flex min-h-58 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all duration-200",
+                            "flex items-center justify-between rounded-2xl border px-4 py-4 text-left transition-all duration-200",
                             isPicked
-                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-102"
+                              ? "border-primary-500 bg-primary-50 shadow-sm ring-1 ring-primary-200"
                               : isAvailable
-                                ? "border-neutral-200 bg-white text-secondary-600 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
-                                : "border-neutral-200 bg-neutral-50 text-secondary-500 opacity-40 cursor-not-allowed"
+                                ? "border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm"
+                                : "border-neutral-100 bg-neutral-50 opacity-35 cursor-not-allowed"
                           )}
                           disabled={!isAvailable}
                         >
-                          <span
-                            className={cn(
-                              "text-xs leading-tight font-semibold uppercase tracking-wide",
-                              isPicked ? "text-primary-600" : isAvailable ? "text-secondary-400" : "text-secondary-300"
-                            )}
-                          >
-                            {monthLabel}
+                          <span className={cn("text-sm font-bold leading-snug", isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400")}>
+                            {weekdayLabel}, {dayMonthLabel}
                           </span>
-                          <span
-                            className={cn(
-                              "mt-0.5 text-xl font-extrabold leading-none",
-                              isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400"
-                            )}
-                          >
-                            {dayLabel}
+                          <span className={cn("shrink-0 text-sm font-bold tabular-nums ml-3", isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400")}>
+                            {priceDisplay}
                           </span>
                         </button>
                       );
