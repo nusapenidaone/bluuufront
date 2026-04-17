@@ -3206,66 +3206,57 @@ function StepTwo({
               </div>
               <div className="mt-5 flex-1 overflow-y-auto">
                 {hasRange ? (
-                  <div className="flex flex-col gap-2 pr-1">
+                  <div className="grid grid-cols-5 gap-2 pr-1">
                     {rangeDates.map((date) => {
                       const isAvailable = availableDates.includes(date);
                       const isPicked = draftFlexDate === date;
                       const parsed = new Date(`${date}T00:00:00`);
-                      const weekdayLabel = Number.isNaN(parsed.getTime()) ? "" : parsed.toLocaleDateString("en-US", { weekday: "long" });
-                      const dayMonthLabel = Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString("en-US", { month: "long", day: "numeric" });
-                      const seats = dateSeatsMap[date];
-                      const seatsNum = seats ?? null;
-                      const seatsText = seatsNum !== null
-                        ? (seatsNum > 0 ? (seatsNum > 10 ? "10+ spots" : `${seatsNum} spots`) : "Sold out")
-                        : null;
-                      const seatsIsLow = seatsNum !== null && seatsNum > 0 && seatsNum <= 3;
-                      const timeRange = (boat.routeStart && boat.routeEnd)
-                        ? `${boat.routeStart}–${boat.routeEnd}`
-                        : null;
-                      const priceForDate = typeof calculateBoatPrice === 'function' && privateTours
-                        ? calculateBoatPrice(boat.tourId, date, groupSize, privateTours)
-                        : null;
-                      const priceDisplay = formatIDR(priceForDate ?? boat.priceValue);
+                      const monthLabel = parsed.toLocaleString("en-US", { month: "short" });
+                      const dayLabel = Number.isNaN(parsed.getTime()) ? "" : String(parsed.getDate());
                       return (
                         <button
                           key={date}
                           type="button"
-                          onClick={() => { if (!isAvailable) return; setDraftFlexDate(date); }}
+                          onClick={() => {
+                            if (!isAvailable) return;
+                            setDraftFlexDate(date);
+                          }}
                           className={cn(
-                            "flex items-center justify-between rounded-2xl border px-4 py-4 text-left transition-all duration-200",
+                            "flex min-h-58 flex-col items-center justify-center rounded-xl border px-2 py-1 transition-all duration-200",
                             isPicked
-                              ? "border-primary-500 bg-primary-50 shadow-sm ring-1 ring-primary-200"
+                              ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-102"
                               : isAvailable
-                                ? "border-neutral-200 bg-white hover:border-neutral-300 hover:shadow-sm"
-                                : "border-neutral-100 bg-neutral-50 opacity-35 cursor-not-allowed"
+                                ? "border-neutral-200 bg-white text-secondary-600 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
+                                : "border-neutral-200 bg-neutral-50 text-secondary-500 opacity-40 cursor-not-allowed"
                           )}
                           disabled={!isAvailable}
                         >
-                          <div className="flex flex-col gap-0.5 min-w-0">
-                            <span className={cn("text-sm font-bold leading-snug", isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400")}>
-                              {weekdayLabel}, {dayMonthLabel}
-                            </span>
-                            {timeRange && (
-                              <span className={cn("text-xs", isPicked ? "text-primary-500" : "text-secondary-400")}>
-                                {timeRange}
-                              </span>
+                          <span
+                            className={cn(
+                              "text-xs leading-tight font-semibold uppercase tracking-wide",
+                              isPicked ? "text-primary-600" : isAvailable ? "text-secondary-400" : "text-secondary-300"
                             )}
-                          </div>
-                          <div className="flex flex-col items-end gap-0.5 shrink-0 ml-3">
-                            <span className={cn("text-sm font-bold tabular-nums", isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400")}>
-                              {priceDisplay}
-                            </span>
-                            {seatsText && (
-                              <span className={cn(
-                                "text-xs font-medium",
-                                seatsNum === 0 ? "text-red-500" :
-                                seatsIsLow ? "text-amber-600" :
-                                isPicked ? "text-primary-500" : "text-secondary-400"
-                              )}>
-                                {seatsText}
-                              </span>
+                          >
+                            {monthLabel}
+                          </span>
+                          <span
+                            className={cn(
+                              "mt-0.5 text-sm font-bold leading-none",
+                              isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400"
                             )}
-                          </div>
+                          >
+                            {dayLabel}
+                          </span>
+                          {dateSeatsMap[date] !== undefined && (
+                            <span
+                              className={cn(
+                                "mt-0.5 text-2xs font-bold leading-none",
+                                isPicked ? "text-primary-500" : isAvailable ? "text-secondary-400" : "text-secondary-300"
+                              )}
+                            >
+                              {dateSeatsMap[date] > 0 ? (dateSeatsMap[date] > 10 ? ">10" : `${dateSeatsMap[date]} left`) : "full"}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -5639,7 +5630,7 @@ function StepFive({
                                         <>
                                           <span className="day-number">{dayOfMonth}</span>
                                           {seats !== undefined && (
-                                            <span className="day-sub">{seats > 0 ? (seats > 10 ? "10+" : `${seats} left`) : "full"}</span>
+                                            <span className="day-sub">{seats > 0 ? (seats > 10 ? ">10" : `${seats} left`) : "full"}</span>
                                           )}
                                         </>
                                       );
@@ -7623,8 +7614,6 @@ export default function Shared_tour_01() {
         schedule,
         routeId: routeId || (linkedRoute?.id ? Number(linkedRoute.id) : null),
         routeSchedule,
-        routeStart: linkedRoute?.start || null,
-        routeEnd: linkedRoute?.end || null,
         status: tour.status || "ready",
         fleetSize: Number(tour.fleet_size) || 0,
         badgeName: tour.badge_name || null,
