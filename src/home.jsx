@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
-import { AnimatePresence, motion } from "framer-motion";
 import { useCurrency } from "./CurrencyContext";
 import { useTours } from "./ToursContext";
 import { useExtras } from "./contexts/ExtrasContext";
@@ -338,14 +337,14 @@ function GalleryBlock() {
     <section id="gallery" className="py-12 sm:py-16">
       <div className="container">
         {/* Header */}
-        <div className="mb-5 flex items-end justify-between gap-4">
+        {/* <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <div className="text-xs font-black uppercase tracking-widest text-primary-600">From our guests</div>
             <h2 className="mt-1.5 text-2xl font-bold text-secondary-900 sm:text-3xl">
               This is what your day looks like
             </h2>
           </div>
-        </div>
+        </div> */}
 
         {/* Gallery grid */}
         {loading ? (
@@ -603,12 +602,7 @@ function Hero() {
     <section className="relative pt-12 sm:pt-20 min-h-[600px] sm:min-h-[700px]">
       <div className="container">
         <div className="flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col items-center"
-          >
+          <div className="flex flex-col items-center">
             <div style={{ height: 40, overflow: 'hidden' }}><div className="elfsight-app-59bf9aa3-92ce-4654-aa87-9f5050b2af3a" /></div>
             <p className="mt-4 text-xs font-bold uppercase  text-primary-600 sm:text-sm">
               Full day tour · Bali to Nusa Penida · All-inclusive
@@ -635,15 +629,10 @@ function Hero() {
               </a> }
             </div>
            
-          </motion.div>
+          </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative mt-12 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-xl"
-        >
+        <div className="relative mt-12 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-xl">
           <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
@@ -668,7 +657,7 @@ function Hero() {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -903,7 +892,7 @@ function LegacyTourTypeCards() {
               <div className="mt-3 flex items-center gap-3">
                 <span className="text-xs text-secondary-500 whitespace-nowrap">Guests:</span>
                 <input
-                  type="range" min={2} max={16} value={guests}
+                  type="range" min={2} max={14} value={guests}
                   onChange={e => setGuests(+e.target.value)}
                   onClick={e => e.stopPropagation()}
                   className="flex-1 h-1.5 appearance-none rounded-full bg-primary-200 accent-primary-600 cursor-pointer"
@@ -1016,12 +1005,12 @@ function TourTypeCards() {
   const privateTour = TOUR_OPTIONS.find((t) => t.id === "private");
   const sharedTour = TOUR_OPTIONS.find((t) => t.id === "shared");
 
-  const boatPrice = privateTour?.priceValue ?? 0;
-  const sharedPrice = sharedTour?.priceValue ?? 0;
+  const boatPrice = 750; // USD, hardcoded
+  const sharedPrice = 80; // USD, hardcoded
   const perPerson = guests > 0 ? Math.round(boatPrice / guests) : 0;
-  const isCheaper = sharedPrice > 0 && perPerson < sharedPrice;
-  const isSame = !isCheaper && sharedPrice > 0 && perPerson <= sharedPrice * 1.1;
-  const guestProgress = ((guests - 2) / 14) * 100;
+  const isCheaper = perPerson < sharedPrice;
+  const isSame = !isCheaper && perPerson <= sharedPrice * 1.1;
+  const guestProgress = ((guests - 2) / 12) * 100;
   const privateComparisonBadge = isCheaper
     ? {
       label: "Better than shared",
@@ -1075,11 +1064,7 @@ function TourTypeCards() {
       <div className="mb-2 rounded-xl border border-neutral-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="text-xs uppercase text-secondary-400">from</span>
-          {loading ? (
-            <div className="h-9 w-32 animate-pulse rounded-xl bg-neutral-100" />
-          ) : (
-            <span className="text-2xl font-bold tracking-tight text-primary-600">{formatIDR(sharedPrice)}</span>
-          )}
+          <span className="text-2xl font-bold tracking-tight text-primary-600">${sharedPrice}</span>
           <span className="text-sm text-secondary-500">/ person</span>
           <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-2xs font-semibold uppercase text-emerald-700">
             All inclusive
@@ -1142,22 +1127,18 @@ function TourTypeCards() {
       <div className="mb-2 rounded-xl border border-neutral-200 bg-white p-4">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
           <span className="text-xs uppercase text-secondary-400">from</span>
-          {loading ? (
-            <div className="h-9 w-32 animate-pulse rounded-xl bg-neutral-100" />
-          ) : (
-            <span className="text-2xl font-bold tracking-tight text-primary-600">{formatIDR(boatPrice)}</span>
-          )}
+          <span className="text-2xl font-bold tracking-tight text-primary-600">${boatPrice}</span>
           <span className="text-sm text-secondary-500">/ entire boat</span>
         </div>
 
-        {!loading && boatPrice > 0 && (
+        {boatPrice > 0 && (
           <>
             <div className="mt-2 flex items-center gap-2">
               <span className="text-xs text-secondary-400 whitespace-nowrap">Your group:</span>
               <input
                 type="range"
                 min={2}
-                max={16}
+                max={14}
                 value={guests}
                 onChange={(event) => setGuests(Number(event.target.value))}
                 className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full accent-primary-600"
@@ -1169,7 +1150,7 @@ function TourTypeCards() {
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
               <span className="text-xs text-secondary-400">=</span>
-              <span key={perPerson} className="num-pop text-2xl font-bold text-primary-600">{formatIDR(perPerson)}</span>
+              <span key={perPerson} className="num-pop text-2xl font-bold text-primary-600">${perPerson}</span>
               <span className="text-sm text-secondary-500">/ person</span>
               {privateComparisonBadge && (
                 <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold uppercase", privateComparisonBadge.className)}>
@@ -1221,11 +1202,9 @@ function TourTypeCards() {
                 className="relative flex flex-col items-center justify-center rounded-xl px-4 py-4 text-center z-10"
               >
                 {activeTab === "shared" && (
-                  <motion.div
-                    layoutId="tourTabBg"
+                  <div
                     className="absolute inset-0 rounded-xl"
                     style={{ backgroundColor: "#1B3132", boxShadow: "0 8px 20px rgba(27,49,50,0.30)" }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <span className={cn("relative block text-sm font-semibold leading-tight", activeTab === "shared" ? "text-white" : "text-secondary-500")}>Shared tour</span>
@@ -1239,11 +1218,9 @@ function TourTypeCards() {
                 className="relative flex flex-col items-center justify-center rounded-xl px-4 py-4 text-center z-10"
               >
                 {activeTab === "private" && (
-                  <motion.div
-                    layoutId="tourTabBg"
+                  <div
                     className="absolute inset-0 rounded-xl"
                     style={{ backgroundColor: "#0073E0", boxShadow: "0 8px 20px rgba(0,115,224,0.22)" }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <span className={cn("relative block text-sm font-semibold leading-tight", activeTab === "private" ? "text-white" : "text-secondary-500")}>Private charter</span>
@@ -1359,7 +1336,7 @@ function TourTypeCards() {
                     <div className="mt-2.5 flex items-center gap-2">
                       <span className="text-xs text-secondary-500 whitespace-nowrap">How many in your group?</span>
                       <input
-                        type="range" min={2} max={16} value={guests}
+                        type="range" min={2} max={14} value={guests}
                         onChange={(e) => setGuests(Number(e.target.value))}
                         className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full accent-primary-600"
                         style={{ background: `linear-gradient(90deg, var(--primary-600) 0%, var(--primary-600) ${guestProgress}%, var(--primary-200) ${guestProgress}%, var(--primary-200) 100%)` }}
@@ -1368,7 +1345,7 @@ function TourTypeCards() {
                     </div>
                     <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
                       <span className="text-sm font-medium text-secondary-400">=</span>
-                      <span key={perPerson} className="num-pop text-2xl font-bold text-primary-600">{formatIDR(perPerson)}</span>
+                      <span key={perPerson} className="num-pop text-2xl font-bold text-primary-600">${perPerson}</span>
                       <span className="text-sm text-secondary-500">/ person</span>
                       {privateComparisonBadge && (
                         <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold uppercase", privateComparisonBadge.className)}>
@@ -1397,17 +1374,9 @@ function TourTypeCards() {
 
         </div>
         <div className="md:hidden">
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
-            >
-              {activeTab === "shared" ? sharedCard : privateCard}
-            </motion.div>
-          </AnimatePresence>
+          <div key={activeTab}>
+            {activeTab === "shared" ? sharedCard : privateCard}
+          </div>
         </div>
 
       </div>
@@ -2089,21 +2058,21 @@ function FAQItem({ q, a }) {
           <Plus className="h-3.5 w-3.5" />
         </span>
       </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div
-              className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
-              dangerouslySetInnerHTML={{ __html: a }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: isOpen ? "1fr" : "0fr",
+          opacity: isOpen ? 1 : 0,
+          transition: "grid-template-rows 0.22s ease-out, opacity 0.22s ease-out",
+        }}
+      >
+        <div style={{ overflow: "hidden" }}>
+          <div
+            className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
+            dangerouslySetInnerHTML={{ __html: a }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -2699,11 +2668,9 @@ function SharedTiersBlock() {
                 className="relative flex flex-col items-center justify-center rounded-xl px-2 py-4 text-center z-10"
               >
                 {activeIdx === i && (
-                  <motion.div
-                    layoutId="sharedTabBg"
+                  <div
                     className="absolute inset-0 rounded-xl"
                     style={{ backgroundColor: tabColor, boxShadow: tabShadow }}
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
                   />
                 )}
                 <span className={cn("relative block text-sm font-semibold leading-tight", activeIdx === i ? "text-white" : "text-secondary-500")}>{t.label}</span>
@@ -2725,17 +2692,9 @@ function SharedTiersBlock() {
         ))}
       </div>
       <div className="sm:hidden overflow-hidden">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={activeIdx}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-          >
-            <TierCard tier={tiersWithData[activeIdx]} idx={activeIdx} />
-          </motion.div>
-        </AnimatePresence>
+        <div key={activeIdx}>
+          <TierCard tier={tiersWithData[activeIdx]} idx={activeIdx} />
+        </div>
       </div>
 
       {/* Compare toggle (mobile) */}
@@ -2976,9 +2935,6 @@ export default function MainTest01() {
       />
       <Hero />
       <TourTypeCards />
-      <SharedTiersBlock />
-      <RouteBlocks />
-      <BoatsHomeBlock />
       <GalleryBlock />
       <Included />
       <DayPlan />

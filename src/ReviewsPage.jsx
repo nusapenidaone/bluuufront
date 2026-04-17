@@ -19,11 +19,11 @@ export default function ReviewsPage() {
 
       <main className="container flex-1 py-8 sm:py-12">
         <a
-          href="/new/private"
+          href="/"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-500 transition hover:text-primary-600"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to private tour
+          Back to home
         </a>
 
         <div className="max-w-3xl">

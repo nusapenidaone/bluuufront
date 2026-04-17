@@ -13,13 +13,11 @@
     "@fancyapps/ui": "^6.1.13",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
-    "framer-motion": "^12.24.12",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.0",
-    "react-international-phone": "^4.8.0",
-    "react-markdown": "^10.1.0"
+    "react-international-phone": "^4.8.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

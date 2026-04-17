@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, getUtmParams, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
+import PhoneInput from "./components/common/PhoneInput";
 import {
   ArrowLeft,
   Calendar,
@@ -100,15 +101,27 @@ export default function Checkout() {
     trackPixelInitiateCheckout({ value: analyticsTotal, currency: analyticsCurrency });
   }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
 
-  // ── Form state ───────────────────────────────────────────────────────────
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
-  const [requests, setRequests] = useState("");
+  // ── Form state (restored from sessionStorage on back-navigation) ─────────
+  const STORAGE_KEY = "bluuu_checkout_form";
+  const saved = useMemo(() => {
+    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || "null"); } catch { return null; }
+  }, []);
+
+  const [name, setName] = useState(saved?.name ?? "");
+  const [email, setEmail] = useState(saved?.email ?? "");
+  const [whatsapp, setWhatsapp] = useState(saved?.whatsapp ?? "");
+  const [requests, setRequests] = useState(saved?.requests ?? "");
 
   // ── Payment state ────────────────────────────────────────────────────────
-  const [method, setMethod] = useState(1); // 1 = Xendit, 2 = PayPal
-  const [depositPct, setDepositPct] = useState(100);
+  const [method, setMethod] = useState(saved?.method ?? 1); // 1 = Xendit, 2 = PayPal
+  const [depositPct, setDepositPct] = useState(saved?.depositPct ?? 100);
+
+  // Persist form to sessionStorage on every change
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ name, email, whatsapp, requests, method, depositPct }));
+    } catch { /* quota exceeded or private mode */ }
+  }, [name, email, whatsapp, requests, method, depositPct]);
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -170,6 +183,7 @@ export default function Checkout() {
       pickupAddress: null,
       dropoffAddress: null,
       ga_client_id: getGaClientId(),
+      utm: getUtmParams(),
       leadId: null,
     };
 
@@ -196,6 +210,7 @@ export default function Checkout() {
       }
 
       const redirectUrl = await res.json();
+      try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
       window.location.href = redirectUrl;
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -273,14 +288,7 @@ export default function Checkout() {
                     <span className="text-xs font-semibold text-secondary-600">
                       WhatsApp <span className="text-secondary-400">(optional)</span>
                     </span>
-                    <input
-                      type="tel"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
-                      placeholder="+62 812 3456 7890"
-                      className={INPUT_BASE}
-                      required
-                    />
+                    <PhoneInput value={whatsapp} onChange={setWhatsapp} />
                   </label>
 
                   <label className="flex flex-col gap-1.5">

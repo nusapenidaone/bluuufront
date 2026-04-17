@@ -1,85 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, forwardRef } from "react";
 import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-/**
- * Premium Custom Date Picker using react-datepicker
- * Dropdown style with luxury Bluuu aesthetic.
- */
-export default function CustomDatePicker({
-  mode = "single", // "single" | "range"
-  selected, // Date for single, { from, to } for range
-  onSelect,
-  minDate = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })(),
-  filterDate, // optional: (date: Date) => boolean — return false to disable
-  onMonthChange, // optional: (date: Date) => void — called when month is navigated
-  renderDayContents, // optional: (dayOfMonth: number, date: Date) => ReactNode
-  className,
-  inline = false, // when true, renders calendar directly (no input field)
-}) {
-  const isRange = mode === "range";
-
-  // Track if mobile view
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Track if calendar is open (only used in dropdown mode)
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Handle change for both modes
-  const handleChange = (dates) => {
-    if (isRange) {
-      const [from, to] = dates;
-      onSelect({ from, to });
-      // Close calendar after selecting end date (dropdown mode only)
-      if (to && !inline) {
-        setTimeout(() => setIsOpen(false), 100);
-      }
-    } else {
-      onSelect(dates);
-      // Close calendar immediately for single date (dropdown mode only)
-      if (!inline) {
-        setTimeout(() => setIsOpen(false), 100);
-      }
-    }
-  };
-
-  // Parse selected dates - handle both Date objects and ISO strings
-  let selectedDate = null;
-  let endDate = null;
-
-  if (isRange) {
-    // Range mode: selected is { from: Date|string, to: Date|string }
-    if (selected?.from) {
-      selectedDate = selected.from instanceof Date ? selected.from : new Date(selected.from);
-    }
-    if (selected?.to) {
-      endDate = selected.to instanceof Date ? selected.to : new Date(selected.to);
-    }
-  } else {
-    // Single mode: selected is Date|string
-    if (selected) {
-      selectedDate = selected instanceof Date ? selected : new Date(selected);
-    }
-  }
-
-  // Determine how many months to show: 1 on mobile, 2 on desktop (for range only)
-  const monthsToShow = isMobile ? 1 : (isRange ? 2 : 1);
-
-  return (
-    <div className={`premium-datepicker-wrapper${renderDayContents ? " has-custom-days" : ""}`}>
-      <style>{`
+const DATEPICKER_STYLES = `
         .premium-datepicker-wrapper {
           position: relative;
           width: 100%;
@@ -274,9 +198,9 @@ export default function CustomDatePicker({
           .premium-datepicker-wrapper .react-datepicker {
             flex-direction: column;
             width: 100% !important;
-            max-width: 300px;
+            max-width: 340px;
           }
-          
+
           .premium-datepicker-wrapper .react-datepicker__month-container {
             width: 100%;
             padding: 0 4px;
@@ -292,29 +216,29 @@ export default function CustomDatePicker({
           }
 
           .premium-datepicker-wrapper .react-datepicker__day-name {
-            width: 32px;
-            font-size: 0.625rem;
+            width: 40px;
+            font-size: 0.6875rem;
           }
 
           .premium-datepicker-wrapper .react-datepicker__day {
-            width: 32px;
-            height: 32px;
-            line-height: 32px;
-            font-size: 0.75rem;
-            margin: 1px;
+            width: 40px;
+            height: 40px;
+            line-height: 40px;
+            font-size: 0.875rem;
+            margin: 2px;
           }
 
           .premium-datepicker-wrapper.has-custom-days .react-datepicker__day {
-            height: 42px;
+            height: 48px;
             line-height: normal;
           }
 
           .premium-datepicker-wrapper .day-number {
-            font-size: 0.75rem;
+            font-size: 0.875rem;
           }
 
           .premium-datepicker-wrapper .day-sub {
-            font-size: 0.5rem;
+            font-size: 0.5625rem;
           }
         }
 
@@ -325,7 +249,92 @@ export default function CustomDatePicker({
             gap: 1rem;
           }
         }
-      `}</style>
+`;
+
+/**
+ * Premium Custom Date Picker using react-datepicker
+ * Dropdown style with luxury Bluuu aesthetic.
+ */
+const ReadOnlyInput = forwardRef((props, ref) => (
+  <input {...props} ref={ref} readOnly />
+));
+
+export default function CustomDatePicker({
+  mode = "single", // "single" | "range"
+  selected, // Date for single, { from, to } for range
+  onSelect,
+  minDate = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })(),
+  filterDate, // optional: (date: Date) => boolean — return false to disable
+  onMonthChange, // optional: (date: Date) => void — called when month is navigated
+  renderDayContents, // optional: (dayOfMonth: number, date: Date) => ReactNode
+  className,
+  inline = false, // when true, renders calendar directly (no input field)
+}) {
+  const isRange = mode === "range";
+
+  // Track if mobile view
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track if calendar is open (only used in dropdown mode)
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    import("react-datepicker/dist/react-datepicker.css");
+  }, []);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Handle change for both modes
+  const handleChange = (dates) => {
+    if (isRange) {
+      const [from, to] = dates;
+      onSelect({ from, to });
+      // Close calendar after selecting end date (dropdown mode only)
+      if (to && !inline) {
+        setTimeout(() => setIsOpen(false), 100);
+      }
+    } else {
+      onSelect(dates);
+      // Close calendar immediately for single date (dropdown mode only)
+      if (!inline) {
+        setTimeout(() => setIsOpen(false), 100);
+      }
+    }
+  };
+
+  // Parse selected dates - handle both Date objects and ISO strings
+  let selectedDate = null;
+  let endDate = null;
+
+  if (isRange) {
+    // Range mode: selected is { from: Date|string, to: Date|string }
+    if (selected?.from) {
+      selectedDate = selected.from instanceof Date ? selected.from : new Date(selected.from);
+    }
+    if (selected?.to) {
+      endDate = selected.to instanceof Date ? selected.to : new Date(selected.to);
+    }
+  } else {
+    // Single mode: selected is Date|string
+    if (selected) {
+      selectedDate = selected instanceof Date ? selected : new Date(selected);
+    }
+  }
+
+  // Determine how many months to show: 1 on mobile, 2 on desktop (for range only)
+  const monthsToShow = isMobile ? 1 : (isRange ? 2 : 1);
+
+  return (
+    <div className={`premium-datepicker-wrapper${renderDayContents ? " has-custom-days" : ""}`}>
+      <style>{DATEPICKER_STYLES}</style>
       {!inline && <CalendarIcon className="date-icon h-5 w-5 text-secondary-300" />}
       <DatePicker
         selected={selectedDate}
@@ -342,6 +351,7 @@ export default function CustomDatePicker({
         placeholderText={isRange ? "Select date range..." : "Select a date..."}
         autoComplete="new-password"
         onKeyDown={(e) => e.preventDefault()}
+        customInput={isMobile ? <ReadOnlyInput /> : undefined}
         showPopperArrow={false}
         popperPlacement="bottom-start"
         inline={inline}

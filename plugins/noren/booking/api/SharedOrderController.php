@@ -105,10 +105,9 @@ class SharedOrderController extends Controller
                 $order->payment_status_id = 5;   // not paid
             }
 
-            // ── UTM from session ──────────────────────────────────────────
-            if (Session::has('utm')) {
-                $order->utm = Session::get('utm');
-                Session::forget('utm');
+            // ── UTM from request ──────────────────────────────────────────
+            if (!empty($data['utm']) && is_array($data['utm'])) {
+                $order->utm = $data['utm'];
             }
 
             // ── Analytics ─────────────────────────────────────────────────
@@ -137,7 +136,7 @@ class SharedOrderController extends Controller
             $route = $order->route_id ? Route::find($order->route_id) : null;
             $order->program_id = optional($route)->program_id ?? null;
             $order->restaurant_id = optional($route)->restaurant_id ?? ($data['selectedRestaurantId'] ?? null);
-            $order->cars = $data['cars'] ?? ($order->transfer_id ? 1 : 0);
+            $order->cars = $data['cars'] ?? ($order->transfer_id ? (int) ceil($order->members / 5) : 0);
 
             // ── Pricing ───────────────────────────────────────────────────
             $order->boat_price = 0;   // shared tours price per person, not per boat

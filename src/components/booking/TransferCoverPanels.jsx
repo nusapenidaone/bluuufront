@@ -167,10 +167,9 @@ export function TransfersCompact({
 
             {/* Transfer Options */}
             {transfers && transfers.map(transfer => {
-              const isLargeGroup = totalGuests > 5;
-              const unitPrice = (isLargeGroup && transfer.bus_price)
-                ? Number(transfer.bus_price)
-                : Number(transfer.price || 0);
+              const unitPrice = Number(transfer.price || 0);
+              const cars = unitPrice > 0 ? Math.ceil(totalGuests / 5) : 0;
+              const totalTransferPrice = unitPrice * (cars || 1);
               const isSelected = String(selectedTransferId) === String(transfer.id);
               const finalName = transfer.name;
               const transferDescription = getOptionDescription(transfer);
@@ -195,7 +194,7 @@ export function TransfersCompact({
                       <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
                       <div className="mt-1 flex items-center gap-2">
                         <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                          {formatIDR(unitPrice)}
+                          {formatIDR(totalTransferPrice)}
                         </span>
                         <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
                       </div>

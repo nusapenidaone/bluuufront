@@ -14,10 +14,15 @@ function onStart(){
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>tmp-vite</title>
+  <title>Bluuu — Nusa Penida Tours</title>
+  <!-- Preconnect to external origins for faster DNS + TCP -->
+  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+  <link rel="preconnect" href="https://translate.googleapis.com" crossorigin />
+  <link rel="dns-prefetch" href="https://elfsightcdn.com" />
+  <!-- Critical assets -->
+  <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
   <link rel="preload" as="image" href="https://bluuu.tours/storage/app/media/poster.webp" fetchpriority="high" />
   <!-- Google Tag Manager -->
   <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -45,12 +50,12 @@ function onStart(){
       }, 3000);
     });
   </script>
-  <script async src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  <script async src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
-
-
-  <script type="module" crossorigin src="/themes/bluuu/assets/home/index-DyzD0dnp.js"></script>
-  <link rel="stylesheet" crossorigin href="/themes/bluuu/assets/home/index-BbjE78u4.css">
+  <script type="module" crossorigin src="/themes/bluuu/assets/home/index-I7fzSsYR.js"></script>
+  <link rel="modulepreload" crossorigin href="/themes/bluuu/assets/home/vendor-react-Cgg2GOmP.js">
+  <link rel="modulepreload" crossorigin href="/themes/bluuu/assets/home/vendor-icons-B1y60RW3.js">
+  <link rel="stylesheet" crossorigin href="/themes/bluuu/assets/home/index-IwhjzLMX.css">
 </head>
 
 <body>
@@ -58,8 +63,11 @@ function onStart(){
   <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5J8KXLX2"
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
+  <div id="preloader" style="position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <style>#preloader-spin{width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <div id="preloader-spin"></div>
+  </div>
   <div id="root"></div>
 </body>
 
 </html>
-l

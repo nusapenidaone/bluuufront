@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import Modal from "./components/common/Modal";
 import { getBoatFeatures } from "./utils/boatFeatures";
 import {
@@ -21,7 +20,7 @@ import { useExtras } from "./contexts/ExtrasContext";
 import { useRules } from "./contexts/RulesContext";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, trackAddToCart, trackPixelViewContent } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, getUtmParams, getUtmQueryString, trackAddToCart, trackPixelViewContent } from "./lib/analytics";
 import { CoversCompact } from "./components/booking/TransferCoverPanels";
 import InfoDetailModal from "./components/booking/InfoDetailModal";
 import {
@@ -46,10 +45,8 @@ function SkeletonCard() {
     <div className="rounded-xl border border-neutral-100 bg-white overflow-hidden flex flex-col sm:min-h-470">
       {/* Image area */}
       <div className="relative h-250 shrink-0 overflow-hidden bg-neutral-100">
-        <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-          animate={{ x: ["-100%", "100%"] }}
-          transition={{ duration: 1.4, repeat: Infinity, ease: "linear", repeatDelay: 0.3 }}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent anim-skeleton-shimmer"
         />
         {/* Dot indicators */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
@@ -405,6 +402,7 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
           whatsapp: phone,
           requests: null,
           ga_client_id: getGaClientId(),
+          utm: getUtmParams(),
         }),
       });
       if (!res.ok) throw new Error("Request failed");
@@ -549,13 +547,24 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
     const d = new Date();
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }, []);
-  const [date, setDate] = useState(todayISO);
+  const [date, setDate] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    return p.get("date") || todayISO;
+  });
   const pricing = usePricing(date);
   const remainingSeats = selectedYacht?.priceValue ? null : pricing.remainingSeats;
   const maxGuests = Math.min(MAX_GUESTS, remainingSeats ?? MAX_GUESTS);
   const isSoldOut = remainingSeats !== null && remainingSeats <= 0;
-  const [adults, setAdults] = useState(1);
-  const [kids, setKids] = useState(0);
+  const [adults, setAdults] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("adults") || "1", 10);
+    return isNaN(n) || n < 1 ? 1 : n;
+  });
+  const [kids, setKids] = useState(() => {
+    const p = new URLSearchParams(window.location.search);
+    const n = parseInt(p.get("kids") || "0", 10);
+    return isNaN(n) || n < 0 ? 0 : n;
+  });
   const [partnerModalOpen, setPartnerModalOpen] = useState(false);
   useEffect(() => {
     if (remainingSeats === null || maxGuests <= 0) return;
@@ -631,7 +640,14 @@ function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD
         )
       );
     }
-    window.location.href = `/new/checkout?${params.toString()}`;
+    const backParams = new URLSearchParams(window.location.search);
+    backParams.set("date", date);
+    backParams.set("adults", String(adults));
+    backParams.set("kids", String(kids));
+    if (selectedYacht?.tourId) backParams.set("tour", String(selectedYacht.tourId));
+    history.replaceState(null, "", `?${backParams.toString()}`);
+    const utmQs = getUtmQueryString();
+    window.location.href = `/new/checkout?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
   };
   return (
     <Card className={cn("relative overflow-hidden", compact ? "p-4" : "p-5")}>
@@ -1479,16 +1495,15 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                             className={cn("h-4 w-4 text-secondary-600 transition duration-200", extrasExpanded && "rotate-180")}
                           />
                         </button>
-                        <AnimatePresence initial={false}>
-                          {extrasExpanded ? (
-                            <motion.div
-                              key="extras-panel"
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.22, ease: "easeOut" }}
-                              className="overflow-hidden"
-                            >
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateRows: extrasExpanded ? "1fr" : "0fr",
+                            opacity: extrasExpanded ? 1 : 0,
+                            transition: "grid-template-rows 0.22s ease-out, opacity 0.22s ease-out",
+                          }}
+                        >
+                          <div style={{ overflow: "hidden" }}>{extrasExpanded && (<div>
                               <div className="px-4">
                                 <div className="mt-2 text-sm text-secondary-500">
                                   Your tour is complete as-is. Extras can be added now or later via WhatsApp.
@@ -1601,9 +1616,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
                                   </button>
                                 ) : null}
                               </div>
-                            </motion.div>
-                          ) : null}
-                        </AnimatePresence>
+                            </div>)}</div></div>
                       </div>
                     </div>
                     {!extrasExpanded ? (
@@ -2036,12 +2049,7 @@ function Hero() {
     <section className={cn("relative overflow-hidden pt-12 sm:pt-20", SECTION_BACKGROUNDS.white)}>
       <div className="container">
         <div className="flex flex-col items-center text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex flex-col items-center"
-          >
+          <div className="flex flex-col items-center">
             <div style={{ height: 40, overflow: 'hidden' }}><div className="elfsight-app-59bf9aa3-92ce-4654-aa87-9f5050b2af3a" /></div>
             <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-600 sm:text-sm">
               Full day tour · Your boat · Your schedule · Pure comfort
@@ -2067,15 +2075,10 @@ function Hero() {
             <p className="mt-4 text-sm font-medium text-secondary-500">
               From $750 / boat &middot; Free cancellation 24h
             </p>
-          </motion.div>
+          </div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative mt-12 overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-4xl"
-        >
+        <div className="relative mt-12 overflow-hidden rounded-3xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-4xl">
           <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
@@ -2099,7 +2102,7 @@ function Hero() {
               </div>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -2191,8 +2194,6 @@ function HowItWorks() {
                 src="https://bluuu.tours/themes/bluuu/assets/icons/bluu-icon.svg"
                 alt=""
                 className="absolute bottom-4 right-4 h-72pct w-72pct object-contain opacity-50 [filter:brightness(0)_invert(1)]"
-                loading="lazy"
-                decoding="async"
               />
             </div>
             <div className="relative z-10 flex h-full w-full flex-col text-white">
@@ -2743,16 +2744,16 @@ function TourInfoInline() {
             {isOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
           </span>
         </button>
-        <AnimatePresence initial={false}>
-          {isOpen && (
-            <motion.div
-              id="tour-program-inline-panel"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="overflow-hidden"
-            >
+        <div
+          id="tour-program-inline-panel"
+          style={{
+            display: "grid",
+            gridTemplateRows: isOpen ? "1fr" : "0fr",
+            opacity: isOpen ? 1 : 0,
+            transition: "grid-template-rows 0.2s ease-out, opacity 0.2s ease-out",
+          }}
+        >
+          <div style={{ overflow: "hidden" }}>{isOpen && (<div>
               <div className="border-b border-neutral-200 px-5 pt-3 pb-3">
                 <div className="no-scrollbar flex items-center gap-x-5 gap-y-2 overflow-x-auto text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
                   {INFO_DRAWER_TABS.map((tab) => (
@@ -2780,9 +2781,7 @@ function TourInfoInline() {
                   weatherGuaranteeCards={weatherGuaranteeCards}
                 />
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>)}</div></div>
       </div>
       {includedRestaurantPopup && (
         <Modal open={!!includedRestaurantPopup} onClose={() => setIncludedRestaurantPopup(null)} title={includedRestaurantPopup.name || "Restaurant"} subtitle="Included lunch" maxWidth="max-w-xl">
@@ -3330,21 +3329,14 @@ function StepTwo({
             </div>
           );
         })()}
-        <AnimatePresence>
-          {isPickDayMode && (
+        {isPickDayMode && (
             <>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-40 bg-black/40"
+              <div
+                className="fixed inset-0 z-40 bg-black/40 anim-fade-in"
                 onClick={closePickDayMode}
               />
-            <motion.div
-              initial={{ opacity: 0, y: 16, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-2xl sm:inset-0 sm:m-auto sm:h-fit sm:w-[420px] sm:rounded-2xl sm:p-6"
+            <div
+              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col rounded-t-2xl rounded-b-none bg-white p-5 shadow-2xl sm:inset-0 sm:m-auto sm:h-fit sm:w-[420px] sm:rounded-2xl sm:p-6 anim-slide-up"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="space-y-0.5">
@@ -3444,10 +3436,9 @@ function StepTwo({
                   Confirm date
                 </button>
               </div>
-            </motion.div>
+            </div>
           </>
         )}
-      </AnimatePresence>
     </div>
     );
   };
@@ -3896,17 +3887,23 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
         style={{ overflowX: "scroll", scrollbarWidth: "none", msOverflowStyle: "none" }}
         onScroll={handleScroll}
       >
-        {images.map((src, i) => (
-          <div key={i} className="flex-none w-full snap-center relative shrink-0 h-250 overflow-hidden">
-            <img
-              src={src}
-              alt={i === activeIndex ? "Day style preview" : ""}
-              loading={Math.abs(i - activeIndex) <= 1 ? "eager" : "lazy"}
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          </div>
-        ))}
+        {images.map((img, i) => {
+          const src = typeof img === "string" ? img : (img?.thumb || img?.path);
+          const srcSmall = typeof img === "string" ? null : (img?.thumb_small || null);
+          return (
+            <div key={i} className="flex-none w-full snap-center relative shrink-0 h-250 overflow-hidden">
+              <img
+                src={src}
+                srcSet={srcSmall ? `${srcSmall} 300w, ${src} 600w` : undefined}
+                sizes="(max-width: 640px) 100vw, 50vw"
+                alt={i === activeIndex ? "Day style preview" : ""}
+                loading={Math.abs(i - activeIndex) <= 1 ? "eager" : "lazy"}
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            </div>
+          );
+        })}
       </div>
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-accent-soft via-transparent to-transparent rounded-xl" />
@@ -3976,7 +3973,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
   };
   const styleImages = useMemo(() => {
     return styles.reduce((acc, style) => {
-      const images = (style.photos || []).map(p => p.thumb || p.path);
+      const images = (style.photos || []).map(p => p);
       if (!images.length) {
         // Fallback to vibes if no photos
         const pool = vibes.flatMap((vibe) => [vibe.hero, ...(vibe.photos || []).map(p => p?.thumb || p?.path || p)]).filter(Boolean);
@@ -3992,10 +3989,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     }, {});
   }, [vibes, styles]);
 
-  const heroUrls = useMemo(() => styles.map((s) => (styleImages[s.id || s.slug] || [])[0]).filter(Boolean), [styles, styleImages]);
+  const heroUrls = useMemo(() => styles.map((s) => { const img = (styleImages[s.id || s.slug] || [])[0]; return typeof img === "string" ? img : (img?.thumb || img?.path); }).filter(Boolean), [styles, styleImages]);
   const imagesReady = useImagePreload(heroUrls);
   const routeSkeletonCount = Math.max(3, Math.min(styles.length || 3, 6));
-  const showRoutesSkeleton = extrasLoading || (styles.length > 0 && !imagesReady);
+  const showRoutesSkeleton = extrasLoading;
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 639px)");
@@ -4503,18 +4500,15 @@ function StepTransfers({
       </label>
       {/* Transfer Options */}
       {transfers && transfers.map((transfer) => {
-        const isLargeGroup = totalGuests > 5;
-        const unitPrice = (isLargeGroup && transfer.bus_price)
-          ? Number(transfer.bus_price)
-          : Number(transfer.price || 0);
+        const unitPrice = Number(transfer.price || 0);
+        const cars = unitPrice > 0 ? Math.ceil(totalGuests / 5) : 0;
+        const totalTransferPrice = unitPrice * (cars || 1);
         const isSelected = String(selectedTransferId) === String(transfer.id);
         const finalName = transfer.name;
         const transferName = String(transfer.name || "").toLowerCase();
         const isPickupDropoffTransfer = /pick[\s-]?up|drop[\s-]?off/.test(transferName);
-        const transferCapacityHint = isPickupDropoffTransfer
-          ? (isLargeGroup
-            ? "6+ guests: minivan price is applied. Up to 5 guests use car price."
-            : "Up to 5 guests: car price. For 6+ guests, minivan price is applied.")
+        const transferCapacityHint = isPickupDropoffTransfer && cars > 1
+          ? `${cars} cars for ${totalGuests} guests`
           : "";
         const transferDetails = buildOptionDetails(transfer, {
           extraDescription: transferCapacityHint,
@@ -4545,7 +4539,7 @@ function StepTransfers({
                   <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
                   <div className="mt-1 flex items-center gap-2">
                     <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                      {formatIDR(unitPrice)}
+                      {formatIDR(totalTransferPrice)}
                     </span>
                     <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
                   </div>
@@ -4982,15 +4976,15 @@ function StepExtras({
     if (!selectedTransferId) return null;
     const transfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
     if (!transfer) return null;
-    const isLargeGroup = totalGuests > 5;
-    const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
+    const price = Number(transfer.price || 0);
+    const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
     return {
       id: `transfer-${transfer.id}`,
       kind: "transfer",
       name: transfer.name,
       price,
       pricingType: "per_booking",
-      quantity: 1,
+      quantity,
     };
   }, [selectedTransferId, transfers, totalGuests]);
   const selectedCoverItem = useMemo(() => {
@@ -5216,16 +5210,16 @@ function StepExtras({
                 </button>
               </div>
               <div className={cn("flex flex-col gap-4", !isExtrasOpen && "mt-4")}>
-                <AnimatePresence initial={false}>
-                  {isExtrasOpen && (
-                    <motion.div
-                      id={`${sectionId}-extras-panel`}
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="overflow-hidden rounded-b-xl border border-t-0 border-neutral-200 bg-white"
-                    >
+                <div
+                  id={`${sectionId}-extras-panel`}
+                  style={{
+                    display: "grid",
+                    gridTemplateRows: isExtrasOpen ? "1fr" : "0fr",
+                    opacity: isExtrasOpen ? 1 : 0,
+                    transition: "grid-template-rows 0.2s ease-out, opacity 0.2s ease-out",
+                  }}
+                >
+                  <div style={{ overflow: "hidden" }}>{isExtrasOpen && (<div className="rounded-b-xl border border-t-0 border-neutral-200 bg-white">
                       <div className="border-b border-neutral-200 px-6 py-3">
                         <div className="flex items-center gap-x-5 gap-y-2 overflow-x-auto text-sm text-secondary-500 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
                           {extraCategories.map((filter) => (
@@ -5270,9 +5264,7 @@ function StepExtras({
                           </button>
                         </div>
                       )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </div>)}</div></div>
                 <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                   <button
                     type="button"
@@ -5289,16 +5281,17 @@ function StepExtras({
                       {isTransferOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                     </span>
                   </button>
-                  <AnimatePresence initial={false}>
-                    {isTransferOpen && (
-                      <motion.div
-                        id={`${sectionId}-transfer-panel`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="overflow-hidden border-t border-neutral-200"
-                      >
+                  <div
+                    id={`${sectionId}-transfer-panel`}
+                    style={{
+                      display: "grid",
+                      gridTemplateRows: isTransferOpen ? "1fr" : "0fr",
+                      opacity: isTransferOpen ? 1 : 0,
+                      transition: "grid-template-rows 0.2s ease-out, opacity 0.2s ease-out",
+                    }}
+                  >
+                    <div style={{ overflow: "hidden" }}>{isTransferOpen && (
+                      <div className="border-t border-neutral-200">
                         <StepTransfers
                           embedded
                           showContinue={false}
@@ -5317,9 +5310,8 @@ function StepExtras({
                           dropoffAddress={dropoffAddress}
                           onSetDropoffAddress={onSetDropoffAddress}
                         />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      </div>
+                    )}</div></div>
                 </div>
                 <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                   <button
@@ -5337,16 +5329,17 @@ function StepExtras({
                       {isInsuranceOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                     </span>
                   </button>
-                  <AnimatePresence initial={false}>
-                    {isInsuranceOpen && (
-                      <motion.div
-                        id={`${sectionId}-insurance-panel`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="overflow-hidden border-t border-neutral-200"
-                      >
+                  <div
+                    id={`${sectionId}-insurance-panel`}
+                    style={{
+                      display: "grid",
+                      gridTemplateRows: isInsuranceOpen ? "1fr" : "0fr",
+                      opacity: isInsuranceOpen ? 1 : 0,
+                      transition: "grid-template-rows 0.2s ease-out, opacity 0.2s ease-out",
+                    }}
+                  >
+                    <div style={{ overflow: "hidden" }}>{isInsuranceOpen && (
+                      <div className="border-t border-neutral-200">
                         <CoversCompact
                           covers={covers}
                           selectedCoverId={selectedCoverId}
@@ -5356,9 +5349,8 @@ function StepExtras({
                           showHeader={false}
                           framed={false}
                         />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      </div>
+                    )}</div></div>
                 </div>
                 <TourInfoInline />
                 {onReview && (
@@ -6018,7 +6010,7 @@ function HeroDetails({
           <div>
             <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
               <div className="lg:col-span-12">
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+                <div>
                   <p className="text-sm font-semibold uppercase tracking-wide-3xl text-secondary-400">Value proof</p>
                   <h2 className="mt-2 text-3xl font-semibold tracking-tight text-secondary-900 sm:text-4xl">
                     Why Premium Private
@@ -6080,7 +6072,7 @@ function HeroDetails({
                       </button>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               </div>
             </div>
           </div>
@@ -7118,16 +7110,9 @@ function DayPlan() {
     >
       <div className="mt-6 grid gap-8 lg:grid-cols-asymmetric-wide">
         <div className="lg:col-span-7">
-          <AnimatePresence mode="wait" initial={false}>
+          <>
             {!showAll ? (
-              <motion.div
-                key="dayplan-compact"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="space-y-3"
-              >
+              <div key="dayplan-compact" className="space-y-3">
                 {groups.map((g) => (
                   <div
                     key={g.label}
@@ -7180,16 +7165,9 @@ function DayPlan() {
                   See full itinerary
                   <ChevronDown className="h-4 w-4" />
                 </Button>
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
-                key="dayplan-full"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="space-y-5"
-              >
+              <div key="dayplan-full" className="space-y-5">
                 {groups.map((g) => (
                   <div key={g.label} className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
@@ -7252,9 +7230,9 @@ function DayPlan() {
                   Hide details
                   <ChevronDown className="h-4 w-4 rotate-180" />
                 </Button>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
+          </>
         </div>
         <div className="lg:col-span-5">
           <div className="lg:sticky lg:top-24">
@@ -8061,21 +8039,21 @@ function FAQItem({ q, a }) {
           <Plus className="h-3.5 w-3.5" />
         </span>
       </button>
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div
-              className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
-              dangerouslySetInnerHTML={{ __html: a }}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: isOpen ? "1fr" : "0fr",
+          opacity: isOpen ? 1 : 0,
+          transition: "grid-template-rows 0.22s ease-out, opacity 0.22s ease-out",
+        }}
+      >
+        <div style={{ overflow: "hidden" }}>
+          <div
+            className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
+            dangerouslySetInnerHTML={{ __html: a }}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -8561,6 +8539,18 @@ export default function Premium_Private_With_Vibe() {
       urlCoverAppliedRef.current = true;
     }
   }, [covers]);
+  // Keep URL in sync with selections so browser back restores state
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (exactDate) p.set("date", exactDate); else p.delete("date");
+    p.set("adults", String(adults));
+    p.set("kids", String(kids));
+    if (selectedBoatId) p.set("tour", selectedBoatId); else p.delete("tour");
+    if (selectedStyleId) p.set("route", String(selectedStyleId)); else p.delete("route");
+    if (selectedTransferId) p.set("transfer", String(selectedTransferId)); else p.delete("transfer");
+    if (selectedCoverId) p.set("cover", String(selectedCoverId)); else p.delete("cover");
+    history.replaceState(null, "", `?${p.toString()}`);
+  }, [exactDate, adults, kids, selectedBoatId, selectedStyleId, selectedTransferId, selectedCoverId]);
   // Fetch availability from backend when user selects a date or date range
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
@@ -8815,9 +8805,9 @@ export default function Premium_Private_With_Vibe() {
     if (selectedTransferId) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const isLargeGroup = totalGuests > 5;
-        const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
-        sum += price;
+        const price = Number(transfer.price || 0);
+        const cars = price > 0 ? Math.ceil(totalGuests / 5) : 1;
+        sum += price * cars;
       }
     }
     // Add selected cover
@@ -8843,14 +8833,14 @@ export default function Premium_Private_With_Vibe() {
     if (selectedTransferId) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const isLargeGroup = totalGuests > 5;
-        const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
+        const price = Number(transfer.price || 0);
+        const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
         summary.push({
           id: `transfer-${transfer.id}`,
           name: transfer.name,
-          price: price,
+          price,
           pricingType: "per_booking",
-          quantity: 1
+          quantity,
         });
       }
     }
@@ -8950,7 +8940,8 @@ export default function Premium_Private_With_Vibe() {
         name: i.name ?? "",
       }))));
     }
-    window.location.href = `/new/payment?${params.toString()}`;
+    const utmQs = getUtmQueryString();
+    window.location.href = `/new/payment?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
   };
   const availableYachts = useMemo(() => {
     const baseList = yachtOptions.filter((yacht) => totalGuests <= yacht.people);
@@ -9249,8 +9240,7 @@ export default function Premium_Private_With_Vibe() {
         </div>
 
         {/* Date Selection Modal */}
-        <AnimatePresence>
-          {isSelectionModalOpen && (
+        {isSelectionModalOpen && (
             <Modal
               isOpen={isSelectionModalOpen}
               onClose={closeSelectionModal}
@@ -9299,8 +9289,7 @@ export default function Premium_Private_With_Vibe() {
                 </div>
               </div>
             </Modal>
-          )}
-        </AnimatePresence>
+        )}
         <Modal
           isOpen={isTourInfoOpen}
           onClose={() => setIsTourInfoOpen(false)}
@@ -9405,14 +9394,15 @@ export default function Premium_Private_With_Vibe() {
               onChangeExtraQty={handleExtraQtyChange}
               onReserve={handleOpenCheckout}
             />
-            <AnimatePresence>
-              {isCheckoutOpen && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden"
-                >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateRows: isCheckoutOpen ? "1fr" : "0fr",
+                opacity: isCheckoutOpen ? 1 : 0,
+                transition: "grid-template-rows 0.2s ease-out, opacity 0.2s ease-out",
+              }}
+            >
+              <div style={{ overflow: "hidden" }}>{isCheckoutOpen && (<div>
                   <StepCheckout
                     // id="step-checkout" is inside the component
                     step={checkoutStep}
@@ -9441,9 +9431,7 @@ export default function Premium_Private_With_Vibe() {
                       setTimeout(() => document.getElementById("step-review")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
                     }}
                   />
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </div>)}</div></div>
           </div>
           {renderInlineDateHint(stepFiveInlineHint)}
         </div>
@@ -9691,7 +9679,7 @@ function StepCheckout({
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Name*</label>
                     <input
                       type="text"
-                      autoComplete="new-password"
+                      
                       value={contactName}
                       onChange={(e) => handleChange("contactName", e.target.value, onSetName)}
                       placeholder="Enter your full name"
@@ -9737,7 +9725,7 @@ function StepCheckout({
                     value={specialRequests}
                     onChange={(e) => onSetSpecialRequests(e.target.value)}
                     placeholder="Write your comments here"
-                    autoComplete="new-password"
+                    type="text"
                     rows={2}
                     className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
                   />

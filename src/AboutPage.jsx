@@ -75,11 +75,11 @@ export default function AboutPage() {
 
         {/* Back link */}
         <a
-          href="/new/private"
+          href="/"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-500 transition hover:text-primary-600"
         >
           <ChevronLeft className="h-4 w-4" />
-          Back to private tour
+          Back to home
         </a>
 
         {/* Page title — Reviews/Gallery style */}
