@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./components/common/Modal";
+import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures } from "./utils/boatFeatures";
 import {
   TRANSFER_DETAILS_FALLBACK_IMAGE,
@@ -541,335 +542,6 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
     </Modal>
   );
 }
-
-function BookingCard({ compact = false, selectedYacht, cartItems, extrasTotalUSD, selectedVibe, onOpenTourInfo }) {
-  const todayISO = useMemo(() => {
-    const d = new Date();
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  }, []);
-  const [date, setDate] = useState(() => {
-    const p = new URLSearchParams(window.location.search);
-    return p.get("date") || todayISO;
-  });
-  const pricing = usePricing(date);
-  const remainingSeats = selectedYacht?.priceValue ? null : pricing.remainingSeats;
-  const maxGuests = Math.min(MAX_GUESTS, remainingSeats ?? MAX_GUESTS);
-  const isSoldOut = remainingSeats !== null && remainingSeats <= 0;
-  const [adults, setAdults] = useState(() => {
-    const p = new URLSearchParams(window.location.search);
-    const n = parseInt(p.get("adults") || "1", 10);
-    return isNaN(n) || n < 1 ? 1 : n;
-  });
-  const [kids, setKids] = useState(() => {
-    const p = new URLSearchParams(window.location.search);
-    const n = parseInt(p.get("kids") || "0", 10);
-    return isNaN(n) || n < 0 ? 0 : n;
-  });
-  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
-  useEffect(() => {
-    if (remainingSeats === null || maxGuests <= 0) return;
-    if (adults > maxGuests) {
-      setAdults(maxGuests);
-      return;
-    }
-    if (adults + kids > maxGuests) {
-      setKids(Math.max(0, maxGuests - adults));
-    }
-  }, [remainingSeats, maxGuests, adults, kids]);
-  const maxAdults = Math.max(1, maxGuests);
-  const maxKids = Math.max(0, maxGuests - adults);
-  const kidOptions = useMemo(() => Array.from({ length: maxKids + 1 }, (_, i) => i), [maxKids]);
-  const adultOptions = useMemo(() => Array.from({ length: maxAdults }, (_, i) => i + 1), [maxAdults]);
-  const price = useMemo(() => {
-    if (selectedYacht?.priceValue) {
-      return selectedYacht.priceValue;
-    }
-    const base = pricing.price ?? 35;
-    const totalGuests = adults + kids;
-    const mult = totalGuests >= 4 ? 0.95 : 1;
-    return Math.round(base * totalGuests * mult);
-  }, [adults, kids, pricing.price, selectedYacht]);
-  const totalGuests = adults + kids;
-  const perGuest = Math.round(price / Math.max(totalGuests, 1));
-  const hasGroupTransfer = !selectedYacht?.priceValue && totalGuests >= GROUP_TRANSFER_THRESHOLD;
-  const overCapacity = remainingSeats !== null && totalGuests > remainingSeats;
-  const reserveDisabled = isSoldOut || overCapacity;
-  const priceLabel = "/ person";
-  const priceDisplay = selectedYacht?.priceValue ? formatIDR(perGuest) : formatUSD(perGuest);
-  const contacts = useSiteContacts();
-  const safeCartItems = cartItems ?? [];
-  const extrasTotal = Math.round(extrasTotalUSD ?? 0);
-  const onReserve = () => {
-    if (reserveDisabled) return;
-    if (selectedYacht?.isPartner) {
-      setPartnerModalOpen(true);
-      return;
-    }
-    const analyticsCurrency = selectedYacht?.priceValue ? "IDR" : "USD";
-    const analyticsTotal = price + extrasTotal;
-    trackAddToCart({
-      value: analyticsTotal,
-      currency: analyticsCurrency,
-      items: [
-        buildTourAnalyticsItem({
-          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
-          itemName: selectedYacht?.name || "Private Tour",
-          itemCategory: "Private Tour",
-          price: analyticsTotal,
-          currency: analyticsCurrency,
-        }),
-      ],
-    });
-    const params = new URLSearchParams({ date, adults: String(adults), kids: String(kids) });
-    params.set("tourId", String(selectedYacht?.tourId ?? selectedYacht?.id ?? ""));
-    params.set("tourName", selectedYacht?.name || "Private Tour");
-    params.set("tourCategory", "Private Tour");
-    params.set("analyticsCurrency", analyticsCurrency);
-    params.set("analyticsTotal", String(analyticsTotal));
-    if (safeCartItems.length) {
-      params.set(
-        "extras",
-        JSON.stringify(
-          safeCartItems.map((item) => ({
-            id: item.id,
-            title: item.title,
-            priceUSD: item.priceUSD,
-            selection: item.selection ?? undefined,
-            quantity: item.quantity ?? 1,
-          }))
-        )
-      );
-    }
-    const backParams = new URLSearchParams(window.location.search);
-    backParams.set("date", date);
-    backParams.set("adults", String(adults));
-    backParams.set("kids", String(kids));
-    if (selectedYacht?.tourId) backParams.set("tour", String(selectedYacht.tourId));
-    history.replaceState(null, "", `?${backParams.toString()}`);
-    const utmQs = getUtmQueryString();
-    window.location.href = `/new/checkout?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
-  };
-  return (
-    <Card className={cn("relative overflow-hidden", compact ? "p-4" : "p-5")}>
-      <div className="relative">
-        <div className="flex items-end justify-between gap-4">
-          <div className="text-sm font-semibold uppercase tracking-wider text-secondary-500">Per person</div>
-          <div className="text-right">
-            <div className="flex items-end justify-end gap-2">
-              <div className="text-lg font-semibold text-secondary-900">{priceDisplay}</div>
-              <div className="pb-1 text-sm text-secondary-600">{priceLabel}</div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-sm text-secondary-500">
-          <span>Allinclusive (taxes, tickets, lunch)</span>
-          <a
-            href="#social"
-            className="inline-flex items-center gap-1 font-semibold text-secondary-600 hover:text-secondary-900"
-          >
-            <Star className="h-4 w-4 text-primary-600" fill="currentColor" />
-            {BRAND.rating}  {BRAND.reviewCount} {BRAND.reviewLabel}
-          </a>
-        </div>
-        <div className="mt-2 text-sm font-semibold text-secondary-600">
-          Lounge checkin + premium boat + La Rossa lunch + pro photographer
-        </div>
-        {selectedYacht?.name ? (
-          <div className="mt-1 text-sm text-secondary-500">Selected yacht: {selectedYacht.name}</div>
-        ) : null}
-        <div className="mt-3 flex flex-wrap gap-2 text-sm text-secondary-600">
-          <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2 py-1">
-            <Users className="h-3.5 w-3.5 text-secondary-500" /> Small group (max 13)
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-2 py-1">
-            {selectedYacht?.isPartner ? (
-              <Clock className="h-4 w-4 text-amber-500" />
-            ) : (
-              <BadgeCheck className="h-4 w-4 text-emerald-500" />
-            )}
-            {selectedYacht?.isPartner ? "On Request" : "Instant confirmation"}
-          </span>
-        </div>
-        <div className={cn("mt-4 grid gap-3", compact ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-3")}>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-secondary-600">Date</span>
-            <div className="relative">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-              <input
-                type="date"
-                value={date}
-                min={todayISO}
-                onChange={(e) => setDate(e.target.value)}
-                className={cn(INPUT_BASE, "pl-10 pr-3")}
-              />
-            </div>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-secondary-600">Adults</span>
-            <div className="relative">
-              <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-              <select
-                value={adults}
-                onChange={(e) => {
-                  const nextAdults = parseInt(e.target.value, 10);
-                  setAdults(nextAdults);
-                  setKids((prev) => Math.min(prev, Math.max(0, maxGuests - nextAdults)));
-                }}
-                className={cn(INPUT_BASE, "appearance-none pl-10 pr-10")}
-              >
-                {adultOptions.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-            </div>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-semibold text-secondary-600">Kids (7+)</span>
-            <div className="relative">
-              <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-              <select
-                value={kids}
-                onChange={(e) => setKids(parseInt(e.target.value, 10))}
-                className={cn(INPUT_BASE, "appearance-none pl-10 pr-10")}
-              >
-                {kidOptions.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-400" />
-            </div>
-          </label>
-        </div>
-        {!compact ? (
-          <div className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-primary-600">
-            <Clock className="h-3.5 w-3.5" />
-            Popular date  limited seats
-          </div>
-        ) : null}
-        <div className="mt-4 rounded-xl border border-neutral-200 bg-neutral-100 p-3 text-sm text-secondary-600">
-          <div className="flex items-center justify-between">
-            <span className="normal-case">
-              {selectedYacht?.priceValue
-                ? "total for boat"
-                : `total for ${totalGuests} guest${totalGuests > 1 ? "s" : ""}`}
-            </span>
-            <span className="font-semibold text-secondary-900">
-              {selectedYacht?.priceValue ? formatYachtPrice(selectedYacht) : formatUSD(pricing.price ?? 35)}
-            </span>
-          </div>
-          {selectedVibe ? (
-            <div className="mt-2 text-sm text-secondary-500">
-              Vibe: <span className="font-medium text-secondary-600">{selectedVibe.popupTitle ?? selectedVibe.title}</span>
-            </div>
-          ) : null}
-          {extrasTotal > 0 ? (
-            <>
-              <div className="mt-2 flex items-center justify-between text-sm text-secondary-600">
-                <span className="normal-case">extras total</span>
-                <span className="font-semibold text-secondary-900">{formatUSD(extrasTotal)}</span>
-              </div>
-              <div className="mt-1 text-sm text-secondary-500">
-                {safeCartItems.map((item) => item.title).join("  ")}
-              </div>
-              <div className="mt-2 flex items-center justify-between text-sm text-secondary-600">
-                <span className="normal-case">total with extras</span>
-                <span className="font-semibold text-secondary-900">
-                  {selectedYacht?.priceValue
-                    ? `${formatYachtPrice(selectedYacht)} + ${formatUSD(extrasTotalUSD)}`
-                    : formatUSD(price + (extrasTotalUSD ?? 0))}
-                </span>
-              </div>
-            </>
-          ) : null}
-          <div className="mt-1 text-sm text-secondary-500">
-            Adults: {adults}  Kids 7+: {kids}
-          </div>
-          {hasGroupTransfer ? (
-            <div className="mt-1 text-sm font-semibold text-success">
-              Free private transfer included for 4+ guests.
-            </div>
-          ) : null}
-          {remainingSeats !== null ? (
-            <div className="mt-1 text-sm text-secondary-500">Seats left for this date: {remainingSeats}</div>
-          ) : null}
-          {overCapacity ? (
-            <div className="mt-1 text-sm font-semibold text-danger">
-              Only {remainingSeats} seats left for this date.
-            </div>
-          ) : null}
-          <div className="mt-1 text-sm text-secondary-500">All extras and pickup can be added at checkout.</div>
-        </div>
-        <div className="mt-4 grid gap-2">
-          <Button
-            onClick={onReserve}
-            className={cn("w-full rounded-full h-12 text-sm font-black transition-all hover:scale-102 active:scale-98", reserveDisabled && "cursor-not-allowed opacity-60")}
-            disabled={reserveDisabled}
-          >
-            Reserve now <ArrowRight className="h-4 w-4" />
-          </Button>
-          <div className="text-center text-sm text-secondary-500">
-            You'll see the full total before confirming.
-          </div>
-          <div className="relative flex w-full items-center gap-4 overflow-hidden rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
-            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
-              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-0.5">Ask an Expert</div>
-              <div className="text-xs text-secondary-500 mb-2">Our team is ready to help you plan the perfect trip.</div>
-              <div className="flex flex-wrap gap-3">
-                {contacts.phone?.link && (
-                  <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
-                    <Phone className="h-3.5 w-3.5 text-primary-500" />
-                    {contacts.phone.number}
-                  </a>
-                )}
-                {contacts.whatsapp?.link && (
-                  <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
-                    <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
-                    WhatsApp
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 rounded-full border border-neutral-200 bg-white/70 backdrop-blur-sm p-3 text-sm text-secondary-600">
-          <div className="flex items-start gap-2">
-            <Calendar className="mt-0.5 h-4 w-4 text-secondary-600" />
-            <div>
-              <span className="font-semibold text-secondary-900">Not sure about the date?</span> Reserve now and change your
-              date anytime up to 24 hours before the tour.
-            </div>
-          </div>
-        </div>
-        <div className="mt-3 flex items-center justify-between text-sm text-secondary-600">
-          <button type="button" onClick={() => onOpenTourInfo?.("cancellation")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
-            <Shield className="h-3.5 w-3.5" /> Free cancellation 24h <ExternalLink className="h-3 w-3" />
-          </button>
-          <button type="button" onClick={() => onOpenTourInfo?.("weather")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
-            <CloudRain className="h-3.5 w-3.5" /> Weather guarantee <ExternalLink className="h-3 w-3" />
-          </button>
-        </div>
-      </div>
-      <PartnerRequestModal
-        isOpen={partnerModalOpen}
-        onClose={() => setPartnerModalOpen(false)}
-        tourId={selectedYacht?.tourId}
-        tourName={selectedYacht?.name}
-        date={date}
-        adults={adults}
-        kids={kids}
-      />
-    </Card>
-  );
-}
-const MINI_FAQ_ICON_MAP = { BadgeCheck, Users, CloudRain, Clock, Sparkles, Waves };
 function BookingMiniFAQ({ className }) {
   const items = bookingMiniFAQData.map((it) => ({ ...it, icon: MINI_FAQ_ICON_MAP[it.icon] }));
   return (
@@ -2050,7 +1722,7 @@ function Hero() {
       <div className="container">
         <div className="flex flex-col items-center text-center">
           <div className="flex flex-col items-center">
-            <div style={{ height: 40, overflow: 'hidden' }}><div className="elfsight-app-59bf9aa3-92ce-4654-aa87-9f5050b2af3a" /></div>
+            <RatingPill />
             <p className="mt-4 text-xs font-bold uppercase tracking-widest text-primary-600 sm:text-sm">
               Full day tour · Your boat · Your schedule · Pure comfort
             </p>
@@ -5880,7 +5552,7 @@ function StepFive({
                     <div className="space-y-1">
                       {selectedExtrasSummary.map((extra) => (
                         <div key={extra.id} className="flex items-center gap-2 rounded-lg py-1.5 hover:bg-neutral-50 group">
-                          <span className="flex-1 min-w-0 text-secondary-500 font-medium truncate">{extra.name} <span className="text-secondary-900">×{extra.quantity}</span></span>
+                          <span className="flex-1 min-w-0 text-secondary-500 font-medium truncate">{extra.name} <span className="text-secondary-900">Ã—{extra.quantity}</span></span>
                           <span className="font-bold text-secondary-900 shrink-0">{formatIDR(extra.price * extra.quantity)}</span>
                           <button
                             type="button"
@@ -6210,7 +5882,7 @@ function SocialProof() {
           <div className="space-y-4">
             <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">Guest reviews</h2>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="text-xl font-bold text-secondary-900">4.9 | 8500+ reviews</div>
+              <div className="text-xl font-bold text-secondary-900">4.9 | 10,000+ reviews</div>
               <div className="flex flex-wrap gap-2">
                 {reviewSources.map((source) => (
                   <PlatformChipLink key={source.id} source={source} />
@@ -8074,7 +7746,7 @@ function FAQ() {
       id="faq"
       backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
     >
-      <div className="mx-auto w-full max-w-screen-xl">
+      <div className="container">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
           <h2 className={Q_THEME.text.h2}>
@@ -8233,137 +7905,13 @@ function BookingMini() {
     </Card>
   );
 }
-function FinalCTA({
-  selectedYacht,
-  cartItems,
-  extrasTotalUSD,
-  selectedVibe,
-  selectedStyleTitle,
-  selectedExtrasSummary,
-  reviewDateLabel,
-  totalGuests,
-  basePrice,
-  extrasSubtotalIDR,
-}) {
-  const extrasSummaryLine = selectedExtrasSummary?.length
-    ? selectedExtrasSummary
-      .map((extra) => `${extra.name} ${extra.quantity} (${formatIDR(extra.price)})`)
-      .join("  ")
-    : "No extras selected";
-  return (
-    <section className="py-14 sm:py-16" id="booking">
-      <div className="container">
-        <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-gradient-to-r from-primary-50 via-white to-primary-100 p-8 shadow-card animate-gradient-flow">
-          <div className="relative grid gap-8 lg:grid-cols-12 lg:items-center">
-            <div className="lg:col-span-7">
-              <div className="text-sm font-semibold uppercase tracking-wider text-secondary-600">Ready to book</div>
-              <h3 className="mt-2 text-2xl font-semibold text-secondary-900 sm:text-3xl">
-                Reserve your Premium Private day  and let us run the logistics
-              </h3>
-              <p className="mt-3 text-sm leading-6 text-secondary-600 sm:text-base">
-                Allinclusive pricing, instant confirmation, free 24h cancellation, and a weather safety guarantee.
-              </p>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                <Button href="#booking" className="w-full">
-                  Check availability <ArrowRight className="h-4 w-4" />
-                </Button>
-                <Button variant="secondary" onClick={() => alert("WhatsApp demo action")} className="w-full">
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp questions
-                </Button>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {BRAND.badges.slice(1).map((b, i) => (
-                  <Badge key={i} icon={b.icon}>
-                    {b.label}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            <div className="hidden sm:block lg:col-span-5">
-              <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-secondary-600">
-                <div className="text-sm font-semibold uppercase tracking-wider text-secondary-500">Final review</div>
-                <div className="mt-2 space-y-1">
-                  <div>Boat: {selectedYacht?.name ?? "Premium boat"}</div>
-                  <div>Date: {reviewDateLabel}</div>
-                  <div>Guests: {totalGuests}</div>
-                  <div>Day style: {selectedStyleTitle || "Classic route"}</div>
-                  <div>Extras: {extrasSummaryLine}</div>
-                </div>
-                <div className="mt-2 text-sm text-secondary-500">
-                  Base: {formatIDR(basePrice)}  Extras: {formatIDR(extrasSubtotalIDR)}  Total: {formatIDR(basePrice + extrasSubtotalIDR)}
-                </div>
-              </div>
-              <BookingCard
-                compact
-                selectedYacht={selectedYacht}
-                cartItems={cartItems}
-                extrasTotalUSD={extrasTotalUSD}
-                selectedVibe={selectedVibe}
-                onOpenTourInfo={openTourInfo}
-              />
-            </div>
-          </div>
-        </div>
-        <div className="mt-6 sm:hidden">
-          <div className="mb-4 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-secondary-600">
-            <div className="text-sm font-semibold uppercase tracking-wider text-secondary-500">Final review</div>
-            <div className="mt-2 space-y-1">
-              <div>Boat: {selectedYacht?.name ?? "Premium boat"}</div>
-              <div>Date: {reviewDateLabel}</div>
-              <div>Guests: {totalGuests}</div>
-              <div>Day style: {selectedStyleTitle || "Classic route"}</div>
-              <div>Extras: {extrasSummaryLine}</div>
-            </div>
-            <div className="mt-2 text-sm text-secondary-500">
-              Base: {formatIDR(basePrice)}  Extras: {formatIDR(extrasSubtotalIDR)}  Total: {formatIDR(basePrice + extrasSubtotalIDR)}
-            </div>
-          </div>
-          <BookingCard
-            compact
-            selectedYacht={selectedYacht}
-            cartItems={cartItems}
-            extrasTotalUSD={extrasTotalUSD}
-            selectedVibe={selectedVibe}
-          />
-        </div>
-        <div className="mt-10 grid gap-6 border-t border-neutral-200 pt-8 text-sm text-secondary-500 sm:grid-cols-3">
-          <div>
-            <div className="text-sm font-semibold text-secondary-600">Instant confirmation</div>
-            <ul className="mt-2 space-y-2">
-              <li>Secure card checkout in under a minute.</li>
-              <li>Confirmation + pickup details sent automatically.</li>
-              <li>No need to message unless you have a special request.</li>
-            </ul>
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-secondary-600">No surprises</div>
-            <ul className="mt-2 space-y-2">
-              <li>All taxes, tickets, and lunch included.</li>
-              <li>Small group vibe (13 guests max).</li>
-              <li>Free cancellation up to 24h + weather guarantee.</li>
-            </ul>
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-secondary-600">Bring this</div>
-            <ul className="mt-2 space-y-2">
-              <li>Swimwear, sunscreen, and a dry change.</li>
-              <li>Phone/camera for photos.</li>
-              <li>Cash for optional extras if you want them.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 export default function Premium_Private_With_Vibe() {
   useSEO({
     title: "Private Yacht Tour to Nusa Penida | Bluuu Tours",
     description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",
   });
   const { selectedCurrency } = useCurrency();
-  const { privateTours, privateTransfers: transfers, privateCovers: allCovers } = useTours();
+  const { privateTours, privateTransfers: transfers, privateCovers: allCovers, loading: toursLoading, error: toursError } = useTours();
   const { extras, privateRoutes } = useExtras();
   const covers = allCovers || [];
   // State Declarations
@@ -8941,7 +8489,7 @@ export default function Premium_Private_With_Vibe() {
       }))));
     }
     const utmQs = getUtmQueryString();
-    window.location.href = `/new/payment?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
+    window.location.href = `/payment?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
   };
   const availableYachts = useMemo(() => {
     const baseList = yachtOptions.filter((yacht) => totalGuests <= yacht.people);
@@ -9131,6 +8679,36 @@ export default function Premium_Private_With_Vibe() {
     );
   };
   const { activePolicyKey: globalPolicyKey, activePolicy: globalPolicy, closePolicy: closeGlobalPolicy } = usePolicyModal();
+  if (toursLoading) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
+        <div style={{ textAlign: "center", color: "#888" }}>
+          <div style={{ width: 40, height: 40, border: "3px solid #ddd", borderTop: "3px solid #2E53D9", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
+          <p style={{ fontSize: 14 }}>Loading tours…</p>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  if (toursError || (!toursLoading && !privateTours?.length)) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
+        <div style={{ textAlign: "center", maxWidth: 400, padding: "0 24px" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>âš“</div>
+          <h2 style={{ fontSize: 22, fontWeight: 700, color: "#1a1a1a", marginBottom: 8 }}>Could not load tours</h2>
+          <p style={{ color: "#666", fontSize: 15, marginBottom: 24 }}>Something went wrong fetching the tour data. Please try again.</p>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ background: "#2E53D9", color: "#fff", border: "none", borderRadius: 8, padding: "12px 28px", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <CurrencyBridge />
@@ -9482,7 +9060,7 @@ function StepCheckout({
   };
 
   const validatePhone = (phone) => {
-    return String(phone).match(/^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im);
+    return String(phone).trim().length > 4;
   };
 
   const handleFinalize = () => {
