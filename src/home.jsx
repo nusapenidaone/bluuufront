@@ -813,7 +813,7 @@ function LegacyTourTypeCards() {
 
         {/* CTA */}
         <a
-          href="/new/shared"
+          href="/shared-tour-to-nusa-penida"
           className="btn-outline mb-1 flex w-full items-center justify-center gap-2 rounded-full border-2 border-primary-600 py-3.5 text-base leading-tight font-semibold text-primary-600"
         >
           See tour details <ArrowRight className="h-4 w-4" />
@@ -823,7 +823,7 @@ function LegacyTourTypeCards() {
         {/* Upgrade pill */}
         <div className="mb-5 flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-2.5">
           <span className="text-sm leading-tight text-secondary-600">Want the whole boat for your group?</span>
-          <a href="/new/private" className="ml-auto whitespace-nowrap text-sm leading-tight font-semibold text-primary-600 hover:underline">
+          <a href="/private-tour-to-nusa-penida" className="ml-auto whitespace-nowrap text-sm leading-tight font-semibold text-primary-600 hover:underline">
             Go Private →
           </a>
         </div>
@@ -912,7 +912,7 @@ function LegacyTourTypeCards() {
 
         {/* CTA */}
         <a
-          href="/new/private"
+          href="/private-tour-to-nusa-penida"
           className="btn-primary mb-1 flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-base leading-tight font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)]"
         >
           Choose your boat <ArrowRight className="h-4 w-4" />
@@ -1076,7 +1076,7 @@ function TourTypeCards() {
       </div>
 
       <a
-        href="/new/shared"
+        href="/shared-tour-to-nusa-penida"
         className="btn-outline inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary-600 bg-white px-5 py-3.5 text-base leading-tight font-semibold text-primary-600"
       >
         See tour details <ArrowRight className="h-4 w-4" />
@@ -1093,7 +1093,7 @@ function TourTypeCards() {
 
       <div className="mt-4 flex items-center gap-3 rounded-[22px] border border-primary-100 bg-primary-50/70 px-4 py-2.5 text-xs text-secondary-600">
         <span>Want the whole boat for your group instead?</span>
-        <a href="/new/private" className="ml-auto whitespace-nowrap font-semibold text-primary-600 transition hover:text-primary-700">
+        <a href="/private-tour-to-nusa-penida" className="ml-auto whitespace-nowrap font-semibold text-primary-600 transition hover:text-primary-700">
           Go private <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
         </a>
       </div>
@@ -1163,7 +1163,7 @@ function TourTypeCards() {
       </div>
 
       <a
-        href="/new/private"
+        href="/private-tour-to-nusa-penida"
         className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 px-5 py-3.5 text-base leading-tight font-semibold text-white shadow-blue-glow"
       >
         Choose your boat <ArrowRight className="h-4 w-4" />
@@ -1277,7 +1277,7 @@ function TourTypeCards() {
             </div>
             {/* 6. CTA */}
             <div className="px-6 pt-3">
-              <a href="/new/shared" className="btn-outline flex w-full items-center justify-center gap-2 rounded-full border border-primary-600 py-3.5 text-base font-semibold text-primary-600">
+              <a href="/shared-tour-to-nusa-penida" className="btn-outline flex w-full items-center justify-center gap-2 rounded-full border border-primary-600 py-3.5 text-base font-semibold text-primary-600">
                 See tour details <ArrowRight className="h-4 w-4" />
               </a>
               <p className="mt-2 text-center text-xs uppercase tracking-wide text-secondary-400">No payment required to view options</p>
@@ -1289,7 +1289,7 @@ function TourTypeCards() {
               </ul>
               <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary-100 bg-primary-50/70 px-4 py-2.5 text-xs text-secondary-600">
                 <span>Want the whole boat for your group instead?</span>
-                <a href="/new/private" className="ml-auto whitespace-nowrap font-semibold text-primary-600">Go private <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></a>
+                <a href="/private-tour-to-nusa-penida" className="ml-auto whitespace-nowrap font-semibold text-primary-600">Go private <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></a>
               </div>
             </div>
           </article>
@@ -1359,7 +1359,7 @@ function TourTypeCards() {
             </div>
             {/* 6. CTA */}
             <div className="px-6 pt-3">
-              <a href="/new/private" className="btn-primary flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-base font-semibold text-white shadow-blue-glow">
+              <a href="/private-tour-to-nusa-penida" className="btn-primary flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-base font-semibold text-white shadow-blue-glow">
                 Browse 20+ boats <ArrowRight className="h-4 w-4" />
               </a>
               <p className="mt-2 text-center text-xs uppercase tracking-wide text-secondary-400">From speedboats to luxury yachts</p>
@@ -2611,7 +2611,7 @@ function SharedTiersBlock() {
 
         {/* CTA */}
         <a
-          href="/new/shared"
+          href="/shared-tour-to-nusa-penida"
           className={`mb-1 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-base font-semibold transition ${
             tier.solid
               ? "bg-primary-600 text-white hover:bg-primary-500 shadow-[0_4px_14px_rgba(37,99,235,0.25)]"
@@ -2743,7 +2743,7 @@ function SharedTiersBlock() {
 
       {/* CTA */}
       <div className="mt-6 flex justify-center">
-        <a href="/new/shared" className="btn-primary inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]">
+        <a href="/shared-tour-to-nusa-penida" className="btn-primary inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]">
           Book Shared Tour <ArrowRight className="h-4 w-4" />
         </a>
       </div>
@@ -2760,7 +2760,7 @@ function RouteBlocks() {
       title="Pick your private tour route"
       subtitle="Your own yacht, your own pace — select the route for your group."
       routes={privateRoutes}
-      bookHref="/new/private"
+      bookHref="/private-tour-to-nusa-penida"
       bookLabel="Book Private Tour"
       loading={loading}
     />
@@ -2824,7 +2824,7 @@ function BoatsHomeBlock() {
               return (
                 <div key={boat.id} className="w-[300px] shrink-0 snap-center sm:w-auto">
                 <a
-                  href="/new/private"
+                  href="/private-tour-to-nusa-penida"
                   className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white hover:border-neutral-300 transition-all"
                 >
                   {/* Image */}

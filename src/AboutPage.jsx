@@ -68,7 +68,7 @@ export default function AboutPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/new/private#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida#booking" }}
       />
 
       <div className="container pt-8 sm:pt-12">

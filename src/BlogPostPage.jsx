@@ -265,7 +265,7 @@ export default function BlogPostPage({ slug }) {
         <div className="mx-auto max-w-3xl px-6 py-24 text-center">
           <BookOpen className="mx-auto mb-4 h-12 w-12 text-neutral-300" />
           <p className="text-lg font-semibold text-secondary-500">Article not found.</p>
-          <a href="/new/blog" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:underline">
+          <a href="/blog" className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:underline">
             <ArrowLeft className="h-4 w-4" /> Back to blog
           </a>
         </div>
@@ -285,7 +285,7 @@ export default function BlogPostPage({ slug }) {
 
             <div className="relative mx-auto flex h-full max-w-5xl flex-col justify-end px-5 pb-12 pt-28 lg:px-8"
               style={{ minHeight: 460 }}>
-              <a href="/new/blog"
+              <a href="/blog"
                 className="mb-6 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur-sm transition hover:bg-white/20">
                 <ArrowLeft className="h-3.5 w-3.5" /> All articles
               </a>
@@ -362,11 +362,11 @@ export default function BlogPostPage({ slug }) {
                 Join thousands of happy guests who've experienced Nusa Penida with Bluuu.
               </p>
               <div className="flex flex-wrap justify-center gap-3">
-                <a href="/new/shared"
+                <a href="/shared-tour-to-nusa-penida"
                   className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
                   Shared tours
                 </a>
-                <a href="/new/private"
+                <a href="/private-tour-to-nusa-penida"
                   className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-white/10">
                   Private charter
                 </a>
