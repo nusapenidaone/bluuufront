@@ -4,8 +4,6 @@ import { Suspense, lazy, useEffect } from "react";
 const Home = lazy(() => import("./home.jsx"));
 const Private = lazy(() => import("./private.jsx"));
 const Shared = lazy(() => import("./shared.jsx"));
-const LeadAdmin = lazy(() => import("./LeadAdmin.jsx"));
-const Checkout = lazy(() => import("./Checkout.jsx"));
 const Payment = lazy(() => import("./Payment.jsx"));
 const PolicyPage = lazy(() => import("./PolicyPage.jsx"));
 const ReviewsPage = lazy(() => import("./ReviewsPage.jsx"));
@@ -166,10 +164,6 @@ export default function App() {
   const policyKeyFromPath = policyMatch?.[1] ? POLICY_PATH_MAP[policyMatch[1].toLowerCase()] : null;
 
   const content = (() => {
-    if (path === "/lead-admin") {
-      return <LeadAdmin />;
-    }
-
     if (policyKeyFromPath) {
       return <PolicyPage policyKey={policyKeyFromPath} />;
     }
@@ -184,10 +178,6 @@ export default function App() {
 
     if (path === "/shared") {
       return <Shared />;
-    }
-
-    if (path === "/checkout") {
-      return <Checkout />;
     }
 
     if (path === "/payment") {
