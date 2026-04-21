@@ -19,11 +19,10 @@ export const useTours = () => useContext(ToursContext);
 
 // Detect which data is needed for the current page
 function getPageNeeds() {
-    const raw = typeof window !== "undefined" ? window.location.pathname : "/";
-    const path = raw.replace(/\/+$/, "").replace(/^\/[^/]+(?=\/)/, "") || "/";
+    const path = typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") || "/" : "/";
     const isHome = path === "/";
-    const isPrivate = path === "/private";
-    const isShared = path === "/shared";
+    const isPrivate = path === "/private-tour-to-nusa-penida";
+    const isShared = path === "/shared-tour-to-nusa-penida";
     const isFaq = path === "/faq";
     const isGallery = path === "/gallery";
     return {
@@ -33,7 +32,7 @@ function getPageNeeds() {
         sharedTransfers:  isShared,
         privateCovers:    isPrivate,
         sharedCovers:     isShared,
-        faqs:             isHome || isPrivate || isFaq,
+        faqs:             isHome || isPrivate || isShared || isFaq,
         gallery:          isHome || isGallery,
     };
 }

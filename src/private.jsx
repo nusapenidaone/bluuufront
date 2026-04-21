@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "./components/common/Modal";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures } from "./utils/boatFeatures";
@@ -434,7 +434,7 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
           </div>
           <div>
             <div className="text-lg font-bold text-secondary-900">Request sent!</div>
-            <div className="mt-1 text-sm text-secondary-500">We'll contact you within 1–2 hours to confirm.</div>
+            <div className="mt-1 text-sm text-secondary-500">We'll contact you within 1â€“2 hours to confirm.</div>
           </div>
           <Button onClick={handleClose} className="mt-2 w-full rounded-full">Close</Button>
         </div>
@@ -534,9 +534,9 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
             disabled={submitting}
             className="mt-1 w-full rounded-full h-12 text-sm font-black"
           >
-            {submitting ? "Sending…" : <><span>Send request</span><ArrowRight className="h-4 w-4" /></>}
+            {submitting ? "Sendingâ€¦" : <><span>Send request</span><ArrowRight className="h-4 w-4" /></>}
           </Button>
-          <div className="text-center text-sm text-secondary-500">We'll respond within 1–2 hours</div>
+          <div className="text-center text-sm text-secondary-500">We'll respond within 1â€“2 hours</div>
         </form>
       )}
     </Modal>
@@ -8684,7 +8684,7 @@ export default function Premium_Private_With_Vibe() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
         <div style={{ textAlign: "center", color: "#888" }}>
           <div style={{ width: 40, height: 40, border: "3px solid #ddd", borderTop: "3px solid #2E53D9", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ fontSize: 14 }}>Loading tours…</p>
+          <p style={{ fontSize: 14 }}>Loading toursâ€¦</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
@@ -9060,7 +9060,8 @@ function StepCheckout({
   };
 
   const validatePhone = (phone) => {
-    return String(phone).trim().length > 4;
+    const digits = String(phone).replace(/[^0-9]/g, "");
+    return digits.length > 6;
   };
 
   const handleFinalize = () => {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures, bfOn } from "./utils/boatFeatures";
 import {
@@ -3632,7 +3632,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             </span>
                             <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-64 opacity-0 transition-opacity duration-200 group-hover/tooltip:opacity-100 z-50">
                               <div className="rounded-xl bg-secondary-900 px-3 py-2.5 text-xs font-medium leading-relaxed text-white shadow-xl">
-                                This route is built around add-ons — we’ll suggest extras in the next steps.
+                                This route is built around add-ons — weâ€™ll suggest extras in the next steps.
                                 <div className="absolute -bottom-1 right-4 h-3 w-3 rotate-45 rounded-sm bg-secondary-900"></div>
                               </div>
                             </div>
@@ -7854,7 +7854,7 @@ export default function Shared_tour_01() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
         <div style={{ textAlign: "center", color: "#888" }}>
           <div style={{ width: 40, height: 40, border: "3px solid #ddd", borderTop: "3px solid #2E53D9", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ fontSize: 14 }}>Loading tours…</p>
+          <p style={{ fontSize: 14 }}>Loading toursâ€¦</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>
@@ -8287,7 +8287,8 @@ function StepCheckout({
   };
 
   const validatePhone = (phone) => {
-    return String(phone).trim().length > 4;
+    const digits = String(phone).replace(/[^0-9]/g, "");
+    return digits.length > 6;
   };
 
   const handleFinalize = () => {
