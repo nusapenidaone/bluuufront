@@ -55,6 +55,7 @@ export default function PhoneInputComponent({ value, onChange }) {
       defaultCountry="id"
       value={value}
       onChange={onChange}
+      inputProps={{ maxLength: 25 }}
     />
   );
 }
