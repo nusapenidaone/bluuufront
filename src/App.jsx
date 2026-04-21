@@ -13,6 +13,7 @@ const FaqPage = lazy(() => import("./FaqPage.jsx"));
 const BlogPage = lazy(() => import("./BlogPage.jsx"));
 const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
+const AccountPage = lazy(() => import("./AccountPage.jsx"));
 const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImagePreloader.jsx"));
 
 function NotFound() {
@@ -30,7 +31,7 @@ function NotFound() {
       <div>
         <h1 style={{ fontSize: "8rem", fontWeight: 700, color: "#1a9fd4", lineHeight: 1 }}>404</h1>
         <p style={{ fontSize: "1.5rem", color: "#aaa", marginTop: "1rem" }}>Page not found</p>
-        <a href="/new/private" style={{
+        <a href="/private-tour-to-nusa-penida" style={{
           display: "inline-block",
           marginTop: "2rem",
           padding: "0.75rem 2rem",
@@ -116,8 +117,6 @@ const POLICY_PATH_MAP = {
   "release-from-liability": "liability",
 };
 
-const BASE_PATH = "/new";
-
 function appendUtm(url) {
   const qs = getUtmQueryString();
   if (!qs) return url;
@@ -137,11 +136,9 @@ if (typeof window !== "undefined") {
     }
 
     if (href.startsWith("/") && !href.startsWith("//")) {
-      // Пропускаем якоря (#) и ссылки уже содержащие UTM
       if (href.startsWith("#")) return;
-      const fullHref = href.startsWith(BASE_PATH) ? href : BASE_PATH + href;
       e.preventDefault();
-      window.location.href = appendUtm(fullHref);
+      window.location.href = appendUtm(href);
     }
   }, true);
 }
@@ -155,11 +152,20 @@ function removePreloader() {
 }
 
 export default function App() {
-  useEffect(() => { removePreloader(); }, []);
   const rawPath = typeof window !== "undefined" ? window.location.pathname : "/";
-  // Strip any subfolder prefix (e.g. /new, /staging) so routing works regardless of deploy path
-  const stripped = rawPath.replace(/\/+$/, "");
-  const path = (stripped === BASE_PATH ? "/" : stripped.replace(/^\/[^/]+(?=\/)/, "")) || "/";
+  const path = rawPath.replace(/\/+$/, "") || "/";
+
+  useEffect(() => { removePreloader(); }, []);
+
+  // Prefetch private & shared chunks while user is on homepage
+  useEffect(() => {
+    if (path !== "/") return;
+    const t = setTimeout(() => {
+      import("./private.jsx");
+      import("./shared.jsx");
+    }, 1500);
+    return () => clearTimeout(t);
+  }, []);
   const policyMatch = path.match(/^\/policy\/([^/]+)$/i);
   const policyKeyFromPath = policyMatch?.[1] ? POLICY_PATH_MAP[policyMatch[1].toLowerCase()] : null;
 
@@ -168,15 +174,33 @@ export default function App() {
       return <PolicyPage policyKey={policyKeyFromPath} />;
     }
 
+    if (path === "/nusa-penida" || path === "/nusa-penida/boats") {
+      window.location.replace("/");
+      return null;
+    }
+
+    if (path === "/nusa-penida/shared-tours" || path.startsWith("/nusa-penida/shared-tours/")) {
+      window.location.replace("/shared-tour-to-nusa-penida");
+      return null;
+    }
+
+    if (path === "/nusa-penida/private-tours" || path.startsWith("/nusa-penida/private-tours/") || path === "/nusa-penida/bundeled-tours" || path.startsWith("/nusa-penida/bundeled-tours/") || path === "/nusa-penida/bundled-tours" || path.startsWith("/nusa-penida/bundled-tours/")) {
+      window.location.replace("/private-tour-to-nusa-penida");
+      return null;
+    }
+
+
     if (path === "/") {
       return <Home />;
     }
 
-    if (path === "/private") {
+
+
+    if (path === "/private-tour-to-nusa-penida") {
       return <Private />;
     }
 
-    if (path === "/shared") {
+    if (path === "/shared-tour-to-nusa-penida") {
       return <Shared />;
     }
 
@@ -188,8 +212,17 @@ export default function App() {
       return <SuccessPage />;
     }
 
+    if (path === "/account") {
+      return <AccountPage />;
+    }
+
     if (path === "/reviews") {
       return <ReviewsPage />;
+    }
+
+    if (path.startsWith("/reviews/")) {
+      window.location.replace("/reviews");
+      return null;
     }
 
     if (path === "/gallery") {
@@ -223,7 +256,7 @@ export default function App() {
           <RulesProvider>
           <GlobalImagePreloader />
           <UnifiedSwitcher showFloatingButton={false} />
-          <WhatsAppButton />
+          {path !== "/" && <WhatsAppButton />}
           <Suspense fallback={<div style={{ minHeight: "100vh", background: "#fff" }} />}>
             {content}
           </Suspense>
