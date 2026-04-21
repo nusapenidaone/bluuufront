@@ -21,7 +21,7 @@ import { useExtras } from "./contexts/ExtrasContext";
 import { useRules } from "./contexts/RulesContext";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, getUtmParams, getUtmQueryString, trackAddToCart, trackPixelViewContent } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, getUtmParams, getUtmQueryString, trackAddToCart, trackViewItem, trackPixelViewContent, trackPixelAddToCart } from "./lib/analytics";
 import { CoversCompact } from "./components/booking/TransferCoverPanels";
 import InfoDetailModal from "./components/booking/InfoDetailModal";
 import {
@@ -434,7 +434,7 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
           </div>
           <div>
             <div className="text-lg font-bold text-secondary-900">Request sent!</div>
-            <div className="mt-1 text-sm text-secondary-500">We'll contact you within 1â€“2 hours to confirm.</div>
+            <div className="mt-1 text-sm text-secondary-500">We'll contact you within 1–2 hours to confirm.</div>
           </div>
           <Button onClick={handleClose} className="mt-2 w-full rounded-full">Close</Button>
         </div>
@@ -534,9 +534,9 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
             disabled={submitting}
             className="mt-1 w-full rounded-full h-12 text-sm font-black"
           >
-            {submitting ? "Sendingâ€¦" : <><span>Send request</span><ArrowRight className="h-4 w-4" /></>}
+            {submitting ? "Sending…" : <><span>Send request</span><ArrowRight className="h-4 w-4" /></>}
           </Button>
-          <div className="text-center text-sm text-secondary-500">We'll respond within 1â€“2 hours</div>
+          <div className="text-center text-sm text-secondary-500">We'll respond within 1–2 hours</div>
         </form>
       )}
     </Modal>
@@ -5552,7 +5552,7 @@ function StepFive({
                     <div className="space-y-1">
                       {selectedExtrasSummary.map((extra) => (
                         <div key={extra.id} className="flex items-center gap-2 rounded-lg py-1.5 hover:bg-neutral-50 group">
-                          <span className="flex-1 min-w-0 text-secondary-500 font-medium truncate">{extra.name} <span className="text-secondary-900">Ã—{extra.quantity}</span></span>
+                          <span className="flex-1 min-w-0 text-secondary-500 font-medium truncate">{extra.name} <span className="text-secondary-900">×{extra.quantity}</span></span>
                           <span className="font-bold text-secondary-900 shrink-0">{formatIDR(extra.price * extra.quantity)}</span>
                           <button
                             type="button"
@@ -7987,6 +7987,11 @@ export default function Premium_Private_With_Vibe() {
 
   useEffect(() => {
     trackPixelViewContent({ contentName: "Private Charter", value: 0, currency: "IDR" });
+    trackViewItem({
+      value: 0,
+      currency: "IDR",
+      items: [buildTourAnalyticsItem({ itemId: "private-tour", itemName: "Private Charter", itemCategory: "Private Tour", price: 0 })],
+    });
   }, []);
 
   const yachtOptions = useMemo(() => {
@@ -8436,17 +8441,18 @@ export default function Premium_Private_With_Vibe() {
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
   const handleOpenCheckout = () => {
-    trackAddToCart({
+    const analyticsItem = buildTourAnalyticsItem({
+      itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+      itemName: selectedYacht?.name || "Private Tour",
+      itemCategory: "Private Tour",
+      price: totalPrice,
+    });
+    trackAddToCart({ value: totalPrice, currency: "IDR", items: [analyticsItem] });
+    trackPixelAddToCart({
+      contentIds: selectedYacht?.tourId ?? selectedYacht?.id,
+      contentName: selectedYacht?.name || "Private Tour",
       value: totalPrice,
       currency: "IDR",
-      items: [
-        buildTourAnalyticsItem({
-          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
-          itemName: selectedYacht?.name || "Private Tour",
-          itemCategory: "Private Tour",
-          price: totalPrice,
-        }),
-      ],
     });
     setIsCheckoutOpen(true);
     setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -8684,7 +8690,7 @@ export default function Premium_Private_With_Vibe() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
         <div style={{ textAlign: "center", color: "#888" }}>
           <div style={{ width: 40, height: 40, border: "3px solid #ddd", borderTop: "3px solid #2E53D9", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ fontSize: 14 }}>Loading toursâ€¦</p>
+          <p style={{ fontSize: 14 }}>Loading tours…</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>

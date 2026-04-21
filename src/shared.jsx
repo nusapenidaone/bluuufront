@@ -21,7 +21,7 @@ import { useRules } from "./contexts/RulesContext";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getUtmQueryString, trackAddToCart, trackPixelViewContent } from "./lib/analytics";
+import { buildTourAnalyticsItem, getUtmQueryString, trackAddToCart, trackViewItem, trackPixelViewContent, trackPixelAddToCart } from "./lib/analytics";
 
 // Shared Components & Utils
 import {
@@ -3632,7 +3632,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             </span>
                             <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-64 opacity-0 transition-opacity duration-200 group-hover/tooltip:opacity-100 z-50">
                               <div className="rounded-xl bg-secondary-900 px-3 py-2.5 text-xs font-medium leading-relaxed text-white shadow-xl">
-                                This route is built around add-ons — weâ€™ll suggest extras in the next steps.
+                                This route is built around add-ons — we’ll suggest extras in the next steps.
                                 <div className="absolute -bottom-1 right-4 h-3 w-3 rotate-45 rounded-sm bg-secondary-900"></div>
                               </div>
                             </div>
@@ -4947,7 +4947,7 @@ function StepExtras({
                                 <span className="text-xl">{child.emoji}</span>
                               ) : null}
                               <span className="flex-1 truncate text-sm font-medium text-secondary-800">{child.name}</span>
-                              <span className="text-sm text-secondary-400">Ã— {draftQuantities[child.id]}</span>
+                              <span className="text-sm text-secondary-400">× {draftQuantities[child.id]}</span>
                               <span className="text-sm font-bold text-secondary-900 min-w-12 text-right">{formatIDR(child.price * Number(draftQuantities[child.id] || 0))}</span>
                               <button type="button" onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: 0 }))} className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 bg-white text-secondary-400 hover:border-red-200 hover:text-red-500 transition">
                                 <X className="h-3.5 w-3.5" />
@@ -7096,6 +7096,11 @@ export default function Shared_tour_01() {
 
   useEffect(() => {
     trackPixelViewContent({ contentName: "Shared Tour", value: 0, currency: "IDR" });
+    trackViewItem({
+      value: 0,
+      currency: "IDR",
+      items: [buildTourAnalyticsItem({ itemId: "shared-tour", itemName: "Shared Tour", itemCategory: "Shared Tour", price: 0 })],
+    });
   }, []);
 
   const yachtOptions = useMemo(() => {
@@ -7610,17 +7615,18 @@ export default function Shared_tour_01() {
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
   const handleOpenCheckout = () => {
-    trackAddToCart({
+    const analyticsItem = buildTourAnalyticsItem({
+      itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+      itemName: selectedYacht?.name || "Shared Tour",
+      itemCategory: "Shared Tour",
+      price: totalPrice,
+    });
+    trackAddToCart({ value: totalPrice, currency: "IDR", items: [analyticsItem] });
+    trackPixelAddToCart({
+      contentIds: selectedYacht?.tourId ?? selectedYacht?.id,
+      contentName: selectedYacht?.name || "Shared Tour",
       value: totalPrice,
       currency: "IDR",
-      items: [
-        buildTourAnalyticsItem({
-          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
-          itemName: selectedYacht?.name || "Shared Tour",
-          itemCategory: "Shared Tour",
-          price: totalPrice,
-        }),
-      ],
     });
     setIsCheckoutOpen(true);
     setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -7854,7 +7860,7 @@ export default function Shared_tour_01() {
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5" }}>
         <div style={{ textAlign: "center", color: "#888" }}>
           <div style={{ width: 40, height: 40, border: "3px solid #ddd", borderTop: "3px solid #2E53D9", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ fontSize: 14 }}>Loading toursâ€¦</p>
+          <p style={{ fontSize: 14 }}>Loading tours…</p>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
       </div>

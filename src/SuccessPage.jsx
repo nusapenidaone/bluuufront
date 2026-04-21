@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { trackPixelPurchase } from "./lib/analytics";
+import { trackPixelPurchase, trackPurchase } from "./lib/analytics";
 
 function formatAmount(amount, currency) {
   if (!amount) return null;
@@ -59,6 +59,7 @@ export default function SuccessPage() {
   useEffect(() => {
     if (type !== "request" && amount > 0) {
       trackPixelPurchase({ value: amount, currency });
+      trackPurchase({ value: amount, currency, numItems: 1 });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getGaClientId, getUtmParams, trackBeginCheckout, trackPixelInitiateCheckout } from "./lib/analytics";
+import { buildTourAnalyticsItem, getGaClientId, getUtmParams, trackBeginCheckout, trackPixelInitiateCheckout, trackAddPaymentInfo, trackPixelAddPaymentInfo } from "./lib/analytics";
 import { useCurrency } from "./CurrencyContext";
 import {
   ArrowLeft,
@@ -145,6 +145,9 @@ export default function Payment() {
       setError("Missing contact details. Please go back and fill in your name and email.");
       return;
     }
+
+    trackAddPaymentInfo({ value: analyticsTotal, currency: analyticsCurrency });
+    trackPixelAddPaymentInfo({ value: analyticsTotal, currency: analyticsCurrency });
 
     setLoading(true);
     setError(null);

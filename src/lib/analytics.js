@@ -99,12 +99,36 @@ export function pushEcommerceEvent(eventName, { value, currency = "IDR", items =
   return true;
 }
 
+export function trackViewItem(payload) {
+  return pushEcommerceEvent("view_item", payload);
+}
+
 export function trackAddToCart(payload) {
   return pushEcommerceEvent("add_to_cart", payload);
 }
 
 export function trackBeginCheckout(payload) {
   return pushEcommerceEvent("begin_checkout", payload);
+}
+
+export function trackAddPaymentInfo(payload) {
+  return pushEcommerceEvent("add_payment_info", payload);
+}
+
+export function trackPurchase({ value, currency = "IDR", items = [], transactionId, numItems } = {}) {
+  if (typeof window === "undefined") return false;
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: "purchase",
+    ecommerce: {
+      transaction_id: transactionId || String(Date.now()),
+      value: toNumber(value),
+      currency,
+      num_items: numItems || items.length || 1,
+      items: items.filter(Boolean),
+    },
+  });
+  return true;
 }
 
 // ── Meta Pixel helpers ────────────────────────────────────────────────────────
@@ -119,10 +143,28 @@ function fbq(...args) {
  * ViewContent — fire when a tour page loads and tour data is ready.
  * @param {{ contentName: string, value: number, currency?: string }} param
  */
-export function trackPixelViewContent({ contentName, value, currency = "IDR" }) {
+export function trackPixelViewContent({ contentIds, contentName, value, currency = "IDR" }) {
   fbq("track", "ViewContent", {
+    content_ids: contentIds ? [String(contentIds)] : [],
     content_name: contentName,
     content_type: "product",
+    value: toNumber(value),
+    currency,
+  });
+}
+
+export function trackPixelAddToCart({ contentIds, contentName, value, currency = "IDR" }) {
+  fbq("track", "AddToCart", {
+    content_ids: contentIds ? [String(contentIds)] : [],
+    content_name: contentName,
+    content_type: "product",
+    value: toNumber(value),
+    currency,
+  });
+}
+
+export function trackPixelAddPaymentInfo({ value, currency = "IDR" }) {
+  fbq("track", "AddPaymentInfo", {
     value: toNumber(value),
     currency,
   });
