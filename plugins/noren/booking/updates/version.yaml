@@ -709,3 +709,6 @@ v1.0.236:
 v1.0.237:
     - 'Change utm column to text in noren_booking_order'
     - builder_table_update_noren_booking_order_29.php
+v1.0.238:
+    - 'Updated table noren_booking_extras'
+    - builder_table_update_noren_booking_extras_12.php

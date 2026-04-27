@@ -158,8 +158,7 @@ class Order extends Model
 
 
     // =========================
-    // UNIVERSAL EMAIL METHOD
-    // =========================
+
     protected function sendEmailAsyncSimple(string $template, $to, $name = null)
     {
         $order = $this->fresh();

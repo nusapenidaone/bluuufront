@@ -59,7 +59,7 @@ export function FAQSection() {
             id="faq"
             backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
         >
-            <div className="mx-auto w-full max-w-[1280px]">
+            <div className="container">
                 <div className="mb-8 flex flex-col items-center text-center">
                     <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
                     <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">

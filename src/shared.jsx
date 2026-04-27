@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures, bfOn } from "./utils/boatFeatures";
 import {
@@ -21,7 +21,7 @@ import { useRules } from "./contexts/RulesContext";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getUtmQueryString, trackAddToCart, trackPixelViewContent } from "./lib/analytics";
+import { buildTourAnalyticsItem, getUtmQueryString, trackAddToCart, trackViewItem, trackPixelViewContent, trackPixelAddToCart } from "./lib/analytics";
 
 // Shared Components & Utils
 import {
@@ -4947,7 +4947,7 @@ function StepExtras({
                                 <span className="text-xl">{child.emoji}</span>
                               ) : null}
                               <span className="flex-1 truncate text-sm font-medium text-secondary-800">{child.name}</span>
-                              <span className="text-sm text-secondary-400">Ã— {draftQuantities[child.id]}</span>
+                              <span className="text-sm text-secondary-400">× {draftQuantities[child.id]}</span>
                               <span className="text-sm font-bold text-secondary-900 min-w-12 text-right">{formatIDR(child.price * Number(draftQuantities[child.id] || 0))}</span>
                               <button type="button" onClick={() => setDraftQuantities(prev => ({ ...prev, [child.id]: 0 }))} className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 bg-white text-secondary-400 hover:border-red-200 hover:text-red-500 transition">
                                 <X className="h-3.5 w-3.5" />
@@ -7095,7 +7095,12 @@ export default function Shared_tour_01() {
   const { fetchTourDetail } = useTours();
 
   useEffect(() => {
-    trackPixelViewContent({ contentName: "Shared Tour", value: 0, currency: "IDR" });
+    trackPixelViewContent({ contentIds: "shared-tour", contentName: "Shared Tour", value: 0, currency: "IDR" });
+    trackViewItem({
+      value: 0,
+      currency: "IDR",
+      items: [buildTourAnalyticsItem({ itemId: "shared-tour", itemName: "Shared Tour", itemCategory: "Shared Tour", price: 0 })],
+    });
   }, []);
 
   const yachtOptions = useMemo(() => {
@@ -7610,17 +7615,18 @@ export default function Shared_tour_01() {
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
   const handleOpenCheckout = () => {
-    trackAddToCart({
+    const analyticsItem = buildTourAnalyticsItem({
+      itemId: selectedYacht?.tourId ?? selectedYacht?.id,
+      itemName: selectedYacht?.name || "Shared Tour",
+      itemCategory: "Shared Tour",
+      price: totalPrice,
+    });
+    trackAddToCart({ value: totalPrice, currency: "IDR", items: [analyticsItem] });
+    trackPixelAddToCart({
+      contentIds: selectedYacht?.tourId ?? selectedYacht?.id,
+      contentName: selectedYacht?.name || "Shared Tour",
       value: totalPrice,
       currency: "IDR",
-      items: [
-        buildTourAnalyticsItem({
-          itemId: selectedYacht?.tourId ?? selectedYacht?.id,
-          itemName: selectedYacht?.name || "Shared Tour",
-          itemCategory: "Shared Tour",
-          price: totalPrice,
-        }),
-      ],
     });
     setIsCheckoutOpen(true);
     setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -8287,7 +8293,8 @@ function StepCheckout({
   };
 
   const validatePhone = (phone) => {
-    return String(phone).trim().length > 4;
+    const digits = String(phone).replace(/[^0-9]/g, "");
+    return digits.length > 6;
   };
 
   const handleFinalize = () => {

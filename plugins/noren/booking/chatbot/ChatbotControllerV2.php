@@ -296,7 +296,6 @@ class ChatbotControllerV2 extends ChatbotController
         $routeId        = $request->input('route_id');
         $transferId     = $request->input('transfer');
         $coverId        = $request->input('insurance');
-        $extrasInput    = $request->input('extras', []);
         $boatId         = $request->input('boat_id');
         $pickupAddress  = $request->input('pickup_address', '');
         $dropoffAddress = $request->input('dropoff_address', '');
@@ -349,7 +348,10 @@ class ChatbotControllerV2 extends ChatbotController
         // ── Route ────────────────────────────────────────────────────────
         $route = null;
         if ($routeId) {
-            $route = Route::find($routeId);
+            $route = Route::with('restaurant')->find($routeId);
+        } elseif ($isShared) {
+            $tour->loadMissing(['route' => fn($q) => $q->with('restaurant')]);
+            $route = $tour->route;
         }
 
         // ── Transfer ─────────────────────────────────────────────────────
@@ -375,60 +377,34 @@ class ChatbotControllerV2 extends ChatbotController
             }
         }
 
-        // ── Extras ───────────────────────────────────────────────────────
-        $extrasTotal     = 0;
-        $extrasBreakdown = [];
-        $extrasMap       = collect();
-        if (!empty($extrasInput)) {
-            $extraIds  = collect($extrasInput)->pluck('extra_id')->toArray();
-            $extrasMap = Extras::whereIn('id', $extraIds)->get()->keyBy('id');
-
-            foreach ($extrasInput as $item) {
-                $extra = $extrasMap->get($item['extra_id']);
-                if (!$extra) continue;
-                $qty       = max(1, (int) ($item['quantity'] ?? 1));
-                $unitPrice = (int) ($extra->price ?? 0);
-                $subtotal  = $unitPrice * $qty;
-                $extrasTotal += $subtotal;
-                $extrasBreakdown[] = [
-                    'extra_id'       => $extra->id,
-                    'odoo_id'        => $extra->odoo_id ? (int) $extra->odoo_id : null,
-                    'name'           => $extra->name,
-                    'qty'            => $qty,
-                    'unit_price_idr' => $unitPrice,
-                    'subtotal_idr'   => $subtotal,
-                ];
-            }
-        }
-
         // ── USD rate ─────────────────────────────────────────────────────
         $rate    = Rates::where('code', 'USD')->orderBy('id', 'desc')->first();
         $usdRate = $rate ? (float) $rate->rate : null;
 
-        $finalTotalIDR = $boatBasePrice + $transferPrice + $coverPrice + $extrasTotal;
+        $finalTotalIDR = $boatBasePrice + $transferPrice + $coverPrice;
         $finalTotalUSD = $usdRate ? round($finalTotalIDR * $usdRate) : null;
         $perPaxIDR     = $guests > 0 ? round($finalTotalIDR / $guests) : $finalTotalIDR;
         $perPaxUSD     = $usdRate ? round($perPaxIDR * $usdRate) : null;
 
         // ── Booking URL ──────────────────────────────────────────────────
         $baseUrl   = rtrim(env('APP_URL', 'https://bluuu.tours'), '/');
-        $page      = $isShared ? 'shared' : 'private';
+        $page      = $isShared ? 'shared-tour-to-nusa-penida' : 'private-tour-to-nusa-penida';
         $urlParams = array_filter([
             'date'     => $date,
-            'adults'   => $guests,
+            'adults'   => $adults ?: $guests,
+            'kids'     => $kids > 0 ? $kids : null,
             'tour'     => $tour->id,
             'route'    => (!$isShared && $routeId) ? $routeId : null,
             'transfer' => $transferId ?: null,
             'cover'    => $coverId ?: null,
         ], fn($v) => $v !== null && $v !== '');
-        $bookingUrl = $baseUrl . '/new/' . $page . '?' . http_build_query($urlParams);
+        $bookingUrl = "{$baseUrl}/{$page}?" . http_build_query($urlParams);
 
         return response()->json([
             'success'      => true,
             'booking_url'  => $bookingUrl,
             'odoo_data'    => $this->buildOdooData(
                 $tour, $boat, $route, $transfer, $cover,
-                $extrasMap, $extrasInput,
                 $adults, $kids, $guests, $date,
                 $pickupAddress, $dropoffAddress, $cars,
                 $customerName, $customerEmail, $customerPhone, $externalId,
@@ -441,8 +417,6 @@ class ChatbotControllerV2 extends ChatbotController
                     'boat_base_price' => $boatBasePrice,
                     'transfer'        => $transferPrice,
                     'insurance'       => $coverPrice,
-                    'extras_total'    => $extrasTotal,
-                    'extras'          => $extrasBreakdown,
                     'final_total'     => $finalTotalIDR,
                 ],
             ],
@@ -454,7 +428,6 @@ class ChatbotControllerV2 extends ChatbotController
                     'boat_base_price' => round($boatBasePrice * $usdRate),
                     'transfer'        => round($transferPrice  * $usdRate),
                     'insurance'       => round($coverPrice     * $usdRate),
-                    'extras_total'    => round($extrasTotal    * $usdRate),
                     'final_total'     => $finalTotalUSD,
                 ],
             ] : null,
@@ -555,7 +528,6 @@ class ChatbotControllerV2 extends ChatbotController
 
     private function buildOdooData(
         $tour, $boat, $route, $transfer, $cover,
-        $extrasMap, $extrasInput,
         int $adults, int $kids, int $guests, ?string $date,
         string $pickupAddress, string $dropoffAddress, int $cars,
         string $customerName, string $customerEmail, string $customerPhone, string $externalId,
@@ -651,15 +623,14 @@ class ChatbotControllerV2 extends ChatbotController
             ];
         }
 
-        // 5. Extras
-        foreach ($extrasInput as $item) {
-            $extra = $extrasMap->get($item['extra_id'] ?? null);
-            if (!$extra?->odoo_id) continue;
+        // 5. Restaurant
+        $restaurant = $route?->restaurant;
+        if ($restaurant?->odoo_id) {
             $lines[] = [
-                'label'      => 'extra:' . $extra->name,
-                'product_id' => (int) $extra->odoo_id,
-                'qty'        => max(1, (int) ($item['quantity'] ?? 1)),
-                'price'      => (float) ($extra->price ?? 0),
+                'label'      => 'restaurant',
+                'product_id' => (int) $restaurant->odoo_id,
+                'qty'        => $guests,
+                'price'      => 0.0,
             ];
         }
 

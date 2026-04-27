@@ -21,7 +21,7 @@ const EXTRA_IMAGE_BY_ID = {
 };
 const EXTRA_FALLBACK_IMAGE = "https://bluuu.tours/storage/app/uploads/public/68f/9ed/c1a/68f9edc1a9270720998215.jpg";
 
-export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCatalog, selectedExtras, onChangeExtraQty, formatIDR }) {
+export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCatalog, selectedExtras, onChangeExtraQty, formatIDR, totalGuests = 1 }) {
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [pickerQty, setPickerQty] = useState(1);
   const [justAddedId, setJustAddedId] = useState(null);
@@ -99,12 +99,15 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
   const selectedChildDraft = hasChildren ? Number(draftQuantities[selectedChildId] || 0) : 0;
   const remainingForChild = selectedMaxQty === Infinity || selectedMaxQty === 99 ? 99 : Math.max(0, selectedMaxQty - selectedChildDraft);
   const remainingForSingle = maxQty === Infinity ? 99 : Math.max(0, maxQty - singleDraftQty);
+  const carsQty = Math.ceil(totalGuests / 5) || 1;
 
   const confirmHandler = () => {
     if (hasChildren) {
       activeExtra.children.forEach((child) => {
         onChangeExtraQty(child.id, Math.max(0, draftQuantities[child.id] ?? 0));
       });
+    } else if (activeExtra.per_car) {
+      onChangeExtraQty(currentItem.id, singleDraftQty > 0 ? singleDraftQty : carsQty);
     } else {
       onChangeExtraQty(currentItem.id, singleDraftQty);
     }
@@ -300,6 +303,36 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                     <div className="space-y-3">
                       {isSoldOut ? (
                         <div className="rounded-xl border border-neutral-200 px-4 py-3 text-sm text-secondary-400 opacity-50">Sold out</div>
+                      ) : activeExtra.per_car ? (
+                        <div className="flex items-center gap-2">
+                          <div className="inline-flex h-10 items-center gap-2 rounded-full border border-neutral-200 bg-white px-4">
+                            <span className="text-sm font-bold tabular-nums text-secondary-900">×{carsQty}</span>
+                            <span className="text-xs text-secondary-400">car{carsQty !== 1 ? "s" : ""}</span>
+                          </div>
+                          {currentItem?.price > 0 && (
+                            <span className="text-sm font-bold text-secondary-900 tabular-nums">
+                              {formatIDR(carsQty * currentItem.price)}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDraftQuantities((prev) => ({ ...prev, [currentItem.id]: carsQty }));
+                              setJustAddedId(currentItem.id);
+                              setTimeout(() => setJustAddedId(null), 1200);
+                            }}
+                            className={cn(
+                              "ml-auto h-10 rounded-full px-5 text-sm font-bold transition",
+                              justAddedId === currentItem.id
+                                ? "bg-green-500 text-white"
+                                : "bg-primary-500 text-white hover:bg-primary-600"
+                            )}
+                          >
+                            {justAddedId === currentItem.id ? (
+                              <><CheckCircle2 className="inline h-3.5 w-3.5 mr-1" />Added</>
+                            ) : "+ Add"}
+                          </button>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <div className="inline-flex h-10 items-center rounded-full border border-neutral-200 bg-white">

@@ -193,8 +193,13 @@ class SharedOrderController extends Controller
             }
 
             // ── Xendit payment ────────────────────────────────────────────
+            $successBase = url('/new/success') . '?type=shared'
+                . '&order_id=' . urlencode($order->external_id)
+                . '&num_items=' . ($order->adults + $order->kids)
+                . '&content_ids=' . $order->tours_id;
+
             if ($order->method_id == 1) {
-                $successUrl = url('/new/success') . '?amount=' . $order->deposite_summ . '&currency=IDR&type=shared';
+                $successUrl = $successBase . '&amount=' . $order->deposite_summ . '&currency=IDR';
                 $url = XenditService::createPaymentLink(
                     $order->external_id,
                     $order->deposite_summ,
@@ -208,7 +213,7 @@ class SharedOrderController extends Controller
             } else {
                 $usd_rate = Rates::find(2)->rate;
                 $usd_summ = $usd_rate * $order->deposite_summ;
-                $successUrl = url('/new/success') . '?amount=' . round($usd_summ, 2) . '&currency=USD&type=shared';
+                $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
                 $url = PayPalService::createPaymentLink(
                     $order->external_id,
                     $usd_summ,

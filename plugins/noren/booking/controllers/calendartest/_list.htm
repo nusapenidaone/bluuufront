@@ -1,0 +1,90 @@
+<div class="control-list mt-2">
+    <table class="table data" id="table">
+        <thead>
+            <tr>
+                <th class="sort-desc p-2">Boat</th>
+                 <th class="sort-desc p-2">Capacity</th>
+                <?php foreach ($dateArray as $date): ?>
+                    <th class="p-2"><?= e($date) ?></th>
+                <?php endforeach; ?>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($boats as $boat): ?>
+                <tr>
+                    <td><?= e($boat->amo_name) ?></td>
+                    <td><?= e($boat->capacity) ?></td>
+                    <?php foreach ($dateArray as $key => $date): ?>
+                        <?php $records = $bookings[$date][$boat->id] ?? collect(); ?>
+                        <?php if ($records->isEmpty()): ?>
+                            <!-- Свободно -->
+                            <td class="p-2 open">
+                                <a data-request="onAdd"
+                                   data-request-confirm="Are you sure you want to close the date ?"
+                                   data-request-data="id:<?= $boat->id ?>,date:'<?= $date ?>'">
+                                   open
+                                </a>
+                            </td>
+                        <?php elseif ($records->where('type',4)->isNotEmpty()): ?>
+                            <!-- Один ручной -->
+                            <td class="p-2 busy">
+                                <a data-request="onRemove"
+                                   data-request-confirm="Are you sure you want to delete the entry? ?"
+                                   data-request-data="id:<?= $records->first()->id ?>">
+                                   Auto
+                                </a>
+                            </td>
+
+                        <?php elseif ($records->whereNotIn('type',[1,2])->isNotEmpty()): ?>
+                            <!-- Один ручной -->
+                            <td class="p-2 busy">
+                                <a data-request="onRemove"
+                                   data-request-confirm="Are you sure you want to delete the entry? ?"
+                                   data-request-data="id:<?= $records->first()->id ?>">
+                                   Manually
+                                </a>
+                            </td>
+                        <?php else: ?>
+                            <?php $totalQtty = $records->sum('qtty'); ?>
+                            <td class="p-2 busy">
+                                <?php if ($records->where('type',1)->isNotEmpty()): ?>
+                                    <div class="pointer"  data-fancybox data-src="#modal<?= $boat->id ?>-<?= $key ?>">
+                                        SHARED (<?= $totalQtty ?: count($records) ?>)
+                                    </div>
+                                <?php elseif ($records->where('type',2)->isNotEmpty()): ?>
+                                    <div class="pointer"  data-fancybox data-src="#modal<?= $boat->id ?>-<?= $key ?>">
+                                        CRM (<?= $totalQtty ?: count($records) ?>)
+                                    </div>
+                                <?php endif; ?>
+                                <!-- Модалка -->
+                                <div class="position-relative">
+                            <div class="d-none">
+                                <div class="bg-dark"  role="dialog" id="modal<?= $boat->id ?>-<?= $key ?>">
+                                    
+                                        <div >
+                                           
+                                                <h4 class="modal-title flex-grow-1"><?= e($boat->amo_name) ?> (<?= $date ?>)</h4>
+                                           
+                                      
+                                            <div class="py-4">
+                                                <?php foreach ($records as $booking): ?>
+                                                    <div>
+                                                        <a href="https://baliboattours.kommo.com/leads/detail/<?= $booking->lead_id ?>" target="_blank">
+                                                            <?= $booking->lead_id ?: 'Manually' ?> (<?= $booking->qtty ?>)
+                                                        </a>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
+                                  
+                                </div>
+                                </div>
+                                </div>
+                            </td>
+                        <?php endif; ?>
+                    <?php endforeach; ?>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</div>

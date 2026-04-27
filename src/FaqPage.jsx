@@ -66,7 +66,7 @@ export default function FaqPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/new/private#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida#booking" }}
       />
 
       <main className="container flex-1 py-8 sm:py-12">

@@ -1,2948 +1,842 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { Fancybox } from "@fancyapps/ui";
-import "@fancyapps/ui/dist/fancybox/fancybox.css";
-import { useCurrency } from "./CurrencyContext";
-import { useTours } from "./ToursContext";
-import { useExtras } from "./contexts/ExtrasContext";
-import Modal from "./components/common/Modal";
-import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
-import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
-import { cn } from "./lib/utils";
-import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
-import Footer from "./components/common/Footer";
-import LogoSlider from "./components/common/LogoSlider";
-import { getBoatFeatures } from "./utils/boatFeatures";
-import { getBoatLength, sanitizeDisplayText } from "./utils/displayUtils";
+import React, { useState, useEffect, useRef, useId, useMemo } from 'react';
+import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import './home.css';
+import { useSiteContacts } from './hooks/useSiteContacts';
+const MEDIA = 'https://bluuu.tours/storage/app/media/bluuu';
+const imgPoster   = 'https://bluuu.tours/storage/app/media/poster.webp';
+const imgPosterMd = 'https://bluuu.tours/storage/app/media/poster-md.webp';
+const imgShared   = `${MEDIA}/shared.webp`;
+const imgPrivate  = `${MEDIA}/private.webp`;
+const galPreviews = [1,2,3,4,5].map(n => `${MEDIA}/gal${n}.webp`);
+const imgG1 = `${MEDIA}/g1.webp`;
+const imgG2 = `${MEDIA}/g2.webp`;
+const imgG3 = `${MEDIA}/g3.webp`;
+const imgG4 = `${MEDIA}/g4.webp`;
+const imgG5 = `${MEDIA}/g5.webp`;
+const icon1 = `${MEDIA}/icon1.svg`;
+const icon2 = `${MEDIA}/icon2.svg`;
+const icon3 = `${MEDIA}/icon3.svg`;
+const icon4 = `${MEDIA}/icon4.svg`;
+const icon5 = `${MEDIA}/icon5.svg`;
+const icon6 = `${MEDIA}/icon6.svg`;
+import { HugeiconsIcon } from '@hugeicons/react';
+import { CloudSavingDone01Icon, Invoice01Icon, FavouriteIcon, CheckmarkCircle02Icon, Tick02Icon, Shield01Icon, HeartCheckIcon, Certificate01Icon, AnchorIcon, UserGroupIcon, CheckmarkBadge01Icon, Add01Icon, Shield02Icon, BoatIcon } from '@hugeicons/core-free-icons';
 
-// Global formatters to bridge legacy utility functions with React Context
-let _globalFormatPrice = (val, opts) => `IDR ${Number(val).toLocaleString()}`;
-const CurrencyBridge = () => {
-  const currency = useCurrency();
-  if (typeof currency?.formatPrice === "function") {
-    _globalFormatPrice = currency.formatPrice; // Synchronous update to avoid stale prices during first render
-  }
-  return null;
-};
-import {
-  Anchor,
-  ArrowRight,
-  BadgeCheck,
-  Calendar,
-  Car,
-  Camera,
-  Check,
-  ChevronDown,
-  Clock,
-  Plus,
-  Coffee,
-  Fish,
-  Trophy,
-  ExternalLink,
-  Globe,
-  LifeBuoy,
-  MapPin,
-  Mail,
-  MessageCircle,
-  Phone,
-  Play,
-  Shield,
-  Ship,
-  Sparkles,
-  Star,
-  Sun,
-  Ticket,
-  Users,
-  UtensilsCrossed,
-  Waves,
-  ChevronLeft,
-  ChevronRight,
-  Maximize,
-  Wine,
-  X,
-} from "lucide-react";
+const TripAdvisorIcon = ({ size = 22 }) => (
+  <svg width={size} height={size} viewBox="0 0 111 111" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M55.1965 110.393C85.6806 110.393 110.393 85.6806 110.393 55.1965C110.393 24.7123 85.6806 0 55.1965 0C24.7123 0 0 24.7123 0 55.1965C0 85.6806 24.7123 110.393 55.1965 110.393Z" fill="#34E0A1"/><path d="M89.2887 44.4287L95.9493 37.1822H81.1788C73.7844 32.1312 64.8542 29.1895 55.1964 29.1895C45.5507 29.1895 36.6455 32.1375 29.2632 37.1822H14.4558L21.1164 44.4287C17.0338 48.1536 14.4744 53.5192 14.4744 59.4767C14.4744 70.7196 23.5896 79.8346 34.8324 79.8346C40.1733 79.8346 45.0391 77.7748 48.6716 74.4075L55.1965 81.5121L61.7214 74.4137C65.354 77.781 70.2136 79.8346 75.5544 79.8346C86.7972 79.8346 95.9247 70.7196 95.9247 59.4767C95.9307 53.513 93.3715 48.1476 89.2887 44.4287ZM34.8385 73.2542C27.228 73.2542 21.061 67.0872 21.061 59.4767C21.061 51.8663 27.2282 45.6991 34.8385 45.6991C42.4487 45.6991 48.6159 51.8663 48.6159 59.4767C48.6159 67.0872 42.4487 73.2542 34.8385 73.2542ZM55.2026 59.0759C55.2026 50.01 48.6099 42.227 39.9079 38.9028C44.6134 36.9354 49.7754 35.8439 55.1964 35.8439C60.6173 35.8439 65.7853 36.9354 70.491 38.9028C61.7954 42.2332 55.2026 50.0101 55.2026 59.0759ZM75.5606 73.2542C67.9502 73.2542 61.783 67.0872 61.783 59.4767C61.783 51.8663 67.9502 45.6991 75.5606 45.6991C83.171 45.6991 89.3381 51.8663 89.3381 59.4767C89.3381 67.0872 83.1709 73.2542 75.5606 73.2542ZM75.5606 52.2486C71.5704 52.2486 68.3387 55.4803 68.3387 59.4706C68.3387 63.4607 71.5704 66.6923 75.5606 66.6923C79.5507 66.6923 82.7824 63.4607 82.7824 59.4706C82.7822 55.4865 79.5507 52.2486 75.5606 52.2486ZM42.0602 59.4767C42.0602 63.4668 38.8286 66.6985 34.8385 66.6985C30.8484 66.6985 27.6167 63.4668 27.6167 59.4767C27.6167 55.4865 30.8484 52.2548 34.8385 52.2548C38.8286 52.2486 42.0602 55.4865 42.0602 59.4767Z" fill="#000"/></svg>
+);
 
-const ROUTE_ICON_MAP = {
-  MapPin, Fish, Clock, LifeBuoy, UtensilsCrossed, Camera, Shield, Waves,
-  Anchor, Sun, BadgeCheck, Ship, Coffee, Ticket, Users, Wine, Globe, Star,
-  Calendar, ArrowRight, Car, Sparkles,
+const GoogleIcon = ({ size = 20 }) => {
+  const uid = useId();
+  const a = `${uid}-a`;
+  const b = `${uid}-b`;
+  const c = `${uid}-c`;
+  const d = `${uid}-d`;
+  const e = `${uid}-e`;
+  const f = `${uid}-f`;
+  const g = `${uid}-g`;
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill={`url(#${a})`} d="M6.592 13.918a6.04 6.04 0 0 1-.307-1.909H2.208c0 1.517.343 2.946.947 4.227l.124.254v.01a10.063 10.063 0 0 0 1.889 2.604l4.47-1.674a6.12 6.12 0 0 1-3.046-3.512Z"/><path fill={`url(#${b})`} d="M18.883 4.619C17.148 3 14.896 2.01 12.198 2.01c-.531 1.11-.62 2.771 0 3.981 1.472 0 2.78.51 3.824 1.491l2.86-2.863Z"/><path fill={`url(#${c})`} d="M12.198 5.991h.095l-.095-3.981a9.936 9.936 0 0 0-7.645 3.577c.257 1.483.97 2.435 3.12 2.586 1.084-1.324 2.71-2.182 4.525-2.182Z"/><path fill={`url(#${d})`} d="M15.568 17.073c-.89.6-2.026.963-3.37.963-.784 1.262-1.31 2.562 0 3.972 2.53 0 4.675-.783 6.295-2.14l.318-.278c1.482-1.37 2.473-3.244 2.83-5.46.098-.607.148-1.24.148-1.894l-2.265.3-1.912 1.35-.037.177a4.596 4.596 0 0 1-1.813 2.871l-.194.139Z"/><path fill="#3086FF" d="M12.207 10.195v3.864l5.368.004a7.211 7.211 0 0 1-.013.067h4.08a11.894 11.894 0 0 0-.034-3.94h-6.902v.005h-2.499Z"/><path fill={`url(#${e})`} d="m6.532 10.336.072-.227a6.136 6.136 0 0 1 1.719-2.616c-.93-.157-3.263-1.525-3.567-2.14a10.066 10.066 0 0 0-1.477 2.174 9.885 9.885 0 0 0-1.07 4.694c.723.313 3.082.37 4.08 0a5.926 5.926 0 0 1 .243-1.885Z"/><path fill={`url(#${f})`} d="M8.24 2.828 9.954 6.45c-.754.322-1.43.8-1.99 1.392l-3.77-1.798A10.016 10.016 0 0 1 8.24 2.828Z"/><path fill={`url(#${g})`} d="M12.198 18.036a5.733 5.733 0 0 1-3.046-.879l-1.562-.043c-1.839.489-2.372.882-2.538 1.872a9.935 9.935 0 0 0 7.146 3.022v-3.972Z"/><defs><radialGradient id={a} cx="0" cy="0" r="1" gradientTransform="matrix(-.39758 -10.0212 14.2947 -.60136 9.548 18.953)" gradientUnits="userSpaceOnUse"><stop offset=".142" stopColor="#1ABD4D"/><stop offset=".54" stopColor="#EBCB03"/><stop offset=".861" stopColor="#FFCE0A"/></radialGradient><radialGradient id={b} cx="0" cy="0" r="1" gradientTransform="matrix(6.98058 -.00002 -.00001 8.69619 18.606 7.276)" gradientUnits="userSpaceOnUse"><stop offset=".408" stopColor="#FB4E5A"/><stop offset="1" stopColor="#FF4540"/></radialGradient><radialGradient id={c} cx="0" cy="0" r="1" gradientTransform="matrix(-9.69141 5.2869 7.2839 12.9533 14.943 .736)" gradientUnits="userSpaceOnUse"><stop offset=".231" stopColor="#FF4541"/><stop offset="1" stopColor="#FF8C18"/></radialGradient><radialGradient id={d} cx="0" cy="0" r="1" gradientTransform="matrix(-17.1723 -22.6195 -8.27448 6.39613 12.433 20.73)" gradientUnits="userSpaceOnUse"><stop offset=".132" stopColor="#0CBA65"/><stop offset=".801" stopColor="#3086FF"/></radialGradient><radialGradient id={e} cx="0" cy="0" r="1" gradientTransform="matrix(-1.20393 10.4774 14.3481 1.68074 11.206 4)" gradientUnits="userSpaceOnUse"><stop offset=".366" stopColor="#FF4E3A"/><stop offset=".771" stopColor="#FFCD0A"/></radialGradient><radialGradient id={f} cx="0" cy="0" r="1" gradientTransform="matrix(-3.50908 3.94959 -10.9464 -10.0725 9.582 3.782)" gradientUnits="userSpaceOnUse"><stop offset=".316" stopColor="#FF4C3C"/><stop offset="1" stopColor="#FF9F13"/></radialGradient><radialGradient id={g} cx="0" cy="0" r="1" gradientTransform="matrix(-9.59942 -5.20588 7.21476 -12.7547 14.895 23.203)" gradientUnits="userSpaceOnUse"><stop offset=".231" stopColor="#0FBC5F"/><stop offset="1" stopColor="#86C504"/></radialGradient></defs></svg>
+  );
 };
 
-function getScheduleIcon(title) {
-  const t = (title || "").toLowerCase();
-  if (/snorkel|swim|wave|crystal|lagoon|reef/.test(t)) return Waves;
-  if (/lunch|restaurant|food|dinner|eat|meal/.test(t)) return UtensilsCrossed;
-  if (/depart|departure/.test(t)) return Ship;
-  if (/return|back|cruise|transfer/.test(t)) return Anchor;
-  if (/manta|dive|fish/.test(t)) return Fish;
-  if (/car|land|tour|viewpoint|cliff|trek|hike|temple|monument/.test(t)) return Car;
-  if (/meeting|briefing|welcome|pickup/.test(t)) return Users;
-  if (/coffee|drink|break/.test(t)) return Coffee;
-  if (/photo|camera/.test(t)) return Camera;
-  if (/sunset|sun|rise/.test(t)) return Sun;
-  return MapPin;
-}
+const AirbnbIcon = ({ size = 20 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="#FF385C" fillRule="evenodd" d="M21.157 16.214c-.101-.24-.203-.5-.304-.72-.162-.36-.325-.701-.467-1.021l-.02-.02a208.116 208.116 0 0 0-4.488-9.05l-.061-.12c-.162-.3-.325-.62-.488-.94-.203-.36-.405-.741-.73-1.102A3.298 3.298 0 0 0 12.02 2c-1.015 0-1.929.44-2.6 1.202-.304.36-.527.74-.73 1.1-.163.32-.325.641-.487.942l-.062.12a233.985 233.985 0 0 0-4.487 9.048l-.02.04c-.142.32-.305.661-.467 1.022-.102.22-.203.46-.305.72-.264.74-.345 1.442-.243 2.162a4.264 4.264 0 0 0 2.639 3.323A4.208 4.208 0 0 0 6.903 22a5.422 5.422 0 0 0 2.559-.72c.832-.461 1.624-1.122 2.517-2.083.894.961 1.706 1.622 2.518 2.082a5.42 5.42 0 0 0 2.559.721c.568 0 1.137-.1 1.644-.32a4.257 4.257 0 0 0 2.64-3.324c.162-.7.082-1.4-.183-2.142ZM12 17.255c-1.096-1.361-1.806-2.642-2.05-3.723-.102-.461-.122-.861-.062-1.222.041-.32.163-.6.325-.84.386-.541 1.036-.881 1.787-.881.752 0 1.422.32 1.787.88.163.24.285.521.325.841.061.36.041.78-.06 1.222-.244 1.06-.955 2.342-2.052 3.723Zm8.102.941a2.98 2.98 0 0 1-1.847 2.342 3.11 3.11 0 0 1-1.544.2 4.02 4.02 0 0 1-1.543-.52c-.73-.4-1.462-1.02-2.315-1.942 1.34-1.622 2.153-3.103 2.457-4.424a4.95 4.95 0 0 0 .102-1.702 3.24 3.24 0 0 0-.548-1.361c-.63-.901-1.685-1.422-2.864-1.422-1.177 0-2.233.541-2.862 1.422-.285.4-.468.86-.549 1.361a4.092 4.092 0 0 0 .102 1.702c.304 1.321 1.137 2.823 2.457 4.444-.833.921-1.584 1.542-2.315 1.942-.528.3-1.036.46-1.543.52a3.297 3.297 0 0 1-1.543-.2 2.983 2.983 0 0 1-1.849-2.342c-.06-.5-.02-1 .183-1.562.062-.2.163-.4.265-.64.142-.32.304-.66.466-1l.02-.041A217.999 217.999 0 0 1 9.3 5.984l.061-.12c.162-.3.325-.62.487-.921.163-.32.346-.62.569-.88a2.134 2.134 0 0 1 1.624-.742c.63 0 1.198.261 1.625.741.223.26.406.56.568.881.163.3.325.62.488.921l.06.12a263.89 263.89 0 0 1 4.447 9.01v.02c.162.32.305.68.467 1 .102.24.203.44.264.64.163.52.224 1.022.142 1.542Z" clipRule="evenodd"/></svg>
+);
 
-const BRAND = {
-  name: "Bluuu",
-  product: "Nusa Penida day tours",
-  reviewCount: "8,595",
-  reviewLabel: "reviews",
-  badges: [
-    { icon: Star, label: "Customer choice" },
-    { icon: MapPin, label: "Free Bluuu Bus shuttle" },
-    { icon: BadgeCheck, label: "Safety first" },
-    { icon: LifeBuoy, label: "24/7 support" },
-  ],
-};
-
-const ACCENT = "#045cff";
-const ACCENT_DARK = "#0a4deb";
-const PAGE_BG = "#FFFFFF";
-const HERO_BACKGROUND_IMAGE = "https://bluuu.tours/storage/app/media/shared.webp";
-
-const SECTIONS = [
-  { id: "tours", label: "Tours" },
-  { id: "compare", label: "Compare" },
-  { id: "plan", label: "Schedule" },
-  { id: "social", label: "Reviews" },
-  { id: "why", label: "Why book" },
-  { id: "included", label: "Included" },
-  { id: "faq", label: "FAQ" },
-  { id: "book", label: "Book" },
-];
-
-const TOUR_HIGHLIGHT_BADGES = [
-  { icon: Ship, label: "Bali → Nusa Penida" },
-  { icon: LifeBuoy, label: "Full day tour" },
-];
-
-const OVERVIEW_HIGHLIGHTS = [
-  {
-    icon: Ship,
-    title: "Comfort yacht",
-    text: "Relaxed ride with attentive crew and smooth transitions.",
-  },
-  {
-    icon: Waves,
-    title: "Multiple snorkel spots",
-    text: "Curated underwater stops supported by quality gear.",
-  },
-  {
-    icon: MapPin,
-    title: "Curated land highlights",
-    text: "Comfortable transfers to iconic viewpoints with time to enjoy.",
-  },
-  {
-    icon: Star,
-    title: "Swim with mantas",
-    text: "Swim with manta rays when conditions allow, guided by crew.",
-  },
-];
-
-const TOUR_OPTIONS_BASE = [
-  {
-    id: "shared",
-    name: "Shared Tour",
-    badge: "Best value",
-    tone: "shared",
-    summary: "Unique shared speedboat day tour with all the highlights.",
-    highlights: [
-      "Best snorkel spots",
-      "Lunch at scenic restaurant",
-      "Land Tour to Kelingking Cliff",
-      "Swim with Manta Rays",
-      "Showers, towels, drinks & ice cream",
-    ],
-    bestFor: "Value seekers, solo travelers, couples",
-    cta: "Shared",
-    priceValue: 1300000,
-    priceNote: "/ person",
-  },
-  {
-    id: "premium-shared",
-    name: "Premium Shared",
-    badge: "Most booked",
-    tone: "premium",
-    summary: "Shared comfort with elevated perks and more space.",
-    highlights: [
-      "Everything in Comfort, plus premium touches",
-      "Upgraded Premium boat",
-      "1 extra ‘Secret’ snorkel spot",
-      "3 bottles of Prosecco to share onboard",
-      "Pro photographer for all day",
-    ],
-    bestFor: "Couples, comfort lovers, small groups",
-    cta: "Premium Shared",
-    priceValue: 1900000,
-    priceNote: "/ person",
-  },
-  {
-    id: "private",
-    name: "Private",
-    badge: "For families and groups",
-    tone: "private",
-    summary: "Private yacht experience with flexible pace and extras.",
-    highlights: [
-      "Choose your yacht model",
-      "Private boat — only your group onboard",
-      "Flexible pace and timing (within route)",
-      "Add extras: diving, pro photographer, jet ski & more (optional)",
-      "Lunch in scenic restaurant",
-    ],
-    bestFor: "Families, birthdays, groups who want privacy",
-    cta: "Private",
-    priceValue: 14900000,
-    priceNote: "/ boat",
-  },
-  {
-    id: "premium-private",
-    name: "Premium Private",
-    badge: "Top tier",
-    tone: "premium-private",
-    summary: "A premium private day with seamless flow and extra amenities.",
-    highlights: [
-      "Everything in Private, plus premium touches",
-      "Upgraded premium boat",
-      "1 extra ‘secret’ snorkel spot (when conditions allow)",
-      "3 bottles of Prosecco to share onboard",
-      "Pro photographer for all day",
-    ],
-    bestFor: "Luxury seekers, proposals, special occasions",
-    cta: "Premium Private",
-    priceValue: 19900000,
-    priceNote: "/ boat",
-  },
-];
-
-// GALLERY_ITEMS removed to strictly use API data
-
-
-const COMMON_GROUND_ITEMS = [
-  "Same route: Bali to Nusa Penida",
-  "Same Bluuu crew and safety standards",
-  "Snorkel stops plus swim with mantas",
-  "Free cancellation 24h and weather guarantee",
-];
-
-
-export function useTourOptions() {
-  const { privateTours, sharedTours } = useTours();
-  const { formatPrice } = useCurrency();
-
-  return useMemo(() => {
-    return TOUR_OPTIONS_BASE.map(opt => {
-      if (opt.id === "private" && privateTours?.length) {
-        const standard = privateTours.find(t => t.name.includes("Standard")) || privateTours[0];
-        if (standard) {
-          const minPricelist = standard.packages?.pricelist?.length ? Math.min(...standard.packages.pricelist.map(p => Number(p.price))) : 0;
-          const boatPrice = Number(standard.boat_price) || 0;
-          const priceValue = minPricelist + boatPrice;
-          if (priceValue > 0) {
-            return { ...opt, priceValue, priceNote: `from ${formatPrice(priceValue, { fromCurrency: "IDR" })} / boat` };
-          }
-        }
-      }
-      if (opt.id === "premium-private" && privateTours?.length) {
-        const premium = privateTours.find(t => t.name.includes("Premium") || t.name.includes("First Class")) || privateTours[1];
-        if (premium) {
-          const minPricelist = premium.packages?.pricelist?.length ? Math.min(...premium.packages.pricelist.map(p => Number(p.price))) : 0;
-          const boatPrice = Number(premium.boat_price) || 0;
-          const priceValue = minPricelist + boatPrice;
-          if (priceValue > 0) {
-            return { ...opt, priceValue, priceNote: `from ${formatPrice(priceValue, { fromCurrency: "IDR" })} / boat` };
-          }
-        }
-      }
-      return opt;
-    });
-  }, [privateTours, sharedTours, formatPrice]);
-}
-
-const SAFETY_ITEMS = [
-  "Free shuttle from selected areas (Canggu/Berawa, Batu Belig, Seminyak, Legian/Kuta)",
-  "Two certified guides on every boat (first-aid trained)",
-  "Experienced crew (3+ years) and our own fleet (not outsourced)",
-];
-
-try {
-  console.assert(new Set(SECTIONS.map((s) => s.id)).size === SECTIONS.length, "SECTIONS ids must be unique");
-} catch (_) { }
-
-function formatIDR(value) {
-  return _globalFormatPrice(value, { fromCurrency: "IDR" });
-}
-
-function formatUSD(value) {
-  return _globalFormatPrice(value, { fromCurrency: "USD" });
-}
-
-function Pill({ icon: Icon, children }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs text-secondary-900 shadow-card">
-      <Icon className="h-4 w-4 text-primary-600" />
-      {children}
-    </span>
-  );
-}
-
-
-
-
-
-
-
-function GalleryBlock() {
-  const { loading, gallery: apiGallery, privateTours } = useTours();
-
-  // Use dedicated gallery items; fall back to tour images if none
-  const galleryItems = useMemo(() => {
-    if (apiGallery?.length) {
-      return apiGallery.map((g) => ({
-        id: g.id,
-        src: g.url,
-        thumb: g.thumb || g.url,
-        thumbSmall: g.thumb_small || null,
-        title: g.title || "",
-      }));
-    }
-    return (privateTours || [])
-      .flatMap((t) => t.images_with_thumbs || [])
-      .filter(Boolean)
-      .map((img, i) => ({
-        id: i,
-        src: img.original || img.thumb1 || img,
-        thumb: img.thumb1 || img.original || img,
-        thumbSmall: img.thumb1_small || null,
-        title: "",
-      }));
-  }, [apiGallery, privateTours]);
-
-  // Desktop: 5 previews (1 large + 2×2); Mobile: 3 previews (1 large + 2 bottom)
-  const preview = galleryItems.slice(0, 5);
-  const previewMob = galleryItems.slice(0, 3);
-
-  const openFancybox = (startIndex = 0) => {
-    Fancybox.show(
-      galleryItems.map((item) => ({
-        src: item.src,
-        thumb: item.thumb,
-        caption: item.title || undefined,
-      })),
-      { startIndex }
-    );
-  };
-
-  return (
-    <section id="gallery" className="py-12 sm:py-16">
-      <div className="container">
-        {/* Header */}
-        {/* <div className="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <div className="text-xs font-black uppercase tracking-widest text-primary-600">From our guests</div>
-            <h2 className="mt-1.5 text-2xl font-bold text-secondary-900 sm:text-3xl">
-              This is what your day looks like
-            </h2>
-          </div>
-        </div> */}
-
-        {/* Gallery grid */}
-        {loading ? (
-          <GallerySkeleton />
-        ) : previewMob.length > 0 ? (
-          <div className="relative overflow-hidden rounded-xl sm:rounded-xl">
-
-            {/* ── MOBILE: 1 large + 2 bottom ── */}
-            <div className="grid h-440 grid-rows-gallery-asymmetric gap-0.75 sm:hidden">
-              {/* Large image */}
-              <button
-                type="button"
-                className="group relative overflow-hidden"
-                onClick={() => openFancybox(0)}
-              >
-                <img
-                  src={previewMob[0].thumb}
-                  srcSet={previewMob[0].thumbSmall ? `${previewMob[0].thumbSmall} 400w, ${previewMob[0].thumb} 800w` : undefined}
-                  sizes="100vw"
-                  alt={previewMob[0].title || "Gallery"}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                />
-                <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-              </button>
-
-              {/* 2 small images in a row */}
-              <div className="grid grid-cols-2 gap-0.75">
-                {[previewMob[1], previewMob[2]].map((item, i) => {
-                  if (!item) return <div key={i} className="bg-neutral-200" />;
-                  return (
-                    <button
-                      key={item.id ?? i}
-                      type="button"
-                      className="group relative overflow-hidden"
-                      onClick={() => openFancybox(i + 1)}
-                    >
-                      <img
-                        src={item.thumb}
-                        srcSet={item.thumbSmall ? `${item.thumbSmall} 400w, ${item.thumb} 800w` : undefined}
-                        sizes="50vw"
-                        alt={item.title || "Gallery"}
-                        loading="lazy"
-                        className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                      />
-                      <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ── DESKTOP: 1 large left + 2×2 right ── */}
-            <div className="hidden h-520 grid-cols-2 gap-0.75 sm:grid">
-              {/* Main large image */}
-              <button
-                type="button"
-                className="group relative overflow-hidden"
-                onClick={() => openFancybox(0)}
-              >
-                <img
-                  src={preview[0].thumb}
-                  alt={preview[0].title || "Gallery"}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.03]"
-                />
-                <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-              </button>
-
-              {/* 2 × 2 grid */}
-              <div className="grid grid-cols-2 gap-0.75">
-                <div className="grid min-h-0 grid-rows-gallery-asymmetric-alt gap-0.75">
-                  {[preview[1], preview[3]].map((item, i) => {
-                    if (!item) return <div key={i} className="bg-neutral-200" />;
-                    const imageIndex = i === 0 ? 1 : 3;
-                    return (
-                      <button
-                        key={item.id ?? imageIndex}
-                        type="button"
-                        className="group relative h-full overflow-hidden"
-                        onClick={() => openFancybox(imageIndex)}
-                      >
-                        <img
-                          src={item.thumb}
-                          alt={item.title || "Gallery"}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                        />
-                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="grid min-h-0 grid-rows-gallery-asymmetric-rev gap-0.75">
-                  {[preview[2], preview[4]].map((item, i) => {
-                    if (!item) return <div key={i} className="bg-neutral-200" />;
-                    const imageIndex = i === 0 ? 2 : 4;
-                    return (
-                      <button
-                        key={item.id ?? imageIndex}
-                        type="button"
-                        className="group relative h-full overflow-hidden"
-                        onClick={() => openFancybox(imageIndex)}
-                      >
-                        <img
-                          src={item.thumb}
-                          alt={item.title || "Gallery"}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
-                        />
-                        <div className="absolute inset-0 bg-black/0 transition-colors duration-500 group-hover:bg-black/10" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Floating "Show all photos" pill */}
-            <button
-              type="button"
-              className="absolute bottom-4 right-4 flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-secondary-900 shadow-md transition hover:bg-neutral-50 hover:shadow-lg"
-              onClick={() => openFancybox(0)}
-            >
-              <Camera className="h-4 w-4 text-secondary-500" />
-              Show all photos
-            </button>
-          </div>
-        ) : null}
-      </div>
-
-    </section>
-  );
-}
-
-
-
-function TourPicker({ activeTourId, onSelectTour }) {
-  const TOUR_OPTIONS = useTourOptions();
-  const selectedTour = TOUR_OPTIONS.find((tour) => tour.id === activeTourId) ?? TOUR_OPTIONS[0];
-
-  return (
-    <Card className="rounded-xl p-6">
-      <div className="text-sm font-semibold text-secondary-900">Check availability</div>
-      <div className="mt-5 space-y-4">
-        <label className="flex flex-col gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide-4xl text-secondary-500">Tour option</span>
-          <div className="relative">
-            <select
-              value={activeTourId}
-              onChange={(e) => onSelectTour?.(e.target.value)}
-              className="h-11 w-full appearance-none rounded-xl border border-neutral-200 bg-white px-4 pr-10 text-sm text-secondary-900 outline-none focus:border-primary-600/40 focus:ring-4 focus:ring-primary-600/10"
-            >
-              {TOUR_OPTIONS.map((tour) => (
-                <option key={tour.id} value={tour.id}>
-                  {tour.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-500" />
-          </div>
-        </label>
-
-        <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold text-secondary-900">Tour price</div>
-          <div className="text-lg font-semibold text-secondary-900">
-            <span className="text-sm font-medium text-secondary-500 mr-1">from</span>
-            {formatIDR(selectedTour.priceValue)}
-          </div>
-        </div>
-        {selectedTour.priceNote ? (
-          <div className="mt-1 text-xs font-semibold text-secondary-500">{selectedTour.priceNote}</div>
-        ) : null}
-        <p className="mt-3 text-sm text-secondary-600">
-          Best for: <span className="font-semibold text-secondary-900">{selectedTour.bestFor}</span>
-        </p>
-        <div className="mt-3 space-y-2">
-          {selectedTour.highlights.slice(0, 3).map((item) => (
-            <div key={item} className="flex items-center gap-2 text-sm text-secondary-600">
-              <Check className="h-4 w-4 text-primary-600" />
-              <span>{item}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <PrimaryLink href="#book" className="w-full justify-center">
-        Check availability
-      </PrimaryLink>
-      <SecondaryButton onClick={() => alert("WhatsApp demo action")}>
-        <MessageCircle className="h-4 w-4" />
-        Chat with a manager
-      </SecondaryButton>
-
-      <div className="flex items-center justify-between text-xs font-semibold text-secondary-600">
-        <span className="inline-flex items-center gap-1">
-          <Shield className="h-3.5 w-3.5 text-primary-600" />
-          Free cancellation 24h
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Sun className="h-3.5 w-3.5 text-primary-600" />
-          Weather guarantee
-        </span>
-      </div>
-    </Card>
-  );
-}
-
-const VIDEO_MD = "https://bluuu.tours/storage/app/media/video-md";
-const VIDEO_XL = "https://bluuu.tours/storage/app/media/video-xl";
-
-function getVideoSrc() {
-  const isMobile = window.innerWidth < 768;
-  const base = isMobile ? VIDEO_MD : VIDEO_XL;
-  const supportsWebm = document.createElement("video").canPlayType("video/webm") !== "";
-  return base + (supportsWebm ? ".webm" : ".mp4");
-}
-
-function Hero() {
-  const videoRef = useRef(null);
-  const [playing, setPlaying] = useState(false);
+const AnimatedCounter = ({ target, duration = 2000, formatter }) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef(null);
+  const started = useRef(false);
 
   useEffect(() => {
-    const el = videoRef.current;
+    const el = ref.current;
     if (!el) return;
-    el.src = getVideoSrc();
-    el.load();
-    const onScroll = () => {
-      const rect = el.getBoundingClientRect();
-      const inView = rect.top < window.innerHeight && rect.bottom > 0;
-      if (inView) {
-        if (el.paused) { el.play().catch(() => { }); }
-        setPlaying(true);
-      } else {
-        if (!el.paused) { el.pause(); }
-        setPlaying(false);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !started.current) {
+        started.current = true;
+        const start = performance.now();
+        const step = (now) => {
+          const progress = Math.min((now - start) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          setCount(Math.round(eased * target));
+          if (progress < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
       }
+    }, { threshold: 0.5 });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target, duration]);
+
+  return <span ref={ref}>{formatter ? formatter(count) : count}</span>;
+};
+
+const Home3 = () => {
+  const contacts = useSiteContacts();
+  const waLink = contacts?.whatsapp?.link || 'https://wa.me/6281547483381';
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formData, setFormData] = useState({ name: '', email: '', whatsapp: '', groupSize: '' });
+  const utmRef = useRef({});
+  const utmQuery = useMemo(() => {
+    const p = new URLSearchParams(window.location.search);
+    const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+    const out = new URLSearchParams();
+    keys.forEach(k => { if (p.get(k)) out.set(k, p.get(k)); });
+    return out.toString();
+  }, []);
+  const utmUrl = (base) => utmQuery ? `${base}?${utmQuery}` : base;
+  const [openFaqIndex, setOpenFaqIndex] = useState(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const heroVideoRef = useRef(null);
+  const scrollToContactForm = () => {
+    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+
+  // Navbar scroll behavior
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 60);
     };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("wheel", onScroll, { passive: true });
-    window.addEventListener("touchmove", onScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Lazy-load video after page is interactive (avoids 3.6 MB download blocking LCP)
+  useEffect(() => {
+    const v = heroVideoRef.current;
+    if (!v) return;
+    const loadAndPlay = () => {
+      const size = window.innerWidth <= 768 ? 'md' : 'xl';
+      const base = `${MEDIA}/video-${size}`;
+      [['video/webm', `${base}.webm`], ['video/mp4', `${base}.mp4`]].forEach(([type, src]) => {
+        const s = document.createElement('source');
+        s.type = type; s.src = src;
+        v.appendChild(s);
+      });
+      v.load();
+      v.play().catch(() => {
+        const startPlay = () => { v.play(); };
+        document.addEventListener('touchstart', startPlay, { once: true });
+        document.addEventListener('click', startPlay, { once: true });
+      });
+    };
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(loadAndPlay, { timeout: 3000 });
+    } else {
+      setTimeout(loadAndPlay, 2500);
+    }
+  }, []);
+
+  // Scroll-triggered animations
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.home2-wrapper .animate-in').forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // Park floating WhatsApp button 40px above the USD currency row
+  useEffect(() => {
+    const stopRow = document.querySelector('.home2-wrapper .footer-bottom');
+    const btn = document.querySelector('.home2-wrapper .float-wa');
+    if (!stopRow || !btn) return;
+
+    const handleScroll = () => {
+      const stopTop = stopRow.getBoundingClientRect().top;
+      // distance from viewport bottom to top of footer-bottom row
+      const distance = window.innerHeight - stopTop;
+      // We want button's bottom edge to be 40px above the currency row top.
+      // Default position is 24px from viewport bottom.
+      // Park when parking position would be greater than default.
+      const parked = distance + 40;
+      btn.style.bottom = parked > 24 ? `${parked}px` : '24px';
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("wheel", onScroll);
-      window.removeEventListener("touchmove", onScroll);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
     };
   }, []);
 
-  const handlePlay = () => {
-    videoRef.current?.play().catch(() => { });
-    setPlaying(true);
+  // Read captured UTM data (captureUtm() already ran in main.jsx)
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem('bluuu_utm');
+      if (stored) utmRef.current = JSON.parse(stored);
+    } catch { /* ignore */ }
+  }, []);
+
+
+  const handleInputChange = (e) => {
+    const { id, value } = e.target;
+    const field = id.replace('hero-', '');
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  return (
-    <section className="relative pt-12 sm:pt-20 min-h-[600px] sm:min-h-[700px]">
-      <div className="container">
-        <div className="flex flex-col items-center text-center">
-          <div className="flex flex-col items-center">
-            <div style={{ height: 40, overflow: 'hidden' }}><div className="elfsight-app-59bf9aa3-92ce-4654-aa87-9f5050b2af3a" /></div>
-            <p className="mt-4 text-xs font-bold uppercase  text-primary-600 sm:text-sm">
-              Full day tour · Bali to Nusa Penida · All-inclusive
-            </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-tight text-secondary-900 sm:text-6xl lg:text-6xl">
-              Award-winning tours to <br className="sm:hidden" /><span className="text-primary-600">Nusa Penida</span>
-            </h1>
-            <p className="mt-4 max-w-2xl  text-secondary-600 text-lg">
-              Manta rays, snorkeling, diving, and a land tour — all in one unforgettable day.
-            </p>
-             <p className="mt-2 text-sm font-medium text-secondary-500">
-              24/7 WhatsApp support · Full refund if bad weather · Free cancellation 24h
-            </p>
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-              { <a
-                href="#tours"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("tours")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="btn-primary inline-flex h-12 items-center justify-center gap-2 rounded-full bg-primary-600 px-8 text-base font-bold text-white shadow-xl sm:h-14"
-              >
-                View tours <ArrowRight className="h-4 w-4" />
-              </a> }
-            </div>
-           
-          </div>
-        </div>
+  const handleHeroFormSubmit = async () => {
+    const phoneVal = whatsapp.trim();
+    const isPhoneValid = phoneVal.replace(/[^0-9]/g, "").length > 6;
 
-        <div className="relative mt-12 overflow-hidden rounded-xl border border-neutral-200 bg-neutral-900 shadow-2xl sm:mt-16 md:rounded-xl">
-          <div className="aspect-video sm:aspect-video-wide">
-            <video
-              ref={videoRef}
-              poster="https://bluuu.tours/storage/app/media/poster.webp"
-              muted
-              loop
-              playsInline
-              fetchPriority="high"
-              className="h-full w-full object-cover"
-            />
-            {!playing && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <button
-                  type="button"
-                  onClick={handlePlay}
-                  className="relative flex h-16 w-16 items-center justify-center rounded-full bg-white/90 text-secondary-900 shadow-2xl backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:bg-white sm:h-24 sm:w-24"
-                >
-                  <Play className="ml-1 h-6 w-6 fill-current sm:h-10 sm:w-10" />
-                  <span className="sr-only">Play video</span>
-                  <div className="absolute inset-0 animate-ping rounded-full bg-white/40" />
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const TRUST_ITEMS = [
-  { Icon: Shield,        text: "Licensed & insured" },
-  { Icon: Waves,         text: "Refund if bad weather" },
-  { Icon: Clock,         text: "Free cancel 24h" },
-  { Icon: Trophy,        text: "Best of the Best" },
-  { Icon: MessageCircle, text: "24/7 WhatsApp" },
-  { Icon: BadgeCheck,    text: "Secure payment" },
-];
-
-function TourTypeCardShell({
-  featured = false,
-  badge,
-  badgeIcon: BadgeIcon,
-  badgeTone = "dark",
-  imageSrc,
-  imageAlt,
-  children,
-}) {
-  return (
-    <article
-      className={cn(
-        "group flex h-full flex-col overflow-hidden rounded-xl bg-white border border-neutral-200 transition duration-300",
-        featured && "border-neutral-200"
-      )}
-    >
-      <div
-        className={cn(
-          "flex h-9 items-center justify-center gap-1.5 px-4 text-2xs font-semibold uppercase  text-white",
-          badgeTone === "blue" ? "bg-primary-600" : "bg-brand-dark"
-        )}
-      >
-        <div className="flex items-center justify-center gap-1.5">
-          {BadgeIcon && <BadgeIcon className="h-3.5 w-3.5" />}
-          <span>{badge}</span>
-        </div>
-      </div>
-      <div className={cn("rounded-b-xl", badgeTone === "blue" ? "bg-primary-600" : "bg-brand-dark")}>
-        <div className="relative overflow-hidden rounded-xl">
-        <img
-          src={imageSrc}
-          alt={imageAlt}
-          loading="lazy"
-          decoding="async"
-          className="h-200 w-full object-cover transition duration-700 group-hover:scale-103 sm:h-220 lg:h-250"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/20 via-secondary-900/0 to-transparent" />
-        </div>
-      </div>
-      <div className="flex flex-1 flex-col px-3.5 pb-3.5 pt-5 sm:p-6">{children}</div>
-    </article>
-  );
-}
-
-function TourTypeBenefitItem({ children }) {
-  return (
-    <li className="flex items-start gap-3 text-xs leading-6 text-secondary-600 sm:text-sm">
-      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg">
-        <Check className="h-3 w-3 stroke-[3]" />
-      </span>
-      {children}
-    </li>
-  );
-}
-
-function TourTypeDetailRow({ icon: Icon, children }) {
-  return (
-    <div className="flex items-start gap-3 text-xs leading-6 text-secondary-600 sm:text-sm">
-      <Icon className="mt-1 h-4 w-4 shrink-0 text-secondary-400" />
-      <span>{children}</span>
-    </div>
-  );
-}
-
-/* eslint-disable */
-function LegacyTourTypeCards() {
-  const TOUR_OPTIONS = useTourOptions();
-  const { loading } = useTours();
-  const [guests, setGuests] = useState(8);
-  const [activeTab, setActiveTab] = useState("shared");
-
-  const privateTour = TOUR_OPTIONS.find((t) => t.id === "private");
-  const sharedTour  = TOUR_OPTIONS.find((t) => t.id === "shared");
-
-  const boatPrice   = privateTour?.priceValue ?? 0;
-  const sharedPrice = sharedTour?.priceValue  ?? 0;
-  const perPerson   = guests > 0 ? Math.round(boatPrice / guests) : 0;
-  const isCheaper   = sharedPrice > 0 && perPerson < sharedPrice;
-  const isSame      = !isCheaper && sharedPrice > 0 && perPerson <= sharedPrice * 1.1;
-
-  const InclItem = ({ children }) => (
-    <li className="flex items-start gap-2 text-xs text-secondary-600">
-      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
-        <Check className="h-2.5 w-2.5 stroke-[3]" />
-      </span>
-      {children}
-    </li>
-  );
-
-  const sharedCard = (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      {/* Ribbon */}
-      <div className="relative p-3 pb-0">
-        <div className="relative overflow-hidden rounded-xl">
-          <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-neutral-900 px-3 py-1 text-2xs font-bold text-white">
-            ★ Best value
-          </div>
-          <img
-            src="https://bluuu.tours/storage/app/media/shared.webp"
-            alt="Shared group tour"
-            loading="lazy" decoding="async"
-            className="h-200 w-full object-cover"
-          />
-        </div>
-      </div>
-      {/* Body */}
-      <div className="flex flex-1 flex-col p-6">
-        <p className="text-3xs font-bold uppercase tracking-widest text-secondary-400 mb-1">Join a small group</p>
-        <h3 className="text-xl leading-tight font-bold text-secondary-900 mb-2">Shared Tour</h3>
-        <p className="text-sm text-secondary-500 leading-relaxed mb-4">
-          Explore Nusa Penida with other travellers on a guided full-day trip. Affordable, social, and hassle-free.
-        </p>
-
-        {/* Boat info box */}
-        <div className="mb-4 rounded-xl bg-neutral-100 p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm leading-tight text-secondary-600">
-            <Anchor className="h-4 w-4 shrink-0 text-secondary-400" />
-            <span>One shared speedboat · up to 10 guests</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm leading-tight text-secondary-600">
-            <Users className="h-4 w-4 shrink-0 text-secondary-400" />
-            <span>Fixed departure · strangers may join</span>
-          </div>
-        </div>
-
-        {/* Price box */}
-        <div className="mb-4 rounded-xl border border-neutral-200 bg-white p-4">
-          <div className="flex items-baseline flex-wrap gap-1.5 mb-1">
-            <span className="text-xs text-secondary-400">from</span>
-            {loading
-              ? <div className="h-8 w-32 animate-pulse rounded-lg bg-neutral-100" />
-              : <span className="text-3xl leading-tight font-bold tracking-tight text-secondary-900">{formatIDR(sharedPrice)}</span>
-            }
-            <span className="text-xs text-secondary-500">/ person</span>
-            <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-2xs font-bold uppercase text-emerald-700 border border-emerald-200">ALL INCLUSIVE</span>
-          </div>
-          <p className="text-xs text-secondary-400">Lunch, gear, guide, boat · no hidden fees</p>
-        </div>
-
-        {/* CTA */}
-        <a
-          href="/new/shared"
-          className="btn-outline mb-1 flex w-full items-center justify-center gap-2 rounded-full border-2 border-primary-600 py-3.5 text-base leading-tight font-semibold text-primary-600"
-        >
-          See tour details <ArrowRight className="h-4 w-4" />
-        </a>
-        <p className="mb-5 text-center text-2xs text-secondary-400">No payment required to view options</p>
-
-        {/* Upgrade pill */}
-        <div className="mb-5 flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-2.5">
-          <span className="text-sm leading-tight text-secondary-600">Want the whole boat for your group?</span>
-          <a href="/new/private" className="ml-auto whitespace-nowrap text-sm leading-tight font-semibold text-primary-600 hover:underline">
-            Go Private →
-          </a>
-        </div>
-
-        {/* Included list */}
-        <ul className="space-y-2.5 border-t border-neutral-100 pt-4">
-          <InclItem>Small group — max 10 guests per boat</InclItem>
-          <InclItem>Lunch at a clifftop restaurant — included</InclItem>
-          <InclItem>Snorkeling with manta rays</InclItem>
-          <InclItem>Kelingking Beach, Crystal Bay, Broken Beach</InclItem>
-          <InclItem>Safety gear, certified crew &amp; guide</InclItem>
-          <InclItem>All entrance fees included</InclItem>
-        </ul>
-      </div>
-    </div>
-  );
-
-  const privateCard = (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white">
-      {/* Ribbon */}
-      <div className="relative p-3 pb-0">
-        <div className="relative overflow-hidden rounded-xl">
-          <div className="absolute left-3 top-3 z-10 flex items-center gap-1 rounded-full bg-primary-600 px-3 py-1 text-2xs font-bold text-white">
-            ✦ Most popular
-          </div>
-          <img
-            src="https://bluuu.tours/storage/app/media/private.webp"
-            alt="Private charter"
-            loading="lazy" decoding="async"
-            className="h-200 w-full object-cover rounded-xl"
-          />
-        </div>
-      </div>
-      {/* Body */}
-      <div className="flex flex-1 flex-col p-6">
-        <p className="text-3xs font-bold uppercase tracking-widest text-primary-500 mb-1">Your boat, your rules</p>
-        <h3 className="text-xl leading-tight font-bold text-secondary-900 mb-2">Private Charter</h3>
-        <p className="text-sm text-secondary-500 leading-relaxed mb-4">
-          The entire boat is yours — only your group. Choose your time, adjust your stops, set your pace.
-        </p>
-
-        {/* Boat info box */}
-        <div className="mb-4 rounded-xl bg-neutral-100 p-4 flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-sm text-secondary-600">
-            <Anchor className="h-4 w-4 shrink-0 text-secondary-400" />
-            <span>20+ boats to choose from · all sizes</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-secondary-600">
-            <Users className="h-4 w-4 shrink-0 text-secondary-400" />
-            <span>2–45 guests · fully flexible itinerary</span>
-          </div>
-        </div>
-
-        {/* Price box with slider */}
-        <div className="mb-4 rounded-xl border border-primary-200 bg-primary-50 p-4">
-          <div className="flex items-baseline flex-wrap gap-1.5 mb-1">
-            <span className="text-xs text-secondary-400">from</span>
-            {loading
-              ? <div className="h-8 w-32 animate-pulse rounded-lg bg-primary-100" />
-              : <span className="text-3xl leading-tight font-bold tracking-tight text-primary-700">{formatIDR(boatPrice)}</span>
-            }
-            <span className="text-xs text-secondary-500">/ boat</span>
-          </div>
-          {!loading && boatPrice > 0 && (
-            <div onClick={e => e.preventDefault()}>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="text-xs text-secondary-500 whitespace-nowrap">Guests:</span>
-                <input
-                  type="range" min={2} max={14} value={guests}
-                  onChange={e => setGuests(+e.target.value)}
-                  onClick={e => e.stopPropagation()}
-                  className="flex-1 h-1.5 appearance-none rounded-full bg-primary-200 accent-primary-600 cursor-pointer"
-                />
-                <span className="text-sm font-bold text-primary-600 min-w-[20px] text-center">{guests}</span>
-              </div>
-              <div className="mt-2 flex items-center gap-2 flex-wrap">
-                <span className="text-sm leading-tight font-semibold text-secondary-700">
-                  = <span className="text-primary-600">{formatIDR(perPerson)}</span> / person
-                </span>
-                {isCheaper && <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-2xs font-bold text-emerald-700">CHEAPER THAN GROUP!</span>}
-                {isSame    && <span className="rounded-md bg-sky-100 px-2 py-0.5 text-2xs font-bold text-sky-700">≈ SAME AS GROUP</span>}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* CTA */}
-        <a
-          href="/new/private"
-          className="btn-primary mb-1 flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-base leading-tight font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)]"
-        >
-          Choose your boat <ArrowRight className="h-4 w-4" />
-        </a>
-        <p className="mb-5 text-center text-2xs text-secondary-400">20+ boats · pick your favorite</p>
-
-        {/* Included list */}
-        <ul className="space-y-2.5 border-t border-primary-100 pt-4">
-          <InclItem>Entire boat — only your group on board</InclItem>
-          <InclItem>Flexible departure time, you decide</InclItem>
-          <InclItem>Custom route &amp; stops on request</InclItem>
-          <InclItem>Snorkeling + manta ray spots included</InclItem>
-          <InclItem>Drone, diving, birthday setups &amp; more</InclItem>
-          <InclItem>Safety gear, certified crew &amp; guide</InclItem>
-        </ul>
-      </div>
-    </div>
-  );
-
-  return (
-    <section id="tours" className="scroll-mt-24 py-16 sm:py-24 bg-neutral-100">
-      <div className="mx-auto max-w-[1100px] px-4">
-
-        {/* Header */}
-        <div className="mb-10 text-center">
-          <p className="text-2xs font-bold uppercase tracking-wide-4xl text-primary-600 mb-3">Two ways to explore</p>
-          <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
-            Choose your <span className="text-primary-600">tour type</span>
-          </h2>
-          <p className="mx-auto mt-3 max-w-md text-base leading-tight text-secondary-500">
-            Same island, same iconic spots — different experience. Pick what suits your group.
-          </p>
-        </div>
-
-        {/* Mobile tab switcher */}
-        <div className="mb-6 md:hidden">
-          <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-neutral-200 bg-white p-1.5 ">
-            <button
-              onClick={() => setActiveTab("shared")}
-              className={`rounded-full py-3 text-sm font-semibold transition-all ${activeTab === "shared" ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:bg-neutral-50"}`}
-            >
-              <span className="block leading-tight">Shared tour</span>
-              <span className={`block text-2xs font-normal mt-0.5 ${activeTab === "shared" ? "text-white/75" : "text-secondary-400"}`}>
-                from {sharedPrice > 0 ? formatIDR(sharedPrice) : "—"}/person
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab("private")}
-              className={`rounded-full py-3 text-sm font-semibold transition-all ${activeTab === "private" ? "bg-primary-600 text-white shadow-md" : "text-secondary-500 hover:bg-neutral-50"}`}
-            >
-              <span className="block leading-tight">Private charter</span>
-              <span className={`block text-2xs font-normal mt-0.5 ${activeTab === "private" ? "text-white/75" : "text-secondary-400"}`}>
-                from {boatPrice > 0 ? formatIDR(boatPrice) : "—"}/boat
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Cards */}
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className={activeTab === "shared" ? "block" : "hidden md:block"}>{sharedCard}</div>
-          <div className={activeTab === "private" ? "block" : "hidden md:block"}>{privateCard}</div>
-        </div>
-
-        {/* Trust bar */}
-        <div className="mt-8 grid grid-cols-2 gap-2.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-3">
-          {TRUST_ITEMS.map(({ Icon, text }) => (
-            <div key={text} className="flex items-center gap-2 rounded-full bg-white border border-neutral-200 px-4 py-2.5 text-sm leading-tight text-secondary-600 shadow-sm">
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-primary-50">
-                <Icon className="h-3.5 w-3.5 text-primary-500" />
-              </span>
-              {text}
-            </div>
-          ))}
-        </div>
-
-      </div>
-    </section>
-  );
-}
-
-
-/* eslint-enable */
-function TourTypeCards() {
-  const TOUR_OPTIONS = useTourOptions();
-  const { loading } = useTours();
-  const [guests, setGuests] = useState(8);
-  const [activeTab, setActiveTab] = useState("shared");
-
-  const privateTour = TOUR_OPTIONS.find((t) => t.id === "private");
-  const sharedTour = TOUR_OPTIONS.find((t) => t.id === "shared");
-
-  const boatPrice = 750; // USD, hardcoded
-  const sharedPrice = 80; // USD, hardcoded
-  const perPerson = guests > 0 ? Math.round(boatPrice / guests) : 0;
-  const isCheaper = perPerson < sharedPrice;
-  const isSame = !isCheaper && perPerson <= sharedPrice * 1.1;
-  const guestProgress = ((guests - 2) / 12) * 100;
-  const privateComparisonBadge = isCheaper
-    ? {
-      label: "Better than shared",
-      className: "border border-emerald-200 bg-emerald-100 text-emerald-700",
+    if (!name.trim() || !email.trim() || !isPhoneValid) {
+      alert('Please enter your name, a valid email, and a valid phone number / WhatsApp.');
+      return;
     }
-    : isSame
-      ? {
-        label: "Close to shared",
-        className: "border border-primary-200 bg-primary-100 text-primary-700",
-      }
-      : null;
-
-  const sharedBenefits = [
-    "Small group with up to 10 guests per boat",
-    "Lunch at a clifftop restaurant included",
-    "Snorkeling with manta rays and iconic reef spots",
-    "Land highlights like Kelingking and Crystal Bay",
-    "Safety gear, certified crew, and guide included",
-  ];
-
-  const privateBenefits = [
-    "Entire boat reserved only for your group",
-    "Flexible departure and stop timing",
-    "Custom route and optional add-ons on request",
-    "Snorkeling and manta ray spots included",
-    "Great fit for families, birthdays, and friend groups",
-  ];
-
-  const sharedCard = (
-    <TourTypeCardShell
-      badge="Best value"
-      badgeIcon={Star}
-      imageSrc="https://bluuu.tours/storage/app/media/shared.webp"
-      imageAlt="Shared group tour"
-    >
-      <div>
-        <p className="mb-0.5 text-xs leading-tight font-semibold uppercase text-secondary-500">Join a small group</p>
-        <h3 className="mb-1.5 text-2xl leading-tight font-semibold tracking-tight text-secondary-900">
-          Shared Tour
-        </h3>
-        <p className="mb-6 text-sm leading-snug text-secondary-600">
-          Explore Nusa Penida with other travellers on a guided full-day trip. Affordable, social, and smooth from pickup to drop-off.
-        </p>
-      </div>
-
-      <div className="mb-2 flex flex-col space-y-2 rounded-xl bg-neutral-100 p-4">
-        <TourTypeDetailRow icon={Anchor}><strong>One shared speedboat</strong> for up to <strong>10 guests</strong></TourTypeDetailRow>
-        <TourTypeDetailRow icon={Users}><strong>Fixed departure time</strong> with fellow travellers onboard</TourTypeDetailRow>
-      </div>
-
-      <div className="mb-2 rounded-xl border border-neutral-200 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="text-xs uppercase text-secondary-400">from</span>
-          <span className="text-2xl font-bold tracking-tight text-primary-600">${sharedPrice}</span>
-          <span className="text-sm text-secondary-500">/ person</span>
-          <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-2xs font-semibold uppercase text-emerald-700">
-            All inclusive
-          </span>
-        </div>
-        <p className="mt-1.5 text-xs leading-snug text-secondary-500">
-          Lunch, snorkeling gear, guide, and boat ride included. No hidden fees.
-        </p>
-      </div>
-
-      <a
-        href="/new/shared"
-        className="btn-outline inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary-600 bg-white px-5 py-3.5 text-base leading-tight font-semibold text-primary-600"
-      >
-        See tour details <ArrowRight className="h-4 w-4" />
-      </a>
-      <p className="mb-3 mt-2 text-center text-xs leading-tight uppercase tracking-wide-lg text-secondary-400">
-        No payment required to view options
-      </p>
-
-      <ul className="space-y-1.5 pt-2">
-        {sharedBenefits.map((item) => (
-          <TourTypeBenefitItem key={item}>{item}</TourTypeBenefitItem>
-        ))}
-      </ul>
-
-      <div className="mt-4 flex items-center gap-3 rounded-[22px] border border-primary-100 bg-primary-50/70 px-4 py-2.5 text-xs text-secondary-600">
-        <span>Want the whole boat for your group instead?</span>
-        <a href="/new/private" className="ml-auto whitespace-nowrap font-semibold text-primary-600 transition hover:text-primary-700">
-          Go private <ArrowRight className="ml-1 inline h-3.5 w-3.5" />
-        </a>
-      </div>
-    </TourTypeCardShell>
-  );
-
-  const privateCard = (
-    <TourTypeCardShell
-      featured
-      badge="Most popular"
-      badgeIcon={Sparkles}
-      badgeTone="blue"
-      imageSrc="https://bluuu.tours/storage/app/media/private.webp"
-      imageAlt="Private charter"
-    >
-      <div>
-        <p className="mb-0.5 text-xs leading-tight font-semibold uppercase text-primary-600">Your boat, your rules</p>
-        <h3 className="mb-1.5 text-2xl leading-tight font-semibold tracking-tight text-secondary-900">
-          Private Charter
-        </h3>
-        <p className="mb-4 text-sm leading-snug text-secondary-600">
-          The entire boat is yours. Choose the timing, adjust the stops, and set the pace for your group.
-        </p>
-      </div>
-
-      <div className="mb-2 flex flex-col space-y-2 rounded-xl bg-neutral-100 p-4">
-        <TourTypeDetailRow icon={Anchor}><strong>20+ boats</strong> available across different sizes and styles</TourTypeDetailRow>
-        <TourTypeDetailRow icon={Users}><strong>2-45 guests</strong> with <strong>flexible routing</strong> and <strong>private pacing</strong></TourTypeDetailRow>
-      </div>
-
-      <div className="mb-2 rounded-xl border border-neutral-200 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-          <span className="text-xs uppercase text-secondary-400">from</span>
-          <span className="text-2xl font-bold tracking-tight text-primary-600">${boatPrice}</span>
-          <span className="text-sm text-secondary-500">/ entire boat</span>
-        </div>
-
-        {boatPrice > 0 && (
-          <>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-secondary-400 whitespace-nowrap">Your group:</span>
-              <input
-                type="range"
-                min={2}
-                max={14}
-                value={guests}
-                onChange={(event) => setGuests(Number(event.target.value))}
-                className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full accent-primary-600"
-                style={{
-                  background: `linear-gradient(90deg, var(--primary-600) 0%, var(--primary-600) ${guestProgress}%, var(--primary-200) ${guestProgress}%, var(--primary-200) 100%)`,
-                }}
-              />
-              <span key={guests} className="num-pop min-w-[20px] text-right text-sm font-bold text-secondary-900">{guests}</span>
-            </div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-              <span className="text-xs text-secondary-400">=</span>
-              <span key={perPerson} className="num-pop text-2xl font-bold text-primary-600">${perPerson}</span>
-              <span className="text-sm text-secondary-500">/ person</span>
-              {privateComparisonBadge && (
-                <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold uppercase", privateComparisonBadge.className)}>
-                  {privateComparisonBadge.label}
-                </span>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      <a
-        href="/new/private"
-        className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 px-5 py-3.5 text-base leading-tight font-semibold text-white shadow-blue-glow"
-      >
-        Choose your boat <ArrowRight className="h-4 w-4" />
-      </a>
-      <p className="mb-3 mt-2 text-center text-2xs uppercase  text-secondary-400">
-        20+ boats ready for your route
-      </p>
-
-      <ul className="space-y-1.5 pt-2">
-        {privateBenefits.map((item) => (
-          <TourTypeBenefitItem key={item}>{item}</TourTypeBenefitItem>
-        ))}
-      </ul>
-    </TourTypeCardShell>
-  );
-
-  return (
-    <section id="tours" className="relative scroll-mt-24 py-16 sm:py-24">
-      <div className="absolute inset-0 -z-10 bg-[radial-gradient(60%_55%_at_50%_0%,rgba(0,127,255,0.09),transparent_70%)]" />
-      <div className="container">
-        <div className="mb-8 text-center sm:mb-12">
-          <p className="mb-3 text-2xs font-semibold uppercase tracking-wide-4xl text-primary-600">Two ways to explore</p>
-          <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
-            Choose your <span className="text-primary-600">tour type</span>
-          </h2>
-          <p className="mx-auto mt-3 max-w-[620px] text-base leading-tight leading-7 text-secondary-500 sm:text-base">
-            Same island, same iconic spots, different experience. Pick the format that fits your group best.
-          </p>
-        </div>
-
-        <div className="mb-6 md:hidden">
-          <div className="relative grid grid-cols-2 gap-1.5 rounded-xl border border-neutral-200 bg-white p-1.5 ">
-              <button
-                type="button"
-                onClick={() => setActiveTab("shared")}
-                className="relative flex flex-col items-center justify-center rounded-xl px-4 py-4 text-center z-10"
-              >
-                {activeTab === "shared" && (
-                  <div
-                    className="absolute inset-0 rounded-xl"
-                    style={{ backgroundColor: "#1B3132", boxShadow: "0 8px 20px rgba(27,49,50,0.30)" }}
-                  />
-                )}
-                <span className={cn("relative block text-sm font-semibold leading-tight", activeTab === "shared" ? "text-white" : "text-secondary-500")}>Shared tour</span>
-                <span className={cn("relative mt-1 block text-2xs", activeTab === "shared" ? "text-white/70" : "text-secondary-400")}>
-                  from {sharedPrice > 0 ? formatIDR(sharedPrice) : "--"} / person
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("private")}
-                className="relative flex flex-col items-center justify-center rounded-xl px-4 py-4 text-center z-10"
-              >
-                {activeTab === "private" && (
-                  <div
-                    className="absolute inset-0 rounded-xl"
-                    style={{ backgroundColor: "#0073E0", boxShadow: "0 8px 20px rgba(0,115,224,0.22)" }}
-                  />
-                )}
-                <span className={cn("relative block text-sm font-semibold leading-tight", activeTab === "private" ? "text-white" : "text-secondary-500")}>Private charter</span>
-                <span className={cn("relative mt-1 block text-2xs", activeTab === "private" ? "text-white/70" : "text-secondary-400")}>
-                  from {boatPrice > 0 ? formatIDR(boatPrice) : "--"} / boat
-                </span>
-              </button>
-          </div>
-        </div>
-
-        {/* Desktop — CSS subgrid: every section row is shared between both columns */}
-        <div className="hidden md:grid md:grid-cols-2 gap-x-5 xl:gap-x-7">
-
-          {/* ── SHARED ── */}
-          <article className="[grid-row:span_7] grid [grid-template-rows:subgrid] overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
-            {/* 1. Badge */}
-            <div className="flex h-9 items-center justify-center gap-1.5 bg-brand-dark px-4 text-2xs font-semibold uppercase text-white">
-              <Star className="h-3.5 w-3.5" /><span>Best value</span>
-            </div>
-            {/* 2. Image */}
-            <div className="rounded-b-xl bg-brand-dark">
-              <div className="relative overflow-hidden rounded-xl">
-                <img src="https://bluuu.tours/storage/app/media/shared.webp" alt="Shared group tour" loading="lazy" decoding="async" className="h-[220px] w-full object-cover transition duration-700 hover:scale-[1.03]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/20 to-transparent" />
-              </div>
-            </div>
-            {/* 3. Title */}
-            <div className="px-6 pt-5">
-              <p className="mb-0.5 text-xs font-semibold uppercase tracking-widest text-secondary-400">Join a small group</p>
-              <h3 className="mb-1.5 text-2xl font-bold tracking-tight text-secondary-900">Shared Tour</h3>
-              <p className="text-sm leading-snug text-secondary-500">Explore Nusa Penida with other travellers on a guided full-day trip. Affordable, social, and smooth from pickup to drop-off.</p>
-            </div>
-            {/* 4. Info box */}
-            <div className="px-6 pt-4">
-              <div className="flex flex-col gap-2 rounded-xl bg-neutral-100 px-4 py-3">
-                <TourTypeDetailRow icon={Anchor}><strong>One shared speedboat</strong> for up to <strong>10 guests</strong></TourTypeDetailRow>
-                <TourTypeDetailRow icon={Users}><strong>Fixed departure time</strong> with fellow travellers onboard</TourTypeDetailRow>
-              </div>
-            </div>
-            {/* 5. Price box */}
-            <div className="flex h-full px-6 pt-3">
-              <div className="flex w-full flex-col rounded-xl border border-neutral-200 bg-white p-4">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-                  <span className="text-sm text-secondary-400">from</span>
-                  {loading
-                    ? <div className="h-9 w-32 animate-pulse rounded-xl bg-neutral-100" />
-                    : <span className="text-2xl font-bold tracking-tight text-primary-600">{formatIDR(sharedPrice)}</span>
-                  }
-                  <span className="text-sm text-secondary-500">/ person</span>
-                  <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-2xs font-semibold uppercase text-emerald-700">All inclusive</span>
-                </div>
-                <p className="mt-1.5 text-xs leading-snug text-secondary-500">Lunch, snorkeling gear, guide, and boat ride included. No hidden fees.</p>
-              </div>
-            </div>
-            {/* 6. CTA */}
-            <div className="px-6 pt-3">
-              <a href="/new/shared" className="btn-outline flex w-full items-center justify-center gap-2 rounded-full border border-primary-600 py-3.5 text-base font-semibold text-primary-600">
-                See tour details <ArrowRight className="h-4 w-4" />
-              </a>
-              <p className="mt-2 text-center text-xs uppercase tracking-wide text-secondary-400">No payment required to view options</p>
-            </div>
-            {/* 7. Benefits + nudge */}
-            <div className="flex flex-col justify-between px-6 pb-6 pt-3">
-              <ul className="space-y-2">
-                {sharedBenefits.map((item) => <TourTypeBenefitItem key={item}>{item}</TourTypeBenefitItem>)}
-              </ul>
-              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary-100 bg-primary-50/70 px-4 py-2.5 text-xs text-secondary-600">
-                <span>Want the whole boat for your group instead?</span>
-                <a href="/new/private" className="ml-auto whitespace-nowrap font-semibold text-primary-600">Go private <ArrowRight className="ml-0.5 inline h-3.5 w-3.5" /></a>
-              </div>
-            </div>
-          </article>
-
-          {/* ── PRIVATE ── */}
-          <article className="[grid-row:span_7] grid [grid-template-rows:subgrid] overflow-hidden rounded-2xl border border-primary-200 bg-white shadow-sm">
-            {/* 1. Badge */}
-            <div className="flex h-9 items-center justify-center gap-1.5 bg-primary-600 px-4 text-2xs font-semibold uppercase text-white">
-              <Sparkles className="h-3.5 w-3.5" /><span>Most popular</span>
-            </div>
-            {/* 2. Image */}
-            <div className="rounded-b-xl bg-primary-600">
-              <div className="relative overflow-hidden rounded-xl">
-                <img src="https://bluuu.tours/storage/app/media/private.webp" alt="Private charter" loading="lazy" decoding="async" className="h-[220px] w-full object-cover transition duration-700 hover:scale-[1.03]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/20 to-transparent" />
-              </div>
-            </div>
-            {/* 3. Title */}
-            <div className="px-6 pt-5">
-              <p className="mb-0.5 text-xs font-semibold uppercase tracking-widest text-primary-500">Your boat, your rules</p>
-              <h3 className="mb-1.5 text-2xl font-bold tracking-tight text-secondary-900">Private Charter</h3>
-              <p className="text-sm leading-snug text-secondary-500">The entire boat is yours. Choose the timing, adjust the stops, and set the pace for your group.</p>
-            </div>
-            {/* 4. Info box */}
-            <div className="px-6 pt-4">
-              <div className="flex flex-col gap-2 rounded-xl bg-neutral-100 px-4 py-3">
-                <TourTypeDetailRow icon={Anchor}><strong>20+ boats</strong> — speedboats to luxury yachts</TourTypeDetailRow>
-                <TourTypeDetailRow icon={Users}><strong>2–45 guests</strong> — pick the right boat for your group</TourTypeDetailRow>
-              </div>
-            </div>
-            {/* 5. Price box */}
-            <div className="px-6 pt-3">
-              <div className="rounded-xl border border-neutral-200 bg-white p-4">
-                <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-                  <span className="text-sm text-secondary-400">from</span>
-                  {loading
-                    ? <div className="h-9 w-32 animate-pulse rounded-xl bg-neutral-100" />
-                    : <span className="text-2xl font-bold tracking-tight text-primary-600">{formatIDR(boatPrice)}</span>
-                  }
-                  <span className="text-sm text-secondary-500">/ entire boat</span>
-                </div>
-                {!loading && boatPrice > 0 && (
-                  <>
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <span className="text-xs text-secondary-500 whitespace-nowrap">How many in your group?</span>
-                      <input
-                        type="range" min={2} max={14} value={guests}
-                        onChange={(e) => setGuests(Number(e.target.value))}
-                        className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full accent-primary-600"
-                        style={{ background: `linear-gradient(90deg, var(--primary-600) 0%, var(--primary-600) ${guestProgress}%, var(--primary-200) ${guestProgress}%, var(--primary-200) 100%)` }}
-                      />
-                      <span key={guests} className="num-pop min-w-[20px] text-right text-sm font-bold text-primary-600">{guests}</span>
-                    </div>
-                    <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
-                      <span className="text-sm font-medium text-secondary-400">=</span>
-                      <span key={perPerson} className="num-pop text-2xl font-bold text-primary-600">${perPerson}</span>
-                      <span className="text-sm text-secondary-500">/ person</span>
-                      {privateComparisonBadge && (
-                        <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold uppercase", privateComparisonBadge.className)}>
-                          {privateComparisonBadge.label}
-                        </span>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-            {/* 6. CTA */}
-            <div className="px-6 pt-3">
-              <a href="/new/private" className="btn-primary flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3.5 text-base font-semibold text-white shadow-blue-glow">
-                Browse 20+ boats <ArrowRight className="h-4 w-4" />
-              </a>
-              <p className="mt-2 text-center text-xs uppercase tracking-wide text-secondary-400">From speedboats to luxury yachts</p>
-            </div>
-            {/* 7. Benefits */}
-            <div className="px-6 pb-6 pt-3">
-              <ul className="space-y-2">
-                {privateBenefits.map((item) => <TourTypeBenefitItem key={item}>{item}</TourTypeBenefitItem>)}
-              </ul>
-            </div>
-          </article>
-
-        </div>
-        <div className="md:hidden">
-          <div key={activeTab}>
-            {activeTab === "shared" ? sharedCard : privateCard}
-          </div>
-        </div>
-
-      </div>
-    </section>
-  );
-}
-
-
-function RouteCardSkeleton() {
-  return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-neutral-100 bg-white">
-      <div className="relative aspect-[16/10] overflow-hidden bg-neutral-100">
-        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/50 to-transparent" />
-      </div>
-      <div className="flex flex-1 flex-col gap-3 p-5">
-        <div className="h-5 w-2/5 animate-pulse rounded-lg bg-neutral-100" />
-        <div className="space-y-1.5">
-          <div className="h-3.5 w-full animate-pulse rounded-lg bg-neutral-100" />
-          <div className="h-3.5 w-4/5 animate-pulse rounded-lg bg-neutral-100" />
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          <div className="h-6 w-20 animate-pulse rounded-full bg-neutral-100" />
-          <div className="h-6 w-24 animate-pulse rounded-full bg-neutral-100" />
-        </div>
-        <div className="mt-auto flex justify-end">
-          <div className="h-4 w-24 animate-pulse rounded-lg bg-neutral-100" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function RouteCard({ route, bookHref }) {
-  const tourImages = (route.tour_images || []).map(img => img.thumb1 || img.original).filter(Boolean);
-  const displayImages = tourImages.length ? tourImages : (route.photos || []);
-  const coverImg = typeof displayImages[0] === "string" ? displayImages[0] : (displayImages[0]?.thumb || displayImages[0]?.path);
-
-  const chips = route.highlights || [];
-  const bestFor = route.best_for || route.bestFor;
-
-  return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white transition-all hover:border-neutral-300">
-      {/* Image */}
-      <div className="relative h-[200px] overflow-hidden rounded-b-2xl">
-        {coverImg
-          ? <img src={coverImg} alt={route.title} loading="lazy" decoding="async" className="h-full w-full object-cover" />
-          : <div className="h-full w-full bg-gradient-to-br from-primary-800 to-primary-600" />
-        }
-      </div>
-
-      {/* Body */}
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="text-xl font-bold leading-tight text-secondary-900">{route.title}</h3>
-        {route.description && (
-          <div
-            className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-secondary-500"
-            dangerouslySetInnerHTML={{ __html: route.description }}
-          />
-        )}
-
-        {/* Feature chips */}
-        {chips.length > 0 && (
-          <div className="mt-4 border-t border-neutral-100 pt-4 flex flex-wrap gap-x-4 gap-y-2">
-            {chips.map((item) => {
-              const Icon = typeof item.icon === "string"
-                ? (ROUTE_ICON_MAP[item.icon] || Ship)
-                : (item.icon || Ship);
-              return (
-                <div key={item.label} className="flex items-center gap-1.5 text-sm font-medium text-secondary-700">
-                  <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                  {item.label}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Best for + link */}
-        <div className="mt-auto pt-4">
-          {bestFor && (
-            <div className="mb-3 flex items-start gap-2 text-sm font-semibold leading-5 text-secondary-600">
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-              <span>{bestFor}</span>
-            </div>
-          )}
-          <div className="border-t border-neutral-100 pt-4">
-            <a
-              href={bookHref}
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 transition hover:text-primary-700 hover:underline underline-offset-4"
-            >
-              See itinerary
-              <ArrowRight className="h-3.5 w-3.5" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function TourOptions({ activeTourId, onSelectTour }) {
-  const { loading } = useTours();
-  const TOUR_OPTIONS = useTourOptions();
-  const toneStyles = {
-    shared: {
-      card: "bg-gradient-to-br from-[#f7fafc] via-[#f2f7fb] to-[#eef3f7]",
-      text: "text-secondary-900",
-      muted: "text-secondary-600",
-      check: "text-primary-600",
-      button: "bg-white border border-neutral-300 text-secondary-900 hover:border-[var(--accent)]/40",
-    },
-    premium: {
-      card: "bg-gradient-to-br from-[#eef3f7] via-[#e2ebf3] to-[#d5e1ec] ring-0",
-      text: "text-secondary-900",
-      muted: "text-secondary-600",
-      check: "text-primary-600",
-      button: "bg-white border border-neutral-300 text-secondary-900 hover:border-[var(--accent)]/40",
-    },
-    private: {
-      card: "bg-gradient-to-br from-[#f0f4f9] via-[#edf6fb] to-[#e3edf5]",
-      text: "text-secondary-900",
-      muted: "text-secondary-600",
-      check: "text-primary-600",
-      button: "bg-white border border-neutral-300 text-secondary-900 hover:border-[var(--accent)]/40",
-    },
-    "premium-private": {
-      card: "bg-gradient-to-br from-[#e7edf6] via-[#dfe7ef] to-[#d5dfe7]",
-      text: "text-secondary-900",
-      muted: "text-secondary-600",
-      check: "text-primary-600",
-      button: "bg-white border border-neutral-300 text-secondary-900 hover:border-[var(--accent)]/40",
-    },
+    setFormSubmitted(true);
+    try {
+      await fetch('/submit.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, whatsapp, groupSize, utm: utmRef.current }),
+      });
+    } catch (_) {
+      // silently ignore — lead is best-effort
+    }
   };
-  const tourById = new Map(TOUR_OPTIONS.map((tour) => [tour.id, tour]));
-  const groups = [
-    {
-      id: "shared-book",
-      kicker: "Shared tours",
-      title: "A shared tour that feels premium",
-      subtitle: "Shared boats, small groups (max 13 guests), and a smooth, curated path.",
-      tourIds: ["shared", "premium-shared"],
-    },
-    {
-      id: "private-book",
-      kicker: "Private tours",
-      title: "Private yachts with elevated service",
-      subtitle: "Fully private days for your group, flexible timing, and extra touches.",
-      tourIds: ["private", "premium-private"],
-    },
-  ];
 
-  return (
+  const toggleFaq = (index) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index);
+  };
+
+  const renderPriceStrip = () => (
+    <div className="price-strip-inner">
+      <div className="price-strip-item">
+        <div className="price-strip-icon">
+          <HugeiconsIcon icon={CloudSavingDone01Icon} size={28} color="currentColor" strokeWidth={1.5} />
+        </div>
+        <div className="price-strip-text">
+          <p className="price-strip-title">Weather Guarantee</p>
+          <p>Bad weather? We reschedule or refund you in full</p>
+        </div>
+      </div>
+      <div className="price-strip-item">
+        <div className="price-strip-icon">
+          <HugeiconsIcon icon={Invoice01Icon} size={28} color="currentColor" />
+        </div>
+        <div className="price-strip-text">
+          <p className="price-strip-title">No hidden fees</p>
+          <p>What you see is what you pay</p>
+        </div>
+      </div>
+      <div className="price-strip-item">
+        <div className="price-strip-icon">
+          <HugeiconsIcon icon={FavouriteIcon} size={28} color="currentColor" />
+        </div>
+        <div className="price-strip-text">
+          <p className="price-strip-title">Website-exclusive perks</p>
+          <p>Free drone photos & hotel pickup when you book direct</p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFormBody = (idPrefix) => (
     <>
-      {groups.map((group, index) => (
-        <Section
-          key={group.id}
-          id={group.id}
-          kicker={group.kicker}
-          title={group.title}
-          subtitle={group.subtitle}
-          className="!pt-10 sm:!pt-12"
-        >
-          {loading ? (
-            <div className="grid gap-6 md:grid-cols-2">
-              <CardSkeleton />
-              <CardSkeleton />
-            </div>
-          ) : (
-            <div className="grid gap-6 md:grid-cols-2">
-              {group.tourIds.map((tourId) => {
-                const tour = tourById.get(tourId);
-                if (!tour) return null;
-                const tone = toneStyles[tour.tone] ?? toneStyles.shared;
-                const selected = activeTourId === tour.id;
-                return (
-                  <Card
-                    key={tour.id}
-                    className={cn(
-                      "relative flex h-full flex-col p-6 shadow-none transition-all",
-                      tone.card,
-                      selected ? "ring-2 ring-primary-600" : ""
-                    )}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="text-xl font-semibold text-secondary-900">{tour.name}</h3>
-                    </div>
-                    <div className="text-xl font-semibold leading-tight text-secondary-900">
-                      <span className="text-sm font-medium text-secondary-500 mr-1">from</span>
-                      {formatIDR(tour.priceValue)}
-                    </div>
-                    {tour.priceNote ? (
-                      <div className="text-xs font-semibold text-secondary-500">{tour.priceNote}</div>
-                    ) : null}
-                    <p className="mt-3 text-sm text-secondary-600">{tour.summary}</p>
-                    <div className="mt-4 space-y-2">
-                      {tour.highlights.map((item) => (
-                        <div key={item} className="flex items-start gap-3 text-sm text-secondary-600">
-                          <Check className={cn("mt-1 h-4 w-4", tone.check)} />
-                          <span>{item}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 text-sm text-secondary-600">
-                      Best for: <span className="font-semibold text-secondary-900">{tour.bestFor}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onSelectTour?.(tour.id)}
-                      className={cn(
-                        "mt-6 inline-flex items-center justify-center gap-2 rounded-[45px] border px-6 py-3 text-sm font-semibold transition",
-                        tone.button
-                      )}
-                    >
-                      {tour.cta}
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </Section>
-      ))}
+      <div id={`${idPrefix}-inner`} style={{display: formSubmitted ? 'none' : 'block'}}>
+        <h3>Plan your adventure</h3>
+        <p className="form-subtitle">Leave your details - we'll reply within 5 minutes.</p>
+        <div className="form-field">
+          <input aria-label="Full Name" type="text" id={`${idPrefix}-name`} placeholder="Full Name" autoComplete="name" value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} />
+        </div>
+        <div className="form-field">
+          <input aria-label="Email" type="email" id={`${idPrefix}-email`} placeholder="Email Address" autoComplete="email" value={formData.email} onChange={(e) => setFormData((p) => ({ ...p, email: e.target.value }))} />
+        </div>
+        <div className="form-field">
+          <label htmlFor={`${idPrefix}-whatsapp`}>Phone Number / WhatsApp</label>
+          <PhoneInput
+            defaultCountry="US"
+            value={formData.whatsapp}
+            onChange={(phone) => setFormData((prev) => ({ ...prev, whatsapp: phone ?? '' }))}
+            id={`${idPrefix}-whatsapp`}
+            autoComplete="tel"
+            className="hero-phone-input"
+          />
+        </div>
+        <div className="form-field">
+          <input aria-label="Group Size" type="number" min="1" id={`${idPrefix}-group-size`} placeholder="Group Size (Optional)" inputMode="numeric" value={formData.groupSize} onChange={(e) => setFormData((p) => ({ ...p, groupSize: e.target.value }))} />
+        </div>
+        <button type="button" className="hero-form-btn" onClick={handleHeroFormSubmit}>
+          Get my tour details {'->'}
+        </button>
+        <p className="form-disclaimer">No spam. No payment required.</p>
+      </div>
+      <div className="form-success" style={{display: formSubmitted ? 'block' : 'none'}}>
+        <HugeiconsIcon icon={CheckmarkCircle02Icon} size={40} color="var(--success)" />
+        <h3>Thanks! We'll be in touch.</h3>
+        <p className="form-success-sub">Check your WhatsApp shortly.</p>
+      </div>
     </>
   );
-}
-
-function OverviewSection({ activeTourId, onSelectTour }) {
-  const TOUR_OPTIONS = useTourOptions();
-  const overviewDescription =
-    "A full-day Nusa Penida experience that blends sea and land highlights. Expect curated stops, time in the water, and iconic viewpoints — organized to feel smooth, comfortable, and memorable across every tour type.";
 
   return (
-    <Section
-      id="overview"
-      kicker="Tour overview"
-      title="A full-day island experience"
-      subtitle={overviewDescription}
-      className="!pt-12 sm:!pt-16"
-    >
-      <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-        <div className="space-y-6">
-          <div className="flex flex-wrap gap-2">
-            {TOUR_HIGHLIGHT_BADGES.map((badge) => (
-              <span
-                key={badge.label}
-                className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-secondary-500"
-              >
-                <badge.icon className="h-3.5 w-3.5 text-primary-600" />
-                {badge.label}
-              </span>
-            ))}
-          </div>
-          <div className="text-sm text-secondary-600">{overviewDescription}</div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {OVERVIEW_HIGHLIGHTS.map((highlight) => (
-              <div
-                key={highlight.title}
-                className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white/90 p-4"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-neutral-200 bg-white">
-                  <highlight.icon className="h-6 w-6 text-secondary-900" />
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-secondary-900">{highlight.title}</div>
-                  <div className="text-xs text-secondary-600">{highlight.text}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Card className="p-4">
-              <div className="text-sm font-semibold text-secondary-900">Safety & logistics</div>
-              <div className="mt-3 space-y-2 text-sm text-secondary-600">
-                {SAFETY_ITEMS.map((item) => (
-                  <div key={item} className="flex items-start gap-2">
-                    <Check className="mt-1 h-4 w-4 text-primary-600" />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-            <Card className="p-4">
-              <div className="text-sm font-semibold text-secondary-900">What stays the same for all tours</div>
-              <ul className="mt-3 space-y-2 text-sm text-secondary-600">
-                {COMMON_GROUND_ITEMS.map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <Check className="mt-1 h-4 w-4 text-primary-600" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          </div>
-        </div>
-        <div className="lg:col-span-1">
-          <TourPicker activeTourId={activeTourId} onSelectTour={onSelectTour} />
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function CompareTable() {
-  const TOUR_OPTIONS = useTourOptions();
-  const compareTones = {
-    shared: "border-neutral-200 bg-gradient-to-br from-[#f7fafc] via-[#f2f7fb] to-[#eaf2f7]",
-    premium: "border-neutral-200 bg-gradient-to-br from-[#eef3f7] via-[#e2ebf3] to-[#d5e1ec]",
-    private: "border-neutral-200 bg-gradient-to-br from-[#f0f4f9] via-[#edf6fb] to-[#e3edf5]",
-    "premium-private": "border-neutral-200 bg-gradient-to-br from-[#e7edf6] via-[#dfe7ef] to-[#d5dfe7]",
-  };
-  const compareRows = [
-    {
-      label: "From",
-      render: (tour) => (
-        <div className="text-sm font-semibold text-secondary-900 whitespace-nowrap">
-          {tour.price?.replace("From ", "")}
-        </div>
-      ),
-    },
-    {
-      label: "Best for",
-      render: (tour) => (
-        <div className="text-sm text-secondary-600 truncate" title={tour.bestFor}>
-          {tour.bestFor}
-        </div>
-      ),
-    },
-    {
-      label: "Top inclusions",
-      render: (tour) => (
-        <ul className="space-y-2 text-xs text-secondary-600">
-          {tour.highlights.slice(0, 3).map((item) => (
-            <li key={item} className="flex items-center gap-2">
-              <Check className="h-3.5 w-3.5 text-primary-600" />
-              <span className="truncate" title={item}>
-                {item}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ),
-    },
-    {
-      label: "Positioning",
-      render: (tour) => (
-        <span className="inline-flex items-center rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-secondary-500">
-          {tour.badge}
-        </span>
-      ),
-    },
-  ];
-
-  return (
-    <Section
-      id="compare"
-      kicker="Compare"
-      title="Compare all tour types"
-      subtitle="Highlights and positioning pulled from the tour cards, so you can see the differences at a glance."
-    >
-      <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <div className="min-w-[960px]">
-            <div className="grid grid-cols-[180px_repeat(4,1fr)] border-b border-neutral-200 px-4 py-4">
-              <div className="text-xs font-black uppercase tracking-widest text-primary-600">Tour</div>
-              {TOUR_OPTIONS.map((tour) => (
-                <div key={tour.id} className="px-3">
-                  <div
-                    className={cn(
-                      "rounded-xl border px-4 py-3 text-left",
-                      compareTones[tour.tone] ?? compareTones.shared
-                    )}
-                  >
-                    <div className="text-sm font-semibold text-secondary-900">{tour.name}</div>
-                    <div className="mt-2 inline-flex rounded-full border border-white/70 bg-white/80 px-3 py-1 text-xs font-semibold text-secondary-500">
-                      {tour.badge}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {compareRows.map((row, idx) => (
-              <div
-                key={row.label}
-                className={cn(
-                  "grid grid-cols-[180px_repeat(4,1fr)] px-4 py-4",
-                  idx % 2 === 0 ? "bg-neutral-50" : "bg-white",
-                  idx !== compareRows.length - 1 ? "border-b border-neutral-200" : ""
-                )}
-              >
-                <div className="text-xs font-semibold uppercase tracking-[0.2em] text-secondary-500">{row.label}</div>
-                {TOUR_OPTIONS.map((tour) => (
-                  <div key={`${row.label}-${tour.id}`} className="px-3">
-                    {row.render(tour)}
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function SocialProof() {
-  return (
-    <Section
-      id="social"
-      kicker="Trusted by travelers"
-      title="A premium tour with seamless flow"
-    >
-      <div className="overflow-hidden rounded-xl bg-white p-4 sm:p-6">
-        <div className="elfsight-app-1f614ea8-8602-4273-83b3-ab40c213a3d7" data-elfsight-app-lazy />
-      </div>
-    </Section>
-  );
-}
-
-function WhyBluuu() {
-  const cards = [
-    {
-      iconUrl: "https://bluuu.tours/storage/app/media/icons%20from%20upwork/l1.svg",
-      title: "Comfort-first boats",
-      text: "A smooth ride, attentive crew, and a relaxed pace from start to finish.",
-    },
-    {
-      iconUrl:
-        "https://bluuu.tours/storage/app/media/icons%20from%20upwork/icons%20ready_All%20Nusa%20Penida%20in%20one%20day.svg",
-      title: "Do it all in one day",
-      text: "Cruise on a comfort yacht, snorkel, visit Kelingking Cliff, and swim with manta rays.",
-    },
-    {
-      iconUrl: "https://bluuu.tours/storage/app/media/icons%20from%20upwork/l5.svg",
-      title: "Smooth boarding",
-      text: "No low-tide ocean walking, no waiting, no dinghy transfer. Arrive, check in, and board smoothly.",
-    },
-    {
-      iconUrl:
-        "https://bluuu.tours/storage/app/media/icons%20from%20upwork/icons%20ready_safety%20first%20always.svg",
-      title: "Free Cancellation",
-      text: "Free cancellation up to 24 hours before your tour. Bad weather? We'll reschedule or refund.",
-    },
-  ];
-
-  return (
-    <Section
-      id="why"
-      kicker="Why book this tour"
-      title="The premium way to do Nusa Penida in one day"
-      subtitle="Comfort-first day trips with clear logistics and a flexible pace across every tour option."
-      titleClassName="text-2xl sm:text-3xl"
-    >
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 auto-rows-fr">
-        {cards.map((c, i) => (
-          <Card key={i} className="h-full p-4 sm:p-5">
-            <div className="flex items-center justify-center">
-              <img src={c.iconUrl} alt="" className="h-16 w-16 sm:h-24 sm:w-24" />
-            </div>
-            <div className="mt-1 text-xs font-semibold text-secondary-900 sm:text-sm">{c.title}</div>
-            <div className="mt-1 text-xs leading-5 text-secondary-600 sm:text-sm sm:leading-6">{c.text}</div>
-          </Card>
-        ))}
-      </div>
-
-      <div className="mt-4 rounded-xl border border-neutral-200 bg-white p-6">
-        <div className="grid gap-4 lg:grid-cols-12 lg:items-center">
-          <div className="lg:col-span-8">
-            <div className="text-sm font-semibold text-secondary-900">Designed for a seamless day on the water.</div>
-            <div className="mt-2 text-sm leading-6 text-secondary-600">
-              A dedicated crew manages the day end-to-end so you can relax and enjoy every moment.
-            </div>
-          </div>
-          <div className="lg:col-span-4">
-            <PrimaryLink href="#tours" className="w-full">
-              Choose your tour
-            </PrimaryLink>
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function DayPlan() {
-  const BLOCK_BACKGROUND = "bg-white";
-
-  const groups = [
-    {
-      label: "Morning",
-      items: [
-        {
-          title: "Cruise & snorkel",
-          icon: Waves,
-          text: "Board the yacht and visit curated snorkel spots with calm waters.",
-          tint: "bg-gradient-to-r from-[#eef6ff] to-[#f7fbff]",
-          iconTone: "text-primary-600 bg-primary-600/20",
-        },
-      ],
-    },
-    {
-      label: "Midday",
-      items: [
-        {
-          title: "Lunch & relax",
-          icon: UtensilsCrossed,
-          text: "Lunch with ocean views and time to refresh before the second half.",
-          tint: "bg-gradient-to-r from-[#eef6ff] to-[#f7fbff]",
-          iconTone: "text-primary-600 bg-primary-600/20",
-        },
-      ],
-    },
-    {
-      label: "Afternoon",
-      items: [
-        {
-          title: "Land highlights",
-          icon: Car,
-          text: "Short land stops for viewpoints and photo moments.",
-          tint: "bg-gradient-to-r from-[#eef6ff] to-[#f7fbff]",
-          iconTone: "text-primary-600 bg-primary-600/20",
-        },
-        {
-          title: "Swim with mantas",
-          icon: Star,
-          text: "Manta ray swim (conditions permitting), guided by the crew.",
-          tint: "bg-gradient-to-r from-[#eef6ff] to-[#f7fbff]",
-          iconTone: "text-primary-600 bg-primary-600/20",
-        },
-      ],
-    },
-    {
-      label: "Return",
-      items: [
-        {
-          title: "Back to Bali",
-          icon: Ship,
-          text: "Return crossing and wrap-up at the lounge.",
-          tint: "bg-gradient-to-r from-[#eef6ff] to-[#f7fbff]",
-          iconTone: "text-primary-600 bg-primary-600/20",
-        },
-      ],
-    },
-  ];
-
-  return (
-    <Section
-      id="plan"
-      kicker="What to expect"
-      title="Your day plan"
-      subtitle="A smooth full-day flow with snorkeling, lunch, land highlights, and manta time."
-      className=""
-    >
-      <div className="grid gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-7">
-          <div className="space-y-3">
-            {groups.map((g) => (
-              <div key={g.label}>
-                <div className="mb-2 text-xs font-black uppercase tracking-widest text-secondary-400">{g.label}</div>
-                <div className="space-y-2">
-                  {g.items.map((s) => (
-                    <div
-                      key={`${g.label}-${s.title}`}
-                      className="flex items-start gap-4 rounded-xl border border-neutral-200 bg-white p-5"
-                    >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50">
-                        <s.icon className="h-5 w-5 text-primary-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-secondary-900">{s.title}</div>
-                        <div className="mt-1 text-sm text-secondary-600">{s.text}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="lg:col-span-5">
-          <div className="mt-8 lg:mt-0 lg:sticky lg:top-24">
-            <img
-              src="https://bluuu.tours/themes/bluuu/assets/images/map.webp"
-              alt="Route overview map"
-              loading="lazy"
-              decoding="async"
-              className="h-full w-full object-contain"
-            />
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
-
-function Included() {
-  const highlights = [
-    {
-      title: "Comfort yacht",
-      text: "Premium seating, a smoother ride, and attentive crew service all day.",
-      icon: Ship,
-    },
-    {
-      title: "Curated lunch",
-      text: "Lunch with ocean views and thoughtful service to recharge the day.",
-      icon: UtensilsCrossed,
-    },
-    {
-      title: "Land highlights",
-      text: "Short land stops for iconic views, photos, and a relaxed pace.",
-      icon: MapPin,
-    },
-    {
-      title: "Underwater GoPro",
-      text: "Underwater GoPro coverage keeps your snorkel moments on film.",
-      icon: Camera,
-    },
-    {
-      title: "Snorkeling equipment",
-      text: "High-quality snorkeling gear supplied for every guest.",
-      icon: Sparkles,
-    },
-    {
-      title: "All entrance tickets",
-      text: "Entrance fees and passes handled so you can skip the queues.",
-      icon: Ticket,
-    },
-  ];
-
-  return (
-    <Section
-      id="included"
-      kicker="Included"
-      title="Everything you want is already covered"
-      subtitle="Simple, transparent inclusions — so you can focus on the day, not the fine print."
-    >
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {highlights.map((h) => (
-          <div
-            key={h.title}
-            className="flex items-start gap-4 rounded-xl border border-neutral-200 bg-white p-5 "
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-50">
-              <h.icon className="h-5 w-5 text-primary-600" />
-            </div>
-            <div>
-              <div className="text-sm font-semibold text-secondary-900">{h.title}</div>
-              <div className="mt-1 text-sm text-secondary-600">{h.text}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-    </Section>
-  );
-}
-
-function FAQItem({ q, a }) {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <div className="border-b border-neutral-100 last:border-0">
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="group flex w-full items-center justify-between px-6 py-5 text-left"
-      >
-        <span className="pr-6 text-base font-semibold text-secondary-900">{q}</span>
-        <span
-          className={cn(
-            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border transition-all duration-200",
-            isOpen
-              ? "rotate-45 border-primary-200 bg-primary-50 text-primary-500"
-              : "border-neutral-200 bg-neutral-50 text-secondary-400"
-          )}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </span>
-      </button>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateRows: isOpen ? "1fr" : "0fr",
-          opacity: isOpen ? 1 : 0,
-          transition: "grid-template-rows 0.22s ease-out, opacity 0.22s ease-out",
-        }}
-      >
-        <div style={{ overflow: "hidden" }}>
-          <div
-            className="px-6 pb-5 pr-16 text-sm leading-relaxed text-secondary-500 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_strong]:font-semibold [&_strong]:text-secondary-700 [&_ul]:list-disc [&_ul]:pl-4 [&_ul]:space-y-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_a]:text-primary-600 [&_a]:underline"
-            dangerouslySetInnerHTML={{ __html: a }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FAQ() {
-  const { faqs: apiFaqs, loading: faqLoading } = useTours();
-  const contacts = useSiteContacts();
-  const [showAll, setShowAll] = useState(false);
-
-  // API returns { id, question, answer }; normalize to { q, a } expected by FAQItem
-  const normalizedFaqs = apiFaqs?.length
-    ? apiFaqs.map(f => ({ q: f.question, a: f.answer }))
-    : [];
-
-  const primaryFaqs = normalizedFaqs.slice(0, 5);
-
-  return (
-    <Section
-      id="faq"
-      backgroundClassName="bg-gradient-to-b from-[#f0f6ff] via-white to-[#f5f9ff]"
-    >
-      <div className="mx-auto w-full max-w-[1280px]">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-2 text-xs font-black uppercase tracking-widest text-primary-600">FAQ</div>
-          <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl">
-            Frequently Asked Questions
-          </h2>
-        </div>
-
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
-          {faqLoading ? (
-            <div className="space-y-0">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="border-b border-neutral-100 px-6 py-5 last:border-0">
-                  <div className="h-4 w-3/4 animate-pulse rounded-lg bg-neutral-100" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            (showAll ? normalizedFaqs : primaryFaqs).map((faq, i) => (
-              <FAQItem key={faq.id ?? i} q={faq.q} a={faq.a} />
-            ))
-          )}
-        </div>
-
-        <div className="mt-8 flex flex-col items-center gap-6">
-          {!showAll && !faqLoading && normalizedFaqs.length > 5 && (
-            <button
-              onClick={() => setShowAll(true)}
-              className="text-sm font-semibold text-primary-600 hover:text-primary-700 hover:underline"
-            >
-              See all questions
-            </button>
-          )}
-
-          <div className="relative flex w-full items-center gap-5 overflow-hidden rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full border-2 border-primary-100">
-              <img src="https://bluuu.tours/storage/app/media/images/manager.webp" alt="Expert" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-            </div>
-            <div className="flex-1">
-              <div className="text-xs font-black uppercase tracking-widest text-primary-600 mb-1">Ask an Expert</div>
-              <div className="text-sm text-secondary-500 mb-3">Our team is ready to help you plan the perfect trip.</div>
-              <div className="flex flex-wrap gap-4">
-                {contacts.phone?.link && (
-                  <a href={contacts.phone.link} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
-                    <Phone className="h-3.5 w-3.5 text-primary-500" />
-                    {contacts.phone.number}
-                  </a>
-                )}
-                {contacts.email && (
-                  <a href={`mailto:${contacts.email}`} className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
-                    <Mail className="h-3.5 w-3.5 text-primary-500" />
-                    {contacts.email}
-                  </a>
-                )}
-                {contacts.whatsapp?.link && (
-                  <a href={contacts.whatsapp.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-800 hover:text-primary-600 transition-colors">
-                    <MessageCircle className="h-3.5 w-3.5 text-primary-500" />
-                    WhatsApp
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Section>
-  );
-}
-function BookingMini({ activeTourId, onSelectTour }) {
-  const TOUR_OPTIONS = useTourOptions();
-  const todayISO = (() => {
-    const d = new Date();
-    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  })();
-  const [adults, setAdults] = useState(2);
-  const [date, setDate] = useState(todayISO);
-
-  const activeTour = TOUR_OPTIONS.find((tour) => tour.id === activeTourId) || TOUR_OPTIONS[0];
-
-  return (
-    <Card className="p-4">
-      <div className="text-xs font-semibold uppercase tracking-wider text-secondary-500">Book (demo)</div>
-      <div className="mt-3 grid gap-3">
-        <label className="flex flex-col gap-2">
-          <span className="text-xs font-semibold text-secondary-600">Tour</span>
-          <div className="relative">
-            <select
-              value={activeTourId}
-              onChange={(e) => onSelectTour?.(e.target.value)}
-              className="h-11 w-full appearance-none rounded-[18px] border border-neutral-200 bg-white px-3 pr-10 text-sm text-secondary-900 shadow-sm outline-none focus:border-[var(--accent)]/40 focus:ring-4 focus:ring-primary-600/10"
-            >
-              {TOUR_OPTIONS.map((tour) => (
-                <option key={tour.id} value={tour.id}>
-                  {tour.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-500" />
-          </div>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-secondary-600">Date</span>
-            <div className="relative">
-              <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-500" />
-              <input
-                type="date"
-                value={date}
-                min={todayISO}
-                onChange={(e) => setDate(e.target.value)}
-                className="h-11 w-full rounded-[18px] border border-neutral-200 bg-white pl-10 pr-3 text-sm text-secondary-900 shadow-sm outline-none focus:border-[var(--accent)]/40 focus:ring-4 focus:ring-primary-600/10"
-              />
-            </div>
-          </label>
-          <label className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-secondary-600">Guests</span>
-            <div className="relative">
-              <Users className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-500" />
-              <select
-                value={adults}
-                onChange={(e) => setAdults(parseInt(e.target.value, 10))}
-                className="h-11 w-full appearance-none rounded-[18px] border border-neutral-200 bg-white pl-10 pr-10 text-sm text-secondary-900 shadow-sm outline-none focus:border-[var(--accent)]/40 focus:ring-4 focus:ring-primary-600/10"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary-500" />
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-2">
-        <button
-          onClick={() => alert(`Reserve: ${activeTour.name}, ${date}, guests: ${adults}. (Demo action)`)}
-          className={cn(
-            "btn-primary inline-flex w-full items-center justify-center gap-2 rounded-[45px] bg-primary-600 px-5 py-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
-          )}
-        >
-          Check availability <ArrowRight className="h-4 w-4" />
-        </button>
-        <SecondaryButton onClick={() => alert("WhatsApp demo action")}
-        >
-          <MessageCircle className="h-4 w-4" />
-          Chat with a manager
-        </SecondaryButton>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Pill icon={Shield}>Free cancellation 24h</Pill>
-        <Pill icon={Sun}>Weather guarantee</Pill>
-      </div>
-    </Card>
-  );
-}
+    <div className="home2-wrapper">
 
 
-
-function MobileStickyCTA() {
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-neutral-200 bg-white backdrop-blur sm:hidden">
-      <div className="mx-auto max-w-6xl px-4 py-3">
-        <a
-          href="#book"
-          className={cn(
-            "btn-primary inline-flex w-full items-center justify-center gap-2 rounded-[45px] bg-primary-600 px-5 py-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]"
-          )}
-        >
-          Check availability <ArrowRight className="h-4 w-4" />
-        </a>
-        <div className="mt-2 flex items-center justify-between text-xs text-secondary-500">
-          <span className="inline-flex items-center gap-1">
-            <Shield className="h-3.5 w-3.5 text-primary-600" /> Free cancellation 24h
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Sun className="h-3.5 w-3.5 text-primary-600" /> Weather guarantee
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PrimaryLink({ href, children, className, onClick }) {
-  return (
-    <a
-      href={href}
-      onClick={onClick}
-      className={cn(
-        "btn-primary inline-flex items-center justify-center gap-2 rounded-[45px] bg-primary-600 px-6 py-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]",
-        className
-      )}
-    >
-      {children}
-      <ArrowRight className="h-4 w-4" />
+{/* ═══════════════════════════════════════
+     NAVBAR
+     ═══════════════════════════════════════ */}
+<nav className={`navbar ${isScrolled ? 'scrolled' : ''}`} id="navbar">
+  <div className="inner">
+    <a href="https://bluuu.tours" className="logo" aria-label="Bluuu Tours">
+      <svg width="140" height="30" viewBox="0 0 140 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g clipPath="url(#navClip)">
+          <path d="M8.55478 6.47086C5.92052 4.49424 1.1896 2.89157 0.571354 6.47086C0.221911 8.47419 -0.0468934 12.561 0.00686701 16.7279C0.114388 26.9315 0.275669 28.1335 1.21648 28.8547C1.4584 29.0417 1.7272 29.1753 2.02288 29.2821C6.80757 30.8581 11.431 23.4057 12.8556 20.2805C14.9523 15.7129 13.0438 9.83645 8.55478 6.47086Z" fill="#2E53D9"/>
+          <path d="M29.711 3.6661C25.9477 -0.0734532 21.5394 0.0868102 15.2763 0.00667695C11.1636 0.00667695 5.57252 -0.0200325 2.7501 0.0333897C0.196474 0.00667858 0.357756 0.460767 2.34689 1.23539C2.64258 1.34223 2.93825 1.47579 3.20706 1.60934C5.30371 2.62436 7.61542 3.98663 9.55079 5.50916C12.5614 7.7796 15.3032 11.0918 18.2869 12.7479C21.1093 14.3505 25.0876 15.1519 28.0444 14.0567C32.5334 12.6143 32.8291 6.63103 29.711 3.6661Z" fill="#2E53D9"/>
+          <path d="M22.5062 16.7003C18.1785 18.116 13.9314 21.0275 11.8078 24.9006C8.66289 31.1243 19.7644 30.1627 23.6352 29.5483C28.3661 28.8004 32.2906 26.6101 33.4464 22.3363C34.8711 15.9257 28.2586 14.5901 22.5062 16.7003Z" fill="#2E53D9"/>
+          <path d="M62.6931 13.8691C66.5101 10.8507 64.9241 3.47852 58.0697 3.47852H41.2695V24.1796C41.2695 25.2213 42.1028 26.0761 43.1243 26.0761H59.0105C67.424 26.1028 69.1712 16.3265 62.6931 13.8691ZM45.194 7.32492H58.0428C61.4297 7.32492 61.1609 12.7472 58.0697 12.7472H45.194V7.32492ZM59.0105 22.2564H45.194V16.1395H58.8492C63.7145 16.1663 63.4188 22.2564 59.0105 22.2564Z" fill="#2E53D9"/>
+          <path d="M68.418 5.40172V26.1829H70.4878C71.5092 26.1829 72.3425 25.3282 72.3425 24.2864V3.47852H70.2727C69.2513 3.50523 68.418 4.33328 68.418 5.40172Z" fill="#2E53D9"/>
+          <path d="M95.2169 21.3484V8.04624L93.0127 8.07296C92.0451 8.07296 91.2655 8.84758 91.2655 9.80918V19.9861C91.2655 20.2265 91.1849 20.4402 91.0505 20.6272C90.1634 21.8559 88.5506 22.7908 85.9701 22.7908C82.2875 22.7908 78.8737 21.562 78.8737 17.9828V8.01953H76.6964C75.7287 8.01953 74.9492 8.79415 74.9492 9.75575V17.9828C74.9492 24.34 80.0833 26.5036 85.7551 26.5036C90.271 26.5036 93.0127 24.2064 93.6847 23.5921C94.4374 22.9243 95.2438 22.2832 95.2169 21.3484Z" fill="#2E53D9"/>
+          <path d="M136.101 8.04624V18.0095C136.101 21.5888 132.66 22.8175 129.005 22.8175C126.424 22.8175 124.838 21.8826 123.924 20.6539C123.79 20.4669 123.709 20.2532 123.709 20.0128V9.83588C123.709 8.87428 122.93 8.09966 121.962 8.09966L119.758 8.01953V21.3216C119.758 22.2565 120.537 22.9243 121.263 23.5921C121.935 24.2064 124.677 26.5036 129.193 26.5036C134.864 26.5036 139.999 24.34 139.999 17.9828V9.75575C139.999 8.79415 139.219 8.01953 138.251 8.01953L136.101 8.04624Z" fill="#2E53D9"/>
+          <path d="M117.691 21.3484V8.01953L115.487 8.04624C114.519 8.04624 113.739 8.82087 113.739 9.78246V19.906C113.739 20.1731 113.659 20.4135 113.471 20.6272C112.691 21.5353 111.105 22.7908 107.449 22.7908C104.358 22.7908 102.342 21.5888 101.482 20.6539C101.294 20.4669 101.213 20.1998 101.213 19.9327V9.78246C101.213 8.82087 100.434 8.04624 99.4659 8.04624L97.2617 8.01953V21.3216C97.2617 22.0161 97.9337 23.0312 98.7133 23.5654C100.944 25.1146 102.96 26.1831 105.89 26.3967C106.939 26.5036 107.396 26.4769 108.551 26.4235C108.551 26.4235 113.39 26.2365 116.159 23.5654C116.938 22.9243 117.691 22.0161 117.691 21.3484Z" fill="#2E53D9"/>
+        </g>
+        <defs><clipPath id="navClip"><rect width="140" height="30" fill="white"/></clipPath></defs>
+      </svg>
     </a>
-  );
-}
-
-function SecondaryLink({ href, children, className, targetBlank = false }) {
-  return (
-    <a
-      href={href}
-      target={targetBlank ? "_blank" : undefined}
-      rel={targetBlank ? "noreferrer" : undefined}
-      className={cn(
-        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[45px] border border-neutral-300 bg-white px-5 py-3 text-sm font-semibold text-secondary-900 transition hover:bg-neutral-50 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]",
-        className
-      )}
-    >
-      {children}
-    </a>
-  );
-}
-
-function SecondaryButton({ children, onClick, className }) {
-  return (
+    <div className={`nav-right ${mobileMenuOpen ? 'is-open' : ''}`}>
+      <a href="#tours" className="nav-link-faq" onClick={() => setMobileMenuOpen(false)}>Tours</a>
+      <a href="#faq" className="nav-link-faq" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
+    </div>
     <button
-      onClick={onClick}
-      className={cn(
-        "inline-flex w-full items-center justify-center gap-2 rounded-[45px] border border-neutral-300 bg-white px-5 py-3 text-sm font-semibold text-secondary-900 transition hover:bg-neutral-50 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600/25 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page-bg)]",
-        className
-      )}
+      type="button"
+      className={`nav-burger ${mobileMenuOpen ? 'is-open' : ''}`}
+      aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+      onClick={() => setMobileMenuOpen((v) => !v)}
     >
-      {children}
+      <span></span>
+      <span></span>
+      <span></span>
     </button>
-  );
-}
+  </div>
+</nav>
 
-function Card({ children, className }) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border border-neutral-200 bg-white p-5 transition-all hover:border-primary-300",
-        className
-      )}
-    >
-      {children}
+
+{/* ═══════════════════════════════════════
+     HERO - Cinematic bottom-left
+     ═══════════════════════════════════════ */}
+<section className="hero" id="hero">
+  <picture>
+    <source media="(max-width: 768px)" srcSet={imgPosterMd} />
+    <img src={imgPoster} alt="" className="hero-poster" aria-hidden="true" fetchPriority="high" />
+  </picture>
+  <video className="hero-video" id="heroVideo" muted loop playsInline disablePictureInPicture preload="none" ref={heroVideoRef} />
+  <div className="hero-overlay"></div>
+
+  <div className="hero-content hero-content--centered">
+
+      <div className="hero-pills-row hero-pills-row--center">
+        <div className="hero-pill hero-pill--metric-outline">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>Best Price Guaranteed</span>
+        </div>
+      </div>
+
+      <h1>Discover <span className="accent">Nusa Penida</span></h1>
+
+      <p className="hero-subtitle">
+        Manta rays, snorkeling, diving, and a land tour – all in one unforgettable day from Bali.
+      </p>
+
+      <p className="hero-pricing">
+        From <strong>$80</strong>/person&nbsp; ·&nbsp; Private boats from <strong>$750</strong>
+      </p>
+
+      <div className="hero-cta-row">
+<a href="#tours" className="hero-cta hero-cta--outline">Explore Tours</a>
+      </div>
+
+      <div className="hero-ratings-bar">
+        <div className="hero-rating-col">
+          <span className="hero-rating-score">4.9</span>
+          <span className="hero-rating-stars">★★★★★</span>
+          <span className="hero-rating-label">Google</span>
+        </div>
+        <div className="hero-rating-col">
+          <span className="hero-rating-score">4.9</span>
+          <span className="hero-rating-stars">★★★★★</span>
+          <span className="hero-rating-label">TripAdvisor</span>
+        </div>
+        <div className="hero-rating-col">
+          <span className="hero-rating-score">4.9</span>
+          <span className="hero-rating-stars">★★★★★</span>
+          <span className="hero-rating-label">Airbnb</span>
+        </div>
+        <div className="hero-rating-divider"></div>
+        <div className="hero-rating-col hero-rating-col--total">
+          <span className="hero-rating-score hero-rating-score--big">10,000+</span>
+          <span className="hero-rating-label">Total Reviews</span>
+        </div>
+      </div>
+
+      <div className="hero-explore-cue">
+        <div className="hero-explore-line"></div>
+        <span className="hero-explore-text">Explore</span>
+      </div>
+
+  </div>
+</section>
+
+
+{/* ═══════════════════════════════════════
+     WHAT'S INCLUDED - Redesigned with illustrations
+     ═══════════════════════════════════════ */}
+<section className="included-section included-section-gray section-padding">
+  <div className="container">
+
+    <div className="section-header section-header-center animate-in">
+      <div className="h2-overline h2-overline-blue">INCLUDED</div>
+      <h2 className="heading-dark">Everything you want is already <span className="accent-blue-italic">covered</span></h2>
+      <p className="section-lede">Simple, transparent inclusions - so you can focus on the day, not the fine print.</p>
     </div>
-  );
-}
 
-function Section({ id, kicker, title, subtitle, children, titleAddon, className, titleClassName }) {
-  return (
-    <section id={id} className={cn("scroll-mt-24 py-16 sm:py-24", className)}>
-      <div className="container">
-        <div className="mb-10 text-center">
-          {kicker ? (
-            <div className="text-xs font-black uppercase tracking-widest text-primary-600">
-              {kicker}
-            </div>
-          ) : null}
-          {title ? (
-            <>
-              <h2 className={cn("mt-2 text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl", titleClassName)}>
-                {title}
-              </h2>
-              {titleAddon ? titleAddon : null}
-            </>
-          ) : null}
-          {subtitle ? (
-            <p className="mx-auto mt-3 max-w-2xl text-lg leading-relaxed text-secondary-600">
-              {subtitle}
-            </p>
-          ) : null}
+    <div className="incl-card-grid">
+      
+      <div className="incl-card animate-in"
+     
+     >
+        {/* accent line */}
+        <div className="incl-accent"></div>
+        {/* number */}
+        <div className="incl-number">01</div>
+        {/* icon */}
+        <div className="incl-icon">
+          <img src={icon1} alt="Comfort Yacht" width="128" height="128" />
         </div>
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function RoutesBlock({ id, kicker, title, subtitle, routes, bookHref, bookLabel, loading }) {
-  const [activeIdx, setActiveIdx] = useState(0);
-
-  const skeletonItems = Array.from({ length: 3 });
-
-  return (
-    <Section id={id} kicker={kicker} title={title} subtitle={subtitle}>
-      {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {skeletonItems.map((_, i) => <RouteCardSkeleton key={i} />)}
-        </div>
-      ) : routes.length > 0 ? (
-        <>
-          {/* Cards — horizontal scroll on mobile, grid on desktop */}
-          <div className="-mx-4 overflow-hidden sm:mx-0">
-            <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-1 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
-              {routes.map((route) => (
-                <div key={route.id} className="w-[300px] shrink-0 snap-center sm:w-auto">
-                  <RouteCard route={route} bookHref={bookHref} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* CTA */}
-          <div className="mt-6 flex justify-center">
-            <a href={bookHref} className="btn-primary inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]">
-              {bookLabel} <ArrowRight className="h-4 w-4" />
-            </a>
-          </div>
-        </>
-      ) : null}
-    </Section>
-  );
-}
-
-const SHARED_TIERS = [
-  {
-    id: "classic",
-    ribbon: { text: "★ Best price", bg: "bg-neutral-800/80" },
-    label: "Classic",
-    title: "The essentials, done right",
-    desc: "Everything you need, nothing you don't. The full Nusa Penida experience at the best price.",
-    price: "$99",
-    priceTag: null,
-    imgGradient: "from-teal-700 to-teal-500",
-    boat: [
-      { Icon: Ship,  text: "Speedboat · 12m" },
-      { Icon: Users, text: "Max 13 guests" },
-      { Icon: Sun,   text: "Partial shade · open deck" },
-    ],
-    solid: false,
-    upgradeNote: null,
-    incl: [
-      { plus: false, text: "Snorkeling at 4 top spots + manta rays" },
-      { plus: false, text: "Land tour to Kelingking Cliff" },
-      { plus: false, text: "Lunch at cliff restaurant" },
-      { plus: false, text: "Snorkel gear, towels, GoPro photos" },
-      { plus: false, text: "Hotel transfer & insurance" },
-    ],
-  },
-  {
-    id: "premium",
-    ribbon: { text: "✦ Most popular", bg: "bg-primary-600" },
-    label: "Premium",
-    title: "More space, more time, more fun",
-    desc: "Bigger boat, extra hour on the route, and sunset prosecco on the way back. The sweet spot.",
-    price: "$129",
-    priceTag: "BEST SELLER",
-    imgGradient: "from-blue-800 to-blue-600",
-    boat: [
-      { Icon: Ship,  text: "Premium Speedboat · 13m · 2024–2025" },
-      { Icon: Users, text: "Max 13 guests" },
-      { Icon: Sun,   text: "Shaded lounge · extra deck space" },
-    ],
-    solid: true,
-    featured: true,
-    upgradeNote: "Only +$30/person to upgrade from Classic",
-    incl: [
-      { plus: false, text: "Everything in Classic, plus:" },
-      { plus: true,  text: "Extra 1h on the route — more snorkeling time" },
-      { plus: true,  text: "Lunch at La Rossa beach club" },
-      { plus: true,  text: "Pro photographer all day — 20–30 edited photos" },
-      { plus: true,  text: "Underwater GoPro photos & video by guides" },
-      { plus: true,  text: "All photos & videos delivered within 3 days" },
-      { plus: true,  text: "Sunset prosecco on the cruise back" },
-      { plus: true,  text: "Sound system on board" },
-    ],
-  },
-  {
-    id: "elite",
-    ribbon: { text: "★ Top tier", bg: "bg-neutral-800/80" },
-    label: "Elite",
-    title: "The best we offer",
-    desc: "Handcrafted yacht by Fortune Yachts, premium service, and the most relaxed pace on the water.",
-    price: "$149",
-    priceTag: "TOP TIER",
-    imgGradient: "from-slate-900 to-slate-700",
-    boat: [
-      { Icon: Ship,  text: "Eldorado yacht · 13m · 2026" },
-      { Icon: Users, text: "Max 13 guests" },
-      { Icon: Sun,   text: "Full shade · bow lounge with sofas" },
-    ],
-    solid: false,
-    upgradeNote: "Only +$20/person more than Premium",
-    incl: [
-      { plus: false, text: "Everything in Premium, plus:" },
-      { plus: true,  text: "Brand-new Fortune Yachts Eldorado" },
-      { plus: true,  text: "Drone photos & video included" },
-      { plus: true,  text: "All photos & videos delivered next day" },
-      { plus: true,  text: "Free GoPro rental — shoot your own content" },
-      { plus: true,  text: "Lunch at luxury cliff-top hotel restaurant" },
-      { plus: true,  text: "Photo stop at secret spot" },
-      { plus: true,  text: "Most experienced guides — 3+ years with Bluuu" },
-    ],
-  },
-];
-
-const SHARED_COMPARE_ROWS = [
-  { label: "Boat",              values: ["Speedboat 12m", "Premium Speedboat 13m", "Eldorado yacht 13m"] },
-  { label: "Year",              values: ["Mixed fleet", "2024–2025", "2026"] },
-  { label: "Shade",             values: ["Partial", "Shaded lounge", "Full + bow lounge"] },
-  { label: "Snorkeling spots",  values: ["✓ 4 spots", "✓ 4 spots", "✓ 4 spots"],  check: [true,true,true] },
-  { label: "Manta rays",        values: ["✓", "✓", "✓"],  check: [true,true,true] },
-  { label: "Extra time",        values: ["—", "+1 hour", "+1 hour"], check: [false,true,true] },
-  { label: "Lunch",             values: ["Cliff restaurant", "La Rossa beach club", "Luxury restaurant"] },
-  { label: "Photographer",      values: ["—", "✓ 20–30 photos", "✓ 20–30 photos"], check: [false,true,true] },
-  { label: "Underwater GoPro",  values: ["✓ by guides", "✓ by guides", "✓ by guides"], check: [true,true,true] },
-  { label: "Drone photo/video", values: ["—", "—", "✓"], check: [false,false,true] },
-  { label: "Photo delivery",    values: ["—", "Within 3 days", "Next day"], check: [false,false,true] },
-  { label: "GoPro rental",      values: ["—", "✓", "✓ Free"], check: [false,true,true] },
-  { label: "Secret spot",       values: ["—", "—", "✓"], check: [false,false,true] },
-  { label: "Sunset prosecco",   values: ["—", "✓", "✓"], check: [false,true,true] },
-  { label: "Guides",            values: ["Certified", "Certified", "Senior 3yr+"] },
-  { label: "Price / person",    values: ["$99", "$129", "$149"], priceRow: true },
-];
-
-function SharedTiersBlock() {
-  const [activeIdx, setActiveIdx]     = useState(1); // default: Premium
-  const [showCompare, setShowCompare] = useState(false);
-  const { sharedTours } = useTours();
-  const { formatPrice }              = useCurrency();
-
-  // Sort tours cheapest→most expensive to map Classic/Premium/Elite by price rank
-  const sortedTours = useMemo(() => {
-    if (!sharedTours?.length) return [];
-    return [...sharedTours]
-      .filter(t => t.status !== "disabled" && t.status !== "hidden")
-      .sort((a, b) => {
-        const pa = Number(a.prices?.[0]?.price || a.price || 0);
-        const pb = Number(b.prices?.[0]?.price || b.price || 0);
-        return pa - pb;
-      });
-  }, [sharedTours]);
-
-  const tierImages = useMemo(() =>
-    sortedTours.slice(0, 3).map(t => {
-      const imgs = t.images_with_thumbs || [];
-      return imgs[0]?.thumb1 || imgs[0]?.original || null;
-    }), [sortedTours]);
-
-  // Merge live data (description + price) from DB into hardcoded tier configs
-  const tiersWithData = useMemo(() =>
-    SHARED_TIERS.map((tier, i) => {
-      const tour = sortedTours[i];
-
-      const liveDesc = sanitizeDisplayText(tour?.description || tour?.json?.subtitle || "");
-
-      // Min price across all rate seasons
-      const rawPrices = (tour?.prices || []).map(p => Number(p.price)).filter(p => p > 0);
-      const rawPrice = rawPrices.length
-        ? Math.min(...rawPrices)
-        : Number(tour?.price || 0);
-      const livePrice = rawPrice > 0
-        ? formatPrice(rawPrice, { fromCurrency: "IDR" })
-        : null;
-
-      return {
-        ...tier,
-        desc:  liveDesc  || tier.desc,
-        price: livePrice || tier.price,
-      };
-    }), [sortedTours, formatPrice]);
-
-  const TierCard = ({ tier, idx }) => {
-    const headerBg = tier.featured ? "bg-primary-600" : "bg-brand-dark";
-    return (
-    <div className={`flex h-full w-full flex-col overflow-hidden rounded-xl bg-white border border-neutral-200 transition duration-300 ${
-      tier.featured ? "border-primary-300" : ""
-    }`}>
-      {/* Solid header badge strip */}
-      <div className={`flex h-9 items-center justify-center gap-1.5 px-4 text-2xs font-semibold uppercase  text-white ${headerBg}`}>
-        <span>{tier.ribbon.text}</span>
-      </div>
-      {/* Image with matching color wrapping bottom corners */}
-      <div className={`rounded-b-xl ${headerBg}`}>
-        <div className="relative overflow-hidden rounded-xl">
-          {tierImages[idx] ? (
-            <img src={tierImages[idx]} alt={tier.label} className="h-[190px] w-full object-cover transition duration-700 group-hover:scale-103" loading="lazy" decoding="async" />
-          ) : (
-            <div className={`h-[190px] w-full bg-gradient-to-br ${tier.imgGradient}`} />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-secondary-900/20 via-secondary-900/0 to-transparent" />
+        {/* text */}
+        <div className="incl-text">
+          <div className="incl-title">Comfort Yacht</div>
+          <div className="incl-body">Premium boats with shade, cushions, and a smooth ride all day.</div>
         </div>
       </div>
-
-      {/* Body */}
-      <div className="flex flex-1 flex-col p-5">
-        <p className="mb-0.5 text-xs font-bold uppercase tracking-widest text-primary-500">{tier.label}</p>
-        <h3 className="mb-1.5 min-h-[3.5rem] text-lg font-bold leading-tight text-secondary-900 line-clamp-3">{tier.title}</h3>
-        <div className="mb-4 min-h-[2.75rem]">
-          <p className="text-sm leading-relaxed text-secondary-500 line-clamp-2">{tier.desc}</p>
+      <div className="incl-card animate-in"
+     
+     >
+        {/* accent line */}
+        <div className="incl-accent"></div>
+        {/* number */}
+        <div className="incl-number">02</div>
+        {/* icon */}
+        <div className="incl-icon">
+          <img src={icon2} alt="Curated Lunch" width="128" height="128" />
         </div>
-
-        {/* Boat box */}
-        <div className="mb-4 rounded-xl bg-neutral-100 p-3 flex flex-col gap-2">
-          {tier.boat.map(({ Icon, text }) => (
-            <div key={text} className="flex items-center gap-2 text-xs text-secondary-600">
-              <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-              <span>{text}</span>
-            </div>
-          ))}
+        {/* text */}
+        <div className="incl-text">
+          <div className="incl-title">Curated Lunch</div>
+          <div className="incl-body">Clifftop restaurant with ocean views and local cuisine.</div>
         </div>
-
-        {/* Price */}
-        <div className="mb-4">
-          <div className="flex items-baseline flex-wrap gap-1.5">
-            <span className="text-2xs text-secondary-400">from</span>
-            <span className={`text-2xl font-bold tracking-tight ${tier.featured ? "text-primary-600" : "text-secondary-900"}`}>
-              {tier.price}
-            </span>
-            <span className="text-sm text-secondary-500">/ person</span>
-            {tier.priceTag && (
-              <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-700 border border-emerald-200">
-                {tier.priceTag}
-              </span>
-            )}
-          </div>
+      </div>
+      <div className="incl-card animate-in"
+     
+     >
+        {/* accent line */}
+        <div className="incl-accent"></div>
+        {/* number */}
+        <div className="incl-number">03</div>
+        {/* icon */}
+        <div className="incl-icon">
+          <img src={icon3} alt="Land Highlights" width="128" height="128" />
         </div>
-
-        {/* CTA */}
-        <a
-          href="/new/shared"
-          className={`mb-1 flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-base font-semibold transition ${
-            tier.solid
-              ? "bg-primary-600 text-white hover:bg-primary-500 shadow-[0_4px_14px_rgba(37,99,235,0.25)]"
-              : "border-2 border-primary-600 text-primary-600 hover:bg-primary-50"
-          }`}
-        >
-          Select {tier.label} <ArrowRight className="h-4 w-4" />
-        </a>
-        <p className="mb-4 text-center text-2xs text-secondary-400">No payment required to view options</p>
-
-        {/* Upgrade nudge */}
-        {tier.upgradeNote && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-3 py-2 text-2xs font-semibold text-primary-600">
-            ↑ {tier.upgradeNote}
-          </div>
-        )}
-
-        {/* Included list */}
-        <ul className="space-y-2 border-t border-neutral-100 pt-4">
-          {tier.incl.map(({ plus, text }) => (
-            <li key={text} className="flex items-start gap-2 text-sm text-secondary-500">
-              <span className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-2xs font-bold ${
-                plus ? "bg-primary-50 text-primary-600" : "bg-emerald-50 text-emerald-700"
-              }`}>
-                {plus ? "+" : "✓"}
-              </span>
-              {text}
-            </li>
-          ))}
-        </ul>
+        {/* text */}
+        <div className="incl-text">
+          <div className="incl-title">Land Highlights</div>
+          <div className="incl-body">Kelingking Cliff, Angel's Billabong, and more iconic photo stops.</div>
+        </div>
+      </div>
+      <div className="incl-card animate-in"
+     
+     >
+        {/* accent line */}
+        <div className="incl-accent"></div>
+        {/* number */}
+        <div className="incl-number">04</div>
+        {/* icon */}
+        <div className="incl-icon">
+          <img src={icon4} alt="Underwater GoPro" width="128" height="128" />
+        </div>
+        {/* text */}
+        <div className="incl-text">
+          <div className="incl-title">Underwater GoPro</div>
+          <div className="incl-body">Capture every moment underwater with a rental GoPro.</div>
+        </div>
+      </div>
+      <div className="incl-card animate-in"
+     
+     >
+        {/* accent line */}
+        <div className="incl-accent"></div>
+        {/* number */}
+        <div className="incl-number">05</div>
+        {/* icon */}
+        <div className="incl-icon">
+          <img src={icon5} alt="Snorkeling Equipment" width="128" height="128" />
+        </div>
+        {/* text */}
+        <div className="incl-text">
+          <div className="incl-title">Snorkeling Equipment</div>
+          <div className="incl-body">Full gear provided - mask, fins, and life jacket.</div>
+        </div>
+      </div>
+      <div className="incl-card animate-in"
+     
+     >
+        {/* accent line */}
+        <div className="incl-accent"></div>
+        {/* number */}
+        <div className="incl-number">06</div>
+        {/* icon */}
+        <div className="incl-icon">
+          <img src={icon6} alt="All Entrance Tickets" width="128" height="128" />
+        </div>
+        {/* text */}
+        <div className="incl-text">
+          <div className="incl-title">All Entrance Tickets</div>
+          <div className="incl-body">Every fee handled - nothing extra to pay on the day.</div>
+        </div>
       </div>
     </div>
-    );
-  };
 
-  return (
-    <Section
-      id="shared-group"
-      kicker="Shared tours"
-      title={<>Pick your <span className="text-primary-600">comfort level</span></>}
-      subtitle="Same incredible route, same manta rays. Choose how much comfort, space, and extras you want on the water."
-      className="bg-neutral-100"
-    >
-      {/* Mobile tabs */}
-      <div className="mb-5 sm:hidden">
-        <div className="relative grid grid-cols-3 gap-1.5 rounded-xl border border-neutral-200 bg-white p-1.5 ">
-            {tiersWithData.map((t, i) => {
-              const tabColor = t.featured ? "#0073E0" : "#1B3132";
-              const tabShadow = t.featured ? "0 8px 20px rgba(0,115,224,0.22)" : "0 8px 20px rgba(27,49,50,0.30)";
-              return (
-              <button
-                key={t.id}
-                onClick={() => setActiveIdx(i)}
-                className="relative flex flex-col items-center justify-center rounded-xl px-2 py-4 text-center z-10"
-              >
-                {activeIdx === i && (
-                  <div
-                    className="absolute inset-0 rounded-xl"
-                    style={{ backgroundColor: tabColor, boxShadow: tabShadow }}
-                  />
-                )}
-                <span className={cn("relative block text-sm font-semibold leading-tight", activeIdx === i ? "text-white" : "text-secondary-500")}>{t.label}</span>
-                <span className={cn("relative mt-0.5 block text-2xs", activeIdx === i ? "text-white/70" : "text-secondary-400")}>
-                  from {t.price}
-                </span>
-              </button>
-              );
-            })}
-        </div>
-      </div>
+  </div>
+</section>
 
-      {/* Cards grid — desktop always shows all; mobile animates */}
-      <div className="hidden sm:grid sm:grid-cols-3 gap-4">
-        {tiersWithData.map((tier, i) => (
-          <div key={tier.id}>
-            <TierCard tier={tier} idx={i} />
+
+{/* ═══════════════════════════════════════
+     SKU - Shared vs Private
+     ═══════════════════════════════════════ */}
+<section className="sku-section section-padding" id="tours">
+  <div className="container">
+    <div className="section-header animate-in">
+      <div className="h2-overline">TWO WAYS TO EXPLORE</div>
+      <h2>Choose your <span className="accent">tour type</span></h2>
+      <p>Same island, same iconic spots, different experience. Pick the format that fits your group best.</p>
+    </div>
+
+    <div className="sku-grid sku-grid--minimal">
+      {/* Shared Tour */}
+      <a href={utmUrl("/shared-tour-to-nusa-penida")} id="shared-tour-card" className="sku-minimal animate-in">
+        <img className="sku-minimal__img" src={imgShared} alt="Shared yacht tour" loading="lazy" />
+        <div className="sku-minimal__overlay"></div>
+        <span className="sku-minimal__badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="#F59E0B"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Best Value</span>
+        <div className="sku-minimal__content">
+          <h3 className="sku-minimal__title">Shared Tour</h3>
+          <p className="sku-minimal__desc">Explore Nusa Penida with other travellers on a guided full-day trip. Affordable, social, and smooth from pickup to drop-off.</p>
+          <div className="sku-minimal__separator"></div>
+          <div className="sku-minimal__footer">
+            <div className="sku-minimal__meta">
+              <span>Up to 13 guests</span>
+              <span>Fixed departure</span>
+            </div>
+            <div className="sku-minimal__price">from <strong>$80</strong> <span>/ person</span></div>
           </div>
-        ))}
+        </div>
+      </a>
+
+      {/* Private Charter */}
+      <a href={utmUrl("/private-tour-to-nusa-penida")} id="private-charter-card" className="sku-minimal sku-minimal--delay animate-in">
+        <img className="sku-minimal__img" src={imgPrivate} alt="Private yacht charter" loading="lazy" />
+        <div className="sku-minimal__overlay"></div>
+        <span className="sku-minimal__badge sku-minimal__badge--blue"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2z"/></svg> Most Popular</span>
+        <div className="sku-minimal__content">
+          <h3 className="sku-minimal__title">Private Charter</h3>
+          <p className="sku-minimal__desc">The entire boat is yours. Choose the timing, adjust the stops, and set the pace for your group or family.</p>
+          <div className="sku-minimal__separator"></div>
+          <div className="sku-minimal__footer">
+            <div className="sku-minimal__meta">
+              <span>2-45 guests</span>
+              <span>Flexible routing</span>
+            </div>
+            <div className="sku-minimal__price">from <strong>$750</strong> <span>/boat</span></div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+{/* ═══════════════════════════════════════
+     PHOTO GALLERY - Captured by our guests
+     ═══════════════════════════════════════ */}
+<section className="gallery-section">
+  <div className="container">
+    <div className="section-header section-header-center-sm animate-in">
+      <div className="h2-overline h2-overline-blue">FROM OUR GUESTS</div>
+      <h2 className="heading-dark">Captured by <span className="accent-blue-italic">our guests</span></h2>
+    </div>
+
+    <div className="gallery-grid">
+      {/* Big left photo */}
+      <div className="gallery-tile gallery-tile--tall animate-in" style={{'--i': 0}}>
+        <img src={galPreviews[0]} alt="Guests photo" className="gallery-img" loading="lazy" onLoad={e => e.currentTarget.classList.add('img-loaded')} />
       </div>
-      <div className="sm:hidden overflow-hidden">
-        <div key={activeIdx}>
-          <TierCard tier={tiersWithData[activeIdx]} idx={activeIdx} />
+      {/* Top middle */}
+      <div className="gallery-tile animate-in" style={{'--i': 1}}>
+        <img src={galPreviews[1]} alt="Guests photo" className="gallery-img" loading="lazy" onLoad={e => e.currentTarget.classList.add('img-loaded')} />
+      </div>
+      {/* Top right */}
+      <div className="gallery-tile animate-in" style={{'--i': 2}}>
+        <img src={galPreviews[2]} alt="Guests photo" className="gallery-img gallery-img--top" loading="lazy" onLoad={e => e.currentTarget.classList.add('img-loaded')} />
+      </div>
+      {/* Bottom middle */}
+      <div className="gallery-tile animate-in" style={{'--i': 3}}>
+        <img src={galPreviews[3]} alt="Guests photo" className="gallery-img gallery-img--bottom" loading="lazy" onLoad={e => e.currentTarget.classList.add('img-loaded')} />
+      </div>
+      {/* Bottom right - with "Show all" button overlay */}
+      <div className="gallery-tile gallery-tile--with-overlay animate-in" style={{'--i': 4}}>
+        <img src={galPreviews[4]} alt="Guests photo" className="gallery-img gallery-img--center-60" loading="lazy" onLoad={e => e.currentTarget.classList.add('img-loaded')} />
+        {/* Glass "Show all photos" button */}
+        <a href={utmUrl("/gallery")} className="gallery-show-all-btn">
+            <span className="gallery-show-all-btn-border"></span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Show all photos
+          </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+{/* ═══════════════════════════════════════
+     SOCIAL PROOF
+     ═══════════════════════════════════════ */}
+<section className="social-proof section-padding">
+  <div className="container">
+    <div className="section-header animate-in">
+      <div className="h2-overline">TRUSTED BY TRAVELERS</div>
+      <h2>A premium tour with <span className="accent">seamless flow</span></h2>
+    </div>
+
+    <div className="rating-summary rating-summary-flex animate-in">
+      <div className="rating-summary-row">
+      <div className="rating-big">
+        <div className="number">4.9</div>
+        <div className="stars">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F59E0B" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div className="count">10,000+ reviews</div>
+      </div>
+
+      <div className="platform-ratings">
+        <div className="platform-pill">
+          <GoogleIcon size={20} />
+          4.9 Google
+        </div>
+        <div className="platform-pill">
+          <TripAdvisorIcon size={22} />
+          4.9 TripAdvisor
+        </div>
+        <div className="platform-pill">
+          <AirbnbIcon size={20} />
+          4.9 Airbnb
         </div>
       </div>
 
-      {/* Compare toggle (mobile) */}
-      <button
-        onClick={() => setShowCompare(v => !v)}
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-primary-600 shadow-sm transition hover:bg-primary-50 sm:hidden"
-      >
-        {showCompare ? "Hide comparison" : "Compare all three side by side"}
-        <ChevronDown className={`h-4 w-4 transition-transform ${showCompare ? "rotate-180" : ""}`} />
-      </button>
+    </div></div>
 
-      {/* Comparison table */}
-      <div className={`mt-5 rounded-xl border border-neutral-200 bg-white p-5 ${showCompare ? "block" : "hidden sm:block"}`}>
-        <p className="mb-4 text-sm font-bold text-secondary-900">Quick comparison</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                <th className="w-[38%] rounded-tl-xl bg-neutral-100 p-2 text-left font-semibold text-secondary-700"></th>
-                {SHARED_TIERS.map((t, i) => (
-                  <th key={t.id} className={`p-2 text-center font-bold ${i === 1 ? "bg-primary-50 text-primary-700" : "bg-neutral-100 text-secondary-700"} ${i === 2 ? "rounded-tr-xl" : ""}`}>
-                    {t.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {SHARED_COMPARE_ROWS.map((row, ri) => (
-                <tr key={row.label} className="border-t border-neutral-100">
-                  <td className="py-2.5 px-3 font-medium text-secondary-500">{row.label}</td>
-                  {row.values.map((val, vi) => (
-                    <td key={vi} className={`py-2.5 px-3 text-center ${vi === 1 ? "bg-primary-50/50" : ""} ${
-                      row.check?.[vi] ? "font-semibold text-emerald-600" :
-                      row.priceRow ? "font-bold text-primary-600" :
-                      val === "—" ? "text-secondary-300" : "text-secondary-600"
-                    }`}>
-                      {val}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="reviews-grid">
+      <div className="review-card animate-in">
+        <div className="review-top">
+          <div className="review-avatar">S</div>
+          <div className="review-meta">
+            <div className="name">Sarah M.</div>
+            <div className="date">March 2026 · Google Reviews</div>
+          </div>
+        </div>
+        <div className="review-stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div className="review-title">Best day of our Bali trip!</div>
+        <div className="review-text">The crew was incredible, the boat was spotless, and swimming with mantas was a once-in-a-lifetime experience. Worth every penny.</div>
+      </div>
+
+      <div className="review-card review-card--delay-1 animate-in">
+        <div className="review-top">
+          <div className="review-avatar">J</div>
+          <div className="review-meta">
+            <div className="name">James K.</div>
+            <div className="date">February 2026 · TripAdvisor</div>
+          </div>
+        </div>
+        <div className="review-stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div className="review-title">Smooth from start to finish</div>
+        <div className="review-text">Hotel pickup was on time, the boarding was seamless (no wading through water!), and the guides knew exactly where to go. Highly recommend the Premium tier.</div>
+      </div>
+
+      <div className="review-card review-card--delay-2 animate-in">
+        <div className="review-top">
+          <div className="review-avatar">L</div>
+          <div className="review-meta">
+            <div className="name">Lisa T.</div>
+            <div className="date">January 2026 · Google Reviews</div>
+          </div>
+        </div>
+        <div className="review-stars">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#F59E0B"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+        <div className="review-title">Private charter was incredible</div>
+        <div className="review-text">We took 12 friends on a private yacht - the flexibility to choose our own stops and timing made it feel like our own adventure. The sunset prosecco was the perfect ending.</div>
+      </div>
+    </div>
+
+    {/* Crew avatars */}
+    <div className="crew-cluster">
+      <div className="crew-avatars">
+        <img className="crew-avatar" src={imgG1} alt="Budi" loading="lazy" />
+        <img className="crew-avatar" src={imgG2} alt="Nyoman" loading="lazy" />
+        <img className="crew-avatar" src={imgG3} alt="Vicky" loading="lazy" />
+        <img className="crew-avatar" src={imgG4} alt="Tim" loading="lazy" />
+        <img className="crew-avatar" src={imgG5} alt="Jena" loading="lazy" />
+      </div>
+      <span className="crew-caption">Your crew: <strong>Budi, Nyoman, Vicky</strong> +12 guides</span>
+    </div>
+  </div>
+</section>
+
+
+
+{/* ═══════════════════════════════════════
+     FAQ - Trimmed for paid ads (3 questions)
+     ═══════════════════════════════════════ */}
+<section className="faq-section section-padding" id="faq">
+  <div className="container">
+    <div className="section-header animate-in">
+      <div className="h2-overline">FAQ</div>
+      <h2>Frequently Asked Questions</h2>
+    </div>
+
+    <div className="faq-card animate-in">
+      <div className="faq-list">
+        <div className={`faq-item ${openFaqIndex === 0 ? 'open' : ''}`}>
+          <button className="faq-question" onClick={() => toggleFaq(0)}>
+            <span>How do I book a Nusa Penida tour?</span>
+            <span className="faq-icon"><HugeiconsIcon icon={Add01Icon} size={20} color="currentColor" /></span>
+          </button>
+          <div className="faq-answer"><p>Choose your tour type (shared or private), select your comfort level and date, and complete your booking online. No upfront payment required to check availability - just pick your dates and we'll confirm within minutes.</p></div>
+        </div>
+        <div className={`faq-item ${openFaqIndex === 1 ? 'open' : ''}`}>
+          <button className="faq-question" onClick={() => toggleFaq(1)}>
+            <span>Why are we more expensive than other companies?</span>
+            <span className="faq-icon"><HugeiconsIcon icon={Add01Icon} size={20} color="currentColor" /></span>
+          </button>
+          <div className="faq-answer"><p>We invest in premium boats, certified senior guides, smaller group sizes, and all-inclusive packages so you don't worry about hidden costs. Our 4.9 rating across 10,000+ reviews reflects the experience quality.</p></div>
+        </div>
+        <div className={`faq-item ${openFaqIndex === 2 ? 'open' : ''}`}>
+          <button className="faq-question" onClick={() => toggleFaq(2)}>
+            <span>Can I cancel or reschedule my tour?</span>
+            <span className="faq-icon"><HugeiconsIcon icon={Add01Icon} size={20} color="currentColor" /></span>
+          </button>
+          <div className="faq-answer"><p>Yes! Free cancellation up to 24 hours before departure. If conditions are bad on the day (weather, tides), we'll reschedule at no cost or provide a full refund.</p></div>
         </div>
       </div>
 
-      {/* CTA */}
-      <div className="mt-6 flex justify-center">
-        <a href="/new/shared" className="btn-primary inline-flex items-center gap-2 rounded-full bg-primary-600 px-8 py-3.5 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.25)]">
-          Book Shared Tour <ArrowRight className="h-4 w-4" />
-        </a>
+      <div className="faq-see-all">
+        <a href={utmUrl("/faq")} className="btn-ghost">See all questions →</a>
       </div>
-    </Section>
-  );
-}
+    </div>
+  </div>
+</section>
 
-function RouteBlocks() {
-  const { privateRoutes, loading } = useExtras();
-  return (
-    <RoutesBlock
-      id="private-group"
-      kicker="Private routes"
-      title="Pick your private tour route"
-      subtitle="Your own yacht, your own pace — select the route for your group."
-      routes={privateRoutes}
-      bookHref="/new/private"
-      bookLabel="Book Private Tour"
-      loading={loading}
-    />
-  );
-}
 
-function BoatsHomeBlock() {
-  const { privateTours, loading } = useTours();
 
-  const boats = useMemo(() => {
-    if (!privateTours?.length) return [];
-    return privateTours.map((tour) => {
-      const pricelist = tour.packages?.pricelist || [];
-      const entry = pricelist.find(p => Number(p.members_count) === 1) || pricelist[0];
-      const price = Number(tour.boat_price) || Number(entry?.price) || 0;
-      const images = (tour.images_with_thumbs || []).map(img => img.thumb1 || img.original).filter(Boolean);
-      const cover  = images[0] || null;
-      const bf     = tour.boatFeatures || {};
-      const lengthMeters = getBoatLength(tour);
-      const boatTypeLabel = [bf.boat_type || null, lengthMeters ? `${lengthMeters}M` : null]
-        .filter(Boolean).join(" · ").toUpperCase();
-      return {
-        id:           tour.id,
-        name:         tour.name,
-        cover,
-        images,
-        people:       tour.capacity || 1,
-        price,
-        desc:         sanitizeDisplayText(tour.description || "") || null,
-        fleetSize:    Number(tour.fleet_size) || 0,
-        boatFeatures: tour.boatFeatures || null,
-        boatTypeLabel,
-        bestFor:      bf.best_for || null,
-      };
-    });
-  }, [privateTours]);
-
-  const skeletons = Array.from({ length: 4 });
-
-  return (
-    <Section
-      id="fleet"
-      kicker="Our fleet"
-      title="Choose your boat"
-      subtitle="Every boat is fully private for your group. Pick the model, size, and style — we'll handle the rest."
-    >
-      <div className="-mx-4 overflow-hidden sm:mx-0">
-        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-1 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
-        {loading
-          ? skeletons.map((_, i) => (
-              <div key={i} className="w-[300px] shrink-0 snap-center sm:w-auto rounded-xl border border-neutral-200 bg-white overflow-hidden">
-                <div className="h-[200px] w-full animate-pulse bg-neutral-100" />
-                <div className="p-5 space-y-3">
-                  <div className="h-4 w-3/4 animate-pulse rounded bg-neutral-100" />
-                  <div className="h-3 w-1/2 animate-pulse rounded bg-neutral-100" />
-                </div>
-              </div>
-            ))
-          : boats.map((boat) => {
-              const boatFeatures = getBoatFeatures(boat.boatFeatures);
-              return (
-                <div key={boat.id} className="w-[300px] shrink-0 snap-center sm:w-auto">
-                <a
-                  href="/new/private"
-                  className="group flex h-full flex-col overflow-hidden rounded-xl border border-neutral-200 bg-white hover:border-neutral-300 transition-all"
-                >
-                  {/* Image */}
-                  {(boat.cover || boat.images?.[0]) && (
-                    <div className="relative w-full overflow-hidden aspect-video">
-                      <img
-                        src={boat.cover || boat.images?.[0]}
-                        alt={boat.name}
-                        loading="lazy"
-                        decoding="async"
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-                      />
-                    </div>
-                  )}
-
-                  {/* Info */}
-                  <div className="flex flex-1 flex-col p-5 pt-4">
-                    {boat.boatTypeLabel && (
-                      <div className="mb-1 text-xs font-bold uppercase tracking-widest text-primary-500">{boat.boatTypeLabel}</div>
-                    )}
-                    <div className="text-xl font-bold text-secondary-900 leading-tight">{boat.name}</div>
-                    <div className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-secondary-500 min-h-[2.75rem]"
-                      dangerouslySetInnerHTML={{ __html: boat.desc || "" }} />
-
-                    {boat.fleetSize > 1 && (
-                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-secondary-50 px-3 py-1 text-xs font-semibold text-secondary-600">
-                        <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                        {boat.fleetSize} identical boats — we assign the best available for your date
-                      </div>
-                    )}
-
-                    {boat.bestFor && (
-                      <div className="mt-2.5">
-                        <span className="inline-flex items-center rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-600">
-                          Best for: {boat.bestFor}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Features + Price anchored to bottom */}
-                    <div className="mt-auto">
-                      {/* Features grid */}
-                      <div className="border-t border-neutral-100 pt-3 pb-4">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                          <div className="flex items-center gap-2 px-2 text-xs font-medium text-secondary-900">
-                            <Users className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                            Up to {boat.people}
-                          </div>
-                          {boatFeatures.map(({ label, present, Icon }) => (
-                            <div key={label} className={cn("flex items-center gap-2 px-2 text-xs", present ? "font-medium text-secondary-900" : "text-secondary-300")}>
-                              <Icon className={cn("h-3.5 w-3.5 shrink-0", present ? "text-secondary-400" : "text-neutral-300")} />
-                              {label}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Price + button */}
-                      <div className="border-t border-neutral-100 pt-5">
-                        <span className="inline-flex h-10 w-full items-center justify-center rounded-full bg-primary-600 px-5 text-sm font-semibold text-white transition group-hover:bg-primary-500 shadow-[0_2px_10px_rgba(37,99,235,0.2)]">
-                          Select
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </a>
-                </div>
-              );
-            })
-        }
+{/* ═══════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════ */}
+<footer className="footer">
+  <div className="container">
+    <div className="footer-grid">
+      <div className="footer-col">
+        <div className="footer-logo">
+          <svg width="120" height="26" viewBox="0 0 140 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g clipPath="url(#footClip)">
+              <path d="M8.55478 6.47086C5.92052 4.49424 1.1896 2.89157 0.571354 6.47086C0.221911 8.47419 -0.0468934 12.561 0.00686701 16.7279C0.114388 26.9315 0.275669 28.1335 1.21648 28.8547C1.4584 29.0417 1.7272 29.1753 2.02288 29.2821C6.80757 30.8581 11.431 23.4057 12.8556 20.2805C14.9523 15.7129 13.0438 9.83645 8.55478 6.47086Z" fill="#2E53D9"/>
+              <path d="M29.711 3.6661C25.9477 -0.0734532 21.5394 0.0868102 15.2763 0.00667695C11.1636 0.00667695 5.57252 -0.0200325 2.7501 0.0333897C0.196474 0.00667858 0.357756 0.460767 2.34689 1.23539C2.64258 1.34223 2.93825 1.47579 3.20706 1.60934C5.30371 2.62436 7.61542 3.98663 9.55079 5.50916C12.5614 7.7796 15.3032 11.0918 18.2869 12.7479C21.1093 14.3505 25.0876 15.1519 28.0444 14.0567C32.5334 12.6143 32.8291 6.63103 29.711 3.6661Z" fill="#2E53D9"/>
+              <path d="M22.5062 16.7003C18.1785 18.116 13.9314 21.0275 11.8078 24.9006C8.66289 31.1243 19.7644 30.1627 23.6352 29.5483C28.3661 28.8004 32.2906 26.6101 33.4464 22.3363C34.8711 15.9257 28.2586 14.5901 22.5062 16.7003Z" fill="#2E53D9"/>
+              <path d="M62.6931 13.8691C66.5101 10.8507 64.9241 3.47852 58.0697 3.47852H41.2695V24.1796C41.2695 25.2213 42.1028 26.0761 43.1243 26.0761H59.0105C67.424 26.1028 69.1712 16.3265 62.6931 13.8691ZM45.194 7.32492H58.0428C61.4297 7.32492 61.1609 12.7472 58.0697 12.7472H45.194V7.32492ZM59.0105 22.2564H45.194V16.1395H58.8492C63.7145 16.1663 63.4188 22.2564 59.0105 22.2564Z" fill="#2E53D9"/>
+              <path d="M68.418 5.40172V26.1829H70.4878C71.5092 26.1829 72.3425 25.3282 72.3425 24.2864V3.47852H70.2727C69.2513 3.50523 68.418 4.33328 68.418 5.40172Z" fill="#2E53D9"/>
+              <path d="M95.2169 21.3484V8.04624L93.0127 8.07296C92.0451 8.07296 91.2655 8.84758 91.2655 9.80918V19.9861C91.2655 20.2265 91.1849 20.4402 91.0505 20.6272C90.1634 21.8559 88.5506 22.7908 85.9701 22.7908C82.2875 22.7908 78.8737 21.562 78.8737 17.9828V8.01953H76.6964C75.7287 8.01953 74.9492 8.79415 74.9492 9.75575V17.9828C74.9492 24.34 80.0833 26.5036 85.7551 26.5036C90.271 26.5036 93.0127 24.2064 93.6847 23.5921C94.4374 22.9243 95.2438 22.2832 95.2169 21.3484Z" fill="#2E53D9"/>
+              <path d="M136.101 8.04624V18.0095C136.101 21.5888 132.66 22.8175 129.005 22.8175C126.424 22.8175 124.838 21.8826 123.924 20.6539C123.79 20.4669 123.709 20.2532 123.709 20.0128V9.83588C123.709 8.87428 122.93 8.09966 121.962 8.09966L119.758 8.01953V21.3216C119.758 22.2565 120.537 22.9243 121.263 23.5921C121.935 24.2064 124.677 26.5036 129.193 26.5036C134.864 26.5036 139.999 24.34 139.999 17.9828V9.75575C139.999 8.79415 139.219 8.01953 138.251 8.01953L136.101 8.04624Z" fill="#2E53D9"/>
+              <path d="M117.691 21.3484V8.01953L115.487 8.04624C114.519 8.04624 113.739 8.82087 113.739 9.78246V19.906C113.739 20.1731 113.659 20.4135 113.471 20.6272C112.691 21.5353 111.105 22.7908 107.449 22.7908C104.358 22.7908 102.342 21.5888 101.482 20.6539C101.294 20.4669 101.213 20.1998 101.213 19.9327V9.78246C101.213 8.82087 100.434 8.04624 99.4659 8.04624L97.2617 8.01953V21.3216C97.2617 22.0161 97.9337 23.0312 98.7133 23.5654C100.944 25.1146 102.96 26.1831 105.89 26.3967C106.939 26.5036 107.396 26.4769 108.551 26.4235C108.551 26.4235 113.39 26.2365 116.159 23.5654C116.938 22.9243 117.691 22.0161 117.691 21.3484Z" fill="#2E53D9"/>
+            </g>
+            <defs><clipPath id="footClip"><rect width="140" height="30" fill="white"/></clipPath></defs>
+          </svg>
         </div>
+        <p>Award-winning Nusa Penida day tours from Bali. Comfort-first boats, certified guides, and all-inclusive packages.</p>
+        <p>Jl. Tukad Punggawa No.238, Serangan, Denpasar Selatan, Bali 80228</p>
       </div>
-    </Section>
-  );
-}
+      <div className="footer-col">
+        <p className="footer-col-title">Tours</p>
+        <a href={utmUrl("/private-tour-to-nusa-penida")}>Private tour</a>
+        <a href={utmUrl("/shared-tour-to-nusa-penida")}>Shared tour</a>
+        <a href={utmUrl("/reviews")}>Reviews</a>
+        <a href={utmUrl("/faq")}>FAQ</a>
+      </div>
+      <div className="footer-col">
+        <p className="footer-col-title">Legal</p>
+        <a href={utmUrl("/policy/privacy")}>Privacy Policy</a>
+        <a href={utmUrl("/policy/payment")}>Payment Policy</a>
+        <a href={utmUrl("/policy/cancellation")}>Cancellation Policy</a>
+        <a href={utmUrl("/policy/health")}>Health &amp; Safety</a>
+      </div>
+      <div className="footer-col">
+        <p className="footer-col-title">Connect</p>
+        <a href={waLink} target="_blank" rel="noopener">WhatsApp</a>
+        <a href="https://www.instagram.com/bluuu.tours/" target="_blank" rel="noopener">Instagram</a>
+        <a href="https://www.youtube.com/@bluuu_tours" target="_blank" rel="noopener">YouTube</a>
 
-export default function MainTest01() {
-  useSEO({
-    title: "Nusa Penida Day Tours from Bali | Bluuu Tours",
-    description: "Award-winning private yacht & shared speedboat tours from Bali to Nusa Penida. Manta rays, snorkeling, diving & land tour — all-inclusive from IDR 1,300,000.",
-  });
-  const TOUR_OPTIONS = useTourOptions();
-  const [activeTourId, setActiveTourId] = useState(TOUR_OPTIONS[1]?.id ?? TOUR_OPTIONS[0].id);
+      </div>
+    </div>
 
-  return (
-    <div
-      className="min-h-screen bg-neutral-100 text-secondary-900"
-      style={{
-        "--accent": ACCENT,
-        "--accent-dark": ACCENT_DARK,
-        "--page-bg": PAGE_BG,
-        "--ink": "#1f2632",
-        "--ink-muted": "#4f5f75",
-        "--ink-subtle": "#7a889c",
-        "--line": "rgba(31,38,48,0.12)",
-        "--line-soft": "rgba(31,38,48,0.08)",
-        "--surface": "#ffffff",
-        "--surface-muted": "#f7fafc",
-        "--surface-soft": "#f2f6ff",
-        "--surface-soft-border": "rgba(147, 176, 211, 0.35)",
-      }}
-    >
-      <CurrencyBridge />
-      <Navbar
-        variant="fullbar"
-        links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "#book" }}
-      />
-      <Hero />
-      <TourTypeCards />
-      <GalleryBlock />
-      <Included />
-      <DayPlan />
-      <SocialProof />
-      <LogoSlider title="Trusted on top travel platforms" />
-      <WhyBluuu />
-      <FAQ />
-      <Footer />
+    <div className="footer-bottom">
+      <p>© 2026 Bluuu Inc. All rights reserved.</p>
+      <p>USD</p>
+    </div>
+  </div>
+</footer>
+
+
+{/* ═══════════════════════════════════════
+     FLOATING WHATSAPP
+     ═══════════════════════════════════════ */}
+<a href={waLink} className="float-wa" target="_blank" rel="noopener" id="floatWa" aria-label="Chat with us on WhatsApp">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  <span>Chat with us</span>
+</a>
+
+
+{/* ═══════════════════════════════════════
+     SCRIPTS
+     ═══════════════════════════════════════ */}
+
     </div>
   );
-}
+};
+
+export default Home3;

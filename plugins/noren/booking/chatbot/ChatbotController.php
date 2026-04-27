@@ -433,7 +433,7 @@ class ChatbotController extends Controller
 
         // ── Booking URL ──────────────────────────────────────────────────
         $baseUrl  = rtrim(env('APP_URL', 'https://bluuu.tours'), '/');
-        $page     = $isShared ? 'shared' : 'private';
+        $page     = $isShared ? 'shared-tour-to-nusa-penida' : 'private-tour-to-nusa-penida';
         $urlParams = array_filter([
             'date'     => $date,
             'adults'   => $guests,
@@ -442,7 +442,7 @@ class ChatbotController extends Controller
             'transfer' => $transferId ?: null,
             'cover'    => $coverId ?: null,
         ], fn($v) => $v !== null && $v !== '');
-        $bookingUrl = $baseUrl . '/new/' . $page . '?' . http_build_query($urlParams);
+        $bookingUrl = $baseUrl . '/' . $page . '?' . http_build_query($urlParams);
 
         return response()->json([
             'success'       => true,

@@ -25,4 +25,8 @@ class Classes extends Model
         'types' => Types::class,
     ];
 
+    public $hasMany = [
+        'tours' => [Tours::class, 'key' => 'classes_id'],
+    ];
+
 }
