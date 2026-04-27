@@ -131,7 +131,7 @@ export default function Payment() {
       ],
       dedupeKey: `ga4:begin_checkout:${window.location.pathname}:${window.location.search}`,
     });
-    trackPixelInitiateCheckout({ value: analyticsTotal, currency: analyticsCurrency });
+    trackPixelInitiateCheckout({ contentIds: analyticsItemId, value: analyticsTotal, currency: analyticsCurrency, numItems: totalGuests });
   }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
 
   // ── UI state ─────────────────────────────────────────────────────────────

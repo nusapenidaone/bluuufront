@@ -52,14 +52,17 @@ export default function SuccessPage() {
   const type = params.get("type");
   const amount = parseFloat(params.get("amount") || "0");
   const currency = params.get("currency") || "IDR";
+  const orderId = params.get("order_id") || null;
+  const numItems = parseInt(params.get("num_items") || "1", 10);
+  const contentIds = params.get("content_ids") || null;
 
   const scene = SCENARIOS[type] || SCENARIOS.default;
   const amountLabel = type !== "request" && amount > 0 ? formatAmount(amount, currency) : null;
 
   useEffect(() => {
     if (type !== "request" && amount > 0) {
-      trackPixelPurchase({ value: amount, currency });
-      trackPurchase({ value: amount, currency, numItems: 1 });
+      trackPixelPurchase({ contentIds, value: amount, currency, orderId, numItems });
+      trackPurchase({ value: amount, currency, numItems, transactionId: orderId });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

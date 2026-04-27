@@ -4445,6 +4445,9 @@ function StepExtras({
   const [activeExtraId, setActiveExtraId] = useState(null);
   const [showAddedToast, setShowAddedToast] = useState(false);
   const [isExtrasOpen, setIsExtrasOpen] = useState(true);
+  const filterSliderRef = useRef(null);
+  const [filterSliderCanScrollLeft, setFilterSliderCanScrollLeft] = useState(false);
+  const [filterSliderCanScrollRight, setFilterSliderCanScrollRight] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isInsuranceOpen, setIsInsuranceOpen] = useState(false);
   const closeManageExtras = useCallback(() => {
@@ -4455,32 +4458,28 @@ function StepExtras({
   const extraCategories = useMemo(() => {
     // Route-grouped categories (from Route model)
     if (privateRoutes && privateRoutes.length > 0) {
-      const cats = [{ id: "all", label: "All", show_name: "All" }];
+      const cats = [];
       privateRoutes.forEach(route => {
         if (route.ecategories && route.ecategories.length > 0) {
           route.ecategories.forEach(cat => {
             const globalCat = categories?.find((c) => c.id == cat.id);
             const name = globalCat?.show_name || cat.show_name || globalCat?.name || cat.name;
             const label = privateRoutes.length > 1 ? `${name} (${route.title})` : name;
-            cats.push({ id: String(cat.id), label: label, routeTitle: route.title, show_name: name });
+            cats.push({ id: String(cat.id), label: label, routeTitle: route.title, show_name: name, sort_order: globalCat?.sort_order ?? 9999 });
           });
         }
       });
-      const uniqueCats = Array.from(new Map(cats.map(cat => [cat.id, cat])).values());
-      return uniqueCats;
+      const unique = Array.from(new Map(cats.map(cat => [cat.id, cat])).values());
+      return unique.sort((a, b) => a.sort_order - b.sort_order);
     }
-    // 3. Global categories from ExtrasContext (legacy fallback)
+    // Global categories from ExtrasContext (legacy fallback)
     if (categories && categories.length > 0) {
-      const cats = [{ id: "all", label: "All", show_name: "All" }];
-      categories.forEach(cat => {
-        cats.push({ id: String(cat.id), label: cat.show_name || cat.name, show_name: cat.show_name || cat.name });
-      });
-      const uniqueCats = Array.from(new Map(cats.map(cat => [cat.id, cat])).values());
-      return uniqueCats;
+      return [...categories]
+        .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
+        .map(cat => ({ id: String(cat.id), label: cat.show_name || cat.name, show_name: cat.show_name || cat.name, sort_order: cat.sort_order }));
     }
-    // 4. Hardcoded fallback
+    // Hardcoded fallback
     return [
-      { id: "all", label: "All" },
       { id: "comfort", label: "Comfort" },
       { id: "photo", label: "Photo & video" },
       { id: "celebration", label: "Celebration" },
@@ -4488,6 +4487,30 @@ function StepExtras({
       { id: "transfer", label: "Transfer" },
     ];
   }, [categories, privateRoutes]);
+  useEffect(() => {
+    if (extraCategories.length > 0 && (extrasFilter === "all" || !extraCategories.some(c => c.id === extrasFilter))) {
+      setExtrasFilter(extraCategories[0].id);
+    }
+  }, [extraCategories]);
+  const updateFilterSliderArrows = useCallback(() => {
+    const el = filterSliderRef.current;
+    if (!el) return;
+    setFilterSliderCanScrollLeft(el.scrollLeft > 4);
+    setFilterSliderCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+  useEffect(() => {
+    const el = filterSliderRef.current;
+    if (!el) return;
+    updateFilterSliderArrows();
+    el.addEventListener("scroll", updateFilterSliderArrows, { passive: true });
+    return () => el.removeEventListener("scroll", updateFilterSliderArrows);
+  }, [updateFilterSliderArrows, extraCategories]);
+  useEffect(() => {
+    const el = filterSliderRef.current;
+    if (!el) return;
+    const active = el.querySelector(`[data-filter-id="${extrasFilter}"]`);
+    if (active) active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }, [extrasFilter]);
   const extraCategoryById = useMemo(
     () => ({
       photographer: "photo",
@@ -4511,7 +4534,10 @@ function StepExtras({
   const filteredExtras = useMemo(() => {
     let base = combinedExtras;
     if (extrasFilter !== "all") {
-      base = combinedExtras.filter((extra) => (extra.category || extraCategoryById[extra.id] || "comfort") === extrasFilter);
+      base = combinedExtras.filter((extra) => {
+        const catIds = extra.categoryIds?.length ? extra.categoryIds : [extra.category || extraCategoryById[extra.id] || "comfort"];
+        return catIds.includes(extrasFilter);
+      });
     }
     return base;
   }, [combinedExtras, extrasFilter, extraCategoryById]);
@@ -4529,13 +4555,10 @@ function StepExtras({
   const nextExtrasChunkCount = Math.min(extrasIncrementCount, filteredExtras.length - visibleExtras.length);
   const extrasFilterCounts = useMemo(() => {
     return extraCategories.reduce((acc, filter) => {
-      if (filter.id === "all") {
-        acc[filter.id] = combinedExtras.length;
-        return acc;
-      }
-      acc[filter.id] = combinedExtras.filter(
-        (extra) => (extra.category || extraCategoryById[extra.id] || "comfort") === filter.id
-      ).length;
+      acc[filter.id] = combinedExtras.filter((extra) => {
+        const catIds = extra.categoryIds?.length ? extra.categoryIds : [extra.category || extraCategoryById[extra.id] || "comfort"];
+        return catIds.includes(filter.id);
+      }).length;
       return acc;
     }, {});
   }, [combinedExtras, extraCategories, extraCategoryById]);
@@ -4728,6 +4751,7 @@ function StepExtras({
     const qty = selectedExtras[extra.id] || 0;
     const isHighlighted = extra.id === highlightExtraId;
     const defaultQty = getDefaultQty(extra);
+    const carsQty = Math.ceil(totalGuests / 5) || 1;
     return (
       <div
         key={extra.id}
@@ -4791,6 +4815,39 @@ function StepExtras({
             >
               {extra.children.length} options
             </button>
+          ) : extra.per_car ? (
+            qty > 0 ? (
+              <div className="flex items-center gap-2 sm:w-full sm:justify-end">
+                <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChangeExtraQty(extra.id, 0);
+                    }}
+                    className="grid h-7 w-7 place-items-center rounded-full text-secondary-700 transition-colors hover:text-primary-600 active:scale-90 sm:h-8 sm:w-8"
+                    aria-label={`Remove ${extra.name}`}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <div className="min-w-6 text-center text-base font-bold leading-none text-secondary-900 sm:min-w-7 sm:text-lg">
+                    ×{carsQty}
+                  </div>
+                  <div className="h-7 w-7 sm:h-8 sm:w-8" />
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChangeExtraQty(extra.id, carsQty);
+                }}
+                className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primary-50 bg-neutral-100 px-2.5 text-sm font-bold text-primary-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-10 sm:px-3"
+              >
+                Add
+              </button>
+            )
           ) : qty > 0 ? (
             <div className="flex items-center gap-2 sm:w-full sm:justify-end">
               <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
@@ -4892,15 +4949,28 @@ function StepExtras({
                   }}
                 >
                   <div style={{ overflow: "hidden" }}>{isExtrasOpen && (<div className="rounded-b-xl border border-t-0 border-neutral-200 bg-white">
-                      <div className="border-b border-neutral-200 px-6 py-3">
-                        <div className="flex items-center gap-x-5 gap-y-2 overflow-x-auto text-sm text-secondary-500 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible [&::-webkit-scrollbar]:hidden">
+                      <div className="relative border-b border-neutral-200">
+                        {filterSliderCanScrollLeft && (
+                          <button
+                            type="button"
+                            onClick={() => filterSliderRef.current?.scrollBy({ left: -160, behavior: "smooth" })}
+                            className="absolute left-0 top-0 z-10 flex h-full items-center bg-gradient-to-r from-white via-white/90 to-transparent pl-2 pr-4"
+                          >
+                            <svg className="h-4 w-4 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                        )}
+                        <div
+                          ref={filterSliderRef}
+                          className="flex items-center gap-x-5 overflow-x-auto px-6 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                        >
                           {extraCategories.map((filter) => (
                             <button
                               key={filter.id}
+                              data-filter-id={filter.id}
                               type="button"
                               onClick={() => setExtrasFilter(filter.id)}
                               className={cn(
-                                "inline-flex items-center gap-1 whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
+                                "inline-flex shrink-0 items-center gap-1 whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
                                 extrasFilter === filter.id
                                   ? "border-primary-600 text-primary-600 hover:text-primary-700"
                                   : "text-secondary-500 hover:text-secondary-700"
@@ -4913,6 +4983,15 @@ function StepExtras({
                             </button>
                           ))}
                         </div>
+                        {filterSliderCanScrollRight && (
+                          <button
+                            type="button"
+                            onClick={() => filterSliderRef.current?.scrollBy({ left: 160, behavior: "smooth" })}
+                            className="absolute right-0 top-0 z-10 flex h-full items-center bg-gradient-to-l from-white via-white/90 to-transparent pl-4 pr-2"
+                          >
+                            <svg className="h-4 w-4 text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                          </button>
+                        )}
                       </div>
                       <div
                         className={cn(
@@ -5124,6 +5203,7 @@ function StepExtras({
         selectedExtras={selectedExtras}
         onChangeExtraQty={onChangeExtraQty}
         formatIDR={formatIDR}
+        totalGuests={totalGuests}
       />
     </>
   );
@@ -7960,6 +8040,7 @@ export default function Premium_Private_With_Vibe() {
   });
   const [selectedCoverId, setSelectedCoverId] = useState(null);
   const [availabilityMap, setAvailabilityMap] = useState({});
+  const [isFetchingAvailability, setIsFetchingAvailability] = useState(false);
   const [calendarAvailMap, setCalendarAvailMap] = useState({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const p = new URLSearchParams(window.location.search);
@@ -7986,7 +8067,7 @@ export default function Premium_Private_With_Vibe() {
   const { fetchTourDetail } = useTours();
 
   useEffect(() => {
-    trackPixelViewContent({ contentName: "Private Charter", value: 0, currency: "IDR" });
+    trackPixelViewContent({ contentIds: "private-tour", contentName: "Private Charter", value: 0, currency: "IDR" });
     trackViewItem({
       value: 0,
       currency: "IDR",
@@ -8114,6 +8195,7 @@ export default function Premium_Private_With_Vibe() {
       return;
     }
     const fetchAvailability = async () => {
+      setIsFetchingAvailability(true);
       const results = {};
       const queryParams = hasExact
         ? `?date=${exactDate}`
@@ -8138,6 +8220,8 @@ export default function Premium_Private_With_Vibe() {
         setAvailabilityMap(results);
       } catch (err) {
         console.error("Global fetch availability error:", err);
+      } finally {
+        setIsFetchingAvailability(false);
       }
     };
     fetchAvailability();
@@ -8297,6 +8381,7 @@ export default function Premium_Private_With_Vibe() {
         description: child.description || "",
       })),
       hasChildren: (e.children || []).length > 0,
+      per_car: !!e.per_car,
     });
     // Use global extras
     return (extras || []).map(e => mapExtra(e, null));
@@ -8422,7 +8507,8 @@ export default function Premium_Private_With_Vibe() {
       let dateAvailable = true;
       if (dateMode === "exact") {
         if (exactDate) {
-          dateAvailable = isDateAvailable(yacht.id, exactDate);
+          // While fetching, treat as unavailable to prevent premature "available" state
+          dateAvailable = !isFetchingAvailability && isDateAvailable(yacht.id, exactDate);
         }
       } else if (rangeStart && rangeEnd) {
         availableDates = getAvailableDates(yacht.id, rangeStart, rangeEnd);
@@ -8436,7 +8522,7 @@ export default function Premium_Private_With_Vibe() {
       };
       return acc;
     }, {});
-  }, [dateMode, exactDate, rangeStart, rangeEnd, totalGuests, yachtOptions, isDateAvailable, getAvailableDates]);
+  }, [dateMode, exactDate, rangeStart, rangeEnd, totalGuests, yachtOptions, isDateAvailable, getAvailableDates, isFetchingAvailability]);
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);

@@ -8,15 +8,16 @@ use Carbon\Carbon;
 use Cache;
 use Log;
 use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Classes;
 use Noren\Booking\Models\Order;
 
 /**
  * Viator Supplier API — Operator-Hosted Endpoints
  *
  * Authentication: X-API-Key header
- *   Key:  857de21c4d0a349485fd2702f3ea5e681315fa9688d12c3032af8b2336d7588b
+ *   Key:  TPE_6ksS7xfc47PCvbaq-8NVZtrgJGW6hwavp12dG8M  (Supplier ID: 4000500)
  *   Env:  VIATOR_API_KEY  (fallback — ключ выше)
- *         VIATOR_SUPPLIER_ID
+ *         VIATOR_SUPPLIER_ID  (fallback: 4000500)
  *
  * Availability logic:
  *   Private (classes_id=8) — тур доступен если НЕ все лодки заняты  → PER_UNIT_PRICE
@@ -42,7 +43,7 @@ class ViatorController extends Controller
 
     private function authenticate(Request $request): bool
     {
-        $apiKey = env('VIATOR_API_KEY', '857de21c4d0a349485fd2702f3ea5e681315fa9688d12c3032af8b2336d7588b');
+        $apiKey = env('VIATOR_API_KEY', 'TPE_6ksS7xfc47PCvbaq-8NVZtrgJGW6hwavp12dG8M');
         return !empty($apiKey) && $request->header('X-API-Key') === $apiKey;
     }
 
@@ -53,7 +54,7 @@ class ViatorController extends Controller
 
     private function getSupplierId(): int
     {
-        return (int) env('VIATOR_SUPPLIER_ID', 0);
+        return (int) env('VIATOR_SUPPLIER_ID', 4000500);
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -222,10 +223,19 @@ class ViatorController extends Controller
      */
     private function findTour(string $optionId): ?Tours
     {
-        return Tours::with(['boat.closeddates', 'packages', 'pricesbydates.packages'])
+        return Tours::with(['boat.closeddates', 'packages', 'pricesbydates.packages', 'route'])
             ->where('slug', $optionId)
             ->orWhere('id', is_numeric($optionId) ? (int) $optionId : -1)
             ->first();
+    }
+
+    /**
+     * Время отправления тура из route.start, формат "HH:MM". Null если не задано.
+     */
+    private function getTourStartTime(Tours $tour): ?string
+    {
+        $start = $tour->route?->start ?? null;
+        return $start ? substr($start, 0, 5) : null;
     }
 
     /**
@@ -249,30 +259,14 @@ class ViatorController extends Controller
         return $order;
     }
 
-    /**
-     * Ответ об ошибке в формате v1.0.
-     */
-    private function v1Error(string $message, array $data, string $code = 'TGDS0026', int $status = 400)
-    {
-        return response()->json([
-            'responseType' => 'ErrorResponse',
-            'data'         => [
-                'ApiKey'        => $data['ApiKey'] ?? '',
-                'ResellerId'    => $data['ResellerId'] ?? '',
-                'SupplierId'    => $data['SupplierId'] ?? '',
-                'Timestamp'     => Carbon::now()->toIso8601String(),
-                'RequestStatus' => [
-                    'Status' => 'ERROR',
-                    'Error'  => ['ErrorCode' => $code, 'ErrorMessage' => $message],
-                ],
-            ],
-        ], $status);
-    }
+
 
     // ─── Endpoints ───────────────────────────────────────────────────────────
 
     /**
      * POST /viator/tourlist  (v1.0)
+     * Классы с types_id=5 → продукты (SupplierProductCode).
+     * Туры каждого класса → опции (TourOption).
      */
     public function tourList(Request $request)
     {
@@ -282,27 +276,31 @@ class ViatorController extends Controller
 
         $data = $this->getData($request);
 
+        $classes = Classes::query()->where('types_id', 5)->get()->keyBy('id');
+
         $tours = Tours::with(['boat', 'packages', 'pricesbydates.packages'])
-            ->whereIn('classes_id', [8, 9])
+            ->whereIn('classes_id', $classes->keys())
             ->orderBy('sort_order')
-            ->get();
+            ->get()
+            ->groupBy('classes_id');
 
-        $grouped = $tours->groupBy('classes_id');
-
-        $tourList = $grouped->map(fn($group, $classId) => [
-            'SupplierProductCode' => $classId == 8 ? 'private' : 'shared',
-            'SupplierProductName' => $classId == 8 ? 'Private Tour' : 'Shared Tour',
-            'CountryCode'         => 'ID',
-            'DestinationCode'     => 'ID LBN',
-            'DestinationName'     => 'Lombok, Indonesia',
-            'TourDescription'     => $classId == 8 ? 'Private boat tour' : 'Shared boat tour',
-            'TourOption'          => $group->map(fn($tour) => [
-                'productOptionId'    => $tour->slug,
-                'SupplierOptionCode' => $tour->slug,
-                'SupplierOptionName' => $tour->name,
-                'TourDepartureTime'  => '08:00:00',
-            ])->values()->all(),
-        ])->values();
+        $tourList = $classes->map(function ($class) use ($tours) {
+            $classTours = $tours->get($class->id, collect());
+            return [
+                'SupplierProductCode' => $class->slug ?? "class-{$class->id}",
+                'SupplierProductName' => $class->name,
+                'CountryCode'         => 'ID',
+                'DestinationCode'     => 'ID LBN',
+                'DestinationName'     => 'Lombok, Indonesia',
+                'TourDescription'     => $class->name,
+                'TourOption'          => $classTours->map(fn($tour) => [
+                    'productOptionId'    => $tour->slug,
+                    'SupplierOptionCode' => $tour->slug,
+                    'SupplierOptionName' => $tour->name,
+                    'TourDepartureTime'  => '08:00:00',
+                ])->values()->all(),
+            ];
+        })->values();
 
         return response()->json([
             'responseType' => 'TourListResponse',
@@ -345,8 +343,7 @@ class ViatorController extends Controller
         $resultOptions = [];
 
         foreach ($productOptions as $option) {
-            $optionId   = $option['productOptionId'] ?? null;
-            $startTimes = $option['startTimes'] ?? ['08:00'];
+            $optionId = $option['productOptionId'] ?? null;
 
             if (!$optionId) continue;
 
@@ -355,29 +352,35 @@ class ViatorController extends Controller
             // Если тур не найден — не включаем в ответ (спек: invalid = not returned)
             if (!$tour) continue;
 
-            $available   = $this->calculateAvailability($tour, $dateStr);
-            $isAvailable = $available >= max(1, $totalTravelers);
-            $price       = $this->getPrice($tour, $carbonDate, $totalTravelers);
-            $events      = [];
+            $available      = $this->calculateAvailability($tour, $dateStr);
+            $isAvailable    = $available >= max(1, $totalTravelers);
+            $price          = $this->getPrice($tour, $carbonDate, $totalTravelers);
+            $events         = [];
+            $startTimes     = $option['startTimes'] ?? [];
+            $hasStartTimes  = !empty($startTimes);
 
-            foreach ($startTimes as $startTime) {
-                if ($isAvailable) {
-                    $events[] = [
+            $slots = $hasStartTimes ? $startTimes : [null];
+
+            foreach ($slots as $startTime) {
+                $base = $isAvailable
+                    ? [
                         'status'        => 'AVAILABLE',
-                        'startTime'     => $startTime,
                         'capacity'      => $this->buildCapacity($tour, $available),
                         'bookingCutoff' => $cutoff,
                         'price'         => $this->buildPrice($tour, $price),
-                    ];
-                } else {
-                    $events[] = [
+                    ]
+                    : [
                         'status'            => 'UNAVAILABLE',
                         'unavailableReason' => $available === 0 ? 'SOLD_OUT' : 'LIMITED_AVAILABILITY',
-                        'startTime'         => $startTime,
                         'capacity'          => $this->buildCapacity($tour, $available),
                         'bookingCutoff'     => $cutoff,
                     ];
+
+                if ($startTime !== null) {
+                    $base['startTime'] = $startTime;
                 }
+
+                $events[] = $base;
             }
 
             $resultOptions[] = [
@@ -427,8 +430,9 @@ class ViatorController extends Controller
             $tour = $this->findTour($optionId);
             if (!$tour) continue;
 
-            $dates   = [];
-            $current = $start->copy();
+            $startTime = $this->getTourStartTime($tour);
+            $dates     = [];
+            $current   = $start->copy();
 
             while ($current->lte($end)) {
                 $dateStr   = $current->format('Y-m-d');
@@ -436,10 +440,9 @@ class ViatorController extends Controller
                 $price     = $this->getPrice($tour, $current->copy(), 1);
                 $cutoff    = $current->copy()->subDay()->setTime(23, 59, 59)->utc()->toIso8601String();
 
-                $event = $available > 0
+                $base = $available > 0
                     ? [
                         'status'        => 'AVAILABLE',
-                        'startTime'     => '08:00',
                         'bookingCutoff' => $cutoff,
                         'capacity'      => $this->buildCapacity($tour, $available),
                         'price'         => $this->buildPrice($tour, $price),
@@ -447,15 +450,18 @@ class ViatorController extends Controller
                     : [
                         'status'            => 'UNAVAILABLE',
                         'unavailableReason' => 'SOLD_OUT',
-                        'startTime'         => '08:00',
                         'bookingCutoff'     => $cutoff,
                         'capacity'          => $this->buildCapacity($tour, 0),
                         'price'             => $this->buildPrice($tour, $price),
                     ];
 
+                if ($startTime !== null) {
+                    $base['startTime'] = $startTime;
+                }
+
                 $dates[] = [
                     'travelDate' => $dateStr,
-                    'events'     => [$event],
+                    'events'     => [$base],
                 ];
 
                 $current->addDay();
@@ -556,7 +562,7 @@ class ViatorController extends Controller
     }
 
     /**
-     * POST /viator/booking  (v1.0)
+     * POST /viator/v2/booking
      */
     public function booking(Request $request)
     {
@@ -564,47 +570,40 @@ class ViatorController extends Controller
             return $this->unauthorized();
         }
 
-        $data     = $this->getData($request);
-        $bookRef  = $data['BookingReference'] ?? null;
-        $prodCode = $data['SupplierProductCode'] ?? null;
-
-        $tourOptions = $data['TourOptions'] ?? [];
-        $optionId    = $tourOptions['SupplierOptionCode'] ?? $prodCode;
-
-        if (!$optionId) {
-            return $this->v1Error('Missing SupplierProductCode', $data);
-        }
-
-        $holdRef  = $data['AvailabilityHoldReference'] ?? null;
+        $data     = $request->all();
+        $optionId = $data['productOptionId'] ?? null;
+        $holdRef  = $data['availabilityHoldReference'] ?? null;
         $holdData = $holdRef ? Cache::get($holdRef) : null;
 
-        $travelDate = $data['TravelDate'] ?? ($holdData['travel_date'] ?? null);
-        if (!$travelDate) {
-            return $this->v1Error('Missing TravelDate', $data);
+        $travelDate = $data['travelDate'] ?? ($holdData['travel_date'] ?? null);
+
+        if (!$optionId || !$travelDate) {
+            return response()->json(['error' => 'INVALID_BOOKING', 'message' => 'Missing productOptionId or travelDate'], 422);
         }
 
-        $tour = Tours::with(['boat.closeddates'])
-            ->where('slug', $optionId)
-            ->orWhere('id', is_numeric($prodCode) ? (int) $prodCode : -1)
-            ->first();
-
+        $tour = $this->findTour($optionId);
         if (!$tour) {
-            return $this->v1Error('Tour not found', $data, 'TGDS0012');
+            return response()->json(['error' => 'INVALID_PRODUCT_OPTION', 'message' => 'Product option not found'], 422);
         }
 
-        // Разбираем тип путешественников
-        $travellers = $data['Traveller'] ?? [];
-        $mix        = $data['TravellerMix'] ?? [];
-        $adults     = (int) ($mix['Adult'] ?? 0);
-        $kids       = (int) ($mix['Child'] ?? 0) + (int) ($mix['Youth'] ?? 0);
-        $children   = (int) ($mix['Infant'] ?? 0);
-        $members    = $adults + $kids ?: (int) ($holdData['total_travelers'] ?? 1);
+        $travelers = $data['travelerMix'] ?? [];
+        $adults = $kids = $children = 0;
+        $name = $email = $phone = '';
 
-        $lead  = collect($travellers)->first(fn($t) => !empty($t['LeadTraveller'])) ?? ($travellers[0] ?? []);
-        $name  = trim(($lead['GivenName'] ?? '') . ' ' . ($lead['Surname'] ?? ''));
-        $email = $data['ContactEmail'] ?? 'viator@booking.com';
-        $phone = $data['ContactDetail']['ContactValue'] ?? '';
+        foreach ($travelers as $t) {
+            $type = strtoupper($t['type'] ?? 'ADULT');
+            if (in_array($type, ['ADULT', 'SENIOR'])) $adults++;
+            elseif ($type === 'INFANT')                $children++;
+            else                                       $kids++;
 
+            if (empty($name) && !empty($t['firstName'])) {
+                $name  = trim(($t['firstName'] ?? '') . ' ' . ($t['lastName'] ?? ''));
+                $email = $t['email'] ?? '';
+                $phone = $t['phone'] ?? '';
+            }
+        }
+
+        $members     = $adults + $kids ?: (int) ($holdData['total_travelers'] ?? 1);
         $carbonDate  = Carbon::parse($travelDate)->startOfDay();
         $retailPrice = $this->getPrice($tour, $carbonDate, $members);
         $totalPrice  = $tour->classes_id == 8 ? $retailPrice : $retailPrice * $members;
@@ -621,55 +620,36 @@ class ViatorController extends Controller
             $order->tour_price  = $totalPrice;
             $order->total_price = $totalPrice;
             $order->name        = $name ?: 'Viator Guest';
-            $order->email       = $email;
+            $order->email       = $email ?: 'viator@booking.com';
             $order->whatsapp    = $phone;
+            $order->source_id   = 2;
             $order->requests    = json_encode([
-                'source'              => 'viator',
-                'BookingReference'    => $bookRef,
-                'holdReference'       => $holdRef,
-                'startTime'           => $tourOptions['TourDepartureTime'] ?? ($holdData['start_time'] ?? '08:00'),
-                'currency'            => 'IDR',
-                'specialRequirement'  => $data['SpecialRequirement'] ?? '',
-                'pickupPoint'         => $data['PickupPoint'] ?? '',
+                'source'                    => 'viator',
+                'viatorConfirmationNumber'  => $data['viatorConfirmationNumber'] ?? null,
+                'holdReference'             => $holdRef,
+                'startTime'                 => $data['startTime'] ?? ($holdData['start_time'] ?? '08:00'),
+                'currency'                  => 'IDR',
             ]);
             $order->status_id   = 2;
             $order->save();
 
-            if ($holdRef) {
-                Cache::forget($holdRef);
-            }
-
-            $confirmNumber = $this->makeConfirmationNumber($order->id);
-
-            $travelerResponse = collect($travellers)->map(fn($t) => [
-                'TravellerIdentifier'               => $t['TravellerIdentifier'] ?? '1',
-                'TravellerSupplierConfirmationNumber' => $confirmNumber,
-            ])->values()->all();
+            if ($holdRef) Cache::forget($holdRef);
 
             return response()->json([
-                'responseType' => 'BookingResponse',
-                'data'         => [
-                    'ApiKey'                    => $data['ApiKey'] ?? '',
-                    'ResellerId'                => $data['ResellerId'] ?? '',
-                    'SupplierId'                => $data['SupplierId'] ?? '',
-                    'ExternalReference'         => $data['ExternalReference'] ?? '',
-                    'Timestamp'                 => Carbon::now()->toIso8601String(),
-                    'RequestStatus'             => ['Status' => 'SUCCESS'],
-                    'BookingReference'          => $bookRef,
-                    'SupplierConfirmationNumber' => $confirmNumber,
-                    'TransactionStatus'         => ['Status' => 'CONFIRMED'],
-                    'Traveller'                 => $travelerResponse,
-                ],
+                'status'                    => 'CONFIRMED',
+                'supplierConfirmationNumber' => $this->makeConfirmationNumber($order->id),
+                'viatorConfirmationNumber'  => $data['viatorConfirmationNumber'] ?? null,
+                'bookingId'                 => $order->id,
             ]);
 
         } catch (\Exception $e) {
             Log::error('Viator booking error: ' . $e->getMessage());
-            return $this->v1Error('Booking creation failed', $data, 'TGDS0006', 500);
+            return response()->json(['error' => 'BOOKING_FAILED', 'message' => 'Internal error'], 500);
         }
     }
 
     /**
-     * POST /viator/booking-amendment  (v1.0)
+     * POST /viator/v2/booking-amendment
      */
     public function bookingAmendment(Request $request)
     {
@@ -677,69 +657,37 @@ class ViatorController extends Controller
             return $this->unauthorized();
         }
 
-        $data        = $this->getData($request);
-        $supplierRef = $data['SupplierConfirmationNumber'] ?? null;
-        $bookRef     = $data['BookingReference'] ?? null;
+        $data        = $request->all();
+        $supplierRef = $data['supplierConfirmationNumber'] ?? null;
 
         if (!$supplierRef) {
-            return $this->v1Error('Missing SupplierConfirmationNumber', $data);
+            return response()->json(['error' => 'INVALID_REQUEST', 'message' => 'Missing supplierConfirmationNumber'], 422);
         }
 
         $order = $this->findOrder($supplierRef);
         if (!$order) {
-            return $this->v1Error('Order not found', $data, 'TGDS0012');
+            return response()->json(['error' => 'BOOKING_NOT_FOUND', 'message' => 'Order not found'], 404);
         }
 
-        $travellers = $data['Traveller'] ?? [];
-        $mix        = $data['TravellerMix'] ?? [];
-        $adults     = (int) ($mix['Adult'] ?? $order->adults);
-        $kids       = (int) ($mix['Child'] ?? 0) + (int) ($mix['Youth'] ?? 0);
-        $children   = (int) ($mix['Infant'] ?? $order->children);
-        $members    = $adults + $kids ?: $order->members;
-        $travelDate = $data['TravelDate'] ?? $order->travel_date;
+        $amendment = $data['amendment'] ?? [];
 
-        $lead = collect($travellers)->first(fn($t) => !empty($t['LeadTraveller'])) ?? ($travellers[0] ?? []);
-        $name = trim(($lead['GivenName'] ?? '') . ' ' . ($lead['Surname'] ?? ''));
-
-        $order->travel_date = $travelDate;
-        $order->adults      = $adults;
-        $order->kids        = $kids;
-        $order->children    = $children;
-        $order->members     = $members;
-        if ($name) $order->name = $name;
+        if (!empty($amendment['travelDate']))      $order->travel_date = $amendment['travelDate'];
+        if (!empty($amendment['totalTravelers']))   $order->members     = (int) $amendment['totalTravelers'];
+        if (!empty($amendment['leadTravelerName'])) $order->name        = $amendment['leadTravelerName'];
 
         $existing               = json_decode($order->requests ?? '{}', true) ?: [];
         $existing['amended_at'] = Carbon::now()->toIso8601String();
-        if (!empty($data['PickupPoint']))       $existing['pickupPoint']        = $data['PickupPoint'];
-        if (!empty($data['SpecialRequirement'])) $existing['specialRequirement'] = $data['SpecialRequirement'];
-        $order->requests = json_encode($existing);
+        $order->requests        = json_encode($existing);
         $order->save();
 
-        $confirmNumber    = str_starts_with($supplierRef, 'BLU-') ? $supplierRef : $this->makeConfirmationNumber($order->id);
-        $travelerResponse = collect($travellers)->map(fn($t) => [
-            'TravellerIdentifier'               => $t['TravellerIdentifier'] ?? '1',
-            'TravellerSupplierConfirmationNumber' => $confirmNumber,
-        ])->values()->all();
-
         return response()->json([
-            'responseType' => 'BookingAmendmentResponse',
-            'data'         => [
-                'ApiKey'                    => $data['ApiKey'] ?? '',
-                'ResellerId'                => $data['ResellerId'] ?? '',
-                'SupplierId'                => $data['SupplierId'] ?? '',
-                'ExternalReference'         => $data['ExternalReference'] ?? '',
-                'Timestamp'                 => Carbon::now()->toIso8601String(),
-                'RequestStatus'             => ['Status' => 'SUCCESS'],
-                'BookingReference'          => $bookRef,
-                'SupplierConfirmationNumber' => $confirmNumber,
-                'TransactionStatus'         => ['Status' => 'CONFIRMED'],
-                'Traveller'                 => $travelerResponse,
-            ],
+            'status'                    => 'AMENDED',
+            'supplierConfirmationNumber' => str_starts_with($supplierRef, 'BLU-') ? $supplierRef : $this->makeConfirmationNumber($order->id),
         ]);
     }
 
     /**
-     * POST /viator/booking-cancellation  (v1.0)
+     * POST /viator/v2/booking-cancellation
      */
     public function bookingCancellation(Request $request)
     {
@@ -747,49 +695,33 @@ class ViatorController extends Controller
             return $this->unauthorized();
         }
 
-        $data        = $this->getData($request);
-        $supplierRef = $data['SupplierConfirmationNumber'] ?? null;
-        $bookRef     = $data['BookingReference'] ?? null;
+        $data        = $request->all();
+        $supplierRef = $data['supplierConfirmationNumber'] ?? null;
 
         if (!$supplierRef) {
-            return $this->v1Error('Missing SupplierConfirmationNumber', $data);
+            return response()->json(['error' => 'INVALID_REQUEST', 'message' => 'Missing supplierConfirmationNumber'], 422);
         }
 
         $order = $this->findOrder($supplierRef);
         if (!$order) {
-            return $this->v1Error('Order not found', $data, 'TGDS0012');
+            return response()->json(['error' => 'BOOKING_NOT_FOUND', 'message' => 'Order not found'], 404);
         }
 
-        $order->status_id = 3; // cancelled
-        $existing                         = json_decode($order->requests ?? '{}', true) ?: [];
-        $existing['cancellation_reason']  = $data['Reason'] ?? '';
-        $existing['cancellation_author']  = $data['Author'] ?? '';
-        $existing['cancelled_at']         = Carbon::now()->toIso8601String();
-        $order->requests = json_encode($existing);
+        $order->status_id = 3;
+        $existing                        = json_decode($order->requests ?? '{}', true) ?: [];
+        $existing['cancellation_reason'] = $data['reason'] ?? '';
+        $existing['cancelled_at']        = Carbon::now()->toIso8601String();
+        $order->requests                 = json_encode($existing);
         $order->save();
 
-        $confirmNumber    = str_starts_with($supplierRef, 'BLU-') ? $supplierRef : $this->makeConfirmationNumber($order->id);
-        $cancelNumber     = 'CANC-' . $order->id . '-' . time();
-
         return response()->json([
-            'responseType' => 'BookingCancellationResponse',
-            'data'         => [
-                'ApiKey'                    => $data['ApiKey'] ?? '',
-                'ResellerId'                => $data['ResellerId'] ?? '',
-                'SupplierId'                => $data['SupplierId'] ?? '',
-                'ExternalReference'         => $data['ExternalReference'] ?? '',
-                'Timestamp'                 => Carbon::now()->toIso8601String(),
-                'RequestStatus'             => ['Status' => 'SUCCESS'],
-                'BookingReference'          => $bookRef,
-                'SupplierConfirmationNumber' => $confirmNumber,
-                'SupplierCancellationNumber' => $cancelNumber,
-                'TransactionStatus'         => ['Status' => 'CONFIRMED'],
-            ],
+            'status'                    => 'CANCELLED',
+            'supplierConfirmationNumber' => str_starts_with($supplierRef, 'BLU-') ? $supplierRef : $this->makeConfirmationNumber($order->id),
         ]);
     }
 
     /**
-     * POST /viator/redemption  (v1.0)
+     * POST /viator/v2/redemption
      */
     public function redemption(Request $request)
     {
@@ -797,32 +729,25 @@ class ViatorController extends Controller
             return $this->unauthorized();
         }
 
-        $data        = $this->getData($request);
-        $supplierRef = $data['SupplierConfirmationNumber'] ?? null;
+        $data        = $request->all();
+        $supplierRef = $data['supplierConfirmationNumber'] ?? null;
 
         if (!$supplierRef) {
-            return $this->v1Error('Missing SupplierConfirmationNumber', $data);
+            return response()->json(['error' => 'INVALID_REQUEST', 'message' => 'Missing supplierConfirmationNumber'], 422);
         }
 
         $order = $this->findOrder($supplierRef);
         if (!$order) {
-            return $this->v1Error('Order not found', $data, 'TGDS0012');
+            return response()->json(['error' => 'BOOKING_NOT_FOUND', 'message' => 'Order not found'], 404);
         }
 
-        // status_id 5 = completed/used — только это считается redemption
         $redeemed = $order->status_id === 5;
 
         return response()->json([
-            'responseType' => 'RedemptionResponse',
-            'data'         => [
-                'ApiKey'            => $data['ApiKey'] ?? '',
-                'ResellerId'        => $data['ResellerId'] ?? '',
-                'SupplierId'        => $data['SupplierId'] ?? '',
-                'ExternalReference' => $data['ExternalReference'] ?? '',
-                'Timestamp'         => Carbon::now()->toIso8601String(),
-                'RequestStatus'     => ['Status' => 'SUCCESS'],
-                'RedemptionStatus'  => $redeemed,
-            ],
+            'supplierConfirmationNumber' => $supplierRef,
+            'status'                    => $redeemed ? 'REDEEMED' : 'NOT_REDEEMED',
+            'travelDate'                => $order->travel_date,
+            'tourId'                    => $order->tours_id,
         ]);
     }
 }

@@ -1,0 +1,93 @@
+
+
+<style>
+    .open{
+        background-color: #41b862!important;
+        color:#fff!important;
+    }
+    .busy{
+        background-color: #dc3545!important;
+        color:#fff!important;
+    }
+    .pointer{
+        cursor: pointer;
+    }
+    
+</style>
+<form class="row" role="form" data-request="onUpdate">
+	<div class="col-4">
+	
+
+    
+<select class="form-control custom-select" name="tour"  data-live-search="true" >
+	<option value="">All Boats</option>
+    <?php foreach ($tours as $tour): ?>
+        <option value="<?= $tour->id ?>"><?= e($tour->name) ?></option>
+    <?php endforeach; ?>
+</select>
+    
+</select>
+
+		
+	</div>
+    <div class="col-auto">
+<div data-control="datepicker" data-format="YYYY-MM-DD">
+    <!-- Date -->
+    <input
+    	id="start"
+        type="text"
+        class="form-control"
+        placeholder="Select a date"
+        data-datepicker />
+
+    <!-- Data locker -->
+    <input
+        type="hidden"
+        name="start"
+        data-datetime-value
+        value="<?= date('Y-m-d', strtotime('+1 day')) ?>"
+        />
+</div>
+    </div>
+
+    <div class="col-auto">
+<div data-control="datepicker"  data-format="YYYY-MM-DD">
+    <!-- Date -->
+    <input
+    id="end"
+        type="text"
+        class="form-control"
+        placeholder="Select a date"
+        data-datepicker />
+
+    <!-- Data locker -->
+    <input
+        type="hidden"
+        name="end"
+        data-datetime-value
+        value="<?= date('Y-m-d', strtotime('+1 day')) ?>"
+        />
+</div>
+    </div>
+
+    <div class="col-auto">
+  <input class="btn btn-default" type="submit" value="Filter">
+    </div>
+</form>
+<div class="py-4"></div>
+
+<div id="list"></div>
+
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.0/dist/fancybox/fancybox.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/@fancyapps/ui@6.0/dist/fancybox/fancybox.umd.js"></script>
+<script>
+	Fancybox.bind("[data-fancybox]", {
+  // Your custom options
+});
+</script>
+
+
+

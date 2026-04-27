@@ -118,6 +118,10 @@ class PrivateOrderController extends Controller
         $order->boat_id     = $this->selectBoatForOrder((int) $data['tourId'], $data['travelDate']);
         $order->travel_date = $data['travelDate'];
 
+        if ($order->boat_id === null) {
+            return response()->json(['error' => 'No available boats for this date'], 422);
+        }
+
         // ── Guests ────────────────────────────────────────────────────
         $order->adults   = $data['adults']   ?? 0;
         $order->kids     = $data['kids']     ?? 0;
@@ -181,8 +185,13 @@ class PrivateOrderController extends Controller
         }
 
         // ── Xendit payment ────────────────────────────────────────────
+        $successBase = url('/new/success') . '?type=private'
+            . '&order_id=' . urlencode($order->external_id)
+            . '&num_items=' . ($order->adults + $order->kids)
+            . '&content_ids=' . $order->tours_id;
+
         if ($order->method_id == 1) {
-            $successUrl = url('/new/success') . '?amount=' . $order->deposite_summ . '&currency=IDR&type=private';
+            $successUrl = $successBase . '&amount=' . $order->deposite_summ . '&currency=IDR';
             $url = XenditService::createPaymentLink(
                 $order->external_id,
                 $order->deposite_summ,
@@ -196,7 +205,7 @@ class PrivateOrderController extends Controller
         } else {
             $usd_rate = Rates::find(2)->rate;
             $usd_summ = $usd_rate * $order->deposite_summ;
-            $successUrl = url('/new/success') . '?amount=' . round($usd_summ, 2) . '&currency=USD&type=private';
+            $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
             $url = PayPalService::createPaymentLink(
                 $order->external_id,
                 $usd_summ,

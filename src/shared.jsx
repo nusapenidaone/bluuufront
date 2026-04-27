@@ -7095,7 +7095,7 @@ export default function Shared_tour_01() {
   const { fetchTourDetail } = useTours();
 
   useEffect(() => {
-    trackPixelViewContent({ contentName: "Shared Tour", value: 0, currency: "IDR" });
+    trackPixelViewContent({ contentIds: "shared-tour", contentName: "Shared Tour", value: 0, currency: "IDR" });
     trackViewItem({
       value: 0,
       currency: "IDR",

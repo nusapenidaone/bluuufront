@@ -4,7 +4,8 @@ import 'react-phone-number-input/style.css';
 import './home.css';
 import { useSiteContacts } from './hooks/useSiteContacts';
 const MEDIA = 'https://bluuu.tours/storage/app/media/bluuu';
-const imgPoster   = `${MEDIA}/poster.webp`;
+const imgPoster   = 'https://bluuu.tours/storage/app/media/poster.webp';
+const imgPosterMd = 'https://bluuu.tours/storage/app/media/poster-md.webp';
 const imgShared   = `${MEDIA}/shared.webp`;
 const imgPrivate  = `${MEDIA}/private.webp`;
 const galPreviews = [1,2,3,4,5].map(n => `${MEDIA}/gal${n}.webp`);
@@ -171,18 +172,12 @@ const Home3 = () => {
     };
   }, []);
 
-  // Capture UTM params once on mount
+  // Read captured UTM data (captureUtm() already ran in main.jsx)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-    const captured = {};
-    utmKeys.forEach((k) => { if (params.get(k)) captured[k] = params.get(k); });
-    if (document.referrer) captured['utm_referrer'] = document.referrer;
-    if (Object.keys(captured).length) {
-      sessionStorage.setItem('bluuu_utm', JSON.stringify(captured));
-    }
-    const stored = sessionStorage.getItem('bluuu_utm');
-    if (stored) utmRef.current = JSON.parse(stored);
+    try {
+      const stored = sessionStorage.getItem('bluuu_utm');
+      if (stored) utmRef.current = JSON.parse(stored);
+    } catch { /* ignore */ }
   }, []);
 
 
@@ -332,7 +327,11 @@ const Home3 = () => {
      HERO - Cinematic bottom-left
      ═══════════════════════════════════════ */}
 <section className="hero" id="hero">
-  <video className="hero-video" id="heroVideo" muted loop playsInline disablePictureInPicture preload="none" poster={imgPoster} ref={heroVideoRef} />
+  <picture>
+    <source media="(max-width: 768px)" srcSet={imgPosterMd} />
+    <img src={imgPoster} alt="" className="hero-poster" aria-hidden="true" fetchPriority="high" />
+  </picture>
+  <video className="hero-video" id="heroVideo" muted loop playsInline disablePictureInPicture preload="none" ref={heroVideoRef} />
   <div className="hero-overlay"></div>
 
   <div className="hero-content hero-content--centered">

@@ -19,29 +19,44 @@ const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImageP
 function NotFound() {
   return (
     <div style={{
-      background: "#0a0a0a",
-      color: "#fff",
+      background: "#fff",
       minHeight: "100vh",
       display: "flex",
+      flexDirection: "column",
       alignItems: "center",
       justifyContent: "center",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      fontFamily: "var(--font-body, 'Petrov Sans', -apple-system, sans-serif)",
       textAlign: "center",
+      padding: "2rem",
     }}>
-      <div>
-        <h1 style={{ fontSize: "8rem", fontWeight: 700, color: "#1a9fd4", lineHeight: 1 }}>404</h1>
-        <p style={{ fontSize: "1.5rem", color: "#aaa", marginTop: "1rem" }}>Page not found</p>
-        <a href="/private-tour-to-nusa-penida" style={{
-          display: "inline-block",
-          marginTop: "2rem",
-          padding: "0.75rem 2rem",
-          background: "#1a9fd4",
+      <div style={{ fontSize: "5rem", marginBottom: "1rem" }}>🌊</div>
+      <h1 style={{ fontSize: "1.25rem", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "#0073E0", marginBottom: "0.75rem" }}>
+        Oops — page not found
+      </h1>
+      <p style={{ fontSize: "1rem", color: "#64748b", maxWidth: 360, lineHeight: 1.6, marginBottom: "2rem" }}>
+        Looks like this wave took you somewhere unexpected. The page you're looking for doesn't exist or has moved.
+      </p>
+      <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", justifyContent: "center" }}>
+        <a href="/" style={{
+          padding: "0.625rem 1.5rem",
+          background: "#0073E0",
           color: "#fff",
           textDecoration: "none",
-          borderRadius: "8px",
-          fontSize: "1rem",
-        }}>Go to booking</a>
+          borderRadius: "0.75rem",
+          fontSize: "0.875rem",
+          fontWeight: 600,
+        }}>Back to home</a>
+        <a href="/private-tour-to-nusa-penida" style={{
+          padding: "0.625rem 1.5rem",
+          background: "#f1f5f9",
+          color: "#0073E0",
+          textDecoration: "none",
+          borderRadius: "0.75rem",
+          fontSize: "0.875rem",
+          fontWeight: 600,
+        }}>Explore tours</a>
       </div>
+      <p style={{ marginTop: "3rem", fontSize: "0.75rem", color: "#cbd5e1" }}>Error 404</p>
     </div>
   );
 }
@@ -174,22 +189,6 @@ export default function App() {
       return <PolicyPage policyKey={policyKeyFromPath} />;
     }
 
-    if (path === "/nusa-penida" || path === "/nusa-penida/boats") {
-      window.location.replace("/");
-      return null;
-    }
-
-    if (path === "/nusa-penida/shared-tours" || path.startsWith("/nusa-penida/shared-tours/")) {
-      window.location.replace("/shared-tour-to-nusa-penida");
-      return null;
-    }
-
-    if (path === "/nusa-penida/private-tours" || path.startsWith("/nusa-penida/private-tours/") || path === "/nusa-penida/bundeled-tours" || path.startsWith("/nusa-penida/bundeled-tours/") || path === "/nusa-penida/bundled-tours" || path.startsWith("/nusa-penida/bundled-tours/")) {
-      window.location.replace("/private-tour-to-nusa-penida");
-      return null;
-    }
-
-
     if (path === "/") {
       return <Home />;
     }
@@ -218,11 +217,6 @@ export default function App() {
 
     if (path === "/reviews") {
       return <ReviewsPage />;
-    }
-
-    if (path.startsWith("/reviews/")) {
-      window.location.replace("/reviews");
-      return null;
     }
 
     if (path === "/gallery") {

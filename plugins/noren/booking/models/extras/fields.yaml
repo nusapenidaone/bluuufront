@@ -10,6 +10,11 @@ tabs:
             span: auto
             type: switch
             tab: Main
+        per_car:
+            label: 'Price per car (qty = ceil guests/5)'
+            span: auto
+            type: switch
+            tab: Main
         name:
             label: Name
             span: auto

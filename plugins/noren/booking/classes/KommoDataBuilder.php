@@ -340,12 +340,28 @@ class KommoDataBuilder
                     $extraModel = Extras::find($extra['id']);
  
                     if ($extraModel && $extraModel->amo_id) {
+
+
+
                         $leadCustomFields[] = [
                             'field_id' => (int)$extraModel->amo_id,
                             'values' => [
                                 ['value' => (int)$extra['qty']],
                             ],
                         ];
+
+
+                        if($extraModel->amo_id==686877){
+                                Log::info('qty='.$extra['qty']);
+                                $leadCustomFields[] = [
+                                    'field_id' => 679279,
+                                    'values' => [
+                                        ['value' => (int)$extra['qty']],
+                                    ],
+                                ];
+                        }
+                        
+
                     }
                 }
             }
