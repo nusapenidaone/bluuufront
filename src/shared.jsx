@@ -1,4 +1,5 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures, bfOn } from "./utils/boatFeatures";
 import {
@@ -1800,7 +1801,7 @@ function StepOne({
                     <div className="relative" id="step1-exact-date">
                       <CustomDatePicker
                         mode="single"
-                        selected={exactDate ? new Date(exactDate) : undefined}
+                        selected={exactDate ? new Date(exactDate + 'T00:00:00') : undefined}
                         onSelect={(date) => {
                           if (date) {
                             const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -1924,7 +1925,7 @@ function StepOne({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-secondary-900">Kids</span>
-                        <span className="text-xs font-semibold text-secondary-500">Ages 7-14</span>
+                        <span className="text-xs font-semibold text-secondary-500">Ages 8-14</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 rounded-full border border-neutral-200 bg-white p-1.5 shadow-none">
@@ -1953,7 +1954,7 @@ function StepOne({
                     <Info className="h-4 w-4" />
                   </div>
                   <p className="text-xs font-bold leading-relaxed text-secondary-500">
-                    Minimum age for shared tours is 7 — traveling with younger kids? <a href="/private" className="text-ink-faint font-semibold hover:text-primary-600 transition-colors">A private tour is the way to go.</a>
+                    Minimum age for shared tours is 8 — traveling with younger kids? <a href="/private" className="text-ink-faint font-semibold hover:text-primary-600 transition-colors">A private tour is the way to go.</a>
                   </p>
                 </div>
               </div>
@@ -3967,10 +3968,9 @@ function StepTransfers({
               <div className="border-t border-neutral-100 px-5 pb-4 pt-3 space-y-3 sm:pl-22 sm:pr-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
                     value={pickupAddress}
-                    onChange={(e) => handlePickupChange(e.target.value)}
+                    onChange={(val) => handlePickupChange(val)}
                     placeholder="Enter your hotel or villa address"
                     className={cn("mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none", skipAddress && "hidden")}
                   />
@@ -3988,10 +3988,9 @@ function StepTransfers({
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</label>
                     {!sameAddress && (
-                      <input
-                        type="text"
+                      <AddressAutocomplete
                         value={dropoffAddress}
-                        onChange={(e) => onSetDropoffAddress && onSetDropoffAddress(e.target.value)}
+                        onChange={(val) => onSetDropoffAddress && onSetDropoffAddress(val)}
                         placeholder="Enter your dropoff address"
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none"
                       />
@@ -5276,7 +5275,7 @@ function StepFive({
                                 <span className="text-xs font-black uppercase tracking-widest text-secondary-300">Exact date</span>
                                 <CustomDatePicker
                                   mode="single"
-                                  selected={draftExactDate ? new Date(draftExactDate) : undefined}
+                                  selected={draftExactDate ? new Date(draftExactDate + 'T00:00:00') : undefined}
                                   onSelect={(date) => {
                                     if (date) {
                                       const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -5366,7 +5365,7 @@ function StepFive({
                                   </div>
                                   <div className="flex flex-col">
                                     <span className="text-sm font-black text-secondary-900">Kids</span>
-                                    <span className="text-xs font-semibold text-secondary-300">Ages 3-11</span>
+                                    <span className="text-xs font-semibold text-secondary-300">Ages 8-14</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-4 rounded-full bg-neutral-100 p-1">
@@ -7012,6 +7011,11 @@ function BookingMini() {
   );
 }
 export default function Shared_tour_01() {
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
+    return () => cancelAnimationFrame(raf);
+  }, []);
   useSEO({
     title: "Shared Speedboat Tour to Nusa Penida | Bluuu Tours",
     description: "Affordable shared speedboat day tour from Bali to Nusa Penida. Manta rays, snorkeling & land tour — all-inclusive from IDR 1,300,000 per person.",
@@ -8534,11 +8538,9 @@ function StepCheckout({
                 {(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && (
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address*</label>
-                    <input
-                      type="text"
-                      
+                    <AddressAutocomplete
                       value={pickupAddress}
-                      onChange={(e) => handlePickupChange(e.target.value)}
+                      onChange={(val) => handlePickupChange(val)}
                       placeholder="Enter your hotel or villa address"
                       className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
                     />
@@ -8548,11 +8550,9 @@ function StepCheckout({
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address*</label>
                     {!sameAddress && (
-                      <input
-                        type="text"
-                        autoComplete="new-password"
+                      <AddressAutocomplete
                         value={dropoffAddress}
-                        onChange={(e) => onSetDropoffAddress(e.target.value)}
+                        onChange={(val) => onSetDropoffAddress(val)}
                         placeholder="Enter your dropoff address"
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
                       />

@@ -1,4 +1,5 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import Modal from "./components/common/Modal";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures } from "./utils/boatFeatures";
@@ -2002,7 +2003,7 @@ function StepOne({
                     <div className="relative" id="step1-exact-date">
                       <CustomDatePicker
                         mode="single"
-                        selected={exactDate ? new Date(exactDate) : undefined}
+                        selected={exactDate ? new Date(exactDate + 'T00:00:00') : undefined}
                         onSelect={(date) => {
                           if (date) {
                             const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -2126,7 +2127,7 @@ function StepOne({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-secondary-900">Kids</span>
-                        <span className="text-xs font-semibold text-secondary-500">Ages 3-11</span>
+                        <span className="text-xs font-semibold text-secondary-500">Ages 8-11</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 rounded-full border border-neutral-200 bg-white p-1.5 shadow-none">
@@ -4251,10 +4252,9 @@ function StepTransfers({
               <div className="border-t border-neutral-100 px-5 pb-4 pt-3 space-y-3 sm:pl-22 sm:pr-5">
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
                     value={pickupAddress}
-                    onChange={(e) => handlePickupChange(e.target.value)}
+                    onChange={(val) => handlePickupChange(val)}
                     placeholder="Enter your hotel or villa address"
                     className={cn("mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none", skipAddress && "hidden")}
                   />
@@ -4272,10 +4272,9 @@ function StepTransfers({
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</label>
                     {!sameAddress && (
-                      <input
-                        type="text"
+                      <AddressAutocomplete
                         value={dropoffAddress}
-                        onChange={(e) => onSetDropoffAddress && onSetDropoffAddress(e.target.value)}
+                        onChange={(val) => onSetDropoffAddress && onSetDropoffAddress(val)}
                         placeholder="Enter your dropoff address"
                         className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none"
                       />
@@ -4509,7 +4508,16 @@ function StepExtras({
     const el = filterSliderRef.current;
     if (!el) return;
     const active = el.querySelector(`[data-filter-id="${extrasFilter}"]`);
-    if (active) active.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    if (active) {
+      const containerRect = el.getBoundingClientRect();
+      const activeRect = active.getBoundingClientRect();
+      if (activeRect.left < containerRect.left || activeRect.right > containerRect.right) {
+        el.scrollTo({
+          left: el.scrollLeft + (activeRect.left - containerRect.left) - 16,
+          behavior: "smooth"
+        });
+      }
+    }
   }, [extrasFilter]);
   const extraCategoryById = useMemo(
     () => ({
@@ -5492,7 +5500,7 @@ function StepFive({
                                 <span className="text-xs font-black uppercase tracking-widest text-secondary-300">Exact date</span>
                                 <CustomDatePicker
                                   mode="single"
-                                  selected={draftExactDate ? new Date(draftExactDate) : undefined}
+                                  selected={draftExactDate ? new Date(draftExactDate + 'T00:00:00') : undefined}
                                   onSelect={(date) => {
                                     if (date) {
                                       const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -5581,7 +5589,7 @@ function StepFive({
                                   </div>
                                   <div className="flex flex-col">
                                     <span className="text-sm font-black text-secondary-900">Kids</span>
-                                    <span className="text-xs font-semibold text-secondary-300">Ages 3-11</span>
+                                    <span className="text-xs font-semibold text-secondary-300">Ages 8-11</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-4 rounded-full bg-neutral-100 p-1">
@@ -7986,6 +7994,11 @@ function BookingMini() {
   );
 }
 export default function Premium_Private_With_Vibe() {
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
+    return () => cancelAnimationFrame(raf);
+  }, []);
   useSEO({
     title: "Private Yacht Tour to Nusa Penida | Bluuu Tours",
     description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",

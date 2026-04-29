@@ -1,0 +1,72 @@
+url = "/:slug?/:slug1?"
+title = "New"
+is_hidden = 0
+==
+<?php
+
+?>
+==
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Bluuu — Nusa Penida Tours</title>
+  <!-- Preconnect to external origins for faster DNS + TCP -->
+  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+  <link rel="preconnect" href="https://translate.googleapis.com" crossorigin />
+  <link rel="dns-prefetch" href="https://elfsightcdn.com" />
+  <!-- Critical assets -->
+  <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
+  <link rel="preload" as="image" href="https://bluuu.tours/storage/app/media/poster.webp" fetchpriority="high" />
+  <link rel="preload" as="font" type="font/woff2" href="/themes/bluuu/assets/home/PetrovSans-Regular-BXcoTdev.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="/themes/bluuu/assets/home/PetrovSans-SemiBold-qOu9CoxP.woff2" crossorigin />
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5J8KXLX2');</script>
+  <!-- End Google Tag Manager -->
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false,
+      }, 'google_translate_element');
+    }
+
+    // Elfsight (виджет отзывов) грузим после загрузки страницы + 3 секунды
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var elfsight = document.createElement('script');
+        elfsight.src = 'https://elfsightcdn.com/platform.js';
+        elfsight.async = true;
+        document.head.appendChild(elfsight);
+      }, 3000);
+    });
+  </script>
+  <script async src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <script type="module" crossorigin src="/themes/bluuu/assets/home/index-55t3sf9G.js"></script>
+  <link rel="modulepreload" crossorigin href="/themes/bluuu/assets/home/vendor-react-Cgg2GOmP.js">
+  <link rel="modulepreload" crossorigin href="/themes/bluuu/assets/home/vendor-icons-C7kigISd.js">
+  <link rel="stylesheet" crossorigin href="/themes/bluuu/assets/home/index-DRm5ty-P.css">
+</head>
+
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5J8KXLX2"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  <div id="preloader" style="position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <style>#preloader-spin{width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <div id="preloader-spin"></div>
+  </div>
+  <div id="root"></div>
+</body>
+
+</html>
