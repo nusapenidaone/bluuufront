@@ -33,20 +33,21 @@ class XenditService
         ];
 
         $response = Http::withBasicAuth($secretKey, '')
+            ->timeout(20)
             ->post('https://api.xendit.co/v2/invoices', $payload)
             ->onError(function ($response) {
                 Log::error('[Xendit] Answer Error: ' . $response->body());
                 return $cancelUrl;
             });
-        
+
         if ($response->successful()) {
             return $response->json()['invoice_url'] ?? $cancelUrl;
         }
         return $cancelUrl;
 
     }
-    
-    
+
+
     public static function createLink($orderId, $amount, $returnUrl, $cancelUrl, $description)
     {
          
@@ -75,12 +76,13 @@ class XenditService
         ];
 
         $response = Http::withBasicAuth($secretKey, '')
+            ->timeout(20)
             ->post('https://api.xendit.co/v2/invoices', $payload)
             ->onError(function ($response) {
                 Log::error('[Xendit] Answer Error: ' . $response->body());
                 return $cancelUrl;
             });
-        
+
         if ($response->successful()) {
             return $response->json()['invoice_url'] ?? $cancelUrl;
         }

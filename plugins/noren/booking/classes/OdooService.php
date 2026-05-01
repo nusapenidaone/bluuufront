@@ -200,7 +200,6 @@ class OdooService
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
-            'x_studio_route'            => $lead['route_name'],
             'x_studio_collect'          => $lead['total_price'] - $lead['deposite_summ'],
         ];
 

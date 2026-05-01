@@ -66,7 +66,7 @@ export default function GalleryPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
 
       <main className="container flex-1 py-8 sm:py-12">

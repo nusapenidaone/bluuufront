@@ -82,6 +82,8 @@ class SharedOrderController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
+        set_time_limit(120);
+
         // CSRF check (same as OrderController)
         // TODO: re-enable before production
         // if (Session::token() != $request->header('X-CSRF-TOKEN')) {
@@ -91,7 +93,7 @@ class SharedOrderController extends Controller
         try {
 
             $data = $request->all();
-            Log::info($data);
+            //Log::info($data);
             $order = new Order;
 
             // ── Order type & status ───────────────────────────────────────
@@ -178,12 +180,12 @@ class SharedOrderController extends Controller
 
             $order->save();
 
-            Log::info('SharedOrder saved', [
-                'order_id' => $order->id,
-                'route_id' => $order->route_id,
-                'restaurant_id' => $order->restaurant_id,
-                'program_id' => $order->program_id,
-            ]);
+            //Log::info('SharedOrder saved', [
+            //    'order_id' => $order->id,
+            //    'route_id' => $order->route_id,
+            //    'restaurant_id' => $order->restaurant_id,
+            //    'program_id' => $order->program_id,
+            //]);
 
             Session::put('order_id', $order->id);
 

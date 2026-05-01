@@ -27,6 +27,7 @@ class PayPalService
         self::init();
 
         $response = Http::asForm()
+            ->timeout(15)
             ->withBasicAuth(self::$clientId, self::$secret)
             ->post(self::$baseUrl . '/v1/oauth2/token', [
                 'grant_type' => 'client_credentials',
@@ -75,6 +76,7 @@ public static function createPaymentLink($orderId, $amount, $email, $returnUrl, 
         ];
 
         $response = Http::withToken($token)
+            ->timeout(15)
             ->post(self::$baseUrl . '/v2/checkout/orders', $payload);
 
         if (!$response->successful()) {

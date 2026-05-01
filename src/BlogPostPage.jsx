@@ -258,7 +258,7 @@ export default function BlogPostPage({ slug }) {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/private#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
 
       {loading ? <Skeleton /> : notFound ? (

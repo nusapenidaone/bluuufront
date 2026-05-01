@@ -83,11 +83,15 @@ class PrivateOrderController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
+        set_time_limit(120);
+
         // CSRF check (same as OrderController)
         // TODO: re-enable before production
         // if (Session::token() != $request->header('X-CSRF-TOKEN')) {
         //     return response('Unauthorized.', 401);
         // }
+
+        try {
 
         $data = $request->all();
 
@@ -217,6 +221,11 @@ class PrivateOrderController extends Controller
         }
 
         return response()->json($url);
+
+        } catch (\Throwable $e) {
+            \Log::error('PrivateOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 
     /**

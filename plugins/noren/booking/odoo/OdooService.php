@@ -148,7 +148,6 @@ class OdooService
                 'partner_id',
                 'rental_start_date',
                 'x_studio_boat_name',
-                'x_studio_route',
                 'x_studio_adults', 'x_studio_kids', 'x_studio_count_of_people',
                 'x_studio_deposit', 'x_studio_collect',
             ],
@@ -182,6 +181,57 @@ class OdooService
         return is_array($result) ? count($result) : 0;
     }
 
+    // ─── Get orders for a date range (UTC) — daily leads/briefing view ─────────
+
+    public static function getLeadsForDate(string $startUtc, string $endUtc): array
+    {
+        return static::post('/json/2/sale.order/search_read', [
+            'domain' => [
+                ['rental_start_date', '>=', $startUtc],
+                ['rental_start_date', '<=', $endUtc],
+                ['state', '!=', 'cancel'],
+            ],
+            'fields' => [
+                'id', 'name', 'state', 'client_order_ref',
+                'partner_id',
+                'rental_start_date', 'rental_return_date',
+                'x_studio_boat_name',
+                'x_studio_adults', 'x_studio_kids', 'x_studio_count_of_people',
+                'x_studio_deposit', 'x_studio_collect',
+                'amount_total',
+                'x_studio_tour_type',
+                'x_studio_guide_1_1', 'x_studio_guide_2_1',
+                'x_studio_pickup_address', 'x_studio_drop_off_address',
+                'x_studio_car_type',
+                'x_studio_source',
+                'x_studio_special_requests',
+                'x_studio_payment_source',
+                'x_studio_lunch_resto',
+                'x_studio_lunch_restaurant',
+            ],
+            'order' => 'rental_start_date asc',
+        ]) ?: [];
+    }
+
+    // Used by BriefingController for daily restaurant emails
+    public static function getTodayOrders(string $startUtc, string $endUtc): array
+    {
+        return static::getLeadsForDate($startUtc, $endUtc);
+    }
+
+    // ─── Read res.partner contacts by IDs ────────────────────────────────────
+
+    public static function readPartners(array $ids): array
+    {
+        if (empty($ids)) return [];
+        $result = static::post('/json/2/res.partner/read', [
+            'ids'    => array_values($ids),
+            'fields' => ['id', 'name', 'email', 'phone', 'mobile'],
+        ]);
+        if (!is_array($result)) return [];
+        return array_column($result, null, 'id');
+    }
+
     // ─── Update fields directly on existing Odoo order ───────────────────────
 
     public static function updateOrderFields(int $odooOrderId, array $fields): void
@@ -211,7 +261,6 @@ class OdooService
                 'x_studio_pickup_address', 'x_studio_drop_off_address',
                 'x_studio_pickup_cars', 'x_studio_drop_off_cars',
                 'x_studio_adults', 'x_studio_kids', 'x_studio_count_of_people',
-                'x_studio_route',
                 'x_studio_deposit', 'x_studio_collect',
                 'x_studio_payment_source', 'x_studio_free_shuttle_bus',
                 'order_line',
@@ -545,7 +594,6 @@ class OdooService
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
-            'x_studio_route'            => $lead['route_name'],
             'x_studio_collect'          => $lead['total_price'] - $lead['deposite_summ'],
             'x_studio_payment_source'   => $lead['payment_source'] ?? '',
             'client_order_ref'          => $lead['external_id'],
