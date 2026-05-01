@@ -1,4 +1,5 @@
 ﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import ElfsightWidget from "./components/common/ElfsightWidget";
 import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures, bfOn } from "./utils/boatFeatures";
@@ -22,7 +23,7 @@ import { useRules } from "./contexts/RulesContext";
 import Skeleton, { CardSkeleton, GallerySkeleton } from "./components/common/Skeleton";
 import { fetchRestaurant, fetchRestaurants } from "./api/extras";
 import { apiUrl } from "./api/base";
-import { buildTourAnalyticsItem, getUtmQueryString, trackAddToCart, trackViewItem, trackPixelViewContent, trackPixelAddToCart } from "./lib/analytics";
+import { buildTourAnalyticsItem, getUtmQueryString, trackAddToCart, trackBeginCheckout, trackAddPaymentInfo, trackViewItem, trackPixelViewContent, trackPixelAddToCart, trackPixelInitiateCheckout, trackPixelAddPaymentInfo } from "./lib/analytics";
 
 // Shared Components & Utils
 import {
@@ -1473,7 +1474,7 @@ function GalleryBlock({ cartItems, onAddExtra, onRemoveExtra, onApplyVibe, onBac
 }
 function getVideoSrc() {
   const isMobile = window.innerWidth < 768;
-  const base = "https://bluuu.tours/storage/app/media/" + (isMobile ? "video-md" : "video-xl");
+  const base = "https://bluuu.tours/storage/app/media/bluuu/" + (isMobile ? "video-md" : "video-xl");
   const supportsWebm = document.createElement("video").canPlayType("video/webm") !== "";
   return base + (supportsWebm ? ".webm" : ".mp4");
 }
@@ -1553,7 +1554,7 @@ function Hero() {
           <div className="aspect-video sm:aspect-video-wide">
             <video
               ref={videoRef}
-              poster="https://bluuu.tours/storage/app/media/poster.webp"
+              poster="https://bluuu.tours/storage/app/media/bluuu/poster.webp"
               muted
               loop
               playsInline
@@ -2404,6 +2405,10 @@ function StepTwo({
       onDateSelectionPreference("pickNow");
       closePickDayMode();
       setConfirmModalData({ boat, date, adults, kids, routeTitle: selectedStyleTitle });
+      const _numItems = (adults || 0) + (kids || 0);
+      const _item = buildTourAnalyticsItem({ itemId: boat.tourId ?? boat.id, itemName: boat.name || "Shared Tour", itemCategory: "Shared Tour", price: boat.priceValue || 0, quantity: Math.max(1, _numItems) });
+      trackAddToCart({ value: boat.priceValue || 0, currency: "IDR", items: [_item] });
+      trackPixelAddToCart({ contentIds: boat.tourId ?? boat.id, contentName: boat.name || "Shared Tour", value: boat.priceValue || 0, currency: "IDR" });
     },
     [inlineDatesFor, closePickDayMode, onDateSelectionPreference, onSelectFlexDate, onSelectBoatId, boats, groupSize, privateTours, adults, kids, selectedStyleTitle]
   );
@@ -2562,7 +2567,13 @@ function StepTwo({
       const rawBoat = (boats || []).find((b) => b.id === boat.id);
       const price = rawBoat ? calculateBoatPrice(rawBoat.tourId, exactDate, groupSize, privateTours) : null;
       const boatWithPrice = rawBoat ? { ...rawBoat, priceValue: price ?? rawBoat.priceValue } : null;
-      if (boatWithPrice) setConfirmModalData({ boat: boatWithPrice, date: exactDate, adults, kids, routeTitle: selectedStyleTitle });
+      if (boatWithPrice) {
+        setConfirmModalData({ boat: boatWithPrice, date: exactDate, adults, kids, routeTitle: selectedStyleTitle });
+        const _numItems = (adults || 0) + (kids || 0);
+        const _item = buildTourAnalyticsItem({ itemId: boatWithPrice.tourId ?? boatWithPrice.id, itemName: boatWithPrice.name || "Shared Tour", itemCategory: "Shared Tour", price: boatWithPrice.priceValue || 0, quantity: Math.max(1, _numItems) });
+        trackAddToCart({ value: boatWithPrice.priceValue || 0, currency: "IDR", items: [_item] });
+        trackPixelAddToCart({ contentIds: boatWithPrice.tourId ?? boatWithPrice.id, contentName: boatWithPrice.name || "Shared Tour", value: boatWithPrice.priceValue || 0, currency: "IDR" });
+      }
     }
   };
   const selectedBoat = useMemo(
@@ -2820,7 +2831,7 @@ function StepTwo({
             {upgradeCost > 0 && upgradeFromName && (
               <div className="mb-4 rounded-xl border border-primary-100 bg-primary-50 px-4 py-2.5">
                 <p className="text-xs font-semibold text-primary-600">
-                  â†‘ Only +{formatIDR(upgradeCost)}/person to upgrade from {upgradeFromName}
+                  Only +{formatIDR(upgradeCost)}/person to upgrade from {upgradeFromName}
                 </p>
               </div>
             )}
@@ -7625,12 +7636,12 @@ export default function Shared_tour_01() {
       itemCategory: "Shared Tour",
       price: totalPrice,
     });
-    trackAddToCart({ value: totalPrice, currency: "IDR", items: [analyticsItem] });
-    trackPixelAddToCart({
+    trackBeginCheckout({ value: totalPrice, currency: "IDR", items: [analyticsItem] });
+    trackPixelInitiateCheckout({
       contentIds: selectedYacht?.tourId ?? selectedYacht?.id,
-      contentName: selectedYacht?.name || "Shared Tour",
       value: totalPrice,
       currency: "IDR",
+      numItems: adults + kids,
     });
     setIsCheckoutOpen(true);
     setTimeout(() => document.getElementById("step-checkout")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -7675,6 +7686,8 @@ export default function Shared_tour_01() {
       }))));
     }
     const utmQs = getUtmQueryString();
+    trackAddPaymentInfo({ value: totalPrice, currency: "IDR" });
+    trackPixelAddPaymentInfo({ value: totalPrice, currency: "IDR" });
     window.location.href = `/payment?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
   };
   const availableYachts = useMemo(() => {
@@ -8151,7 +8164,7 @@ export default function Shared_tour_01() {
                 What our customers say
               </h2>
               <div className="relative overflow-visible">
-                <div className="elfsight-app-1f614ea8-8602-4273-83b3-ab40c213a3d7" data-elfsight-app-lazy></div>
+                <ElfsightWidget appId="1f614ea8-8602-4273-83b3-ab40c213a3d7" />
               </div>
             </div>
           </PremiumContainer>

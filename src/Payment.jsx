@@ -226,13 +226,25 @@ export default function Payment() {
 
       if (!res.ok) {
         const text = await res.text();
-        throw new Error(text || `Server error (${res.status})`);
+        let msg = `Server error (${res.status})`;
+        try {
+          const json = JSON.parse(text);
+          msg = json.error || json.message || msg;
+        } catch {
+          if (text) msg = text;
+        }
+        throw new Error(msg);
       }
 
       const redirectUrl = await res.json();
       window.location.href = redirectUrl;
     } catch (err) {
-      setError(err.message || "Something went wrong. Please try again.");
+      const raw = err.message || "";
+      const isNetworkErr = raw === "Load failed" || raw === "Failed to fetch" || raw.includes("NetworkError");
+      setError(isNetworkErr
+        ? "Connection error. Please check your internet and try again."
+        : raw || "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }

@@ -47,7 +47,7 @@ Order relationships (belongsTo): `tours`, `boat`, `transfer`, `cover`, `route`, 
   - `transfer_id=1` или `2` + `members > 5` → "Private Hi-Ace"
   - `transfer_id=3` → "Free Shuttle Bus"
   - no transfer → `false`
-- `x_studio_boat_name` = `boat.name` (текстовое поле, дублирует product line)
+- `x_studio_boat_name` = `boat.name` (тип **selection** в Odoo, значение должно точно совпадать с допустимыми вариантами; дублирует product line)
 
 **Odoo order lines логика:**
 
@@ -284,27 +284,47 @@ amount_total          — итоговая сумма
 currency_id           — [11, "IDR"]
 ```
 
-**Кастомные поля (x_studio_*):**
-```
-x_studio_boat_name         — название лодки (текст)
-x_studio_route             — название маршрута (текст)
-x_studio_adults            — количество взрослых
-x_studio_kids              — количество детей
-x_studio_count_of_people   — итого людей (members)
-x_studio_deposit           — депозит (получено)
-x_studio_collect           — остаток к оплате
-x_studio_payment_source    — метод оплаты (Xendit / PayPal)
-x_studio_pickup_address    — адрес pickup
-x_studio_drop_off_address  — адрес dropoff
-x_studio_pickup_cars       — кол-во машин pickup
-x_studio_drop_off_cars     — кол-во машин dropoff
-x_studio_tour_type         — берётся из Tours.odoo_type (selection в Odoo: "Standard Shared", "Premium Shared", "First Class Shared", "Standard Private", "Premium Private", "Premium for Couples", "Private Diving", "Professional Fishing")
-x_studio_free_shuttle_bus  — устарело
-x_studio_boat              — false (не используется)
-```
+**Кастомные поля (x_studio_*) — полная схема:**
 
-**Поля которые НЕ используются с сайта:**
-`x_studio_agent`, `x_studio_guide_1/2`, `x_studio_checked_in_by`, `x_studio_responsible_guide`, `x_studio_passenger_list`, `x_studio_tour_date`, `x_studio_car_type`, `x_studio_agency_code`
+| Поле | Тип Odoo | RO | Используется с сайта | Описание |
+|------|----------|----|----------------------|---------|
+| `x_studio_boat_name` | selection | — | ✓ | Название лодки. **selection**, не char — значение должно точно совпадать с вариантами в Odoo |
+| `x_studio_route` | char | — | ✓ | Название маршрута (`route.name` или `program.name`) |
+| `x_studio_adults` | integer | — | ✓ | Кол-во взрослых |
+| `x_studio_kids` | integer | — | ✓ | Кол-во детей |
+| `x_studio_count_of_people` | integer | — | ✓ | Итого людей (members = adults + kids) |
+| `x_studio_deposit` | monetary | — | ✓ | Депозит (получено онлайн) |
+| `x_studio_collect` | monetary | **readonly** | ✓ (read only) | Остаток к оплате. **Нельзя записать напрямую** — вычисляется Odoo как `amount_total - x_studio_deposit` |
+| `x_studio_payment_source` | selection | — | ✓ | Метод оплаты (`order->method->name`) |
+| `x_studio_pickup_address` | char | — | ✓ | Адрес pickup |
+| `x_studio_drop_off_address` | char | — | ✓ | Адрес dropoff |
+| `x_studio_pickup_cars` | integer | — | ✓ | Кол-во машин pickup |
+| `x_studio_drop_off_cars` | integer | — | ✓ | Кол-во машин dropoff |
+| `x_studio_car_type` | selection | — | ✓ | Тип машины (Private Car / Private Hi-Ace / Free Shuttle Bus) |
+| `x_studio_tour_type` | selection | — | ✓ | Тип тура из `Tours.odoo_type` |
+| `x_studio_special_requests` | char | — | — | Спец. пожелания клиента (не используется с сайта пока) |
+| `x_studio_respondio_id` | char | — | — | ID в respond.io (для партнёрских лодок — TODO) |
+| `x_studio_weblink` | char | **readonly** | — | Ссылка на портал Odoo (вычисляется автоматически) |
+| `x_studio_source` | selection | — | — | Источник (заполняется вручную в Odoo) |
+| `x_studio_collected_by_cash` | monetary | — | — | Собрано наличными (заполняется менеджером) |
+| `x_studio_collected_by_edcbank` | monetary | — | — | Собрано через EDC/банк |
+| `x_studio_collected_by_xendit` | monetary | — | — | Собрано через Xendit (онлайн) |
+| `x_studio_customer_checked_in_and_cleared` | boolean | — | — | Клиент прошёл check-in |
+| `x_studio_lunch_resto` | selection | — | — | Ресторан (старое selection поле) |
+| `x_studio_lunch_restaurant` | char | — | — | Ресторан (текстовое, текущее) |
+| `x_studio_free_shuttle_bus` | boolean | — | — | Устарело, не используется |
+| `x_studio_boat` | selection | — | — | Устарело (false) |
+| `x_studio_tour_date` | datetime | — | — | Дата тура (не используется с сайта) |
+| `x_studio_agent` | char | — | — | Агент (ручное заполнение) |
+| `x_studio_agency_code` | char | — | — | Код агентства |
+| `x_studio_guide_1` / `x_studio_guide_1_1` | text / selection | — | — | Гид 1 (два поля: текст + selection) |
+| `x_studio_guide_2` / `x_studio_guide_2_1` | text / selection | — | — | Гид 2 |
+| `x_studio_responsible_guide` | selection | — | — | Ответственный гид |
+| `x_studio_checked_in_by` | selection | — | — | Кто оформил check-in |
+| `x_studio_passenger_list` | text | — | — | Список пассажиров |
+| `x_studio_reason` | selection | — | — | Причина (отмены и т.п.) |
+| `x_studio_update_` | char | — | — | Номер обновления |
+| `x_studio_describe_circumstances` | text | — | — | Описание обстоятельств (инциденты) |
 
 ## Important notes
 

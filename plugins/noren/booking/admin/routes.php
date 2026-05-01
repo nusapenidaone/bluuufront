@@ -14,6 +14,9 @@ Route::get('api/admin/extras',    [AdminController::class, 'extras']);
 
 // ── Odoo-centric (primary) ─────────────────────────────────────────────────
 
+// Daily leads table — Odoo orders by date (Bali tz), enriched with local data
+Route::get('api/admin/leads', [AdminController::class, 'leads']);
+
 // List sale.orders from Odoo with search/pagination
 Route::get('api/admin/odoo/orders', [AdminController::class, 'odooOrders']);
 

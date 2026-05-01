@@ -13,7 +13,7 @@ class OdooWebhookController extends Controller
     public function handle()
     {
         $payload = Input::all();
-        Log::info($payload);
+        //Log::info($payload);
 
         $odooId = (int) ($payload['id'] ?? $payload['_id'] ?? (isset($payload['ids']) ? $payload['ids'][0] : 0));
 
@@ -41,7 +41,7 @@ class OdooWebhookController extends Controller
         $existing = Closeddates::where('odoo_id', $odooId)->first();
         $found    = $existing ? "found in DB (id={$existing->id})" : "not in DB";
 
-        Log::info("Odoo webhook DELETE | odoo_id={$odooId} | {$found}");
+        //Log::info("Odoo webhook DELETE | odoo_id={$odooId} | {$found}");
         Closeddates::where('odoo_id', $odooId)->delete();
 
         return response()->json(['ok' => true]);
@@ -65,13 +65,13 @@ class OdooWebhookController extends Controller
 
         if (!$tourType) {
             $tourType = OdooService::fetchTourType($odooId);
-            Log::info("Odoo webhook | odoo_id={$odooId} | x_studio_tour_type not in payload, fetched from Odoo: '{$tourType}'");
+            //Log::info("Odoo webhook | odoo_id={$odooId} | x_studio_tour_type not in payload, fetched from Odoo: '{$tourType}'");
         }
 
         $tour = $tourType ? Tours::where('odoo_type', $tourType)->first() : null;
 
         if (!$tour) {
-            Log::info("Odoo webhook SKIP | odoo_id={$odooId} | tour not found by odoo_type={$tourType}");
+            //Log::info("Odoo webhook SKIP | odoo_id={$odooId} | tour not found by odoo_type={$tourType}");
             return response()->json(['ok' => true]);
         }
 

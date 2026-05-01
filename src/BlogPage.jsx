@@ -190,7 +190,7 @@ export default function BlogPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
 
       {/* Hero */}

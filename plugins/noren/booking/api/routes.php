@@ -1,5 +1,6 @@
 <?php
 
+use Noren\Booking\Api\AccountController;
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\MarketingController;
 use Noren\Booking\Api\PrivateOrderController;
@@ -69,4 +70,16 @@ Route::get('api/new/categories', [FullController::class, 'getCategories']);
 Route::get('api/new/rules',    [FullController::class, 'getRules']);
 Route::get('api/new/settings', [FullController::class, 'getSettings']);
 Route::get('api/new/contacts', [FullController::class, 'getContacts']);
+
+// Account (личный кабинет)
+Route::options('api/new/account/{any}', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS')
+        ->header('Access-Control-Allow-Headers', '*');
+})->where('any', '.*');
+Route::get  ('api/new/account/{key}',          [AccountController::class, 'show']);
+Route::patch('api/new/account/{key}/simple',   [AccountController::class, 'updateSimple']);
+Route::patch('api/new/account/{key}/products', [AccountController::class, 'updateProducts']);
+Route::post ('api/new/account/{key}/pay',      [AccountController::class, 'createPayment']);
 

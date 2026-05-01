@@ -45,7 +45,7 @@ class RatesController extends Controller
                 $originalRate = $data[$rate->code]['value'];
 
                 // применяем -% и округляем
-                $rate->rate = round($originalRate * $multiplier, 2);
+                $rate->rate = round($originalRate * $multiplier, 8);
 
                 //Log::info("Original: $originalRate | New: " . $rate->rate);
 

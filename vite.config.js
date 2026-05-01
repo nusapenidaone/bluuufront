@@ -4,17 +4,14 @@ import fs from 'fs'
 import path from 'path'
 
 const ASSETS_DIR = 'themes/bluuu/assets/home'
-const PAGE_FILE = 'themes/bluuu/pages/new.htm'
+const PAGE_FILE = 'themes/bluuu/pages/home.htm'
 
-const CMS_HEADER = `url = "/new/:slug?/:slug1?"
+const CMS_HEADER = `url = "/:slug?/:slug1?"
 title = "New"
 is_hidden = 0
 ==
 <?php
-use Noren\\Bluuu\\Models\\Blog;
-function onStart(){
-   // return Blog::with('images')->get();
-}
+
 ?>
 ==
 `

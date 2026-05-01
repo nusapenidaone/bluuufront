@@ -1,5 +1,5 @@
 import "./index.css";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useLayoutEffect } from "react";
 
 const Home = lazy(() => import("./home.jsx"));
 const Private = lazy(() => import("./private.jsx"));
@@ -153,7 +153,7 @@ if (typeof window !== "undefined") {
     if (href.startsWith("/") && !href.startsWith("//")) {
       if (href.startsWith("#")) return;
       e.preventDefault();
-      window.location.href = appendUtm(href);
+      window.location.href = appendUtm(href.split("#")[0] || "/");
     }
   }, true);
 }
@@ -170,6 +170,7 @@ export default function App() {
   const rawPath = typeof window !== "undefined" ? window.location.pathname : "/";
   const path = rawPath.replace(/\/+$/, "") || "/";
 
+  useLayoutEffect(() => { window.scrollTo(0, 0); }, []);
   useEffect(() => { removePreloader(); }, []);
 
   // Prefetch private & shared chunks while user is on homepage

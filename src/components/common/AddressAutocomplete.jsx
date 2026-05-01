@@ -53,21 +53,23 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   };
 
   const handleSelect = async (suggestion) => {
+    const main      = suggestion.placePrediction.mainText?.text ?? '';
+    const secondary = suggestion.placePrediction.secondaryText?.text ?? '';
+    const addr      = secondary ? `${main}, ${secondary}` : main;
+
+    onChange(addr);
+    if (inputRef.current) inputRef.current.value = addr;
+    setSuggestions([]);
+    setOpen(false);
+
     try {
       const place = suggestion.placePrediction.toPlace();
-      await place.fetchFields({ fields: ['formattedAddress', 'location'] });
-      const addr = place.formattedAddress;
-      onChange(addr);
-      if (inputRef.current) inputRef.current.value = addr;
+      await place.fetchFields({ fields: ['location'] });
       const loc = place.location;
       if (loc) setLocation({ lat: loc.lat(), lng: loc.lng() });
     } catch {
-      const text = suggestion.placePrediction.text?.text ?? '';
-      onChange(text);
-      if (inputRef.current) inputRef.current.value = text;
+      // координаты не критичны
     }
-    setSuggestions([]);
-    setOpen(false);
   };
 
   const reverseGeocode = useCallback(async (latLng) => {

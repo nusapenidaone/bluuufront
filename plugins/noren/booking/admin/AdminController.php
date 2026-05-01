@@ -228,7 +228,6 @@ class AdminController extends Controller
             'x_studio_pickup_address', 'x_studio_drop_off_address',
             'x_studio_pickup_cars',    'x_studio_drop_off_cars',
             'x_studio_adults',         'x_studio_kids', 'x_studio_count_of_people',
-            'x_studio_route',
             'x_studio_deposit',        'x_studio_collect',
             'x_studio_free_shuttle_bus',
         ];
@@ -320,6 +319,70 @@ class AdminController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error("Admin odooUpdateProducts #{$odooId}: " . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ─── GET /api/admin/leads ─────────────────────────────────────────────────
+    // Odoo orders for a date range (Bali/Makassar timezone), enriched with local data
+    // Params: date_from=YYYY-MM-DD, date_to=YYYY-MM-DD (or single date=YYYY-MM-DD)
+
+    public function leads(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $baliTz = 'Asia/Makassar';
+
+        try {
+            $from = Carbon::createFromFormat('Y-m-d', $request->get('date_from') ?: $request->get('date') ?: Carbon::now($baliTz)->format('Y-m-d'), $baliTz);
+            $to   = Carbon::createFromFormat('Y-m-d', $request->get('date_to')   ?: $request->get('date') ?: Carbon::now($baliTz)->format('Y-m-d'), $baliTz);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Invalid date. Use YYYY-MM-DD.'], 422);
+        }
+
+        if ($to->lt($from)) $to = $from->copy();
+
+        $startUtc = $from->copy()->startOfDay()->utc()->format('Y-m-d H:i:s');
+        $endUtc   = $to->copy()->endOfDay()->utc()->format('Y-m-d H:i:s');
+
+        try {
+            $orders = OdooService::getLeadsForDate($startUtc, $endUtc);
+
+            if (!empty($orders)) {
+                $odooIds = array_column($orders, 'id');
+
+                $localOrders = Order::whereIn('odoo_id', $odooIds)
+                    ->get(['id', 'odoo_id', 'extras'])
+                    ->keyBy('odoo_id');
+
+                // Batch-fetch partner contacts from Odoo
+                $partnerIds = array_unique(array_filter(array_map(
+                    function ($o) { return is_array($o['partner_id']) ? $o['partner_id'][0] : null; },
+                    $orders
+                )));
+                $partners = OdooService::readPartners($partnerIds);
+
+                foreach ($orders as &$order) {
+                    $local = $localOrders->get($order['id']);
+                    $order['local_id']     = $local ? $local->id : null;
+                    $order['local_extras'] = ($local && is_array($local->extras)) ? $local->extras : [];
+
+                    $pid = is_array($order['partner_id']) ? $order['partner_id'][0] : null;
+                    $p   = $pid ? ($partners[$pid] ?? null) : null;
+                    $order['odoo_email'] = $p['email'] ?? null;
+                    $order['odoo_phone'] = $p['mobile'] ?? $p['phone'] ?? null;
+                }
+                unset($order);
+            }
+
+            return response()->json([
+                'date_from' => $from->toDateString(),
+                'date_to'   => $to->toDateString(),
+                'total'     => count($orders),
+                'orders'    => $orders,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Admin leads: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

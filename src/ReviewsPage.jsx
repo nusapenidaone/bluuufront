@@ -3,6 +3,7 @@ import { useSEO } from "./hooks/useSEO";
 import { ChevronLeft, Star } from "lucide-react";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
+import ElfsightWidget from "./components/common/ElfsightWidget";
 
 export default function ReviewsPage() {
   useSEO({
@@ -14,7 +15,7 @@ export default function ReviewsPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
 
       <main className="container flex-1 py-8 sm:py-12">
@@ -40,7 +41,7 @@ export default function ReviewsPage() {
         </div>
 
         <section className="mt-8 rounded-2xl border border-neutral-200 bg-white p-4 sm:p-6">
-          <div className="elfsight-app-dc207859-e523-4551-bf17-1b6df3428bae" data-elfsight-app-lazy />
+          <ElfsightWidget appId="dc207859-e523-4551-bf17-1b6df3428bae" />
         </section>
       </main>
 

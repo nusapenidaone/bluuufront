@@ -68,7 +68,7 @@ export default function AboutPage() {
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}
-        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida#booking" }}
+        cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
 
       <div className="container pt-8 sm:pt-12">
@@ -197,7 +197,7 @@ export default function AboutPage() {
             </div>
             <div>
               <a
-                href="/private#booking"
+                href="/private-tour-to-nusa-penida"
                 className="btn-primary inline-flex items-center justify-center gap-2 rounded-full bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white"
               >
                 Book now
