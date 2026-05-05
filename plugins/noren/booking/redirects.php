@@ -5,6 +5,29 @@ use Noren\Booking\Models\Types;
 use Noren\Bluuu\Models\Tourspage;
 use Noren\Bluuu\Models\Blog;
 
+if (!function_exists('redirectWithQuery')) {
+    function redirectWithQuery(string $to, int $status = 301)
+    {
+        $qs = request()->getQueryString();
+        if ($qs) {
+            parse_str($qs, $parsed);
+            $utms = array_intersect_key($parsed, array_flip(
+                ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content']
+            ));
+            if (!empty($utms)) {
+                setrawcookie('bluuu_utm_pending', base64_encode(json_encode($utms)), [
+                    'expires'  => time() + 300,
+                    'path'     => '/',
+                    'httponly' => false,
+                    'samesite' => 'Lax',
+                ]);
+            }
+            return redirect("$to?$qs", $status);
+        }
+        return redirect($to, $status);
+    }
+}
+
 // ── Sitemap & Robots ───────────────────────────────────────────────────────
 
 Route::get('sitemap.xml', function () {
@@ -22,80 +45,80 @@ Route::get('robots.txt', function () {
 // ── 301 Redirects ──────────────────────────────────────────────────────────
 
 // /nusa-penida/*
+
+
 Route::get('nusa-penida/shared-tours', function () {
-    return redirect('/shared-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/shared-tour-to-nusa-penida');
 });
 Route::get('nusa-penida/shared-tours/{any}', function () {
-    return redirect('/shared-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/shared-tour-to-nusa-penida');
 })->where('any', '.*');
 
 Route::get('nusa-penida/private-tours', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 });
 Route::get('nusa-penida/private-tours/{any}', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 })->where('any', '.*');
 
 Route::get('nusa-penida/bundeled-tours', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 });
 Route::get('nusa-penida/bundeled-tours/{any}', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 })->where('any', '.*');
 
 Route::get('nusa-penida/bundled-tours', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 });
 Route::get('nusa-penida/bundled-tours/{any}', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 })->where('any', '.*');
 
 Route::get('nusa-penida', function () {
-    return redirect('/', 301);
+    return redirectWithQuery('/');
 });
+
 Route::get('nusa-penida/{any}', function () {
-    return redirect('/', 301);
+    return redirectWithQuery('/');
 })->where('any', '.*');
 
 // /new/* — специфичные до общего
 Route::get('new/private', function () {
-    return redirect('/shared-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/shared-tour-to-nusa-penida');
 });
 Route::get('new/private/{any}', function () {
-    return redirect('/shared-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/shared-tour-to-nusa-penida');
 })->where('any', '.*');
 
 Route::get('new/shared', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 });
 Route::get('new/shared/{any}', function () {
-    return redirect('/private-tour-to-nusa-penida', 301);
+    return redirectWithQuery('/private-tour-to-nusa-penida');
 })->where('any', '.*');
 
 Route::get('new', function () {
-    return redirect('/', 301);
+    return redirectWithQuery('/');
 });
 Route::get('new/{path}', function ($path) {
-    return redirect('/' . $path, 301);
+    return redirectWithQuery('/' . $path);
 })->where('path', '.*');
 
 // /reviews/*
 Route::get('reviews/{any}', function () {
-    return redirect('/reviews', 301);
+    return redirectWithQuery('/reviews');
 })->where('any', '.+');
 
 // /information/*
 Route::get('information/health', function () {
-    return redirect('/policy/health', 301);
+    return redirectWithQuery('/policy/health');
 });
 Route::get('information/privacy', function () {
-    return redirect('/policy/privacy', 301);
+    return redirectWithQuery('/policy/privacy');
 });
 Route::get('information/return', function () {
-    return redirect('/policy/cancellation', 301);
+    return redirectWithQuery('/policy/cancellation');
 });
 
 Route::get('information/{any}', function () { abort(410); })->where('any', '.*');
-
-
-

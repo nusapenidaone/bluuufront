@@ -94,6 +94,18 @@ class PrivateOrderController extends Controller
         try {
 
         $data = $request->all();
+        \Log::info('[PrivateOrder] incoming', [
+            'ip'         => $request->ip(),
+            'email'      => $data['email'] ?? null,
+            'tourId'     => $data['tourId'] ?? null,
+            'boatId'     => $data['boatId'] ?? null,
+            'travelDate' => $data['travelDate'] ?? null,
+            'adults'     => $data['adults'] ?? null,
+            'kids'       => $data['kids'] ?? null,
+            'method'     => $data['method'] ?? null,
+            'deposite'   => $data['deposite'] ?? null,
+            'totalPrice' => $data['totalPrice'] ?? null,
+        ]);
 
         $order = new Order;
 

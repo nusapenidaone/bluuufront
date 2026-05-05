@@ -6,12 +6,15 @@ import {
   ArrowLeft,
   BadgeCheck,
   Calendar,
+  Clock,
   CreditCard,
   Lock,
   MessageCircle,
   Shield,
   Users,
 } from "lucide-react";
+
+const CHECKOUT_TIMER_MS = 10 * 60 * 1000;
 
 function cn(...classes) {
   return classes.filter(Boolean).join(" ");
@@ -117,6 +120,10 @@ export default function Payment() {
   const analyticsItemCategory = params.get("tourCategory") || (tourType === "shared" ? "Shared Tour" : "Private Tour");
 
   useEffect(() => {
+    try { sessionStorage.setItem("bluuu_came_from_payment", "1"); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
     trackBeginCheckout({
       value: analyticsTotal,
       currency: analyticsCurrency,
@@ -133,6 +140,54 @@ export default function Payment() {
     });
     trackPixelInitiateCheckout({ contentIds: analyticsItemId, value: analyticsTotal, currency: analyticsCurrency, numItems: totalGuests });
   }, [analyticsCurrency, analyticsItemCategory, analyticsItemId, analyticsItemName, analyticsTotal]);
+
+  // ── Session keys ─────────────────────────────────────────────────────────
+  const TIMER_SCOPE_KEY = `bluuu_checkout_expires:${window.location.search}`;
+  const startUrl = tourType === "shared" ? "/shared-tour-to-nusa-penida" : "/private-tour-to-nusa-penida";
+
+  const handleGoToStart = () => {
+    try { sessionStorage.removeItem("bluuu_payment_pending"); } catch {}
+    try { sessionStorage.removeItem(TIMER_SCOPE_KEY); } catch {}
+    window.location.href = startUrl;
+  };
+
+  // ── Payment pending guard (came back from Xendit/PayPal) ─────────────────
+  const [paymentPending, setPaymentPending] = useState(() => {
+    try { return sessionStorage.getItem("bluuu_payment_pending") === "1"; } catch { return false; }
+  });
+
+  // ── Checkout session timer ────────────────────────────────────────────────
+  const [timeLeft, setTimeLeft] = useState(CHECKOUT_TIMER_MS);
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    let expires = parseInt(sessionStorage.getItem(TIMER_SCOPE_KEY) || "0", 10);
+    if (!expires || expires <= Date.now()) {
+      expires = Date.now() + CHECKOUT_TIMER_MS;
+      sessionStorage.setItem(TIMER_SCOPE_KEY, String(expires));
+    }
+
+    const tick = () => {
+      const remaining = expires - Date.now();
+      if (remaining <= 0) {
+        setTimeLeft(0);
+        setExpired(true);
+      } else {
+        setTimeLeft(remaining);
+      }
+    };
+
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const timerMinutes = Math.floor(timeLeft / 60000);
+  const timerSeconds = Math.floor((timeLeft % 60000) / 1000);
+  const timerLabel = `${timerMinutes}:${String(timerSeconds).padStart(2, "0")}`;
+  const timerUrgent = timeLeft < 2 * 60 * 1000;
+
+  const handleStartOver = handleGoToStart;
 
   // ── UI state ─────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(false);
@@ -208,7 +263,15 @@ export default function Payment() {
       leadId: null,
     };
 
-    try {
+    const MAX_ATTEMPTS = 3;
+    const RETRY_DELAY_MS = 2000;
+
+    const isNetworkError = (err) => {
+      const msg = err?.message || "";
+      return msg === "Load failed" || msg === "Failed to fetch" || msg.includes("NetworkError");
+    };
+
+    const attemptOrder = async () => {
       const headers = { "Content-Type": "application/json" };
       if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
 
@@ -236,14 +299,26 @@ export default function Payment() {
         throw new Error(msg);
       }
 
-      const redirectUrl = await res.json();
-      window.location.href = redirectUrl;
-    } catch (err) {
-      const raw = err.message || "";
-      const isNetworkErr = raw === "Load failed" || raw === "Failed to fetch" || raw.includes("NetworkError");
-      setError(isNetworkErr
+      return res.json();
+    };
+
+    try {
+      let lastErr;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+          const redirectUrl = await attemptOrder();
+          try { sessionStorage.setItem("bluuu_payment_pending", "1"); } catch {}
+          window.location.href = redirectUrl;
+          return;
+        } catch (err) {
+          lastErr = err;
+          if (!isNetworkError(err) || attempt === MAX_ATTEMPTS) break;
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
+      }
+      setError(isNetworkError(lastErr)
         ? "Connection error. Please check your internet and try again."
-        : raw || "Something went wrong. Please try again."
+        : lastErr?.message || "Something went wrong. Please try again."
       );
     } finally {
       setLoading(false);
@@ -259,7 +334,7 @@ export default function Payment() {
       <div className="min-h-screen bg-neutral-50 text-secondary-900">
         <div className="border-b border-neutral-200 bg-white shadow-sm">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
-            <button type="button" onClick={() => window.history.back()}
+            <button type="button" onClick={handleGoToStart}
               className="inline-flex items-center gap-2 text-sm font-semibold text-secondary-500 transition hover:text-secondary-900">
               <ArrowLeft className="h-4 w-4" /> Back
             </button>
@@ -322,12 +397,72 @@ export default function Payment() {
 
   return (
     <div className="min-h-screen bg-neutral-50 text-secondary-900">
+      {/* Payment already submitted overlay */}
+      {paymentPending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-2xl">
+              ⚠️
+            </div>
+            <div className="text-lg font-bold text-secondary-900">
+              Order already submitted
+            </div>
+            <p className="mt-2 text-sm text-secondary-500">
+              Your order was sent to the payment gateway. If you completed payment, check your email for confirmation.
+            </p>
+            <p className="mt-2 text-xs text-secondary-400">
+              To avoid a duplicate payment, please do not submit again.
+            </p>
+            <button
+              type="button"
+              onClick={handleGoToStart}
+              className="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to start
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentPending(false)}
+              className="mt-3 w-full rounded-xl px-6 py-2.5 text-sm font-semibold text-secondary-500 transition hover:text-secondary-900"
+            >
+              I haven't paid yet — continue
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Session expired overlay */}
+      {expired && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="mx-4 w-full max-w-sm rounded-2xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
+              <Clock className="h-7 w-7 text-danger" />
+            </div>
+            <div className="text-lg font-bold text-secondary-900">
+              Session expired
+            </div>
+            <p className="mt-2 text-sm text-secondary-500">
+              Your 10-minute checkout session has ended. Please go back and start over.
+            </p>
+            <button
+              type="button"
+              onClick={handleStartOver}
+              className="btn-primary mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Choose again
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="border-b border-neutral-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
           <button
             type="button"
-            onClick={() => window.history.back()}
+            onClick={handleGoToStart}
             className="inline-flex items-center gap-2 text-sm font-semibold text-secondary-500 transition hover:text-secondary-900"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -337,9 +472,28 @@ export default function Payment() {
             Bluuu · Confirm & Pay
           </div>
           <div className="inline-flex items-center gap-1.5 text-xs font-medium text-secondary-400">
-            <Lock className="h-3.5 w-3.5" />
-            Secure
-          </div>
+              <Lock className="h-3.5 w-3.5" />
+              Secure
+            </div>
+        </div>
+      </div>
+
+      {/* Timer banner */}
+      <div
+        className={cn(
+          "sticky top-0 z-40 border-b px-4 py-2.5 transition-colors",
+          timerUrgent
+            ? "border-red-300 bg-red-500"
+            : "border-primary-200 bg-primary-600"
+        )}
+      >
+        <div className="mx-auto flex max-w-2xl items-center justify-center gap-2.5">
+          <Clock className={cn("h-4 w-4 shrink-0", timerUrgent ? "animate-pulse text-white" : "text-primary-100")} />
+          <span className="text-sm font-semibold text-white">
+            {timerUrgent
+              ? `Hurry! Only ${timerLabel} left to complete your booking`
+              : `Complete your booking within ${timerLabel}`}
+          </span>
         </div>
       </div>
 

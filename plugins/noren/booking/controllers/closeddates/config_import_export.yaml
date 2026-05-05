@@ -1,0 +1,9 @@
+import:
+    title: Import Closed Dates
+    modelClass: Noren\Booking\Models\CloseddatesImport
+    list: $/noren/booking/models/closeddates/columns.yaml
+
+export:
+    title: Export Closed Dates
+    modelClass: Noren\Booking\Models\CloseddatesExport
+    list: $/noren/booking/models/closeddates/columns.yaml

@@ -284,12 +284,12 @@ amount_total          — итоговая сумма
 currency_id           — [11, "IDR"]
 ```
 
-**Кастомные поля (x_studio_*) — полная схема:**
+**Кастомные поля (x_studio_*) — актуальная схема (получена из Odoo fields_get):**
 
 | Поле | Тип Odoo | RO | Используется с сайта | Описание |
 |------|----------|----|----------------------|---------|
-| `x_studio_boat_name` | selection | — | ✓ | Название лодки. **selection**, не char — значение должно точно совпадать с вариантами в Odoo |
-| `x_studio_route` | char | — | ✓ | Название маршрута (`route.name` или `program.name`) |
+| `x_studio_boat_name` | selection | — | ✓ | Название лодки. **selection** — значение должно точно совпадать с вариантами в Odoo |
+| `x_studio_route_new` | selection | — | ✓ | Маршрут (`route.name` или `program.name`). Заменил удалённый `x_studio_route` |
 | `x_studio_adults` | integer | — | ✓ | Кол-во взрослых |
 | `x_studio_kids` | integer | — | ✓ | Кол-во детей |
 | `x_studio_count_of_people` | integer | — | ✓ | Итого людей (members = adults + kids) |
@@ -302,19 +302,20 @@ currency_id           — [11, "IDR"]
 | `x_studio_drop_off_cars` | integer | — | ✓ | Кол-во машин dropoff |
 | `x_studio_car_type` | selection | — | ✓ | Тип машины (Private Car / Private Hi-Ace / Free Shuttle Bus) |
 | `x_studio_tour_type` | selection | — | ✓ | Тип тура из `Tours.odoo_type` |
-| `x_studio_special_requests` | char | — | — | Спец. пожелания клиента (не используется с сайта пока) |
+| `x_studio_lunch` | selection | — | ✓ | Ресторан/обед. **Единственное актуальное поле.** `x_studio_lunch_resto` и `x_studio_lunch_restaurant` **удалены из Odoo** |
+| `x_studio_special_requests` | char | — | — | Спец. пожелания клиента |
 | `x_studio_respondio_id` | char | — | — | ID в respond.io (для партнёрских лодок — TODO) |
+| `x_studio_respondio_weblink` | char | — | — | Weblink для respond.io |
 | `x_studio_weblink` | char | **readonly** | — | Ссылка на портал Odoo (вычисляется автоматически) |
 | `x_studio_source` | selection | — | — | Источник (заполняется вручную в Odoo) |
 | `x_studio_collected_by_cash` | monetary | — | — | Собрано наличными (заполняется менеджером) |
 | `x_studio_collected_by_edcbank` | monetary | — | — | Собрано через EDC/банк |
 | `x_studio_collected_by_xendit` | monetary | — | — | Собрано через Xendit (онлайн) |
 | `x_studio_customer_checked_in_and_cleared` | boolean | — | — | Клиент прошёл check-in |
-| `x_studio_lunch_resto` | selection | — | — | Ресторан (старое selection поле) |
-| `x_studio_lunch_restaurant` | char | — | — | Ресторан (текстовое, текущее) |
 | `x_studio_free_shuttle_bus` | boolean | — | — | Устарело, не используется |
-| `x_studio_boat` | selection | — | — | Устарело (false) |
-| `x_studio_tour_date` | datetime | — | — | Дата тура (не используется с сайта) |
+| `x_studio_boat` | selection | — | — | Устарело |
+| `x_studio_route_kommo` | selection | — | — | Маршрут для Kommo (отдельное поле) |
+| `x_studio_tour_date` | datetime | — | — | Дата тура |
 | `x_studio_agent` | char | — | — | Агент (ручное заполнение) |
 | `x_studio_agency_code` | char | — | — | Код агентства |
 | `x_studio_guide_1` / `x_studio_guide_1_1` | text / selection | — | — | Гид 1 (два поля: текст + selection) |
@@ -325,6 +326,12 @@ currency_id           — [11, "IDR"]
 | `x_studio_reason` | selection | — | — | Причина (отмены и т.п.) |
 | `x_studio_update_` | char | — | — | Номер обновления |
 | `x_studio_describe_circumstances` | text | — | — | Описание обстоятельств (инциденты) |
+| `x_studio_selection_field_4a6_1jmkpofad` | selection | — | — | Lunch (дублирующее поле с техническим именем, не использовать) |
+
+**Удалённые поля (больше не существуют в Odoo):**
+- ~~`x_studio_route`~~ → заменено на `x_studio_route_new`
+- ~~`x_studio_lunch_restaurant`~~ → заменено на `x_studio_lunch`
+- ~~`x_studio_lunch_resto`~~ → заменено на `x_studio_lunch`
 
 ## Important notes
 

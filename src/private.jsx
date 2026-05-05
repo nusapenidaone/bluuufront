@@ -2879,7 +2879,7 @@ function StepTwo({
                   alt={boat.name}
                   onOpenGallery={(startIndex) => {
                     const slides = boat.images?.length ? boat.images : [boat.cover];
-                    Fancybox.show(slides.map(src => ({ src, type: "image" })), { startIndex: startIndex || 0 });
+                    Fancybox.show(slides.map(img => ({ src: img?.path || img?.thumb || img, type: "image" })), { startIndex: startIndex || 0 });
                   }}
                 />
                 {isSelected && (
@@ -8080,6 +8080,19 @@ export default function Premium_Private_With_Vibe() {
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
 
+  const [backFromPayment, setBackFromPayment] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("bluuu_came_from_payment") === "1") {
+        sessionStorage.removeItem("bluuu_came_from_payment");
+        setBackFromPayment(true);
+        const t = setTimeout(() => setBackFromPayment(false), 12000);
+        return () => clearTimeout(t);
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1);
   const [payMode, setPayMode] = useState("full");
@@ -8832,6 +8845,31 @@ export default function Premium_Private_With_Vibe() {
   return (
     <>
       <CurrencyBridge />
+
+      {backFromPayment && (
+        <div className="fixed inset-x-0 top-0 z-[9999] flex items-start justify-center px-4 pt-4 pointer-events-none">
+          <div className="pointer-events-auto flex w-full max-w-lg items-start gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4 shadow-xl shadow-amber-100/60">
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-lg">
+              ⚠️
+            </div>
+            <div className="flex-1">
+              <div className="font-bold text-amber-900">Please fill in the booking form again</div>
+              <div className="mt-0.5 text-sm text-amber-700">
+                Your session has expired. Select your date, boat and details to proceed to payment.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setBackFromPayment(false)}
+              className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-amber-500 transition hover:bg-amber-100 hover:text-amber-900"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <div
         className="min-h-screen text-secondary-900 bg-neutral-100"
       >

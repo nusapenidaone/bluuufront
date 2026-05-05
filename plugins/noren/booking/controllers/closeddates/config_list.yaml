@@ -1,6 +1,7 @@
 title: Closeddates
 modelClass: Noren\Booking\Models\Closeddates
 list: $/noren/booking/models/closeddates/columns.yaml
+recordUrl: 'noren/booking/closeddates/update/:id'
 noRecordsMessage: 'backend::lang.list.no_records'
 recordsPerPage: 20
 showSetup: true
@@ -13,3 +14,4 @@ toolbar:
     search:
         prompt: 'backend::lang.list.search_prompt'
 filter: config_filter.yaml
+

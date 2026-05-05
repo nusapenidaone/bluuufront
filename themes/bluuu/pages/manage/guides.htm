@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluuu Guides</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-100 text-slate-800 p-4 md:p-6 font-['Outfit']">
+<div id="root"></div>
+<script>
+(function(){var t={{ adminToken|json_encode|raw }};if(t)localStorage.setItem('bluuu_admin_token',t);})();
+</script>
+{% verbatim %}
+<script type="text/babel">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+const TOKEN_KEY = 'bluuu_admin_token';
+const SELECT = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 h-9 text-sm outline-none';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function todayBali() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+}
+function shiftDay(ymd, n) {
+    const d = new Date(ymd + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDisplayDate(ymd) {
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${d}.${m}.${y}`;
+}
+function fmtTime(utcStr) {
+    if (!utcStr) return null;
+    return new Date(utcStr.replace(' ', 'T') + 'Z')
+        .toLocaleTimeString('en-GB', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' });
+}
+function partnerName(o) {
+    if (Array.isArray(o.partner_id)) return o.partner_id[1] || '—';
+    return o.partner_id || '—';
+}
+function isPrivate(o) {
+    return (o.x_studio_tour_type || '').toLowerCase().includes('private');
+}
+function strVal(v) {
+    return v && v !== false ? String(v) : null;
+}
+function copyPhone(phone) {
+    navigator.clipboard.writeText(phone).catch(() => {});
+}
+
+// ─── OrderCard ────────────────────────────────────────────────────────────────
+function OrderCard({ o }) {
+    const priv     = isPrivate(o);
+    const adults   = Number(o.x_studio_adults  ?? 0);
+    const kids     = Number(o.x_studio_kids    ?? 0);
+    const total    = Number(o.x_studio_count_of_people) || (adults + kids);
+    const guides   = [o.x_studio_guide_1_1, o.x_studio_guide_2_1].filter(v => v && v !== false).map(String);
+    const phone    = o.odoo_phone || null;
+    const lunch    = strVal(o.x_studio_lunch);
+    const route    = strVal(o.x_studio_route_new);
+    const source   = strVal(o.x_studio_source);
+    const transfer = strVal(o.x_studio_car_type);
+    const pickup   = strVal(o.x_studio_pickup_address);
+    const dropoff  = strVal(o.x_studio_drop_off_address);
+    const time     = fmtTime(o.rental_start_date);
+    const pax_list = strVal(o.x_studio_passenger_list);
+    const tourTitle = o.local_name || (priv ? 'Private Boat Tour' : 'Shared Boat Tour');
+    const clientName = partnerName(o);
+
+    const Field = ({ label, value, pre }) => {
+        if (!value) return null;
+        return (
+            <div className="border-b border-slate-100 pb-2">
+                <span className="font-semibold text-slate-700 text-sm">{label}: </span>
+                {pre
+                    ? <span className="text-slate-600 text-sm whitespace-pre-line block mt-0.5">{value}</span>
+                    : <span className="text-slate-600 text-sm">{value}</span>
+                }
+            </div>
+        );
+    };
+
+    return (
+        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
+            {/* Card header */}
+            <div className="px-4 pt-4 pb-3 border-b border-slate-100">
+                <div className="flex items-start justify-between gap-3 mb-1">
+                    <a href={`https://pt-day-trip-bali.odoo.com/odoo/rental/${o.id}`}
+                        target="_blank" rel="noopener"
+                        className={`text-base font-bold leading-snug hover:underline ${priv ? 'text-violet-600' : 'text-emerald-600'}`}>
+                        {tourTitle}
+                    </a>
+                    <span className="text-sm text-slate-400 shrink-0 tabular-nums whitespace-nowrap">
+                        {total} ({kids} kids) persons
+                    </span>
+                </div>
+                <div className="text-sm font-semibold text-slate-700">
+                    {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
+                </div>
+            </div>
+
+            {/* Fields */}
+            <div className="px-4 py-3 space-y-2 flex-1">
+                <Field label="Guides"    value={guides.length ? guides.join(', ') : '—'} />
+                <Field label="Route"     value={route || '—'} />
+                <Field label="Lunch"     value={lunch || '—'} />
+                <Field label="Transfer"  value={transfer} />
+                <Field label="Source"    value={source} />
+                <Field label="Time"      value={time} />
+                <Field label="Pickup"    value={pickup} />
+                <Field label="Drop-off"  value={dropoff} />
+                <Field label="Names"     value={pax_list} pre />
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-700 truncate">{clientName}</span>
+                {phone && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <a href={`tel:${phone}`}
+                            className="text-sm font-semibold text-emerald-600 hover:text-emerald-500 transition-colors tabular-nums">
+                            {phone}
+                        </a>
+                        <button onClick={() => copyPhone(phone)}
+                            className="text-slate-400 hover:text-slate-600 transition-colors p-0.5" title="Copy">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                            </svg>
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+function App() {
+    const token = localStorage.getItem(TOKEN_KEY) || '';
+    const [date,        setDate]        = useState(todayBali);
+    const [data,        setData]        = useState(null);
+    const [loading,     setLoading]     = useState(false);
+    const [error,       setError]       = useState('');
+    const [filterGuide, setFilterGuide] = useState('');
+    const [filterBoat,  setFilterBoat]  = useState('');
+
+    const load = useCallback(async d => {
+        setLoading(true);
+        setError('');
+        try {
+            const res  = await fetch(`/api/admin/leads?date_from=${d}&date_to=${d}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+            setData(json);
+            setFilterGuide('');
+            setFilterBoat('');
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    useEffect(() => { load(date); }, [date]);
+
+    const orders = data?.orders || [];
+
+    const guideOptions = useMemo(() => {
+        const set = new Set();
+        orders.forEach(o => {
+            if (o.x_studio_guide_1_1 && o.x_studio_guide_1_1 !== false) set.add(String(o.x_studio_guide_1_1));
+            if (o.x_studio_guide_2_1 && o.x_studio_guide_2_1 !== false) set.add(String(o.x_studio_guide_2_1));
+        });
+        return [...set].sort();
+    }, [orders]);
+
+    const boatOptions = useMemo(() =>
+        [...new Set(orders.map(o => o.x_studio_boat_name).filter(Boolean))].sort()
+    , [orders]);
+
+    const filtered = useMemo(() => {
+        return orders
+            .filter(o => {
+                if (filterBoat && (o.x_studio_boat_name || '') !== filterBoat) return false;
+                if (filterGuide) {
+                    const g1 = o.x_studio_guide_1_1 && o.x_studio_guide_1_1 !== false ? String(o.x_studio_guide_1_1) : '';
+                    const g2 = o.x_studio_guide_2_1 && o.x_studio_guide_2_1 !== false ? String(o.x_studio_guide_2_1) : '';
+                    if (g1 !== filterGuide && g2 !== filterGuide) return false;
+                }
+                return true;
+            })
+            .sort((a, b) => {
+                const ta = a.rental_start_date || '';
+                const tb = b.rental_start_date || '';
+                return ta < tb ? -1 : ta > tb ? 1 : 0;
+            });
+    }, [orders, filterGuide, filterBoat]);
+
+    const isToday = date === todayBali();
+
+    return (
+        <div>
+            {/* Sticky header */}
+            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
+                <select className={SELECT} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
+                    <option value="">All guides</option>
+                    {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <select className={SELECT} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                    <option value="">All Boats</option>
+                    {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+
+                <div className="flex-1" />
+                {loading && <span className="text-[10px] text-blue-500 animate-pulse uppercase tracking-widest">Loading…</span>}
+                {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}
+
+                {/* Date nav */}
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setDate(d => shiftDay(d, -1))}
+                        className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all text-xl font-bold leading-none">
+                        ‹
+                    </button>
+                    <button onClick={() => !isToday && setDate(todayBali())}
+                        className={`h-9 px-4 flex items-center border rounded-lg text-sm font-bold shadow-sm transition-all ${isToday ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'}`}>
+                        {fmtDisplayDate(date)}
+                    </button>
+                    <button onClick={() => setDate(d => shiftDay(d, 1))}
+                        className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all text-xl font-bold leading-none">
+                        ›
+                    </button>
+                </div>
+                <button onClick={() => load(date)} disabled={loading}
+                    className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all disabled:opacity-40 text-base">
+                    ↺
+                </button>
+            </div>
+
+            {/* Content */}
+            <div className="mt-5">
+                {error && (
+                    <div className="mb-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+                )}
+                {loading && (
+                    <div className="flex justify-center mt-16 text-blue-500 font-bold animate-pulse tracking-[0.2em] text-sm">LOADING FROM ODOO...</div>
+                )}
+                {!loading && data && filtered.length === 0 && (
+                    <div className="text-center py-16 text-sm text-slate-400">No orders for {fmtDisplayDate(date)}</div>
+                )}
+                {!loading && filtered.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {filtered.map(o => <OrderCard key={o.id} o={o} />)}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+{% endverbatim %}
+</body>
+</html>

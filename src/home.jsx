@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useId, useMemo } from 'react';
+import { getUtmQueryString } from './lib/analytics';
 import PhoneInput, { isValidPhoneNumber } from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import './home.css';
@@ -80,13 +81,7 @@ const Home3 = () => {
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', whatsapp: '', groupSize: '' });
   const utmRef = useRef({});
-  const utmQuery = useMemo(() => {
-    const p = new URLSearchParams(window.location.search);
-    const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
-    const out = new URLSearchParams();
-    keys.forEach(k => { if (p.get(k)) out.set(k, p.get(k)); });
-    return out.toString();
-  }, []);
+  const utmQuery = useMemo(() => getUtmQueryString(), []);
   const utmUrl = (base) => utmQuery ? `${base}?${utmQuery}` : base;
   const [openFaqIndex, setOpenFaqIndex] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
