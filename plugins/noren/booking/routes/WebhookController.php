@@ -19,6 +19,7 @@ class WebhookController extends Controller
 {
     public function getData(){
         $data=Input::all();
+        Log::info($data);
 
         
         if(isset($data['leads']['status'][0]['custom_fields'])){
@@ -43,6 +44,10 @@ class WebhookController extends Controller
     				    case '187666':
     				        $tour = $field['values'][0]['value'];
     				        break;
+    				    case '685183':
+    				        $odoo_id = $field['values'][0]['value'];
+    				        break;
+    				        
     				        
     				        
     				}
@@ -61,6 +66,7 @@ class WebhookController extends Controller
                         $available->date=date('Y-m-d', $date+28800);
                         $available->type=$type;
                         $available->lead_id=$lead_id;
+                        $available->odoo_id=$odoo_id;
                         $available->boat_id=$boat->id;
                         $available->qtty=isset($qtty) ? $qtty : null ;
                         $available->save();

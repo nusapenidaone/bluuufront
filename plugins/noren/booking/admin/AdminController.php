@@ -324,7 +324,7 @@ class AdminController extends Controller
     }
 
     // ─── GET /api/admin/leads ─────────────────────────────────────────────────
-    // Odoo orders for a date range (Bali/Makassar timezone), enriched with local data
+    // Odoo orders for a date range (Bali/Makassar timezone)
     // Params: date_from=YYYY-MM-DD, date_to=YYYY-MM-DD (or single date=YYYY-MM-DD)
 
     public function leads(Request $request)
@@ -349,13 +349,6 @@ class AdminController extends Controller
             $orders = OdooService::getLeadsForDate($startUtc, $endUtc);
 
             if (!empty($orders)) {
-                $odooIds = array_column($orders, 'id');
-
-                $localOrders = Order::whereIn('odoo_id', $odooIds)
-                    ->get(['id', 'odoo_id', 'extras'])
-                    ->keyBy('odoo_id');
-
-                // Batch-fetch partner contacts from Odoo
                 $partnerIds = array_unique(array_filter(array_map(
                     function ($o) { return is_array($o['partner_id']) ? $o['partner_id'][0] : null; },
                     $orders
@@ -363,14 +356,10 @@ class AdminController extends Controller
                 $partners = OdooService::readPartners($partnerIds);
 
                 foreach ($orders as &$order) {
-                    $local = $localOrders->get($order['id']);
-                    $order['local_id']     = $local ? $local->id : null;
-                    $order['local_extras'] = ($local && is_array($local->extras)) ? $local->extras : [];
-
                     $pid = is_array($order['partner_id']) ? $order['partner_id'][0] : null;
                     $p   = $pid ? ($partners[$pid] ?? null) : null;
                     $order['odoo_email'] = $p['email'] ?? null;
-                    $order['odoo_phone'] = $p['mobile'] ?? $p['phone'] ?? null;
+                    $order['odoo_phone'] = $p['phone'] ?? null;
                 }
                 unset($order);
             }

@@ -20,17 +20,23 @@ export function captureUtm() {
     if (v) fromUrl[k] = v;
   });
 
-  // Read existing stored data to merge into
+  // Read UTMs stored by PHP before redirect (covers server stripping query params, e.g. home page canonicalization)
+  let fromPendingCookie = {};
+  const pendingB64 = readCookie('bluuu_utm_pending');
+  if (pendingB64) {
+    try { fromPendingCookie = JSON.parse(atob(pendingB64)); } catch { /* ignore */ }
+    document.cookie = 'bluuu_utm_pending=; Max-Age=0; path=/';
+  }
+
   let existing = {};
   try {
     const raw = sessionStorage.getItem(UTM_STORAGE_KEY);
     if (raw) existing = JSON.parse(raw);
   } catch { /* ignore */ }
 
-  // URL params always win; start from existing then overlay URL params
-  const merged = { ...existing, ...fromUrl };
+  // Priority: URL params > pending cookie > existing sessionStorage
+  const merged = { ...existing, ...fromPendingCookie, ...fromUrl };
 
-  // Capture external referrer once — only if not already stored and not internal
   if (!merged['utm_referrer']) {
     const ref = typeof document !== 'undefined' ? document.referrer : '';
     const isExternal = ref && !ref.includes(window.location.hostname);

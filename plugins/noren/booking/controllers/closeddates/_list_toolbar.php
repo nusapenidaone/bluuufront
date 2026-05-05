@@ -13,4 +13,14 @@
         data-stripe-load-indicator>
         <?= e(trans('backend::lang.list.delete_selected')) ?>
     </button>
+    <a
+        href="<?= Backend::url('noren/booking/closeddates/import') ?>"
+        class="btn btn-default oc-icon-upload">
+        Import
+    </a>
+    <a
+        href="<?= Backend::url('noren/booking/closeddates/export') ?>"
+        class="btn btn-default oc-icon-download">
+        Export
+    </a>
 </div>

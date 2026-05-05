@@ -12,6 +12,7 @@ use Noren\Booking\Routes\ToursController1;
 use Noren\Booking\Routes\RatesController;
 use Noren\Booking\Routes\QrController;
 use Noren\Booking\Routes\PaylinkController;
+use Noren\Booking\Routes\WebhookController;
 use Fruitcake\Cors\HandleCors;
 
 

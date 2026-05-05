@@ -26,4 +26,20 @@ class Closeddates extends Model
     ];
     protected $fillable = ['date','lead_id','boat_id','qtty', 'type', 'odoo_id'];
 
+    public function scopeFilterType($query, $scope)
+    {
+        $values = is_object($scope) ? $scope->value : $scope;
+        if (!$values) return $query;
+
+        return $query->where(function($q) use ($values) {
+            foreach ($values as $value) {
+                if ($value === 'empty') {
+                    $q->orWhereNull('type')->orWhere('type', '');
+                } else {
+                    $q->orWhere('type', $value);
+                }
+            }
+        });
+    }
+
 }
