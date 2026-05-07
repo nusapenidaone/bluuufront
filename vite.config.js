@@ -4,7 +4,7 @@ import fs from 'fs'
 import path from 'path'
 
 const ASSETS_DIR = 'themes/bluuu/assets/home'
-const PAGE_FILE = 'themes/bluuu/pages/home.htm'
+const PAGE_FILE  = 'themes/bluuu/pages/home.htm'
 
 const CMS_HEADER = `url = "/:slug?/:slug1?"
 title = "New"
@@ -24,20 +24,32 @@ function updatePagePlugin() {
       if (!fs.existsSync(indexPath)) return
 
       const built = fs.readFileSync(indexPath, 'utf-8')
-      const pagePath = path.resolve(PAGE_FILE)
-
-      fs.writeFileSync(pagePath, CMS_HEADER + built)
+      fs.writeFileSync(path.resolve(PAGE_FILE), CMS_HEADER + built)
       fs.unlinkSync(indexPath)
       console.log('[update-page] Updated', PAGE_FILE)
     },
   }
 }
 
-// https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/themes/bluuu/assets/home/' : '/',
-  plugins: [react(), updatePagePlugin()],
+  plugins: [
+    react(),
+    updatePagePlugin(),
+    {
+      name: 'spa-fallback',
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          if (req.url?.startsWith('/explore') || req.url?.startsWith('/discover')) {
+            req.url = '/index.html';
+          }
+          next();
+        });
+      },
+    },
+  ],
   server: {
+    port: 5173,
     proxy: {
       '/api': {
         target: 'https://bluuu.tours',
@@ -50,7 +62,6 @@ export default defineConfig(({ command }) => ({
     outDir: ASSETS_DIR,
     emptyOutDir: true,
     assetsDir: '',
-    // Don't preload heavy lazy-only chunks in the initial HTML
     modulePreload: {
       resolveDependencies: (_filename, deps) =>
         deps.filter(d => !d.includes('vendor-datepicker') && !d.includes('fancybox')),
@@ -58,10 +69,12 @@ export default defineConfig(({ command }) => ({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
+          'vendor-react':      ['react', 'react-dom'],
           'vendor-datepicker': ['react-datepicker'],
-          'vendor-icons': ['lucide-react'],
-          'vendor-phone': ['react-international-phone'],
+          'vendor-icons':      ['lucide-react'],
+          'vendor-phone':      ['react-international-phone'],
+          'vendor-motion':     ['framer-motion'],
+          'vendor-hugeicons':  ['@hugeicons/react', '@hugeicons/core-free-icons'],
         },
       },
     },

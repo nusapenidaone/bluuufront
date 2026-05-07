@@ -7,6 +7,7 @@ use App;
 use Noren\Booking\Classes\KommoDataBuilder;
 use Noren\Booking\Classes\Ga4Service;
 use Noren\Booking\Odoo\OdooService;
+use Noren\Booking\RespondIo\RespondIoService;
 
 class Order extends Model
 {
@@ -111,6 +112,7 @@ class Order extends Model
                     static::dispatchLead($order);
                     //KommoDataBuilder::createLead($order->id);
                     Ga4Service::sendPurchase($order);
+                    RespondIoService::sendOrder($order);
                 } catch (\Exception $e) {
                     Log::error("AfterUpdate error #{$order->id}: " . $e->getMessage());
                 }

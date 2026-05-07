@@ -20,76 +20,14 @@ class PrivateOrderController extends Controller
     /**
      * POST /api/new/order/private
      *
-     * Accepts private-tour booking data and creates an Order record.
-     * Returns a payment URL (Xendit or PayPal) or a success URL for request-type orders.
-     *
-     * Expected JSON body:
-     * {
-     *   // Tour
-     *   "tourId":           int,        // private tour ID
-     *   "travelDate":       "YYYY-MM-DD",
-     *
-     *   // Guests
-     *   "adults":           int,
-     *   "kids":             int,        // children 3–11
-     *   "children":         int,        // infants 0–2
-     *   "members":          int,        // adults + kids
-     *   "cars":             int,        // number of cars for transfer
-     *
-     *   // Pricing  (all in IDR)
-     *   "boatPrice":        float,      // base boat rental price
-     *   "tourPrice":        float,      // tour price (may differ from boatPrice with discount)
-     *   "transferPrice":    float,
-     *   "coverPrice":       float,
-     *   "programPrice":     float,      // route/program add-on price
-     *   "extrasTotal":      float,
-     *   "totalPrice":       float,      // what the customer pays now (or deposit)
-     *   "fullPrice":        float,      // full order value
-     *   "discountPrice":    float,      // amount discounted
-     *   "discount":         float,      // discount % or flat amount
-     *
-     *   // Selected options (IDs)
-     *   "selectedTransferId":   int|null,
-     *   "selectedCoverId":      int|null,
-     *   "selectedProgramId":    int|null,
-     *   "selectedRestaurantId": int|null,
-     *   "selectedExtras":       array,    // [{id, qty, price, name}, ...]
-     *
-     *   // Payment
-     *   "deposite":   int,    // deposit % (0 = request only, no payment)
-     *   "method":     int,    // 1 = Xendit, 2 = PayPal
-     *
-     *   // Promo / agent
-     *   "promocode":  string|null,
-     *   "agent_fee":  float,
-     *   "agent_name": string|null,
-     *
-     *   // Guest contact
-     *   "name":           string,
-     *   "email":          string,
-     *   "whatsapp":       string,
-     *   "requests":       string|null,
-     *   "pickupAddress":  string|null,
-     *   "dropoffAddress": string|null,
-     *
-     *   // Analytics
-     *   "ga_client_id": string|null,
-     *   "leadId":       int|null,
-     * }
+     * Saves the order to the database immediately (no payment gateway call).
+     * Returns {external_id} so the frontend can call /pay next.
      */
     public function createOrder(Request $request)
     {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
-
-        set_time_limit(120);
-
-        // CSRF check (same as OrderController)
-        // TODO: re-enable before production
-        // if (Session::token() != $request->header('X-CSRF-TOKEN')) {
-        //     return response('Unauthorized.', 401);
-        // }
 
         try {
 
@@ -195,47 +133,85 @@ class PrivateOrderController extends Controller
 
         Session::put('order_id', $order->id);
 
-        // ── Request-only (no deposit) ─────────────────────────────────
-        if ($order->deposite == 0) {
-            return response()->json(url('/new/success') . '?type=request');
-        }
+        \Log::info('[PrivateOrder] saved', ['order_id' => $order->id, 'external_id' => $order->external_id]);
 
-        // ── Xendit payment ────────────────────────────────────────────
-        $successBase = url('/new/success') . '?type=private'
-            . '&order_id=' . urlencode($order->external_id)
-            . '&num_items=' . ($order->adults + $order->kids)
-            . '&content_ids=' . $order->tours_id;
-
-        if ($order->method_id == 1) {
-            $successUrl = $successBase . '&amount=' . $order->deposite_summ . '&currency=IDR';
-            $url = XenditService::createPaymentLink(
-                $order->external_id,
-                $order->deposite_summ,
-                $order->email,
-                $successUrl,
-                url('/error'),
-                $order->tours->name ?? 'Private Tour'
-            );
-
-        // ── PayPal payment ────────────────────────────────────────────
-        } else {
-            $usd_rate = Rates::find(2)->rate;
-            $usd_summ = $usd_rate * $order->deposite_summ;
-            $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
-            $url = PayPalService::createPaymentLink(
-                $order->external_id,
-                $usd_summ,
-                $order->email,
-                $successUrl,
-                url('/error'),
-                $order->tours->name ?? 'Private Tour'
-            );
-        }
-
-        return response()->json($url);
+        return response()->json(['external_id' => $order->external_id]);
 
         } catch (\Throwable $e) {
             \Log::error('PrivateOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/new/order/private/pay
+     *
+     * Accepts {external_id}, loads the saved order, calls Xendit or PayPal,
+     * and returns the payment URL. Safe to retry — order already exists.
+     */
+    public function createPaymentLink(Request $request)
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
+        set_time_limit(120);
+
+        try {
+            $externalId = $request->input('external_id');
+            if (!$externalId) {
+                return response()->json(['error' => 'external_id required'], 422);
+            }
+
+            $order = Order::with('tours')->where('external_id', $externalId)->first();
+            if (!$order) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            \Log::info('[PrivateOrder] createPaymentLink', [
+                'external_id' => $externalId,
+                'method_id'   => $order->method_id,
+                'deposite'    => $order->deposite,
+                'amount'      => $order->deposite_summ,
+            ]);
+
+            if ($order->deposite == 0) {
+                return response()->json(url('/new/success') . '?type=request');
+            }
+
+            $successBase = url('/new/success') . '?type=private'
+                . '&order_id=' . urlencode($order->external_id)
+                . '&num_items=' . ($order->adults + $order->kids)
+                . '&content_ids=' . $order->tours_id;
+
+            if ($order->method_id == 1) {
+                $successUrl = $successBase . '&amount=' . $order->deposite_summ . '&currency=IDR';
+                $url = XenditService::createPaymentLink(
+                    $order->external_id,
+                    $order->deposite_summ,
+                    $order->email,
+                    $successUrl,
+                    url('/error'),
+                    $order->tours->name ?? 'Private Tour'
+                );
+            } else {
+                $usd_rate = Rates::find(2)->rate;
+                $usd_summ = $usd_rate * $order->deposite_summ;
+                $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
+                $url = PayPalService::createPaymentLink(
+                    $order->external_id,
+                    $usd_summ,
+                    $order->email,
+                    $successUrl,
+                    url('/error'),
+                    $order->tours->name ?? 'Private Tour'
+                );
+            }
+
+            return response()->json($url);
+
+        } catch (\Throwable $e) {
+            \Log::error('PrivateOrderController@createPaymentLink error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

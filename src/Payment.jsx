@@ -208,6 +208,8 @@ export default function Payment() {
     setError(null);
 
     const csrfToken = getCsrfToken();
+    const headers = { "Content-Type": "application/json" };
+    if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
 
     const body = {
       tourId: boatId ? parseInt(boatId, 10) : null,
@@ -263,63 +265,73 @@ export default function Payment() {
       leadId: null,
     };
 
-    const MAX_ATTEMPTS = 3;
-    const RETRY_DELAY_MS = 2000;
-
     const isNetworkError = (err) => {
+      if (err?.name === "AbortError") return true;
       const msg = err?.message || "";
       return msg === "Load failed" || msg === "Failed to fetch" || msg.includes("NetworkError");
     };
 
-    const attemptOrder = async () => {
-      const headers = { "Content-Type": "application/json" };
-      if (csrfToken) headers["X-CSRF-TOKEN"] = csrfToken;
-
-      const orderEndpoint = tourType === "shared" ? "order/shared" : "order/private";
-      const res = await fetch(apiUrl(orderEndpoint), {
-        method: "POST",
-        headers,
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
-
-      if (res.status === 401) {
-        throw new Error("Session expired. Please refresh the page and try again.");
-      }
-
-      if (!res.ok) {
-        const text = await res.text();
-        let msg = `Server error (${res.status})`;
-        try {
-          const json = JSON.parse(text);
-          msg = json.error || json.message || msg;
-        } catch {
-          if (text) msg = text;
+    const fetchJson = async (url, options, timeoutMs) => {
+      const controller = new AbortController();
+      const timerId = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { ...options, signal: controller.signal });
+        if (res.status === 401) throw new Error("Session expired. Please refresh the page and try again.");
+        if (!res.ok) {
+          const text = await res.text();
+          let msg = `Server error (${res.status})`;
+          try { const j = JSON.parse(text); msg = j.error || j.message || msg; } catch { if (text) msg = text; }
+          throw new Error(msg);
         }
-        throw new Error(msg);
+        return res.json();
+      } finally {
+        clearTimeout(timerId);
       }
-
-      return res.json();
     };
 
+    const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
     try {
-      let lastErr;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      // Step 1: save order to DB (fast, no Xendit — order is always recorded)
+      const orderEndpoint = tourType === "shared" ? "order/shared" : "order/private";
+      let draft;
+      try {
+        draft = await fetchJson(apiUrl(orderEndpoint), { method: "POST", headers, credentials: "include", body: JSON.stringify(body) }, 15_000);
+      } catch (err) {
+        setError(isNetworkError(err)
+          ? "Connection error. Please check your internet and try again."
+          : err?.message || "Something went wrong. Please try again.");
+        return;
+      }
+
+      // Step 2: get payment URL from Xendit/PayPal (retries are safe — no duplicate orders)
+      const payEndpoint = tourType === "shared" ? "order/shared/pay" : "order/private/pay";
+      let payUrl;
+      let lastPayErr;
+      for (let attempt = 1; attempt <= 3; attempt++) {
         try {
-          const redirectUrl = await attemptOrder();
-          try { sessionStorage.setItem("bluuu_payment_pending", "1"); } catch {}
-          window.location.href = redirectUrl;
-          return;
+          payUrl = await fetchJson(apiUrl(payEndpoint), {
+            method: "POST",
+            headers,
+            credentials: "include",
+            body: JSON.stringify({ external_id: draft.external_id }),
+          }, 35_000);
+          break;
         } catch (err) {
-          lastErr = err;
-          if (!isNetworkError(err) || attempt === MAX_ATTEMPTS) break;
-          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+          lastPayErr = err;
+          if (attempt < 3) await delay(2000);
         }
       }
-      setError(isNetworkError(lastErr)
-        ? "Connection error. Please check your internet and try again."
-        : lastErr?.message || "Something went wrong. Please try again."
-      );
+
+      if (!payUrl) {
+        setError(isNetworkError(lastPayErr)
+          ? "Could not connect to payment gateway. Please try again."
+          : lastPayErr?.message || "Payment gateway error. Please try again.");
+        return;
+      }
+
+      try { sessionStorage.setItem("bluuu_payment_pending", "1"); } catch {}
+      window.location.href = payUrl;
     } finally {
       setLoading(false);
     }

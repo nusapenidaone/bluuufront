@@ -19,7 +19,7 @@ class WebhookController extends Controller
 {
     public function getData(){
         $data=Input::all();
-        Log::info($data);
+    
 
         
         if(isset($data['leads']['status'][0]['custom_fields'])){
@@ -54,7 +54,7 @@ class WebhookController extends Controller
                 }
                 if(isset($boat)){
                 	
-					$type = in_array($tour, ['2-Shared Boat Tour', '3-Premium Shared Boat Tour']) ? 1 : 2;
+					$type = in_array($tour, ['2-Shared Boat Tour', '3-Premium Shared Boat Tour', '11-First Class Shared Boat Tour']) ? 1 : 2;
 					
                     $boat=Boat::where('amo_name',$boat)->first();
                     

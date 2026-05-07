@@ -4,6 +4,7 @@ namespace Noren\Booking\Api;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Noren\Booking\RespondIo\RespondIoService;
 
 class MarketingController extends Controller
 {
@@ -103,6 +104,14 @@ class MarketingController extends Controller
         }
 
         if ($httpCode >= 200 && $httpCode < 300) {
+            RespondIoService::sendMarketingLead([
+                'name'      => $name,
+                'email'     => $email,
+                'whatsapp'  => $whatsapp,
+                'groupSize' => $groupSize,
+                'utm'       => $utm,
+            ]);
+
             return response()->json(['success' => true]);
         }
 

@@ -10,13 +10,11 @@ class Closeddates extends Controller
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class,
         \Backend\Behaviors\ImportExportController::class,
-        \Backend\Behaviors\FilterController::class,
     ];
 
     public $formConfig = 'config_form.yaml';
     public $listConfig = 'config_list.yaml';
     public $importExportConfig = 'config_import_export.yaml';
-    public $filterConfig = 'config_filter.yaml';
 
     public function __construct()
     {
