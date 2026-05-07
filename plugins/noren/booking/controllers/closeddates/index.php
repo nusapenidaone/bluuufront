@@ -1,2 +1,1 @@
-<?= $this->listFilterRender() ?>
 <?= $this->listRender() ?>

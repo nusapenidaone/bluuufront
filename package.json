@@ -11,13 +11,17 @@
   },
   "dependencies": {
     "@fancyapps/ui": "^6.1.13",
+    "@hugeicons/core-free-icons": "^4.1.1",
+    "@hugeicons/react": "^1.1.6",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.24.12",
     "lucide-react": "^0.562.0",
     "react": "^19.2.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.0",
-    "react-international-phone": "^4.8.0"
+    "react-international-phone": "^4.8.0",
+    "react-phone-number-input": "^3.4.16"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -25,11 +29,13 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
     "autoprefixer": "^10.4.23",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "postcss": "^8.5.6",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "vercel": "^50.3.2",
     "vite": "^7.2.4"

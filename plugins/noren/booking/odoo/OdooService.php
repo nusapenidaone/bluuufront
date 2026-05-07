@@ -29,11 +29,7 @@ class OdooService
 
     protected static function paymentSource(Order $order): string
     {
-        return match ((int) $order->method_id) {
-            1 => 'Xendit',
-            2 => 'PayPal',
-            default => '',
-        };
+        return optional($order->method)->name ?? '';
     }
 
     /**
@@ -69,7 +65,7 @@ class OdooService
         static::cancelOrder($odooOrderId);
 
         // 3. Create new order
-        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
+        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant', 'method']);
 
         $data = static::buildOrderData($order);
         $data['lead']['payment_source'] = static::paymentSource($order);
@@ -83,10 +79,7 @@ class OdooService
         if ($odooDeposit > $localDeposit) {
             static::post('/json/2/sale.order/write', [
                 'ids'  => [$newOdooId],
-                'vals' => [
-                    'x_studio_deposit' => $odooDeposit,
-                    'x_studio_collect' => max(0.0, (float) ($order->total_price ?? 0) - $odooDeposit),
-                ],
+                'vals' => ['x_studio_deposit' => $odooDeposit],
             ]);
         }
 
@@ -108,7 +101,7 @@ class OdooService
 
     public static function createLead(Order $order): array
     {
-        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant']);
+        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant', 'method']);
 
         $data = static::buildOrderData($order);
         $data['lead']['payment_source'] = static::paymentSource($order);
@@ -365,7 +358,7 @@ class OdooService
 
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_deposit', 'x_studio_collect'],
+            'fields' => ['x_studio_deposit'],
             'limit'  => 1,
         ]);
 
@@ -375,21 +368,16 @@ class OdooService
         }
 
         $currentDeposit = (float) ($result[0]['x_studio_deposit'] ?? 0);
-        $currentCollect = (float) ($result[0]['x_studio_collect'] ?? 0);
 
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
-            'vals' => [
-                'x_studio_deposit' => $currentDeposit + $amount,
-                'x_studio_collect' => max(0.0, $currentCollect - $amount),
-            ],
+            'vals' => ['x_studio_deposit' => $currentDeposit + $amount],
         ]);
 
         Log::info('OdooService::registerWebPayment — done', [
-            'odoo_id'         => $odooOrderId,
-            'amount'          => $amount,
-            'deposit_before'  => $currentDeposit,
-            'collect_before'  => $currentCollect,
+            'odoo_id'        => $odooOrderId,
+            'amount'         => $amount,
+            'deposit_before' => $currentDeposit,
         ]);
     }
 
@@ -407,10 +395,7 @@ class OdooService
 
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
-            'vals' => [
-                'x_studio_deposit' => $currentDeposit + $amount,
-                'x_studio_collect' => 0,
-            ],
+            'vals' => ['x_studio_deposit' => $currentDeposit + $amount],
         ]);
     }
 
@@ -428,28 +413,28 @@ class OdooService
 
         // ── Lead / order fields ───────────────────────────────────────────────
         $lead = [
-            'boat_name'       => optional($boat)->name ?? '',
-            'company_odoo_id' => $company && $company->odoo_id ? (int) $company->odoo_id : null,
-            'adults'          => (int)($order->adults  ?? 0),
-            'kids'            => (int)($order->kids    ?? 0),
-            'members'         => (int)($order->members ?? 0),
-            'travel_date'     => $date,
-            'pickup_address'  => $order->pickup_address  ?? '',
-            'dropoff_address' => $order->dropoff_address ?? '',
-            'cars'            => (int)($order->cars ?? 0),
-            'transfer_type'   => optional($order->transfer)->type ?? '',
-            'route_name'      => optional($order->route)->name ?? optional($order->program)->name ?? '',
-            'route_start'     => optional($order->route)->start ?? '08:00:00',
-            'route_end'       => optional($order->route)->end   ?? '18:00:00',
-            'deposite_summ'   => (float)($order->deposite_summ ?? 0),
-            'total_price'     => (float)($order->total_price   ?? 0),
-            'name'            => $order->name,
-            'email'           => $order->email,
-            'whatsapp'        => $order->whatsapp    ?? '',
-            'external_id'     => $order->external_id ?? '',
-            'order_id'        => $order->id,
+            'boat_name'        => optional($boat)->name ?? '',
+            'company_odoo_id'  => $company && $company->odoo_id ? (int) $company->odoo_id : null,
+            'adults'           => (int)($order->adults  ?? 0),
+            'kids'             => (int)($order->kids    ?? 0),
+            'members'          => (int)($order->members ?? 0),
+            'travel_date'      => $date,
+            'pickup_address'   => $order->pickup_address  ?? '',
+            'dropoff_address'  => $order->dropoff_address ?? '',
+            'cars'             => (int)($order->cars ?? 0),
+            'transfer_type'    => optional($order->transfer)->type ?? '',
+            'route_name'       => optional($order->route)->name ?? optional($order->program)->name ?? '',
+            'route_start'      => optional($order->route)->start ?? '08:00:00',
+            'route_end'        => optional($order->route)->end   ?? '18:00:00',
+            'restaurant_name'  => optional($order->restaurant)->name ?? '',
+            'deposite_summ'    => (float)($order->deposite_summ ?? 0),
+            'total_price'      => (float)($order->total_price   ?? 0),
+            'name'             => $order->name,
+            'email'            => $order->email,
+            'whatsapp'         => $order->whatsapp    ?? '',
+            'external_id'      => $order->external_id ?? '',
+            'order_id'         => $order->id,
             'transfer_id'      => (int) $order->transfer_id,
-            'free_shuttle_bus' => (int) $order->transfer_id === 3,
             'tour_type'        => $tour->odoo_type ?? '',
             'source_name'      => optional($order->source)->name ?? '',
         ];
@@ -596,6 +581,8 @@ class OdooService
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_boat_name'        => $lead['boat_name'],
+            'x_studio_route_new'        => $lead['route_name'],
+            'x_studio_lunch'            => $lead['restaurant_name'],
             'x_studio_pickup_cars'      => in_array((int)$lead['transfer_id'], [1, 2]) ? (int)$lead['cars'] : 0,
             'x_studio_drop_off_cars'    => (int)$lead['transfer_id'] === 2 ? (int)$lead['cars'] : 0,
             'x_studio_car_type'         => static::resolveCarType((int)$lead['transfer_id'], (int)$lead['members']),
@@ -603,10 +590,8 @@ class OdooService
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
-            'x_studio_collect'          => $lead['total_price'] - $lead['deposite_summ'],
             'x_studio_payment_source'   => $lead['payment_source'] ?? '',
             'client_order_ref'          => $lead['external_id'],
-            'x_studio_free_shuttle_bus' => $lead['free_shuttle_bus'] ?? false,
             'x_studio_tour_type'        => $lead['tour_type'] ?? '',
             'x_studio_source'           => $lead['source_name'] ?? '',
         ];
@@ -747,7 +732,7 @@ class OdooService
     {
         if ($transferId === 3) return 'Free Shuttle Bus';
         if (in_array($transferId, [1, 2])) {
-            return 'Private Car';
+            return $members > 5 ? 'Private Hi-Ace' : 'Private Car';
         }
         return false;
     }

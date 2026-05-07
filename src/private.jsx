@@ -351,13 +351,15 @@ function PartnerRequestModal({ isOpen, onClose, tourId, tourName, date, adults, 
 
   const rangeDates = useMemo(() => {
     if (!needsDatePick) return [];
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    const todayISO = new Date().toISOString().slice(0, 10);
     const dates = [];
     const cursor = new Date(start);
     while (cursor <= end) {
-      dates.push(cursor.toISOString().slice(0, 10));
+      const iso = cursor.toISOString().slice(0, 10);
+      if (iso > todayISO) dates.push(iso);
       cursor.setDate(cursor.getDate() + 1);
     }
     return dates;
@@ -1944,8 +1946,8 @@ function StepOne({
   }, [today]);
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
@@ -2038,7 +2040,7 @@ function StepOne({
                           onClick={() => {
                             const base = rangeStart || todayISO;
                             onRangeStartChange(base);
-                            const start = new Date(base);
+                            const start = new Date(base + 'T00:00:00Z');
                             const end = new Date(start);
                             end.setDate(end.getDate() + days - 1);
                             onRangeEndChange(end.toISOString().slice(0, 10));
@@ -2059,8 +2061,8 @@ function StepOne({
                     <CustomDatePicker
                       mode="range"
                       selected={{
-                        from: rangeStart ? new Date(rangeStart) : undefined,
-                        to: rangeEnd ? new Date(rangeEnd) : undefined,
+                        from: rangeStart ? new Date(rangeStart + 'T00:00:00') : undefined,
+                        to: rangeEnd ? new Date(rangeEnd + 'T00:00:00') : undefined,
                       }}
                       onSelect={(range) => {
                         if (range?.from) {
@@ -2069,8 +2071,10 @@ function StepOne({
                         } else {
                           onRangeStartChange("");
                         }
-                        if (range?.to) {
-                          const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                        if (range?.to && range?.from) {
+                          const maxTo = new Date(range.from.getTime() + 13 * 24 * 60 * 60 * 1000);
+                          const cappedTo = range.to > maxTo ? maxTo : range.to;
+                          const toIso = new Date(cappedTo.getTime() - cappedTo.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                           onRangeEndChange(toIso);
                         } else {
                           onRangeEndChange("");
@@ -2557,8 +2561,8 @@ function StepTwo({
   const [confirmModalData, setConfirmModalData] = useState(null);
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
@@ -2566,13 +2570,15 @@ function StepTwo({
   const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const rangeDates = useMemo(() => {
     if (!hasRange) return [];
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    const todayISO = new Date().toISOString().slice(0, 10);
     const dates = [];
     const cursor = new Date(start);
     while (cursor <= end) {
-      dates.push(cursor.toISOString().slice(0, 10));
+      const iso = cursor.toISOString().slice(0, 10);
+      if (iso > todayISO) dates.push(iso);
       cursor.setDate(cursor.getDate() + 1);
     }
     return dates;
@@ -2974,8 +2980,7 @@ function StepTwo({
                         <div className="flex flex-wrap gap-2 text-sm font-semibold">
                           {dateMode === "exact" ? (
                             <>
-                              <button type="button" onClick={onSwitchToFlex} className="text-primary-600 transition hover:text-primary-700">Try flexible dates</button>
-                              <button type="button" onClick={onOpenDateModal} className="text-primary-600 transition hover:text-primary-700">Change range</button>
+                              <button type="button" onClick={onSwitchToFlex} className="text-primary-600 transition hover:text-primary-700">Change range</button>
                             </>
                           ) : (
                             <span className="text-secondary-400">Not available in range</span>
@@ -2986,10 +2991,17 @@ function StepTwo({
                       ) : isSelected ? (
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); openPickDayMode(boat.id); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (dateMode === "flex" && hasRange) {
+                              openPickDayMode(boat.id);
+                            } else {
+                              openBoat(boat);
+                            }
+                          }}
                           className="inline-flex h-10 items-center justify-center rounded-full border border-neutral-200 bg-white px-4 text-xs font-semibold text-primary-600 transition hover:border-primary-200 hover:bg-primary-50"
                         >
-                          {selectedDateForBoat ? "Change date" : "Pick a day"}
+                          {dateMode === "exact" ? "Selected" : (selectedDateForBoat ? "Change date" : "Pick a day")}
                         </button>
                       ) : (
                         <Button
@@ -3038,7 +3050,7 @@ function StepTwo({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="mt-5 flex-1 overflow-y-auto">
+              <div className="mt-5 flex-1">
                 {hasRange ? (
                   <div className="grid grid-cols-5 gap-2 pr-1">
                     {rangeDates.map((date) => {
@@ -3390,6 +3402,36 @@ function StepTwo({
                 <ChevronUp className="h-4 w-4" />
                 Back to slider
               </button>
+            </div>
+          )}
+          {hasDateCriteria && soldOutList.length > 0 && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShowSoldOut((v) => !v)}
+                className="inline-flex items-center gap-1.5 py-1 text-sm font-semibold text-secondary-400 transition-colors hover:text-secondary-600"
+              >
+                {showSoldOut ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" />
+                    Hide unavailable boats
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4" />
+                    Show unavailable boats ({soldOutList.length})
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+          {showSoldOut && soldOutList.length > 0 && (
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {soldOutList.map((boat) => (
+                <div key={boat.id} className="relative flex w-full">
+                  {renderBoatCard(boat, { isSoldOut: true })}
+                </div>
+              ))}
             </div>
           )}
         </PremiumContainer>
@@ -5330,8 +5372,8 @@ function StepFive({
   const [draftKids, setDraftKids] = useState(kids);
   const draftRangeDays = useMemo(() => {
     if (!draftRangeStart || !draftRangeEnd) return 0;
-    const start = new Date(draftRangeStart);
-    const end = new Date(draftRangeEnd);
+    const start = new Date(draftRangeStart + 'T00:00:00Z');
+    const end = new Date(draftRangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
@@ -8367,15 +8409,16 @@ export default function Premium_Private_With_Vibe() {
   }, []);
   const getAvailableDates = useCallback((boatId, start, end) => {
     if (!start || !end) return [];
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDate = new Date(start + 'T00:00:00Z');
+    const endDate = new Date(end + 'T00:00:00Z');
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return [];
     if (endDate < startDate) return [];
+    const todayISO = new Date().toISOString().slice(0, 10);
     const dates = [];
     const cursor = new Date(startDate);
     while (cursor <= endDate && dates.length < 31) {
       const iso = cursor.toISOString().slice(0, 10);
-      if (isDateAvailable(boatId, iso)) {
+      if (iso > todayISO && isDateAvailable(boatId, iso)) {
         dates.push(iso);
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -8981,6 +9024,7 @@ export default function Premium_Private_With_Vibe() {
               isOpen={isSelectionModalOpen}
               onClose={closeSelectionModal}
               title="Select Dates"
+              maxWidth={dateMode !== "exact" ? "max-w-3xl" : "max-w-xl"}
             >
               <div className="p-1">
                 {dateMode === "exact" ? (
@@ -9000,8 +9044,8 @@ export default function Premium_Private_With_Vibe() {
                   <CustomDatePicker
                     mode="range"
                     selected={{
-                      from: rangeStart ? new Date(rangeStart) : undefined,
-                      to: rangeEnd ? new Date(rangeEnd) : undefined,
+                      from: rangeStart ? new Date(rangeStart + 'T00:00:00') : undefined,
+                      to: rangeEnd ? new Date(rangeEnd + 'T00:00:00') : undefined,
                     }}
                     onSelect={(range) => {
                       if (range?.from) {
@@ -9010,8 +9054,10 @@ export default function Premium_Private_With_Vibe() {
                       } else {
                         setRangeStart("");
                       }
-                      if (range?.to) {
-                        const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                      if (range?.to && range?.from) {
+                        const maxTo = new Date(range.from.getTime() + 13 * 24 * 60 * 60 * 1000);
+                        const cappedTo = range.to > maxTo ? maxTo : range.to;
+                        const toIso = new Date(cappedTo.getTime() - cappedTo.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                         setRangeEnd(toIso);
                       } else {
                         setRangeEnd("");

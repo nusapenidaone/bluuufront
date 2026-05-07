@@ -22,73 +22,14 @@ class SharedOrderController extends Controller
     /**
      * POST /api/new/order/shared
      *
-     * Accepts shared-tour booking data and creates an Order record.
-     * Returns a payment URL (Xendit or PayPal) or a success URL for request-type orders.
-     *
-     * Expected JSON body:
-     * {
-     *   // Tour
-     *   "tourId":           int,        // shared tour ID (classic / premium)
-     *   "travelDate":       "YYYY-MM-DD",
-     *
-     *   // Guests
-     *   "adults":           int,
-     *   "kids":             int,        // children 3–11
-     *   "children":         int,        // infants 0–2
-     *   "cars":             int,        // number of cars for transfer
-     *
-     *   // Pricing  (all in IDR)
-     *   "pricePerPerson":   float,      // per-person base price for that date
-     *   "tourPrice":        float,      // pricePerPerson * (adults + kids)
-     *   "transferPrice":    float,
-     *   "coverPrice":       float,
-     *   "extrasTotal":      float,
-     *   "totalPrice":       float,      // what the customer pays now (or deposit)
-     *   "fullPrice":        float,      // full order value
-     *   "discountPrice":    float,      // amount discounted
-     *   "discount":         float,      // discount % or flat amount
-     *
-     *   // Selected options (IDs)
-     *   "selectedTransferId": int|null,
-     *   "selectedCoverId":    int|null,
-     *   "selectedRouteId":    int|null, // shared-tour route (classic / premium)
-     *   "selectedExtras":     array,    // [{id, qty, price, name}, ...]
-     *
-     *   // Payment
-     *   "deposite":   int,    // deposit % (0 = request only, no payment)
-     *   "method":     int,    // 1 = Xendit, 2 = PayPal
-     *
-     *   // Promo / agent
-     *   "promocode":  string|null,
-     *   "agent_fee":  float,
-     *   "agent_name": string|null,
-     *
-     *   // Guest contact
-     *   "name":           string,
-     *   "email":          string,
-     *   "whatsapp":       string,
-     *   "requests":       string|null,
-     *   "pickupAddress":  string|null,
-     *   "dropoffAddress": string|null,
-     *
-     *   // Analytics
-     *   "ga_client_id": string|null,
-     *   "leadId":       int|null,
-     * }
+     * Saves the order to the database immediately (no payment gateway call).
+     * Returns {external_id} so the frontend can call /pay next.
      */
     public function createOrder(Request $request)
     {
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
-
-        set_time_limit(120);
-
-        // CSRF check (same as OrderController)
-        // TODO: re-enable before production
-        // if (Session::token() != $request->header('X-CSRF-TOKEN')) {
-        //     return response('Unauthorized.', 401);
-        // }
 
         try {
 
@@ -104,7 +45,7 @@ class SharedOrderController extends Controller
                 'deposite' => $data['deposite'] ?? null,
                 'totalPrice' => $data['totalPrice'] ?? null,
             ]);
-            //Log::info($data);
+
             $order = new Order;
 
             // ── Order type & status ───────────────────────────────────────
@@ -191,21 +132,55 @@ class SharedOrderController extends Controller
 
             $order->save();
 
-            //Log::info('SharedOrder saved', [
-            //    'order_id' => $order->id,
-            //    'route_id' => $order->route_id,
-            //    'restaurant_id' => $order->restaurant_id,
-            //    'program_id' => $order->program_id,
-            //]);
-
             Session::put('order_id', $order->id);
 
-            // ── Request-only (no deposit) ─────────────────────────────────
+            \Log::info('[SharedOrder] saved', ['order_id' => $order->id, 'external_id' => $order->external_id]);
+
+            return response()->json(['external_id' => $order->external_id]);
+
+        } catch (\Throwable $e) {
+
+            \Log::error('SharedOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * POST /api/new/order/shared/pay
+     *
+     * Accepts {external_id}, loads the saved order, calls Xendit or PayPal,
+     * and returns the payment URL. Safe to retry — order already exists.
+     */
+    public function createPaymentLink(Request $request)
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
+        set_time_limit(120);
+
+        try {
+            $externalId = $request->input('external_id');
+            if (!$externalId) {
+                return response()->json(['error' => 'external_id required'], 422);
+            }
+
+            $order = Order::with('tours')->where('external_id', $externalId)->first();
+            if (!$order) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            \Log::info('[SharedOrder] createPaymentLink', [
+                'external_id' => $externalId,
+                'method_id'   => $order->method_id,
+                'deposite'    => $order->deposite,
+                'amount'      => $order->deposite_summ,
+            ]);
+
             if ($order->deposite == 0) {
                 return response()->json(url('/new/success') . '?type=request');
             }
 
-            // ── Xendit payment ────────────────────────────────────────────
             $successBase = url('/new/success') . '?type=shared'
                 . '&order_id=' . urlencode($order->external_id)
                 . '&num_items=' . ($order->adults + $order->kids)
@@ -221,8 +196,6 @@ class SharedOrderController extends Controller
                     url('/error'),
                     $order->tours->name ?? 'Shared Tour'
                 );
-
-                // ── PayPal payment ────────────────────────────────────────────
             } else {
                 $usd_rate = Rates::find(2)->rate;
                 $usd_summ = $usd_rate * $order->deposite_summ;
@@ -240,8 +213,7 @@ class SharedOrderController extends Controller
             return response()->json($url);
 
         } catch (\Throwable $e) {
-
-            \Log::error('SharedOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            \Log::error('SharedOrderController@createPaymentLink error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

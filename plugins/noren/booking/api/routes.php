@@ -27,8 +27,10 @@ Route::options('api/new/order/{any}', function () {
 Route::middleware([
     \Illuminate\Session\Middleware\StartSession::class,
 ])->group(function () {
-    Route::post('api/new/order/private', [PrivateOrderController::class, 'createOrder']);
-    Route::post('api/new/order/shared',  [SharedOrderController::class, 'createOrder']);
+    Route::post('api/new/order/private',     [PrivateOrderController::class, 'createOrder']);
+    Route::post('api/new/order/private/pay', [PrivateOrderController::class, 'createPaymentLink']);
+    Route::post('api/new/order/shared',      [SharedOrderController::class, 'createOrder']);
+    Route::post('api/new/order/shared/pay',  [SharedOrderController::class, 'createPaymentLink']);
 });
 
 // Routes

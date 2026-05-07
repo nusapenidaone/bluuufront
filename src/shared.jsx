@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import ElfsightWidget from "./components/common/ElfsightWidget";
 import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import RatingPill from "./components/common/RatingPill";
@@ -1742,8 +1742,8 @@ function StepOne({
   }, [today]);
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
@@ -1836,7 +1836,7 @@ function StepOne({
                           onClick={() => {
                             const base = rangeStart || todayISO;
                             onRangeStartChange(base);
-                            const start = new Date(base);
+                            const start = new Date(base + 'T00:00:00Z');
                             const end = new Date(start);
                             end.setDate(end.getDate() + days - 1);
                             onRangeEndChange(end.toISOString().slice(0, 10));
@@ -1857,8 +1857,8 @@ function StepOne({
                     <CustomDatePicker
                       mode="range"
                       selected={{
-                        from: rangeStart ? new Date(rangeStart) : undefined,
-                        to: rangeEnd ? new Date(rangeEnd) : undefined,
+                        from: rangeStart ? new Date(rangeStart + 'T00:00:00') : undefined,
+                        to: rangeEnd ? new Date(rangeEnd + 'T00:00:00') : undefined,
                       }}
                       onSelect={(range) => {
                         if (range?.from) {
@@ -1867,8 +1867,10 @@ function StepOne({
                         } else {
                           onRangeStartChange("");
                         }
-                        if (range?.to) {
-                          const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                        if (range?.to && range?.from) {
+                          const maxTo = new Date(range.from.getTime() + 13 * 24 * 60 * 60 * 1000);
+                          const cappedTo = range.to > maxTo ? maxTo : range.to;
+                          const toIso = new Date(cappedTo.getTime() - cappedTo.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                           onRangeEndChange(toIso);
                         } else {
                           onRangeEndChange("");
@@ -2363,21 +2365,23 @@ function StepTwo({
   const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
   }, [rangeStart, rangeEnd]);
   const rangeDates = useMemo(() => {
     if (!hasRange) return [];
-    const start = new Date(rangeStart);
-    const end = new Date(rangeEnd);
+    const start = new Date(rangeStart + 'T00:00:00Z');
+    const end = new Date(rangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return [];
+    const todayISO = new Date().toISOString().slice(0, 10);
     const dates = [];
     const cursor = new Date(start);
     while (cursor <= end) {
-      dates.push(cursor.toISOString().slice(0, 10));
+      const iso = cursor.toISOString().slice(0, 10);
+      if (iso > todayISO) dates.push(iso);
       cursor.setDate(cursor.getDate() + 1);
     }
     return dates;
@@ -2793,10 +2797,17 @@ function StepTwo({
               ) : isSelected ? (
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); openPickDayMode(boat.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (dateMode === "flex" && hasRange) {
+                      openPickDayMode(boat.id);
+                    } else {
+                      openBoat(boat);
+                    }
+                  }}
                   className="inline-flex w-full h-11 items-center justify-center rounded-full border-2 border-primary-300 bg-primary-50 text-sm font-semibold text-primary-600 transition hover:bg-primary-100"
                 >
-                  {selectedDateForBoat ? "Change date" : "Pick a day"}
+                  {dateMode === "exact" ? "Selected" : (selectedDateForBoat ? "Change date" : "Pick a day")}
                 </button>
               ) : (
                 <button
@@ -2891,7 +2902,7 @@ function StepTwo({
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="mt-5 flex-1 overflow-y-auto">
+              <div className="mt-5 flex-1">
                 {hasRange ? (
                   <div className="grid grid-cols-5 gap-2 pr-1">
                     {rangeDates.map((date) => {
@@ -5114,8 +5125,8 @@ function StepFive({
   const [draftKids, setDraftKids] = useState(kids);
   const draftRangeDays = useMemo(() => {
     if (!draftRangeStart || !draftRangeEnd) return 0;
-    const start = new Date(draftRangeStart);
-    const end = new Date(draftRangeEnd);
+    const start = new Date(draftRangeStart + 'T00:00:00Z');
+    const end = new Date(draftRangeEnd + 'T00:00:00Z');
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
     const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
     return diff > 0 ? diff : 0;
@@ -7416,15 +7427,16 @@ export default function Shared_tour_01() {
   }, []);
   const getAvailableDates = useCallback((boatId, start, end, groupSize = 1) => {
     if (!start || !end) return [];
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const startDate = new Date(start + 'T00:00:00Z');
+    const endDate = new Date(end + 'T00:00:00Z');
     if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return [];
     if (endDate < startDate) return [];
+    const todayISO = new Date().toISOString().slice(0, 10);
     const dates = [];
     const cursor = new Date(startDate);
     while (cursor <= endDate && dates.length < 31) {
       const iso = cursor.toISOString().slice(0, 10);
-      if (isDateAvailable(boatId, iso, groupSize)) {
+      if (iso > todayISO && isDateAvailable(boatId, iso, groupSize)) {
         dates.push(iso);
       }
       cursor.setDate(cursor.getDate() + 1);
@@ -8014,8 +8026,8 @@ export default function Shared_tour_01() {
                   <CustomDatePicker
                     mode="range"
                     selected={{
-                      from: rangeStart ? new Date(rangeStart) : undefined,
-                      to: rangeEnd ? new Date(rangeEnd) : undefined,
+                      from: rangeStart ? new Date(rangeStart + 'T00:00:00') : undefined,
+                      to: rangeEnd ? new Date(rangeEnd + 'T00:00:00') : undefined,
                     }}
                     onSelect={(range) => {
                       if (range?.from) {
@@ -8024,10 +8036,11 @@ export default function Shared_tour_01() {
                       } else {
                         setRangeStart("");
                       }
-                      if (range?.to) {
-                        const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                      if (range?.to && range?.from) {
+                        const maxTo = new Date(range.from.getTime() + 13 * 24 * 60 * 60 * 1000);
+                        const cappedTo = range.to > maxTo ? maxTo : range.to;
+                        const toIso = new Date(cappedTo.getTime() - cappedTo.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
                         setRangeEnd(toIso);
-                        // Close on end selection? Maybe let user close manually or confirm
                       } else {
                         setRangeEnd("");
                       }

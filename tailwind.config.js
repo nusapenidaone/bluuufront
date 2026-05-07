@@ -56,8 +56,13 @@ export default {
           "radial-gradient(120% 120% at 10% 0%, var(--primary-50) 0%, transparent 55%), linear-gradient(180deg, var(--neutral-100) 0%, var(--neutral-50) 100%)",
       },
       borderRadius: {
-        '4xl': '1.5rem', // 24px
-        '5xl': '2rem', // 32px
+        '4xl': '1.5rem',
+        '5xl': '2rem',
+        'h2-card-lg': '32px',
+        'h2-card':    '24px',
+        'h2-card-sm': '16px',
+        'h2-photo':   '26px',
+        'h2-input':   '18px',
       },
       boxShadow: {
         sm: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
@@ -72,6 +77,8 @@ export default {
         floating: "0 18px 60px rgba(6, 18, 40, 0.08)",
         "floating-hover": "0 28px 80px rgba(6, 18, 40, 0.13)",
         "blue-glow": "0 16px 32px rgba(0, 115, 224, 0.28)",
+        "h2-form":   "0 20px 50px rgba(0, 0, 0, 0.45)",
+        "h2-card":   "0 4px 24px rgba(0, 0, 0, 0.3)",
       },
       colors: {
         primary: {
@@ -253,11 +260,12 @@ export default {
         "80vh": "80vh",
       },
       letterSpacing: {
-        'tight-lg': '-0.04em',
-        'wide-lg': '0.05em',
-        'wide-2xl': '0.2em',
-        'wide-3xl': '0.18em',
-        'wide-4xl': '0.3em',
+        'tight-lg':    '-0.04em',
+        'wide-lg':     '0.05em',
+        'wide-2xl':    '0.2em',
+        'wide-3xl':    '0.18em',
+        'wide-4xl':    '0.3em',
+        'h2-overline': '2.4px',
       },
       aspectRatio: {
         'video-wide': '21 / 9',
