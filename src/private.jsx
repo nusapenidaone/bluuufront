@@ -9427,7 +9427,7 @@ function StepCheckout({
                     <img src="https://bluuu.tours/themes/bluuu/assets/icons/card_icon.svg" alt="Card" className="h-7 w-auto" />
                     <div className="text-left">
                       <div className="font-bold text-secondary-900">Card payment</div>
-                      <div className="text-xs text-secondary-500">Payment in IDR, 3% merchant fee apply.</div>
+                      <div className="text-xs text-secondary-500">Payment in IDR</div>
                     </div>
                   </div>
                   <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "card" ? "border-primary-600" : "border-neutral-300")}>
@@ -9445,7 +9445,7 @@ function StepCheckout({
                     <img src="https://bluuu.tours/themes/bluuu/assets/icons/paypal_icon.svg" alt="PayPal" className="h-7 w-auto" />
                     <div className="text-left">
                       <div className="font-bold text-secondary-900">Paypal</div>
-                      <div className="text-xs text-secondary-500">Fast checkout, 5% fee apply.</div>
+                      <div className="text-xs text-secondary-500">Fast checkout</div>
                     </div>
                   </div>
                   <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "paypal" ? "border-primary-600" : "border-neutral-300")}>
@@ -9702,7 +9702,7 @@ function CheckoutModal({
                 <CreditCard className="h-5 w-5 text-primary-600" />
                 <div className="text-left">
                   <div className="font-bold text-secondary-900">Card payment</div>
-                  <div className="text-xs text-secondary-500">Payment in IDR, 3% merchant fee apply.</div>
+                  <div className="text-xs text-secondary-500">Payment in IDR</div>
                 </div>
               </div>
               <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "card" ? "border-primary-600" : "border-neutral-300")}>
@@ -9720,7 +9720,7 @@ function CheckoutModal({
                 <div className="h-5 w-5 font-black text-blue-600 italic">P</div>
                 <div className="text-left">
                   <div className="font-bold text-secondary-900">Paypal</div>
-                  <div className="text-xs text-secondary-500">Fast checkout, 5% fee apply.</div>
+                  <div className="text-xs text-secondary-500">Fast checkout</div>
                 </div>
               </div>
               <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "paypal" ? "border-primary-600" : "border-neutral-300")}>

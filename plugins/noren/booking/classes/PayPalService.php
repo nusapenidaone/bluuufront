@@ -46,7 +46,7 @@ public static function createPaymentLink($orderId, $amount, $email, $returnUrl, 
     try {
         $token = self::getAccessToken();
         
-        $amount=$amount*1.05;
+        //$amount=$amount*1.05;
         $fee=$amount*0.05;
         
         $payload = [
