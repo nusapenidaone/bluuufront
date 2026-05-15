@@ -24,7 +24,7 @@ class Closeddates extends Model
     public $belongsTo =[
         'boat'=> Boat::class,
     ];
-    protected $fillable = ['date','lead_id','boat_id','qtty', 'type', 'odoo_id'];
+    protected $fillable = ['date','lead_id','boat_id','qtty', 'type', 'odoo_id', 'tour_type'];
 
     public function scopeFilterType($query, $scope)
     {

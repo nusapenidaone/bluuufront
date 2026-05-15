@@ -5136,7 +5136,7 @@ function StepExtras({
                     aria-controls={`${sectionId}-insurance-panel`}
                   >
                     <div className="min-w-0">
-                      <div className="text-base sm:text-xl font-semibold text-secondary-900">Insurance</div>
+                      <div className="text-base sm:text-xl font-semibold text-secondary-900">Flexible Ticket</div>
                       <div className="mt-1 text-sm text-secondary-500">{insuranceSummary}</div>
                     </div>
                     <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">

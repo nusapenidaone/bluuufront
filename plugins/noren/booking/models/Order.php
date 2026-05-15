@@ -107,16 +107,7 @@ class Order extends Model
         if ($this->status_id == 2) {
 
             App::after(function () use ($order) {
-
-                try {
-                    static::dispatchLead($order);
-                    //KommoDataBuilder::createLead($order->id);
-                    Ga4Service::sendPurchase($order);
-                    RespondIoService::sendOrder($order);
-                } catch (\Exception $e) {
-                    Log::error("AfterUpdate error #{$order->id}: " . $e->getMessage());
-                }
-
+                static::dispatchLead($order, withRespondIo: true);
             });
 
             // 📩 письмо клиенту
@@ -128,15 +119,7 @@ class Order extends Model
         elseif ($this->status_id == 4) {
 
             App::after(function () use ($order) {
-
-                try {
-                    //KommoDataBuilder::createLead($order->id);
-                    static::dispatchLead($order);
-                    Ga4Service::sendPurchase($order);
-                } catch (\Exception $e) {
-                    Log::error("Status 4 error #{$order->id}: " . $e->getMessage());
-                }
-
+                static::dispatchLead($order);
             });
         }
     }
@@ -145,16 +128,41 @@ class Order extends Model
     // =========================
     // LEAD ROUTING
     // =========================
-    protected static function dispatchLead(Order $order): void
+    protected static function dispatchLead(Order $order, bool $withRespondIo = false): void
     {
-        // TEMP: Odoo disabled — all orders go to Kommo
-        // if ($order->source_id == 1) {
-        //     $result = OdooService::createLead($order);
-        //     $order->odoo_id = $result['order_id'];
-        //     $order->save();
-        // } else {
+        try {
             KommoDataBuilder::createLead($order->id);
-        // }
+        } catch (\Exception $e) {
+            Log::error("Order #{$order->id}: Kommo failed: " . $e->getMessage());
+        }
+
+        try {
+            Ga4Service::sendPurchase($order);
+        } catch (\Exception $e) {
+            Log::error("Order #{$order->id}: GA4 failed: " . $e->getMessage());
+        }
+
+        if ($withRespondIo) {
+            try {
+                RespondIoService::sendOrder($order);
+            } catch (\Exception $e) {
+                Log::error("Order #{$order->id}: RespondIO failed: " . $e->getMessage());
+            }
+        }
+
+        if (!$order->boat_id) {
+            Log::info("Order #{$order->id}: no boat_id, skipping Odoo dispatch");
+            return;
+        }
+
+        try {
+            $result = OdooService::createLead($order);
+            $order->odoo_id = $result['order_id'];
+            $order->saveQuietly();
+            Log::info("Order #{$order->id}: Odoo order created #{$order->odoo_id}");
+        } catch (\Exception $e) {
+            Log::error("Order #{$order->id}: Odoo dispatch failed: " . $e->getMessage());
+        }
     }
 
 

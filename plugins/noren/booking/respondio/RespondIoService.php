@@ -34,6 +34,7 @@ class RespondIoService
 
         try {
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(10)
                 ->post(static::cfg()['webhook_url_explore'], $payload);
 
             Log::info('RespondIoService::sendMarketingLead — done', [
@@ -55,6 +56,7 @@ class RespondIoService
             $payload = static::buildPayload($order);
 
             $response = Http::withHeaders(['Content-Type' => 'application/json'])
+                ->timeout(10)
                 ->post(static::cfg()['webhook_url'], $payload);
 
             Log::info('RespondIoService::sendOrder — done', [
@@ -64,8 +66,18 @@ class RespondIoService
             ]);
         } catch (\Exception $e) {
             Log::error('RespondIoService::sendOrder — error', [
-                'order_id' => $order->id,
-                'error'    => $e->getMessage(),
+                'order_id'   => $order->id,
+                'error'      => $e->getMessage(),
+                'trace'      => $e->getTraceAsString(),
+                'order_data' => [
+                    'travel_date'    => $order->travel_date,
+                    'tours_id'       => $order->tours_id,
+                    'boat_id'        => $order->boat_id,
+                    'route_id'       => $order->route_id,
+                    'transfer_id'    => $order->transfer_id,
+                    'status_id'      => $order->status_id,
+                    'source_id'      => $order->source_id,
+                ],
             ]);
         }
     }
@@ -92,7 +104,8 @@ class RespondIoService
         $travelDate = '-';
         if ($order->travel_date) {
             $startTime  = optional($route)->start ?? '08:00:00';
-            $travelDate = Carbon::parse($order->travel_date . ' ' . $startTime)->format('d.m.Y H:i');
+            $travelDate = Carbon::parse($order->travel_date)->format('Y-m-d') . ' ' . $startTime;
+            $travelDate = Carbon::parse($travelDate)->format('d.m.Y H:i');
         }
 
         $totalPrice    = (float) ($order->total_price    ?? 0);

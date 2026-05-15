@@ -31,7 +31,7 @@ class Tours extends Model
         'meeting' => Meeting::class,
         'additional' => Additional::class,
         'route'=> Route::class,
-
+        'source' => Source::class,
     ];
     public $hasMany = [
         'pricesbydates' => PricesByDates::class,
@@ -48,7 +48,13 @@ class Tours extends Model
         'included' => [Included::class, 'table' => 'noren_booking_tours_included'],
         'why' => [Why::class, 'table' => 'noren_booking_tours_why'],
         'restaurant' => [Restaurant::class, 'table' => 'noren_booking_tours_restaurant'],
-        'boat' => [Boat::class, 'table' => 'noren_booking_tours_boat'],
+        'boat' => [
+            Boat::class, 
+            'table' => 'noren_booking_tours_boat', 
+            'pivot' => ['sort_order'], 
+            'order' => ['noren_booking_tours_boat.sort_order ASC', 'noren_booking_boat.sort_order ASC'],
+            'pivotModel' => ToursBoatPivot::class
+        ],
         'category' => [Category::class, 'table' => 'noren_booking_tours_category'],
         
         'similar' => [
@@ -100,6 +106,7 @@ class Tours extends Model
             ];
         })->toArray();
     }
+
 
 
 public function beforeDelete()

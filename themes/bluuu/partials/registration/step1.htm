@@ -1,0 +1,22 @@
+<div class="col-xl-8">
+    <div class="rounded-15 position-relative shadow">
+        <img src="{{registration.step1.img|media|resize(1920,1080,{'mode':'crop'})}}" class="hero-img w-100 rounded-15 ratio-16x9 ratio-md-3x4 img">
+        <div class="cover bg-lg-transparent"></div>
+        <div class=" position-absolute bottom end start p-4 ">
+            <div class="row justify-content-xl-between align-items-end ">
+                <div class="col-xl-6">
+                    <div class="fz-15 fw-600 c-white" v-text="registration.step1.title"></div>
+                    <div class="mt-2 c-100" v-html="registration.step1.description"></div>
+                </div>
+                <div class="col-xl-auto mt-5">
+                    <div class="btn btn-white" @click="order.step=2">
+                        <span>Start</span>
+                        <svg width="13" class="arrow-icon ms-2" viewBox="0 0 13 11" fill="none">
+                            <path d="M10.587 6.19536L0.757826 6.19536C0.338064 6.19536 0 5.89104 0 5.50303C0 5.12517 0.338064 4.81071 0.757826 4.81071L10.5786 4.81071L7.49937 1.63564C7.22329 1.35414 7.24864 0.920484 7.56135 0.671957C7.87406 0.423428 8.34735 0.446252 8.62344 0.727748L12.8098 5.04402C13.069 5.3103 13.0605 5.70338 12.8013 5.95951L8.62062 10.2682C8.34453 10.5497 7.87124 10.5826 7.55854 10.324C7.24583 10.0754 7.22047 9.64179 7.49656 9.36029L10.5758 6.18522L10.587 6.19536Z" fill="currentColor"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

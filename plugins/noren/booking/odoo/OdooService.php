@@ -423,10 +423,10 @@ class OdooService
             'dropoff_address'  => $order->dropoff_address ?? '',
             'cars'             => (int)($order->cars ?? 0),
             'transfer_type'    => optional($order->transfer)->type ?? '',
-            'route_name'       => optional($order->route)->name ?? optional($order->program)->name ?? '',
+            'route_name'       => optional($order->route)->odoo_name ?? '',
             'route_start'      => optional($order->route)->start ?? '08:00:00',
             'route_end'        => optional($order->route)->end   ?? '18:00:00',
-            'restaurant_name'  => optional($order->restaurant)->name ?? '',
+            'restaurant_name'  => optional($order->restaurant)->odoo_name ?? '',
             'deposite_summ'    => (float)($order->deposite_summ ?? 0),
             'total_price'      => (float)($order->total_price   ?? 0),
             'name'             => $order->name,
@@ -435,6 +435,7 @@ class OdooService
             'external_id'      => $order->external_id ?? '',
             'order_id'         => $order->id,
             'transfer_id'      => (int) $order->transfer_id,
+            'car_type'         => optional($order->transfer)->odoo_name ?: 'No Transfer',
             'tour_type'        => $tour->odoo_type ?? '',
             'source_name'      => optional($order->source)->name ?? '',
         ];
@@ -571,6 +572,7 @@ class OdooService
     {
         $lead = $data['lead'];
 
+        // Non-selection fields only — safe to include in create
         $vals = [
             'partner_id' => $partnerId,
 
@@ -580,29 +582,55 @@ class OdooService
 
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
-            'x_studio_boat_name'        => $lead['boat_name'],
-            'x_studio_route_new'        => $lead['route_name'],
-            'x_studio_lunch'            => $lead['restaurant_name'],
-            'x_studio_pickup_cars'      => in_array((int)$lead['transfer_id'], [1, 2]) ? (int)$lead['cars'] : 0,
-            'x_studio_drop_off_cars'    => (int)$lead['transfer_id'] === 2 ? (int)$lead['cars'] : 0,
-            'x_studio_car_type'         => static::resolveCarType((int)$lead['transfer_id'], (int)$lead['members']),
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
-            'x_studio_payment_source'   => $lead['payment_source'] ?? '',
             'client_order_ref'          => $lead['external_id'],
-            'x_studio_tour_type'        => $lead['tour_type'] ?? '',
-            'x_studio_source'           => $lead['source_name'] ?? '',
         ];
 
         if (!empty($lead['company_odoo_id'])) {
             $vals['company_id'] = $lead['company_odoo_id'];
         }
 
+        $transferId = (int)$lead['transfer_id'];
+        if (in_array($transferId, [1, 2])) {
+            $vals['x_studio_pickup_cars'] = (int)$lead['cars'];
+        }
+        if ($transferId === 2) {
+            $vals['x_studio_drop_off_cars'] = (int)$lead['cars'];
+        }
+
         $id = static::post('/json/2/sale.order/create', ['vals_list' => [$vals]]);
 
         $odooId = (int) (is_array($id) ? $id[0] : $id);
+
+        // Selection fields — set via separate writes, each with own try-catch
+        $selectionFields = [
+            'x_studio_boat_name'      => $lead['boat_name']              ?? '',
+            'x_studio_route_new'      => $lead['route_name']             ?? '',
+            'x_studio_lunch'          => $lead['restaurant_name']        ?? '',
+            'x_studio_payment_source' => $lead['payment_source']         ?? '',
+            'x_studio_tour_type'      => $lead['tour_type']              ?? '',
+            'x_studio_source'         => $lead['source_name']            ?? '',
+            'x_studio_car_type'       => $lead['car_type']               ?? false,
+        ];
+
+        foreach ($selectionFields as $field => $value) {
+            if ($value === false || $value === '') continue;
+            try {
+                static::post('/json/2/sale.order/write', [
+                    'ids'  => [$odooId],
+                    'vals' => [$field => $value],
+                ]);
+            } catch (\Exception $e) {
+                Log::warning("OdooService: {$field} not set", [
+                    'odoo_id' => $odooId,
+                    'value'   => $value,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+        }
 
         static::post('/json/2/sale.order/action_confirm', ['ids' => [$odooId]]);
 

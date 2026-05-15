@@ -1,0 +1,34 @@
+<Transition>
+    <template v-if="order.step==2">
+    <div class="container-xl">
+        <div class="py-4"></div>
+        <div class="d-flex align-items-center">
+            <div class="border-white bg-white rounded-3 p-2 d-flex align-items-center c-950 pointer" @click="order.step=1"><i class="back-icon fz-12"></i></div>
+            <div class=" ms-3 fz-15 lh-11 fw-600 c-950">Add Extras</div>
+        </div>
+        <div class="row gx-3">
+            <div class="col-xl-8 mt-4">
+                    <program-selector :programs="tour.program" @close="showInfo"></program-selector>
+                    <restaurant-selector v-if="selectedProgram.restaurant.length" :restaurants="selectedProgram.restaurant" @close="showInfo"></restaurant-selector>
+                    <transfer-selector v-if="tour.transfer.length" :transfers="tour.transfer" @close="showInfo"></transfer-selector>
+                    <cover-selector v-if="tour.cover.length" :covers="tour.cover" @close="showInfo"></cover-selector>
+                    <extras-selector v-if="tour.ecategories.length" :ecategories="tour.ecategories" @close="showInfo"> </extras-selector>
+            </div>
+            <div class="col-xl-4 mt-4 d-xl-block d-none">
+            <div class="position-sticky top-8">
+                    <info-panel :tour="tour"></info-panel>
+            </div>
+            </div>
+        </div>
+<transition name="notify">
+  <div v-if="info" class="notify">
+  <div v-text="info"></div>
+  </div>
+</transition>
+
+
+    </div>
+
+
+    </template>
+</Transition>

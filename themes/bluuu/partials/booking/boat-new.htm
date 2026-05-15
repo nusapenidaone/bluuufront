@@ -1,0 +1,41 @@
+<div class="d-flex flex-column h-100 bg-white rounded-15"  :class="tour.status ? 'inactive' : 'active'">
+    <div class="position-relative rounded-1">
+        <div class="ratio-3x2 img rounded-1 oh">
+            <boat-slider :images="tour.limited_images" :link="tour.link"/>
+        </div>
+        <div v-if="tour.badge" class="bedge" :class="tour.badge.color" v-text="tour.badge.name"></div>
+        <div v-if="tour.status==false && tour.package_type=='flash_sale'" class="flash-sale">Flash <br>sale</div>
+        <div v-if="tour.status=='booked'" class="boat-status">Sold out</div>
+        <div v-else-if="tour.status=='exceeded'" class="boat-status">Over capacity</div>
+    </div>
+    <a class="flex-grow-1 d-flex flex-column p-4 " :href="tour.link">
+        <ul class="row gx-2 fz-08 c-500 ">
+            <li class="col-auto d-inline-flex align-items-center">
+                <span><span v-text="tour.capacity"></span> people</span>
+            </li>
+            <li class="col-auto d-inline-flex align-items-center">
+                <span><span v-text="tour.duration"></span> hours</span>
+            </li>
+            <li class="col-auto d-inline-flex align-items-center">
+                <span><span v-text="tour.size"></span> meters</span>
+            </li>
+        </ul>
+        <div class="c-950 notranslate lh-12 flex-grow-1 mt-6" v-text="tour.name"></div>
+        <div class="row align-items-center mt-2">
+            <div class="col  ">
+                <span class="fz-09 c-500" v-if="tour.status=='booked'">Click to check available dates!</span>
+                <span class="fz-09 c-500" v-else-if="tour.status=='exceeded'">Maximum allowable quantity</span>
+                <div class="d-flex align-items-end lh-1" v-else>
+                    <div>
+                        <div class="fz-09 c-500 tdo" v-if="tour.gross_price"><format-number :number="tour.gross_price*members"></format-number></div>
+                        <div class="fz-09 c-500 tdo" v-else-if="tour.percent"><format-number :number="tour.price*(tour.percent+100)/100"></format-number></div>
+                        <div :class="tour.percent ? 'c-blue' : 'c-950'" class="fw-600"><format-number :number="tour.price"></format-number></div>
+                    </div>
+                    <div class="c-500 fz-08">
+                         / <span v-text="tour.types_id==1 ? members+' person' : 'boat'"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </a>
+</div>

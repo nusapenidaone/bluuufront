@@ -1,0 +1,30 @@
+{%if similar|length%}
+<div class="container-xl">
+<div class="h-1 bg-black-10 mt-5 mb-4"></div>
+    <div class="row gx-3">
+        {%for t in similar%}
+
+        <div class="col-xl-4 mt-4">
+            <a class="d-flex flex-column h-100" href="{{'/nusa-penida/'~t.types.slug ~ '/'~ t.slug}}">
+                <div class="position-relative rounded-1">
+                    <div class="ratio-3x2 bg-blue-10 rounded-1 oh">
+                        <img src="{{t.images[0].path|resize(600,400,{'mode':'crop','extension':'webp'})}}" class="w-100 ratio-3x2" alt="Slide image">
+                    </div>
+                    {%if t.badge%}
+                    <div class="position-absolute top end p-2" >
+                        <div class=" c-white rounded-35 d-inline-flex align-items-center p-2 " class="{{t.badge.color}}">
+                            <span class="fz-08 lh-1" >{{t.badge.name}}</span>
+                        </div>
+                    </div>
+                    {%endif%}
+                </div>
+                <div class="flex-grow-1 d-flex flex-column">
+                    <div class="c-950 fw-600 mt-2 fz-12" >{{t.name}}</div>
+
+                </div>
+            </a>
+        </div>
+        {%endfor%}
+    </div>
+</div>
+{%endif%}

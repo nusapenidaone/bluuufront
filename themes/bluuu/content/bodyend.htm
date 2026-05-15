@@ -1,0 +1,24 @@
+<script>
+document.querySelectorAll('.whatsapp-link').forEach(function(link) {
+  link.addEventListener('click', function() {
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+        'event': 'whatsapp_clicked'
+    });
+  });
+});
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Bluuu Tours",
+  "alternateName": "Bluuu",
+  "url": "https://bluuu.tours",
+  "brand": {
+    "@type": "Brand",
+    "name": "Bluuu Tours",
+    "logo": "https://bluuu.tours/themes/bluuu/assets/img/logo.svg"
+  }
+}
+</script>

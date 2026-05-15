@@ -1,0 +1,20 @@
+@font-face {
+    font-family: "Petrov Sans";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap; /* лучше swap чем auto */
+    src: local("Petrov Sans Regular"),
+         url("../fonts/PetrovSans-Regular.woff2") format("woff2"),
+         url("../fonts/PetrovSans-Regular.woff") format("woff");
+}
+
+@font-face {
+    font-family: "Petrov Sans";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: local("Petrov Sans SemiBold"),
+         url("../fonts/PetrovSans-SemiBold.woff2") format("woff2"),
+         url("../fonts/PetrovSans-SemiBold.woff") format("woff");
+}
+

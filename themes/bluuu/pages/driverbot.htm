@@ -1,0 +1,46 @@
+url = "/api/driverbot"
+title = "DriverBot"
+is_hidden = 1
+==
+<?php
+use Illuminate\Support\Facades\Log;
+
+function onStart()
+{
+    $data = json_decode(file_get_contents('php://input'), true);
+
+
+    // ✅ Проверка статуса
+    if (($data['state'] ?? '') !== 'sale') {
+        Log::info('Не отправляем, статус: ' . ($data['state'] ?? 'null'));
+        return;
+    }
+
+    $token = "8624062426:AAGbM7F6t-iMiYSFQI9qLMRCEHNweM5uBr0";
+    $chat_id = "252916185";
+
+    $text = "🚤 Новая бронь!\n\n";
+    $text .= "🛥 Лодка: " . ($data['x_studio_boat_name'] ?? '-') . "\n";
+    $text .= "👥 Людей: " . ($data['x_studio_count_of_people'] ?? '-') . "\n";
+    $text .= "📅 Дата: " . ($data['rental_start_date'] ?? '-') . "\n\n";
+    $text .= "📍 Pickup: " . ($data['x_studio_pickup_address'] ?? '-') . "\n";
+    $text .= "📍 DropOff: " . ($data['x_studio_drop_off_address'] ?? '-') . "\n\n";
+    $text .= "📝 Запрос: " . ($data['x_studio_special_requests'] ?? '-');
+
+
+
+    $url = "https://api.telegram.org/bot{$token}/sendMessage";
+
+    $post = [
+        'chat_id' => $chat_id,
+        'text' => $text
+    ];
+
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+    curl_exec($ch);
+    curl_close($ch);
+}
+?>
+==

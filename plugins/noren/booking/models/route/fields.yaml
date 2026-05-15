@@ -173,6 +173,12 @@ tabs:
                 - preview
             type: relation
             tab: Extras
+        odoo_name:
+            label: 'Odoo Route Name'
+            span: auto
+            type: text
+            tab: Main
+
         program:
             label: Program
             nameFrom: name

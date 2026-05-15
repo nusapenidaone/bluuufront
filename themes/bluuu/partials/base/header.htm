@@ -1,0 +1,97 @@
+<div class="d-none">
+<promo-code :code="'PROMO15'"></promo-code>
+</div>
+<header class="header py-3 bg-white oh">
+    <div class="container-fluid px-10">
+        <div class="row justify-content-between align-items-center">
+            <div class="col-auto d-inline-flex align-items-center">
+                <a href="{{'static/home.htm'|page}}" class="logo me-xl-4">
+                    
+                      
+                      <img  src="{{'assets/img/logo.svg'|theme}}" alt="logo" >
+                   
+                </a>
+            </div>
+            <div class="col d-xl-block d-none"></div>
+            <div class="col-auto d-xl-block d-none">
+
+                <ul class="d-flex border-black-10 align-items-center rounded-1 px-3 lh-1">
+                    <li class="d-inline-flex align-items-center py-3 px-4">
+                        <a class="c-950 fw-600 c-blue-hover d-inline-flex align-items-center" href="{{'tours/category.htm'|page({slug:'tours'})}}"><i class="fz-13 shared-icon"></i><span class="ms-2">Tours</span></a>
+                    </li>
+                    <li class="d-inline-flex align-items-center py-3 px-4">
+                        <a class="c-950 fw-600 c-blue-hover d-inline-flex align-items-center" href="{{'tours/category.htm'|page({slug:'boats'})}}"><i class="fz-13 private-icon"></i><span class="ms-2">Boats</span></a>
+                    </li>
+                    
+                    <li class="d-inline-flex align-items-center py-3 px-4">
+                        <a class="c-950 fw-600 c-blue-hover d-inline-flex align-items-center" href="{{'tours/all.htm'|page}}"><i class="fz-13 shared-icon"></i><span class="ms-2">All</span></a>
+                    </li>
+                </ul>
+            </div>
+          <div class="col d-xl-block d-none">
+          
+         
+          </div>
+          
+            <div class="col-auto d-flex">
+             <div class="px-xl-5"></div>
+
+                <div class="menu-button" data-fancybox="false" data-src="#main-menu" data-close-button="false">
+                <i class="menu-icon-dark"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+<Teleport to="body">
+<template>
+    <div class="popup-menu order-first align-self-end p-5 flex-xl-grow-0 flex-grow-1" id="main-menu">
+        <div class="d-flex justify-content-between align-items-center">
+                <div class="d-inline-flex notranslate ttu fw-600 c-950 c-blue-hover pointer" data-fancybox data-src="#currency-popup" >
+                  <i class="fz-15 earth-icon"></i>
+                  <span class="ms-2" v-text="order.language"></span>&nbsp;|&nbsp;<span class="me-2" v-text="order.currency"></span>
+                </div>
+            <div class="menu-close" data-fancybox-close></div>
+        </div>
+        <div class="my-3"></div>
+        <ul class="fz-13 fw-600">
+            <li class="my-3 d-xl-none"><a href="{{'tours/category.htm'|page({slug:'tours'})}}" class="c-950 c-blue-hover mt-2">Tours</a></li>
+            <li class="my-3 d-xl-none"><a href="{{'tours/category.htm'|page({slug:'boats'})}}" class="c-950 c-blue-hover mt-2">Boats</a></li>
+            <li class="my-3 d-xl-none"><a href="{{'tours/all.htm'|page}}" class="c-950 c-blue-hover mt-2">View all tours</a></li>
+            <li class="my-3"><a href="{{'static/about.htm'|page(false)}}" class="c-950 c-blue-hover mt-2">About</a></li>
+            <li class="my-3"><a href="{{'static/gallery.htm'|page(false)}}" class="c-950 c-blue-hover mt-2">Gallery</a></li>
+            <li class="my-3"><a href="{{'static/reviews.htm'|page(false)}}" class="c-950 c-blue-hover mt-2">Reviews</a></li>
+            <li class="my-3"><a href="{{'static/blog.htm'|page(false)}}" class="c-950 c-blue-hover mt-2">Blog</a></li>
+            <li class="my-3"><a href="{{'static/our-service.htm'|page(false)}}" class="c-950 c-blue-hover mt-2">Our service</a></li>
+            <li class="my-3"><a href="{{'static/vacancies.htm'|page}}" class="c-950 c-blue-hover mt-2">Work with us</a></li>
+
+        </ul>
+        <div class="my-3"></div>
+        <div class="d-flex align-items-center">
+            <i class="blue-dot"></i>
+            <span class="ms-2 fz-08 c-500">For chats</span>
+        </div>
+        <div>
+            <a target="_blank" href="{{settings.contacts.whatsapp.link~utm_string}}" class="whatsapp-link c-950 c-blue-hover fz-13 fw-600">{{settings.contacts.whatsapp.number}}</a>
+        </div>
+        <div class="row gx-3 mt-4">
+            <div class="col-auto">
+                <a target="_blank" href="{{settings.contacts.instagram}}" class="p-2 rounded-1 bg-blue c-white d-block bg-950-hover">
+                   <i class="fz-3 instagram-icon"></i>
+                </a>
+            </div>
+            <div class="col-auto">
+                <a target="_blank" href="{{settings.contacts.youtube}}" class="p-2 rounded-1 bg-blue c-white d-block bg-950-hover">
+                    <i class="fz-3 youtube-icon"></i>
+                </a>
+            </div>
+            <div class="col-auto">
+                <a target="_blank" href="{{settings.contacts.whatsapp.link~utm_string}}" class="whatsapp-link p-2 rounded-1 bg-blue c-white d-block bg-950-hover">
+                    <i class="fz-3 whatsapp-icon"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <currency-selector :rates="rates"/>
+</template>
+</Teleport>

@@ -1,0 +1,109 @@
+==
+<?php
+use Noren\Bluuu\Models\Settings;
+use Noren\Bluuu\Models\Rules;
+use Noren\Booking\Models\Rates; 
+use Noren\Bluuu\Models\Reviews;
+function onStart(){
+    $this['settings']= Settings::instance();
+    $this['rules']= Rules::instance();
+    $rates = Rates::select('id', 'code', 'name', 'rate')->get();
+    $this['rates'] = $rates;
+    $this['token'] = Session::token(); 
+    $this['reviews_total'] = Reviews::count();
+
+    // --- 1. Список возможных UTM параметров
+    $utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_referrer'];
+
+    // --- 2. Собираем найденные UTM-метки в массив
+    $utmData = [];
+    foreach ($utmKeys as $key) {
+        if (Input::has($key)==true) {
+            $utmData[$key] = Input::get($key);
+        }
+    }
+
+    // --- 3. Если что-то есть — сохраняем в сессию как одну переменную
+    if (!empty($utmData)) {
+        Session::put('utm', $utmData);
+    }
+
+
+    // --- 4. Получаем UTM из сессии (если нет новых)
+    $utmFromSession = Session::get('utm', []);
+
+    // --- 5. Строим строку utm (например: utm_source=google&utm_medium=cpc...)
+    $utmString = '';
+    if (!empty($utmFromSession)) {
+        $utmString ='?'. http_build_query($utmFromSession);
+    }
+
+    // --- 6. Передаём строку в шаблон
+    $this['utm_string'] = $utmString;
+
+}
+?>
+==
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{this.page.meta_title}}</title>
+    <link rel="icon" href="{{'assets/favicon.png'|theme}}" type="image/png">
+    <meta name="description" content="{{this.page.meta_description}}">
+        <style>
+        .preloader{
+            padding:2rem;
+            width:100%;
+            height:100vh;
+            background-image: linear-gradient(to bottom,#00C4FF 0%,#00A1E0 25%,#0077B6 50%,#005F99 75%,#0066CC 100%);
+            display:flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color:#fff;
+            font-size: 1.5rem;
+        }
+        .preloading1 {
+            animation: preloading 1s infinite;
+            animation-delay: 0.2s;
+        }
+        .preloading2 {
+            animation: preloading 1s infinite;
+            animation-delay: 0.4s;
+        }
+        .preloading3 {
+            animation: preloading 1s infinite;
+            animation-delay: 0.6s;
+        }
+
+        @keyframes preloading{
+            to{
+                opacity: 0
+            }
+        }
+        </style>
+    <link rel="preload" href="{{'assets/fonts/PetrovSans-Regular.woff2'|theme}}" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="{{'assets/fonts/PetrovSans-SemiBold.woff2'|theme}}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{{['assets/css/fonts.css']|theme}}">
+    <link rel="stylesheet" href="{{['assets/css/grid.css','assets/vendor/flatpickr/flatpickr.min.css','assets/vendor/splide/splide.min.css','assets/vendor/fancybox/fancybox.min.css','assets/css/main.css','assets/css/media.css']|theme}}"/>
+    {%placeholder styles%}
+    {% placeholder head %}
+    {%content 'headcodes'%}
+</head>
+<body>
+    {%content 'bodystart'%}
+    <div id="app">
+            {%partial 'base/header' c=true%}
+            {%page%}
+            {%partial 'base/footer-booking'%}
+    </div>
+    
+    <script src="{{'assets/vendor/vue/vue.global.js'|theme}}" ></script>
+    <script src="{{['assets/vendor/axios/axios.min.js','assets/vendor/splide/splide.min.js','assets/vendor/splide/splide-extension-auto-scroll.min.js','assets/vendor/flatpickr/flatpickr.min.js','assets/vendor/fancybox/fancybox.min.js']|theme}}"></script>
+    {%placeholder scripts%}
+    {%content 'bodyend'%}
+    
+</body>
+</html>

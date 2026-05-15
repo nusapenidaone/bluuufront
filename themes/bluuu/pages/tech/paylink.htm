@@ -1,0 +1,83 @@
+url = "/paylink"
+title = "Paylink"
+is_hidden = 1
+==
+<?php
+use Noren\Booking\Classes\XenditService;
+
+function onSend(){
+
+
+    $data = Input::all();
+
+    $rules = [
+        'id' => 'required|numeric',
+        'amount' => 'required|numeric',
+        'description' => 'required',
+    ];
+
+    $validation = Validator::make($data, $rules);
+
+    if ($validation->fails()) {
+        throw new ValidationException($validation);
+    }
+
+
+
+    $link=XenditService::createLink(Input::get('id'), Input::get('amount'), url('/ok'), url('/error'), Input::get('description') . '' .Input::get('amount'));
+    //https://bluuu.tours/api/paylink/xendit?lead_id=111565&description=dfsfsdf&amount=1655653
+
+
+    $this['link'] = $link;
+
+
+}
+?>
+==
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  </head>
+  <body>
+    
+   <div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-xl-5">
+    <form class="form p-4 bg-light rounded border" data-request="onSend" data-request-update="{ tech/link: '#link' }" data-request-validate>
+   <h1>Pay link Generation</h1>
+   <br>
+        <div class="mb-3">
+        <label for="id" class="form-label">Lead id</label>
+        <input type="number" class="form-control" id="id" name="id">
+        <div data-validate-for="id"></div>
+        </div>
+        <div class="mb-3">
+        <label for="amount" class="form-label">Amount</label>
+        <input type="number" class="form-control" id="amount" name="amount">
+        <div data-validate-for="amount"></div>
+        </div>
+        <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <input type="text" class="form-control" id="description" name="description">
+        <div data-validate-for="description"></div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mb-3">Generate</button>
+<br>
+        Pay link
+        <div class="mt-4 p-3 border  rounded" id="link"></div>
+
+    </form>
+
+        </div>
+    </div>
+   </div>
+
+{% framework extras %}
+
+  </body>
+</html>

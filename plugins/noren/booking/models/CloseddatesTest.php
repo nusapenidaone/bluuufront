@@ -14,5 +14,5 @@ class CloseddatesTest extends Model
         'boat' => Boat::class,
     ];
 
-    protected $fillable = ['date', 'lead_id', 'boat_id', 'qtty', 'type', 'odoo_id'];
+    protected $fillable = ['date', 'lead_id', 'boat_id', 'qtty', 'type', 'odoo_id', 'tour_type'];
 }

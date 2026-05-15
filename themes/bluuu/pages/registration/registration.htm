@@ -1,0 +1,275 @@
+url = "/registration/:id|^\d+$"
+layout = "booking-new"
+title = "Registration"
+is_hidden = 0
+==
+<?php
+use Noren\Booking\Classes\KommoService;
+use Noren\Bluuu\Models\Registration;
+
+
+function onStart(){
+
+    $this['registration']=Registration::instance();
+    $lead= KommoService::getLead($this->param('id'));
+    if(!$lead) return Redirect::to("404");
+    
+    if($lead['status_id']!='71217436') return Redirect::to('404');
+
+    $contcat_id=$lead['_embedded']['contacts'][0]['id'];
+    $contact= KommoService::getContact($contcat_id);
+    $leadData=$this->parseLeadData($lead);
+    $contactData=$this->parseContactData($contact);
+    $order = array_merge($leadData, $contactData);
+    
+
+    $order += [
+        'currency'       => 'IDR',
+        'language'       => 'EN',
+        'rate'           => 1,
+        'step'           => 1,
+        'pay'            => $order['collect'] > 0 ? 1 : false,
+        'method'         => $order['collect'] > 0 ? 1 : null,
+        'is_first_class' => (function() use ($lead) {
+            foreach ($lead['custom_fields_values'] ?? [] as $field) {
+                if (($field['field_id'] ?? null) == 187666) {
+                    return ($field['values'][0]['value'] ?? '') === '11-First Class Shared Boat Tour';
+                }
+            }
+            return false;
+        })(),
+        'menu'           => null,
+    ];
+
+    Session::put('order',$order);
+    $this['order']=$order;
+    
+
+}
+
+
+
+
+public static function parseLeadData(array $lead)
+{
+    $result = [
+        'lead_id'         => $lead['id'] ?? null,
+        'odoo_id'         => null,
+        'travel_date'     => null,
+        'travel_time'     => null,
+        'count_of_people' => null,
+        'collect'         => null,
+        'meeting_point'   => null,
+    ];
+
+    if (!empty($lead['custom_fields_values'])) {
+        foreach ($lead['custom_fields_values'] as $field) {
+            if (empty($field['field_name']) || empty($field['values'][0]['value'])) {
+                continue;
+            }
+
+            $fieldName = trim($field['field_name']);
+            $value     = $field['values'][0]['value'];
+
+            switch ($fieldName) {
+                case 'Travel date':
+                    $dt = new DateTime();
+                    $dt->setTimestamp($value);
+                    $dt->setTimezone(new DateTimeZone('Asia/Makassar'));
+
+                    $result['travel_date'] = $dt->format('Y-m-d');
+                    $result['travel_time'] = $dt->modify('-30 minutes')->format('H:i');
+                    break;
+
+                case 'Count of people':
+                    $result['count_of_people'] = (int) $value;
+                    break;
+
+                case 'Collect':
+                    $result['collect'] = (float) $value;
+                    break;
+
+                case 'Meeting point':
+                    $result['meeting_point'] = (string) $value;
+                    break;
+                case 'Odoo rental order':
+                    $result['odoo_id'] = (string) $value;
+                    break;
+
+            }
+        }
+    }
+
+    return $result;
+}
+function parseContactData(array $contact)
+{
+    $result = [
+        'contact_id' => $contact['id'] ?? null,
+        'name' => $contact['name'] ?? null,
+        'email' => null,
+        'phone' => null,
+    ];
+
+    if (!empty($contact['custom_fields_values'])) {
+        foreach ($contact['custom_fields_values'] as $field) {
+            if (isset($field['field_code'])) {
+                switch ($field['field_code']) {
+                    case 'EMAIL':
+                        $result['email'] = $field['values'][0]['value'] ?? null;
+                        break;
+                    case 'PHONE':
+                        $result['phone'] = $field['values'][0]['value'] ?? null;
+                        break;
+                }
+            }
+        }
+    }
+
+    return $result;
+}
+?>
+==
+<section class="flex-grow-1">
+    <div class="py-5"></div>
+    <div class="container-xxl ">
+
+            <div class="row justify-content-center">
+
+                    <template v-if="order.step==1">
+                    {%partial 'registration/step1'%}
+                    </template>
+
+                    <template v-if="order.step==2">
+                    {%partial 'registration/step2'%}
+                    </template>
+
+                    <template v-if="order.step==3">
+                    {%partial 'registration/step3'%}
+                    </template>
+
+                    <template v-if="order.step==4">
+                    <step :step="registration.step4" :next="5" :back="3" :key="4"></step>
+                    </template>
+
+                    <template v-if="order.step==5">
+                    <step :step="registration.step5" :next="6" :back="4" :key="5"></step>
+                    </template>
+
+                    <template v-if="order.step==6">
+                    <step :step="registration.step6" :next="7" :back="5" :key="6"></step>
+                    </template>
+
+                    <template v-if="order.step==7">
+                    <step :step="registration.step7" :next="8" :back="6" :key="7"></step>
+                    </template>
+
+                    <template v-if="order.step==8">
+                    <step :step="registration.step8" :next="9" :back="7" :key="8"></step>
+                    </template>
+
+                    <template v-if="order.step==9">
+                        <step9 :key="9" @save="saveOrder()"></step9>
+                    </template>
+
+                    <template v-if="order.step==10">
+                        <step10 :key="10"  @save="saveOrder()"></step10>
+                    </template>
+                    <template v-if="order.step==11">
+                        <step11 :key="11" @save="saveOrder()"></step11>
+                    </template>
+
+                    <template v-if="order.step==12">
+                        <step12 :key="12" @save="saveOrder()"></step12>
+                    </template>
+
+            </div>
+        <div class="py-5"></div>
+    </div>
+<div class="py-5"></div>    
+</section>
+
+{%put scripts%}
+<script src="{{[
+    'assets/js/components/currency-selector.js',
+    'assets/js/components/promo-code.js',
+    'assets/js/components/format-number.js',
+    'assets/js/components/format-date.js',
+    'assets/js/components/registration/step.js',
+    'assets/js/components/registration/step9.js',
+    'assets/js/components/registration/step10.js',
+    'assets/js/components/registration/step11.js',
+    'assets/js/components/registration/step12.js',
+    ]|theme}}"></script>
+<script>
+    let registration={{registration | json_encode(constant('JSON_NUMERIC_CHECK'))|raw}};
+    let k= '{{token}}';
+    let rates = {{rates | json_encode(constant('JSON_NUMERIC_CHECK'))|raw}};
+    const order = Vue.reactive({{order | json_encode(constant('JSON_NUMERIC_CHECK'))|raw}});
+
+
+
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                loaded: true,
+                registration,
+                rates,
+                order,
+            };
+        },
+
+        watch: {
+            'order.step' : 'scrollTop',
+        },
+
+        computed: {
+
+        },
+        methods:{
+            scrollTop() {
+                window.scrollTo({
+                    top: 0,
+                    behavior: 'auto'
+                });
+            },
+
+
+            saveOrder(){
+                
+                this.loading=true
+                debugger;
+                axios.post('/api/registration', this.order, {
+                        headers: {
+                            'X-CSRF-TOKEN': k
+                        }
+                    })
+                .then(function (response) {
+                    debugger;
+                    window.location.href = response.data;
+                })
+                .catch(function (error) {
+                    window.location.href="https://bluuu.tours/booking/error"
+                });
+            },
+
+
+        }
+    })
+    
+    .component('currency-selector', CurrencySelector)
+    .component('promo-code', PromoCode)
+    .component('format-number', FormatNumber)
+    .component('format-date', FormatDate)
+    .component('step', Step)
+    .component('step9', Step9)
+    .component('step10', Step10)
+    .component('step11', Step11)
+    .component('step12', Step12)
+    .provide('order', order)
+    .mount("#app");
+
+
+</script>
+{%endput%}

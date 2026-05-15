@@ -2,18 +2,23 @@ columns:
     id:
         label: ID
         type: number
-    odoo_id:
-        label: 'Odoo ID'
-        type: number
+        invisible: false
     name:
         label: Name
         type: text
-    company_name:
-        label: Compamy
-        relation: company
-        valueFrom: name
-        span: auto
+    odoo_id:
+        label: 'Odoo ID'
+        type: number
+    odoo_name:
+        label: 'Odoo Name'
         type: text
+
+
     capacity:
         label: Capacity
         type: number
+    sort_order:
+        label: Priority
+        type: number
+        searchable: false
+        sortable: false

@@ -8,3 +8,6 @@ columns:
     title:
         label: title
         type: text
+    odoo_name:
+        label: Odoo Route Name
+        type: text

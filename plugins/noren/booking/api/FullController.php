@@ -333,6 +333,7 @@ class FullController extends Controller
                 'boat_price' => 0,
                 'pricesbydates' => $tour->pricesbydates,
                 'status' => $tour->status ?: 'ready',
+                'odoo_type' => $tour->odoo_type,
                 'fleet_size' => $tour->boat->count(),
                 'badge_name' => $badge?->name ?: null,
                 'badge_color' => $badge?->color ?: null,
@@ -439,8 +440,15 @@ class FullController extends Controller
                     } elseif ((int) $type === 4) {
                         $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
                     } elseif ((int) $type === 1) {
-                        $boatIndex[$boat->id]['dates'][$dateStr]['qtty'] += (int) ($cd->qtty ?? 0);
-                        $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
+                        if ($cd->tour_type && $cd->tour_type !== $tour->odoo_type) {
+                            // Another shared tour is using this boat — fully blocked
+                            $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
+                            $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
+                        } else {
+                            // Same tour or legacy null → count seats
+                            $boatIndex[$boat->id]['dates'][$dateStr]['qtty'] += (int) ($cd->qtty ?? 0);
+                            $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
+                        }
                     }
                 }
             }

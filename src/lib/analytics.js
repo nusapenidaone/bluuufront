@@ -141,6 +141,7 @@ export function trackAddPaymentInfo(payload) {
 
 export function trackPurchase({ value, currency = "IDR", items = [], transactionId, numItems } = {}) {
   if (typeof window === "undefined") return false;
+  const utm = getUtmParams() || {};
   window.dataLayer = window.dataLayer || [];
   window.dataLayer.push({
     event: "purchase",
@@ -151,6 +152,11 @@ export function trackPurchase({ value, currency = "IDR", items = [], transaction
       num_items: numItems || items.length || 1,
       items: items.filter(Boolean),
     },
+    utm_source: utm.utm_source || "(direct)",
+    utm_medium: utm.utm_medium || "(none)",
+    utm_campaign: utm.utm_campaign,
+    utm_term: utm.utm_term,
+    utm_content: utm.utm_content,
   });
   return true;
 }
