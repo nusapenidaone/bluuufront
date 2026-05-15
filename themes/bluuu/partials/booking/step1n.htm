@@ -1,0 +1,274 @@
+<Transition>
+    <div v-if="order.step==1">
+        <div class="py-xl-4"></div>
+        <div class="fixed-navigation">
+            <div class="container-xl">
+                <div class="row gx-2 align-items-center">
+                    <div class="col">
+                        <div class="c-400 fw-600 fz-09 d-xl-flex d-none align-items-center">
+                            <a href="{{'stаtic/home.htm'|page}}" class="c-400 c-950-hover">Home</a>
+                            <i class="bredcrumbs-arrow mx-2"></i>
+                            <a href="{{'tours/all.htm'|page}}" class="c-400 c-950-hover">Tours</a>
+                            <i class="bredcrumbs-arrow mx-2"></i>
+                            <a href="/nusa-penida/{{tour.types.slug}}" class="c-400 c-950-hover">{{tour.types.name}}</a>
+                        </div>
+                    </div>
+                    <div class="col-auto my-2 d-none" v-if="tour.memo">
+                        <a class="d-flex align-items-center pointer fw-600 bg-50 p-xl-0 p-2 rounded-3" download href="tour.memo.path">
+                            <i class="download-icon fz-15"></i>
+                            <span class="ms-2 d-xl-inline d-none">Tour memo</span>
+                        </a>
+                    </div>
+                    <div class="col-auto my-2">
+                        <div class="d-flex align-items-center pointer fw-600 bg-50 p-xl-0 p-2 rounded-3" @click="share">
+                            <i class="share-icon fz-15"></i>
+                            <span class="ms-2">Share</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div >
+
+        <boat-images v-cloak :image="'{{tour.images[0].path|resize(960,640,{'mode':'crop', 'extension':'webp'})}}'" :images="tour.images_with_thumbs" :youtube="tour.youtube"></boat-images>
+        </div>
+        <div class="position-relative z-1 margin-minus rounded-15 bg-50">
+            <div class="container-xl">
+                <div class="row gx-xl-5 pt-3">
+                    <div class="col-xl-8 mt-3">
+
+                            <div class="row gx-3 justify-content-xl-between justify-content-center">
+                                <div class="col-xl-9 text-md-center">
+                                    <h1 class="fz-2 lh-11 fw-600 c-950">{{tour.name}}</h1>
+                                   
+
+
+                                    <div class="col-12">
+                                        <template v-if="tour.why">
+                                        <ul class="c-500 mt-3 justify-content-xl-start justify-content-center row gx-3 gy-2">
+                                            <li class="col-auto d-flex" v-for="v in tour.why">
+                                                <img class="wh-12" :src="'https://bluuu.tours/storage/app/media/'+v.icon" loading="lazy"><span class="ms-2" v-text="v.name"></span>
+                                            </li>
+                                        </ul>
+                                        </template>
+                                        <div class="c-500 mt-3 content mb-2" v-html="tour.description"></div>
+                                        <template v-for="l in tour.list">
+                                        <div class="d-flex mt-2 c-500" ><i class="wh-1 mt-0125" :class="l.icon"></i> <span class="ms-2" v-text="l.test"></span></div>
+                                        </template>
+                                    
+                                    </div>
+                                </div>
+                                <div class="col-xl-2 col-4 mt-3 text-center">
+                                    <img src="{{'assets/icons/choice.webp'|theme}}" alt="choice" class="w-100">
+                                    <div class="c-950 fw-600 fz-09 mt-2">Customer choice</div>
+                                    <div class="c-950 fw-600 tdu"> {{reviews_total|number_format(0, '.', ',')}} Reviews</div>
+                                </div>
+                            </div>
+                            <div class="h-1 bg-black-10 my-1"></div>
+                            <review-slider :reviews="tour.reviews"></review-slider>
+                            
+                            <template v-for="(included, key) in tour.included">
+                            <div class="mt-4">
+                                <div class="row">
+                                    <div class="col-auto" v-if="false">
+                                            <img :src="'https://bluuu.tours/storage/app/media'+included.icon" class="wh-5 rounded-1">
+                                    </div>
+                                    <div class="col-auto" v-else>
+                                        <div class="bg-blue-10 wh-3 rounded-1 d-inline-flex align-items-center justify-content-center fz-12 fw-600">
+                                            <i class="check-icon-blue"></i>
+                                        </div>
+                                    </div>       
+
+
+                                    <div class="col align-self-center">
+                                        <div class="fz-12 fw-600" v-text="included.name"></div>
+                                        <div class="c-500 mt-2" v-html="included.description"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            </template>
+                            <div class="bg-blue-image p-4 rounded-1 shadow mt-1  text-md-center">
+                                <div class="row align-items-center c-50 gx-xl-5 justify-content-center">
+
+                                    <div class="col-xl">
+                                        <div class="fz-15 fw-600">Rainy day? No worries!</div>
+                                        <div class="mt-2">If Bali’s weather misbehaves, we’ll move your tour to another day or refund you completely. <br>
+                                            It’s our sunshine guarantee — even when the sun takes a rain check.</div>
+                                    </div>
+                                    <div class="col-auto mt-xl-0 mt-3">
+                                        <img src="{{'assets/icons/cloude-Icon.svg'|theme}}" alt="claude" loading="lazy" width="64"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="h-1 bg-black-10 my-1"></div>
+                            <div class="title fz-15 fw-600 lh-11 c-950 "> Full day tour to Nusa Penida: what to expect</div>
+                            {%for o in tour.overview%}
+                            <div class="row mt-1">
+                                <div class="col-xl-4">
+
+                                    <img src="{{o.img.path|resize(672,504,{'mode':'crop','extension':'webp'})}}" alt="overview" class="img w-100 rounded-1 ratio-4x3" loading="lazy">
+                                </div>
+                                <div class="col-xl-8 pt-xl-0 pt-3">
+                                    <div class="fw-600 fz-12">{{o.name}}</div>
+                                    <div class="c-500 mt-2 content">{{o.description|raw}}</div>
+                                    {%if o.list_title!=''%}
+                                    <div class="c-950 fw600 mt-3 content">{{o.list_title}}</div>
+                                    {%endif%}
+                                    {%for l in o.list%}
+                                    <div class="d-flex mt-2 c-500"><i class="{{l.icon}} wh-1 mt-0125"></i> <span class="ms-2">{{l.text}}</span></div>
+                                    {%endfor%}
+
+                                </div>
+                            </div>
+                            {%endfor%}
+
+
+                            <div class="h-1 bg-black-10 my-1"></div>
+                            <div class="title fz-15 fw-600 lh-11 c-950 ">
+                                What's included
+                            </div>
+                            <ul class="row fw-600  mt-3">
+                                <li class=" col-xl-6 d-flex mt-xl-4 mt-3" v-for="item in tour.includes">
+                                    <img :alt="item.name" class="wh-15" :src="'/storage/app/media'+item.icon" loading="lazy"><span class="ms-4" v-text="item.name"></span>
+                                </li>
+                            </ul>
+
+
+                            <div class="h-1 bg-black-10 my-5 d-xl-none"></div>
+                            <div class="bg-blue-image p-4 rounded-1 shadow my-5 d-xl-block d-none">
+                                <div class="row align-items-center justify-content-center">
+                                    <div class="col-xl">
+                                        <span class="fz-12 fw-600 c-50">You can cancel up to 24 hours in advance <br>
+                                            for a full refund if your plans change</span>
+                                    </div>
+
+                                    <div class="col-auto mt-xl-0 mt-3">
+                                        <img class="wh-3" src="{{'assets/icons/cancel24-icon.svg'|theme}}" alt="cancel24">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <program-slider :program="tour.program"></program-slider>
+                            </div>
+                            <div class="h-1 bg-black-10 my-1"></div>
+                            <div class="bg-blue-image p-4 rounded-1 shadow my-1 text-md-center">
+                                <div class="row align-items-center justify-content-center">
+                                    <div class="col-xl">
+                                        <span class="fz-12 fw-600 c-50">Do you have any questions ?</span>
+                                    </div>
+
+                                    <div class="col-auto mt-xl-0 mt-3">
+                                        <a class="whatsapp-link btn btn-blur" target="_blank" href="{{settings.contacts.whatsapp.link}}">
+                                            <span class="me-2"> Talk to our Manager </span>
+                                            <i class="arrow-icon-white"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="bg-white rounded-1">
+                                        <div class="p-4">
+                                            <div class="row">
+                                                <div class="col-xl-7">
+                                                    <div class="fz-15 fw-600 lh-11">
+                                                        24/7 Support
+                                                    </div>
+                                                    <div class="c-500 mt-4">
+                                                        Day or night, we’re here for you. Have a
+                                                        question at midnight or a change of
+                                                        plans at dawn? We’re just a call or chat
+                                                        away – anytime, every day, we’ve got
+                                                        your back.
+                                                    </div>
+                                                </div>
+                                                <div class="col-xl-5">
+                                                    <div class="bg-100 shadow border rounded-1 p-4 m-2">
+                                                        <div class="d-flex justify-content-between">
+                                                            <img src="{{'assets/icons/whatsapp-icon-dark.svg'|theme}}" alt="whatsap">
+                                                            <span class="c-600 fz-08">1 hour ago</span>
+                                                        </div>
+                                                        <div class="fw-600 mt-1">Manager</div>
+                                                        <div class="fz-08 c-500 mt-2">
+                                                            We are always ready to help <br>
+                                                            you in solving any issue!
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="p-1 rounded-1 bg-white h-100 check-image">
+                                        <div class="fz-15 fw-600 lh-11">
+                                            Pay securely. No guesswork.
+                                        </div>
+                                        <div class="c-500 mt-4">
+                                            Book with peace of mind using Visa, MasterCard,
+                                            PayPal, or even cash on the day. It’s quick, safe,
+                                            and transparent – no hidden fees, just easy payment
+                                            options that suit you.
+                                        </div>
+                                        <div class="py-5"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                        <div class="h-1 bg-black-10 my-1"></div>
+                        <div class="row">
+                            <div class="col-xl-8">
+                                <div class="fz-15 fw-600 lh-11">Start of the journey</div>
+                                <div class="mt-3 c-500 fz-12">
+                                    Your adventure begins at our own marina in Serangan, Bali. Enjoy a stylish
+                                    waterfront lounge with a bar, chill zone, showers, and a souvenir
+                                    shop—everything you need before setting sail.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-blue-image p-1 rounded-1 mt-4">
+                            <div class="row justify-content-center">
+                                <div class="col-xl d-flex text-md-center justify-content-xl-start justify-content-center">
+                                    <i class="location-icon-white me-3 d-xl-inline-block d-none"></i>
+                                    <div class="fz-11 fw-600 c-50">
+                                        {{settings.contacts.address|raw}}
+                                    </div>
+                                </div>
+                                <div class="col-auto mt-xl-0 mt-3">
+                                    <a href="{{settings.contacts.location}}" class="btn btn-blur" data-fancybox data-type="iframe">
+                                        <span class="me-2">Open map</span>
+                                        <div class="map-icon-white fz-12"></div>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <faq-section :faq="tour.faq"></faq-section>
+
+
+                    </div>
+                    <div class="col-xl-4 order-xl-0 order-last mt-3">
+                        <div class="sticky-block">
+                            <div class="d-xl-block d-none mb-3">
+                                <info-panel :tour="tour"></info-panel>
+                            </div>
+                            <div class="bg-white rounded-1 p-4 shadow text-center">
+                                <div class="fz-12 c-950 fw-600">Have booking questions ?</div>
+                                
+                                    <div class=" mt-3">
+                                        <a class="d-flex c-950 c-blue-hover tdu fw-600 justify-content-center" href="{{settings.contacts.whatsapp.link}}" target="_blank">
+                                            <img alt="whatsappp" class="wh-15em" src="{{'assets/icons/why-icon3.svg'|theme}}" loading="lazy"><span class="ms-2">{{settings.contacts.whatsapp.number}}</span>
+                                        </a>
+                                    </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        {%partial 'booking/similar'%}
+    </div>
+</Transition>

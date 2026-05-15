@@ -1,0 +1,167 @@
+url = "/old/success/:slug"
+layout = "base"
+title = "Success"
+meta_title = "Success"
+meta_description = "Success"
+==
+<?php
+use Noren\Booking\Models\Order;
+
+function onStart()
+{
+
+    if(Session::has('order_id')==true){
+        $this['order']=Order::find(Session::get('order_id'));
+       //Session::forget('user_id');
+    }
+
+
+    $slug = $this->param('slug');
+
+    switch ($slug) {
+        case 'payment-success':
+            $this['content'] = [
+                'title' => "Congratulations!<br> Your tour has been successfully paid.",
+                'text' => "Get ready for an unforgettable adventure! We're excited for you to join us and will send you a friendly reminder about your trip in 24 hours, ensuring you're fully prepared for the journey ahead. Looking forward to seeing you soon!"
+            ];
+            break;
+
+        case 'request-success':
+            $this['content'] = [
+                'title' => "We greatly appreciate your <br>decision to select our company!",
+                'text' => "Your request is currently being processed, and we'll confirm your booking very soon."
+            ];
+            break;
+
+
+        case 'edit-success':
+            $this['content'] = [
+                'title' => "Your order details have been successfully updated.",
+                'text' => "We’ll send you a friendly reminder 24 hours before your trip so you’re fully prepared for the adventure. Thank you for choosing us!"
+            ];
+            break;
+        case 'cancel-success':
+            $this['content'] = [
+                'title' => "Your tour has been successfully canceled",
+                'text' => "If you need help choosing another date or planning a new adventure, we’re always here to assist you. Thank you for being with us!"
+            ];
+            break;
+
+        case 'vacancy-success':
+            $this['content'] = [
+                'title' => "Application sent",
+                'text' => "Thank you! We will review your resume and give you feedback shortly!"
+            ];
+            break;
+        case 'feedback-success':
+            $this['content'] = [
+                'title' => "Application sent",
+                'text' => "Thank you for your feedback! We will review it and get back to you shortly."
+            ];
+            break;
+
+        default:
+            return \Redirect::to('404');
+    }
+}
+?>
+==
+{%put head%}
+<meta name="robots" content="noindex, nofollow, noarchive" >
+
+{%endput%}
+{%if order%}
+<div class="d-none">
+{{order.id}}
+</div>
+{%endif%}
+<section class="bg-50 z-1 position-relative rounded-bottom">
+    <div class="py-xl-5 py-4"></div>
+    <div class="container-xl">
+        <div class="row justify-content-center">
+            <div class="col-xl-8">
+                <div class="p-5 rounded-3 bg-white shadow text-center">
+                    
+                    <div class="row justify-content-center">
+                        <div class="col-xl-8">
+                    <img src="{{'assets/img/success.png'|theme}}" alt="success">
+
+                    <div class="fw-600 c950 fz-15">{{content.title|raw}}</div>
+
+                    <div class="c-500 mt-4">
+                    {{content.text|raw}}
+                    </div>
+                    <a href="{{'static/home.htm'|page}}" class="btn btn-outline mt-4">Back home</a>
+                        
+                    <div class="mt-5 fz-09 c-500">
+                    If you need any assistance, write <br>
+                    in WhatsApp:  <a class="c-950 tdu" href="{{settings.contacts.whatsapp.link}}">{{settings.contacts.whatsapp.number}}</a>
+                    </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="py-5"></div>
+</section>
+
+
+{%put scripts%}
+<script src="{{['assets/js/order.js','assets/js/components/currency-selector.js','assets/js/components/promo-code.js','assets/js/components/format-number.js','assets/js/components/slider.js']|theme}}"></script>
+<script>
+    let rates = {{rates | json_encode(constant('JSON_NUMERIC_CHECK'))|raw}};
+    const { createApp } = Vue;
+    createApp({
+        data() {
+            return {
+                loaded: false,
+                redirect: false,
+                rates,
+                order,
+            };
+        },
+        mounted() {
+
+            this.loaded=true
+        },
+    })
+    .component('currency-selector', CurrencySelector)
+    .component('promo-code', PromoCode)
+    .component('format-number', FormatNumber)
+    .provide('order', order)
+    .mount("#app");
+</script>
+
+{%if order==true%}
+<script>
+window.dataLayer = window.dataLayer || [];
+window.dataLayer.push({
+  event: 'purchase',
+  ecommerce: {
+      transaction_id: '{{order.external_id}}',
+      value: {{order.total_price}},
+      currency: 'IDR',
+      email: '{{order.email}}',
+      customer_type: 'new',
+      customer_age: '30',
+      passengers: '{{order.adults+order.kids+order.children}}',
+      date_of_tour: '{{order.travel_date}}',
+      phone_number: '{{order.whatsapp}}',
+      user_id: '{{order.id}}',
+      items: [
+       {
+        item_id: '{{order.tours.id}}',
+        item_name: '{{order.tours.name}}',
+        currency: 'USD',
+        index: 0,
+        item_brand: 'bluuu',
+        item_category: '{{order.tours.types.name}}',
+        price: {{order.total_price}},
+        quantity: 1
+      }]
+  }
+});
+</script>
+{%endif%}
+{%endput%}

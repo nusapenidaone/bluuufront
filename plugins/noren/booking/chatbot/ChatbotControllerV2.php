@@ -447,7 +447,7 @@ class ChatbotControllerV2 extends ChatbotController
 
     private function getAvailableBoats($tour, ?string $date, int $guests, bool $isShared): \Illuminate\Support\Collection
     {
-        $tour->loadMissing(['boat' => fn($q) => $q->with('company')->orderBy('sort_order')->orderBy('id')]);
+        $tour->loadMissing(['boat' => fn($q) => $q->with('company')->orderBy('noren_booking_tours_boat.sort_order')->orderBy('noren_booking_boat.sort_order')->orderBy('noren_booking_boat.id')]);
 
         if ($tour->boat->isEmpty()) return collect();
 
@@ -479,13 +479,19 @@ class ChatbotControllerV2 extends ChatbotController
 
             if ($isShared) {
                 // Shared: check blocked + count available seats
-                $blocked = $records->contains(function ($r) {
+                $tourType = $tour->odoo_type ?? null;
+                $blocked = $records->contains(function ($r) use ($tourType) {
                     $t = $r->type;
-                    return $t === null || $t === '' || in_array((int) $t, [2, 3, 4]);
+                    if ($t === null || $t === '' || in_array((int) $t, [2, 3, 4])) return true;
+                    // Another shared tour is using this boat
+                    if ((int) $t === 1 && $r->tour_type && $r->tour_type !== $tourType) return true;
+                    return false;
                 });
                 if ($blocked) continue;
 
-                $booked          = (int) $records->where('type', 1)->sum('qtty');
+                $booked = (int) $records->where('type', 1)->filter(function ($r) use ($tourType) {
+                    return !$r->tour_type || $r->tour_type === $tourType;
+                })->sum('qtty');
                 $availableSeats  = max(0, (int) $boat->capacity - $booked);
                 if ($availableSeats < $guests) continue;
 

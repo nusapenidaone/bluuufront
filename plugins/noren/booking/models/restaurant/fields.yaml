@@ -36,6 +36,11 @@ fields:
         label: 'Amo Name'
         span: auto
         type: text
+
+    odoo_name:
+        label: 'Odoo Lunch Name'
+        span: auto
+        type: text
     included:
         type: switch
         label: Included

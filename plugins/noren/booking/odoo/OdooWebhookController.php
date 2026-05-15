@@ -13,7 +13,6 @@ class OdooWebhookController extends Controller
     public function handle()
     {
         $payload = Input::all();
-        //Log::info($payload);
 
         $odooId = (int) ($payload['id'] ?? $payload['_id'] ?? (isset($payload['ids']) ? $payload['ids'][0] : 0));
 
@@ -23,73 +22,95 @@ class OdooWebhookController extends Controller
 
         $state = $payload['state'] ?? null;
 
+        Log::info("Odoo webhook | odoo_id={$odooId} | state={$state}");
+
+        // Case 4: cancel → delete record
         if ($state === 'cancel') {
             return $this->handleCancel($odooId);
         }
 
-        if ($state !== 'sale') {
-            return response()->json(['ok' => true]);
+        // Cases 0, 1, 2, 3: sale → create or update record
+        if ($state === 'sale') {
+            return $this->handleSale($odooId, $payload);
         }
 
-        return $this->handleSale($odooId, $payload);
-    }
-
-    // ─── Cancel ───────────────────────────────────────────────────────────────
-
-    protected function handleCancel(int $odooId)
-    {
-        $existing = Closeddates::where('odoo_id', $odooId)->first();
-        $found    = $existing ? "found in DB (id={$existing->id})" : "not in DB";
-
-        //Log::info("Odoo webhook DELETE | odoo_id={$odooId} | {$found}");
-        Closeddates::where('odoo_id', $odooId)->delete();
-
+        // quotation / draft / sent → ignore (don't touch the record)
         return response()->json(['ok' => true]);
     }
 
-    // ─── Sale ─────────────────────────────────────────────────────────────────
+    // ─── Case 4: cancel → delete ──────────────────────────────────────────────
+
+    protected function handleCancel(int $odooId)
+    {
+        $deleted = Closeddates::where('odoo_id', $odooId)->delete();
+        Log::info("Odoo webhook CANCEL | odoo_id={$odooId} | deleted={$deleted}");
+        return response()->json(['ok' => true]);
+    }
+
+    // ─── Cases 0, 1, 2, 3: sale → upsert ─────────────────────────────────────
 
     protected function handleSale(int $odooId, array $payload)
     {
-        $date = isset($payload['rental_start_date'])
-            ? substr($payload['rental_start_date'], 0, 10)
-            : null;
-
-        if (!$date) {
-            return response()->json(['ok' => false], 400);
-        }
-
-        $boatName = $payload['x_studio_boat_name'] ?? '';
-        $tourType = $payload['x_studio_tour_type'] ?? '';
-        $qtty     = (int) ($payload['x_studio_count_of_people'] ?? 0);
-
+        // Resolve tour type (needed to determine shared=1 / private=2)
+        $tourType = $payload['x_studio_tour_type'] ?? null;
         if (!$tourType) {
             $tourType = OdooService::fetchTourType($odooId);
-            //Log::info("Odoo webhook | odoo_id={$odooId} | x_studio_tour_type not in payload, fetched from Odoo: '{$tourType}'");
         }
 
         $tour = $tourType ? Tours::where('odoo_type', $tourType)->first() : null;
-
         if (!$tour) {
-            //Log::info("Odoo webhook SKIP | odoo_id={$odooId} | tour not found by odoo_type={$tourType}");
+            Log::info("Odoo webhook SKIP | odoo_id={$odooId} | tour not found for odoo_type={$tourType}");
             return response()->json(['ok' => true]);
         }
 
-        $type      = (int) $tour->types_id === 1 ? 1 : 2;
-        $boat      = $boatName ? Boat::where('amo_name', $boatName)->first() : null;
-        $newBoatId = $boat?->id;
+        $type = (int) $tour->types_id === 1 ? 1 : 2;
 
-        return $this->upsertCloseddate($odooId, $date, $type, $newBoatId, $boatName, $qtty, $tourType);
-    }
+        // Load existing record so we can preserve fields missing from payload
+        $existing = Closeddates::where('odoo_id', $odooId)->first();
 
-    // ─── Upsert ───────────────────────────────────────────────────────────────
+        // ── Case 1: date ──────────────────────────────────────────────────────
+        $dateRaw = $payload['rental_start_date'] ?? null;
+        $date    = $dateRaw
+            ? substr($dateRaw, 0, 10)
+            : ($existing?->date ?? null);
 
-    protected function upsertCloseddate(int $odooId, string $date, int $type, ?int $boatId, string $boatName, int $qtty, string $tourType)
-    {
+        if (!$date) {
+            Log::warning("Odoo webhook SKIP | odoo_id={$odooId} | no date in payload and no existing record");
+            return response()->json(['ok' => false, 'error' => 'no date'], 400);
+        }
+
+        // ── Case 3: boat ──────────────────────────────────────────────────────
+        // Use array_key_exists so we can distinguish "not sent" from "empty string"
+        if (array_key_exists('x_studio_boat_name', $payload)) {
+            $boatName = $payload['x_studio_boat_name'];
+            $boat     = $boatName ? Boat::where('amo_name', $boatName)->first() : null;
+            $boatId   = $boat?->id;
+        } else {
+            // field not in payload → keep existing value
+            $boatId = $existing?->boat_id;
+        }
+
+        // ── Case 2: qtty ──────────────────────────────────────────────────────
+        if (array_key_exists('x_studio_count_of_people', $payload)) {
+            $qtty = (int) $payload['x_studio_count_of_people'];
+        } else {
+            $qtty = $existing?->qtty ?? 0;
+        }
+
+        $action = $existing ? 'UPDATE' : 'CREATE';
+
         Closeddates::updateOrCreate(
             ['odoo_id' => $odooId],
-            ['date' => $date, 'type' => $type, 'boat_id' => $boatId, 'qtty' => $qtty ?: null]
+            [
+                'date'      => $date,
+                'type'      => $type,
+                'boat_id'   => $boatId,
+                'qtty'      => $qtty ?: null,
+                'tour_type' => $tourType ?: null,
+            ]
         );
+
+        Log::info("Odoo webhook {$action} | odoo_id={$odooId} | date={$date} | type={$type} | boat_id={$boatId} | qtty={$qtty}");
 
         return response()->json(['ok' => true]);
     }

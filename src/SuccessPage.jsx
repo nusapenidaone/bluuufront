@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { trackPixelPurchase, trackPurchase } from "./lib/analytics";
+import { trackPurchase, trackPixelPurchase } from "./lib/analytics";
 
 function formatAmount(amount, currency) {
   if (!amount) return null;
@@ -61,8 +61,23 @@ export default function SuccessPage() {
 
   useEffect(() => {
     if (type !== "request" && amount > 0) {
-      trackPixelPurchase({ contentIds, value: amount, currency, orderId, numItems });
-      trackPurchase({ value: amount, currency, numItems, transactionId: orderId });
+      const itemId = contentIds || (type === "private" ? "private-tour-nusa-penida" : "shared-tour-nusa-penida");
+      const itemName = type === "private" ? "Private Nusa Penida Tour" : type === "shared" ? "Shared Nusa Penida Tour" : "Nusa Penida Tour";
+      const itemCategory = type === "private" ? "Private Tour" : "Shared Tour";
+      trackPurchase({
+        value: amount,
+        currency,
+        numItems,
+        transactionId: orderId,
+        items: [{ item_id: itemId, item_name: itemName, item_category: itemCategory, quantity: numItems, price: amount }],
+      });
+      trackPixelPurchase({
+        contentIds: itemId,
+        value: amount,
+        currency,
+        orderId,
+        numItems,
+      });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

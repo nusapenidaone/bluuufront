@@ -11,3 +11,6 @@ columns:
     included:
         label: Included
         type: switch
+    odoo_name:
+        label: Odoo Lunch Name
+        type: text

@@ -1,0 +1,42 @@
+<div class="d-flex align-items-center mb-4">
+    <div class="border-white bg-white rounded-3 p-2 d-flex align-items-center c-950 pointer" @click="step=1"><i class="back-icon fz-12"></i></div>
+    <div class=" ms-3 fz-15 lh-11 fw-600 c-950">Edit</div>
+</div>
+<div class="row justify-content-center">
+    <div class="col-xl-8">
+        <div class="p-4 border-black-10 bg50 rounded-1 mb-3 bg-white">
+            <div class="fw-600 flex-grow-1"><span>Base details</span></div>
+            <div class="h-1 bg-black-10 my-3"></div>
+            <ul class="c-500">
+                <li class="d-flex pt-2">
+                    <div class="flex-grow-1 c-950 fw-600">Date</div>
+                    <div v-if="edit_status" class="ms-2 d-inline-flex align-items-center pointer" data-fancybox data-src="#params">
+                        <format-date :date="order.travel_date"></format-date>
+                        <i class="edit-icon ms-2"></i>
+                    </div>
+                    
+                    <format-date v-else :date="order.travel_date"></format-date>
+                 
+                </li>
+                <li class="d-flex pt-2">
+                    <div class=" flex-grow-1 c-950 fw-600">Passengers</div>
+                    <div v-if="edit_status" class="ms-2 d-inline-flex align-items-center pointer" data-fancybox data-src="#params">
+                        <span v-text="membersView"></span>
+                        <i class="edit-icon ms-2"></i>
+                    </div>
+                    <span v-else v-text="membersView"></span>
+                </li>
+            </ul>
+        </div>
+
+  
+        <transfer-selector v-if="tour.transfer.length" :transfers="tour.transfer" @close="showInfo"></transfer-selector>
+        <cover-selector v-if="tour.cover.length" :covers="tour.cover" @close="showInfo"></cover-selector>
+        <extras-selector :ecategories="tour.ecategories" @close="showInfo"> </extras-selector>
+    </div>
+    <div class="col-xl-4">
+    <div class="sticky-block">
+        {%partial 'edit/info'%}
+    </div>
+    </div>
+</div>

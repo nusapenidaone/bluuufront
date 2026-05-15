@@ -1,0 +1,336 @@
+:root{
+    --azure-blue: #324CDA;
+    --ocean-blue: #182DA8;
+    --tropic-aqua: #BEF3FC;
+    --pure-white: #E8E8E6;
+    --black: #000000;
+    --caharcoal: #373737;
+    --cool-grey: #d8d8d8;
+    --mid-grey: #656565;
+    --light-grey: #9E9E9E;
+    --white: #ffffff;
+    --grey: #f9f9f9;
+}
+
+
+body,
+html {
+    font-size: 16px;
+    font-weight: 400;
+     /* scroll-behavior: smooth; */
+}
+
+
+
+body{
+    top: 0!important;
+    position: static!important;
+    min-height: 100%;
+    min-height: auto!important;
+    font-family: "Aeonik Pro", sans-serif;
+}
+
+
+.bg-azure-blue, .bg-azure-blue-hover:hover{background-color: var(--azure-blue)}
+.bg-ocean-blue, .bg-ocean-blue-hover:hover{background-color: var(--ocean-blue)}
+.bg-black, .bg-black-hover:hover{background-color: var(--black)}
+.bg-caharcoal, .bg-caharcoal-hover:hover{background-color: var(--caharcoal)}
+.bg-light-grey, .bg-light-grey-hover:hover{background-color: var(--light-grey)}
+.bg-pure-white, .bg-pure-white-hover:hover{background-color: var(--pure-white)}
+.bg-white, .bg-white-hover:hover{background-color: var(--white)}
+.bg-grey, .bg-grey-hover:hover{background-color: var(--grey)}
+.bg-pattern{
+    background-image: url(../img/pattern.jpg);
+    background-size: auto;
+    background-repeat: repeat;
+}
+
+.c-azure-blue, .c-azure-blue-hover:hover{color: var(--azure-blue)}
+.c-ocean-blue, .c-ocean-blue-hover:hover{color: var(--ocean-blue)}
+.c-black, .c-black-hover:hover{color: var(--black)}
+.c-caharcoal, .c-caharcoal-hover:hover{color: var(--caharcoal)}
+.c-light-grey, .c-light-grey-hover:hover{color: var(--light-grey)}
+.c-pure-white, .c-pure-white-hover:hover{color: var(--pure-white)}
+.c-white, .c-white-hover:hover{color: var(--white)}
+
+.ratio-1{
+    aspect-ratio: 1/1;
+    object-fit: cover;
+}
+.ratio-3x2{
+    aspect-ratio: 3/2;
+    object-fit: cover;
+}
+.ratio-4x3{
+    aspect-ratio: 4/3;
+    object-fit: cover;
+}
+.cover{
+    object-fit: cover;
+}
+.container{
+    object-fit: contain;
+}
+.oh{
+    overflow: hidden;
+}
+
+.pointer{
+    cursor: pointer;
+}
+.relative{
+    position: relative;
+}
+.absolute{
+    position: absolute;
+}
+.fixed{
+    position: fixed;
+}
+.sticky{
+    position: sticky;
+}
+.full{
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+.z-1{
+    z-index: 1;
+}
+.z-2{
+    z-index: 2;
+}
+.z-3{
+    z-index: 3;
+}
+.w-100{
+    width: 100%;
+}
+.wmax-100{
+    max-width: 100%;
+}
+.wmin-100{
+    min-width: 100%;
+}
+.h-100{
+    height: 100%;
+}
+.h-100vh{
+    height: 100vh;
+}
+.hmax-100{
+    max-height: 100%;
+}
+.hmax-100vh{
+    max-height: 100vh;
+}
+.hmin-100{
+    min-height: 100%;
+}
+.hmin-100vh{
+    min-height: 100vh;
+}
+
+.font-1{
+    font-family: "Aeonik Pro", sans-serif;
+}
+.font-2{
+    font-family: "Belfast Grotesk", sans-serif;
+}
+.font-3{
+    font-family: "Krylon", sans-serif;
+}
+.fz-1{
+    font-size: 1rem;
+}
+.fz-12{
+    font-size: 1.2rem;
+}
+.fz-15{
+    font-size: 1.5rem;
+}
+.fz-17{
+    font-size: 1.7rem;
+}
+.fz-2{
+    font-size: 2rem;
+}
+.fz-25{
+    font-size: 2.5rem;
+}
+.fz-3{
+    font-size: 3rem;
+}
+.fz-35{
+    font-size: 3.5rem;
+}
+lh-1{
+    line-height: 1;
+}
+.lh-12{
+    line-height: 1.2;
+}
+
+.text-center{
+    text-align: center;
+}
+.text-right{
+    text-align: right;
+}
+.tdu-hover{
+    text-decoration: underline!important;
+    text-decoration-color: transparent!important;
+}
+.tdu, .tdu-hover:hover{
+    text-decoration: underline!important;
+    text-decoration-color: inherit!important;
+}
+
+
+.header{
+    z-index: 3;
+    background-color: var(--azure-blue);
+    position: sticky;
+    top: 0;
+}
+
+.menu{
+    width: 100%;
+    max-width: 400px;
+}
+
+
+
+
+.hero-section{
+    min-height: 600px;
+    background: url(../img/home-bg.webp) 50%/ cover no-repeat;
+}
+.fw-700{
+    font-weight: 700;
+}
+.fw-400{
+    font-weight: 400;
+}
+
+.v-line{
+    height: 100%;
+    width: 1px;
+    background-color: var(--cool-grey);
+}
+.rounded-0{
+    border-radius: 0.5rem;
+}
+.rounded{
+    border-radius: 50%;
+}
+.rounded-1{
+    border-radius: 1rem;
+}
+.rounded-15{
+    border-radius: 1.5rem;
+}
+
+input[type=radio]{
+    display: none;
+}
+input[type=radio] + i{
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    border: 1px solid var(--light-grey);
+    margin-right: 0.5rem;
+}
+input[type=radio]:checked + i{
+    background-color: var(--azure-blue);
+}
+label{
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+.counter{
+    display: inline-flex;
+    align-items: center;
+}
+.counter-icon{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    border: 1px solid var(--cool-grey);
+    color: var(--caharcoal);
+    transition: 0.3s;
+}
+.counter-icon:hover{
+    background-color: var(--azure-blue);
+    color: var(--white);
+}
+
+
+.btn{
+    font-size: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    outline: none;
+    font-weight: 700;
+    display: inline-flex;
+    color: var(--white);
+    transition: background-color 0.3s;
+}
+.btn:active{
+    transform: scale(0.95);
+}
+.btn-primary{
+    background-color: var(--azure-blue);
+}
+.btn-primary:hover{
+    background-color: var(--ocean-blue);
+}
+.btn-secondary{
+    color: var(--azure-blue);
+    background-color: var(--pure-white);
+}
+.btn-secondary:hover{
+    background-color: var(--cool-grey);    
+}
+
+.bt-ocean-blue{
+    border-top: 2px solid var(--ocean-blue);
+}
+.b-cool-gray{
+    border: 1px solid  var(--cool-grey);
+}
+
+.expand-icon{
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    background: url(../img/expand-icon.svg) 50%/ contain no-repeat;
+    cursor: pointer;
+}
+.expand-icon.active{
+    transform: rotate(180deg);
+}
+.splide{
+    position: relative;
+}
+.splide__arrow--prev{
+    left: 0;
+    top: 50%;
+    position: absolute;
+    transform: translate(-100%)
+}
+.splide__arrow--next{
+    right: 0;
+    top: 50%;
+    position: absolute;
+    transform: translate(100%)
+}

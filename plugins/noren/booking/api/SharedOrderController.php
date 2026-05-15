@@ -227,7 +227,7 @@ class SharedOrderController extends Controller
     {
         $tour = Tours::with([
             'boat' => function ($q) {
-                $q->orderBy('sort_order')->orderBy('id');
+                $q->orderBy('noren_booking_tours_boat.sort_order')->orderBy('noren_booking_boat.sort_order')->orderBy('noren_booking_boat.id');
             }
         ])->find($tourId);
 
@@ -241,12 +241,19 @@ class SharedOrderController extends Controller
                 ->whereNull('deleted_at')
                 ->get();
 
+            $tourType = $tour->odoo_type ?? null;
+
             // Any blocking record → skip
-            $blocked = $records->contains(function ($r) use ($boat) {
+            $blocked = $records->contains(function ($r) use ($boat, $tourType) {
                 if (!empty($boat->closed))
                     return true;
-                $t = $r->type;
-                return $t === null || $t === '' || in_array((int) $t, [2, 3, 4]);
+                $t = (int) $r->type;
+                if ($r->type === null || $r->type === '' || in_array($t, [2, 3, 4]))
+                    return true;
+                // Boat already used by a different shared tour
+                if ($t === 1 && $r->tour_type && $r->tour_type !== $tourType)
+                    return true;
+                return false;
             });
 
             if ($blocked) {
@@ -254,7 +261,9 @@ class SharedOrderController extends Controller
                 continue;
             }
 
-            $booked = $records->where('type', 1)->sum('qtty');
+            $booked = $records->where('type', 1)->filter(function ($r) use ($tourType) {
+                return !$r->tour_type || $r->tour_type === $tourType;
+            })->sum('qtty');
             $boatAvail[$boat->id] = max(0, (int) $boat->capacity - (int) $booked);
         }
 

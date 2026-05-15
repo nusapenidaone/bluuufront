@@ -712,3 +712,33 @@ v1.0.237:
 v1.0.238:
     - 'Updated table noren_booking_extras'
     - builder_table_update_noren_booking_extras_12.php
+v1.0.239:
+    - 'Updated table noren_booking_closeddates: add tour_type'
+    - builder_table_update_noren_booking_closeddates_6.php
+v1.0.240:
+    - 'Updated table noren_booking_closeddates_test: add tour_type'
+    - builder_table_update_noren_booking_closeddates_test.php
+v1.0.241:
+    - 'Updated table noren_booking_tours_boat: add sort_order per tour'
+    - builder_table_update_noren_booking_tours_boat_2.php
+v1.0.242:
+    - 'Updated table noren_booking_tours: add avail_type'
+    - builder_table_update_noren_booking_tours_42.php
+v1.0.243:
+    - 'Updated table noren_booking_tours: add source_id'
+    - builder_table_update_noren_booking_tours_43.php
+v1.0.244:
+    - 'Seed pivot sort_order for tours_boat from boat global sort_order'
+    - seed_tours_boat_sort_order.php
+v1.0.245:
+    - 'Updated table noren_booking_transfer: add odoo_name'
+    - builder_table_update_noren_booking_transfer_7.php
+v1.0.246:
+    - 'Updated table noren_booking_route: add odoo_name'
+    - builder_table_update_noren_booking_route_7.php
+v1.0.247:
+    - 'Updated table noren_booking_restaurant: add email'
+    - builder_table_update_noren_booking_restaurant_7.php
+v1.0.248:
+    - 'Updated table noren_booking_restaurant: add odoo_name'
+    - builder_table_update_noren_booking_restaurant_8.php

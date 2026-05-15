@@ -1,0 +1,21 @@
+<Transition>
+    <template v-if="order.step==3">
+    <div class="container-xl">
+        <div class="py-4"></div>
+        <div class="d-flex align-items-center">
+            <div class="border-white bg-white rounded-3 p-2 d-flex align-items-center c-950 pointer" @click="order.step=2"><i class="back-icon fz-12"></i></div>
+            <div class="ms-3 fz-15 lh-11 fw-600 c-950">Request Form</div>
+        </div>
+        <div class="row gx-3">
+            <div class="col-xl-4 order-xl-1 mt-4">
+                <div class="position-sticky top-8">
+                    <info-panel :tour="tour"></info-panel>
+                </div>
+            </div>
+            <div class="col-xl-8 mt-4">
+                <contact-details :rules="rules" :tour="tour"></contact-details>
+            </div>
+        </div>
+    </div>
+    </template>
+</Transition>

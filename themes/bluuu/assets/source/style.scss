@@ -1,0 +1,54 @@
+    body, html{
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+
+    .video-bg {
+        position: relative;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .video-bg video {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        transform: translate(-50%, -50%);
+        object-fit: cover;
+    }
+
+    /* Desktop video by default */
+    #video-desktop {
+        display: block;
+    }
+    #video-mobile {
+        display: none;
+    }
+
+    /* Mobile override */
+    @media (max-width: 768px) {
+        #video-desktop {
+            display: none !important;
+        }
+        #video-mobile {
+            display: block !important;
+        }
+    }
+
+    .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 1;
+    }
+
+    .video-content {
+        position: relative;
+        z-index: 2;
+        color: #fff;
+    }

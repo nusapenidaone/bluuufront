@@ -1,0 +1,40 @@
+@font-face {
+  font-family: "Belfast Grotesk";
+  src: url("../fonts/BELFAST-GROTESK-REGULAR.woff2") format("woff2"),
+       url("../fonts/BELFAST-GROTESK-REGULAR.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Belfast Grotesk";
+  src: url("../fonts/BELFAST-GROTESK-BOLD.woff2") format("woff2"),
+       url("../fonts/BELFAST-GROTESK-BOLD.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("../fonts/AEONIKPROTRIAL-REGULAR.woff2") format("woff2"),
+       url("../fonts/AEONIKPROTRIAL-REGULAR.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Aeonik Pro";
+  src: url("../fonts/AEONIKPROTRIAL-BOLD.woff2") format("woff2"),
+       url("../fonts/AEONIKPROTRIAL-BOLD.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Krylon";
+  src: url("../fonts/KRYLON-REGULAR.woff2") format("woff2"),
+       url("../fonts/KRYLON-REGULAR.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

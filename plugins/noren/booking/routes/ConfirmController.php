@@ -127,6 +127,33 @@ class ConfirmController extends Controller
 		    $text .= implode("\n", $travellersList);
 		}
 		
+		if (!empty($data['menu'])) {
+		    $menuLabels = [
+		        'starter'   => ['course' => 'Starter',     'options' => ['gyoza' => 'Gyoza', 'tataki' => 'Beef Tataki', 'croquettes' => 'Brazilian Croquettes']],
+		        'main'      => ['course' => 'Main Course', 'options' => ['prawn' => 'BBQ Prawn', 'kebab' => 'Beef Kebab BBQ', 'chicken' => 'Chicken Gravy Steak']],
+		        'dessert'   => ['course' => 'Dessert',     'options' => ['mousse' => 'Chocolate Mousse', 'churros' => 'Churros', 'tiramisu' => 'Melting Tiramisu']],
+		        'beverages' => ['course' => 'Beverages',   'options' => ['soft' => 'Soft Drinks', 'fresh' => 'Freshness', 'cocktail' => 'Cocktails']],
+		    ];
+		    $menuLines = [];
+		    foreach ($menuLabels as $courseId => $meta) {
+		        $parts = [];
+		        foreach ($meta['options'] as $optionId => $optionName) {
+		            $qty = $data['menu'][$courseId][$optionId] ?? 0;
+		            if ($qty > 0) $parts[] = "{$optionName} x{$qty}";
+		        }
+		        $menuLines[] = $meta['course'] . ': ' . (\count($parts) > 0 ? implode(', ', $parts) : '—');
+		    }
+		    $text .= "\nMENU SELECTION (First Class)\n" . implode("\n", $menuLines) . "\n";
+		    KommoService::updateLead($data['lead_id'], [
+		        'custom_fields_values' => [
+		            [
+		                'field_id' => 698740,
+		                'values'   => [['value' => implode("\n", $menuLines)]],
+		            ],
+		        ],
+		    ]);
+		}
+
 		$note = [
 		    [
 		        "note_type" => "common",
@@ -138,8 +165,6 @@ class ConfirmController extends Controller
 		];
 
 
-
-	    
         $k=KommoService::sendNote($note);
 		
 		

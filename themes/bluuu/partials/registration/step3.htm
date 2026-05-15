@@ -1,0 +1,58 @@
+<div class="col-xl-8">
+    <div class="rounded-15 py-5 px-xl-5 px-1 bg-white shadow position-relative">
+        <div class="p-2 position-absolute start top">
+            <div class="btn btn-light btn-circle" @click="order.step=2">
+                <svg width="13" viewBox="0 0 13 11" fill="none">
+                    <path d="M2.413 6.19536H12.2422C12.6619 6.19536 13 5.89104 13 5.50303C13 5.12517 12.6619 4.81071 12.2422 4.81071H2.4214L5.50063 1.63564C5.77671 1.35414 5.75136 0.920483 5.43865 0.671956C5.12594 0.423427 4.65265 0.446251 4.37656 0.727747L0.190202 5.04402C-0.0689978 5.3103 -0.0604977 5.70338 0.198702 5.95951L4.37938 10.2682C4.65547 10.5497 5.12876 10.5826 5.44146 10.324C5.75417 10.0754 5.77953 9.64179 5.50344 9.36029L2.4242 6.18522L2.413 6.19536Z" fill="currentColor" />
+                </svg>
+            </div>
+        </div>
+        <div class="fz-15 fw-600 c-950 text-center" v-text="registration.step3.title"></div>
+        <div class="mt-2 c-500 text-center" v-html="registration.step3.description"></div>
+
+
+        <div class="row justify-content-center mt-1">
+            <div class="col-xl-8">
+                <div class="border-black-10 rounded-1">
+                
+                    <div class="d-flex p-4">
+                        <div class="flex-grow-1 c-500">Date:</div><span class="c-950 fw-600" ><format-date :date="order.travel_date"></format-date></span>
+                    </div>
+                    <div class="h-1 bg-black-10"></div>
+                    <div class="d-flex p-4">
+                        <div class="flex-grow-1 c-500">Time</div><span class="c-950 fw-600" v-text="order.travel_time"></span>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="col-12 mt-4">
+                <div class="bg-100 rounded-15">
+                    <div class="w-100 ratio-16x9 rounded-1 oh" v-html="registration.step3.map"></div>
+                    <div class="p-4 text-center" v-text="registration.step3.text"></div>
+                </div>
+            </div>
+
+
+
+<div class="col-12"></div>
+
+            <div class="col-auto mt-4">
+                <div class="btn btn-blue" @click="order.step=4">
+                    <span>I agree, continue </span>
+                    <svg width="13" class=" ms-2" viewBox="0 0 13 11" fill="none">
+                        <path d="M10.587 6.19536L0.757826 6.19536C0.338064 6.19536 0 5.89104 0 5.50303C0 5.12517 0.338064 4.81071 0.757826 4.81071L10.5786 4.81071L7.49937 1.63564C7.22329 1.35414 7.24864 0.920484 7.56135 0.671957C7.87406 0.423428 8.34735 0.446252 8.62344 0.727748L12.8098 5.04402C13.069 5.3103 13.0605 5.70338 12.8013 5.95951L8.62062 10.2682C8.34453 10.5497 7.87124 10.5826 7.55854 10.324C7.24583 10.0754 7.22047 9.64179 7.49656 9.36029L10.5758 6.18522L10.587 6.19536Z" fill="currentColor"></path>
+                    </svg>
+                </div>            
+            </div>
+
+        </div>
+
+
+
+
+
+
+
+    </div>
+</div>

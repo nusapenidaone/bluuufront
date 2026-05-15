@@ -11,34 +11,20 @@ tabs:
     
         partner:
             label: Partner
-            span: auto
+            span: full
             type: switch
             tab: Main
-        static:
-            label: 'Static Position'
-            span: auto
-            type: switch
-            tab: Main
+        # static:
+        #     label: 'Static Position'
+        #     span: auto
+        #     type: switch
+        #     tab: Main
         name:
             label: Name
             span: auto
             type: text
             tab: Main
-        slug:
-            label: Slug
-            span: auto
-            preset:
-                field: name
-                type: slug
-            type: text
-            tab: Main
-        odoo_id:
-            label: Odoo ID
-            span: auto
-            type: number
-            tab: Main
-            
-            
+
         status:
             label: Status
             span: left
@@ -49,55 +35,14 @@ tabs:
             type: dropdown
             showSearch: true
             tab: Main
-        route:
-            label: Default Route (only for shared)
-            span: auto
-            type: relation
-            tab: Main
-            nameFrom: title
-            emptyOption: --
-            
-
-        types:
-            label: Type
-            span: auto
-            type: relation
-            tab: Main
-            
-        odoo_type:
-            type: dropdown
-            label: Odoo type
-            tab: Main
-            span: auto
-            options:
-                "Standard Shared" : "Standard Shared" 
-                "Premium Shared" : "Premium Shared" 
-                "First Class Shared" : "First Class Shared" 
-                
-                "Standard Private" : "Standard Private" 
-                "Premium Private" : "Premium Private" 
-                "Premium for Couples" : "Premium for Couples" 
-                "Private Diving" : "Private Diving" 
-                "Professional Fishing" : "Professional Fishing" 
-
-        classes:
-            label: Class
-            span: auto
-            type: relation
-            tab: Main
-            
-        category:
-            label: Category
-            type: relation
-            span: auto
-            tab: Main
-        description:
-            label: Description
-            size: large
-            span: auto
-            type: richeditor
-            tab: Main
-            
+        # slug:
+        #     label: Slug
+        #     span: auto
+        #     preset:
+        #         field: name
+        #         type: slug
+        #     type: text
+        #     tab: Main
 
         capacity:
             label: Capacity
@@ -108,8 +53,150 @@ tabs:
             label: 'Boat Size'
             span: auto
             type: number
+            tab: Main  
+            
+
+        route:
+            label: Default Route (only for shared)
+            span: auto
+            type: relation
+            tab: Main
+            nameFrom: title
+            emptyOption: --
+
+        types:
+            label: Type
+            span: auto
+            type: relation
+            tab: Main
+        classes:
+            label: Class
+            span: auto
+            type: relation
+            tab: Main
+        odoo_id:
+            label: Odoo ID
+            span: auto
+            type: number
+            tab: Main
+        odoo_type:
+            type: dropdown
+            label: Odoo type
+            tab: Main
+            span: auto
+            options:
+                "Standard Shared" : "Standard Shared"
+                "Premium Shared" : "Premium Shared"
+                "First Class Shared" : "First Class Shared"
+                "Standard Private" : "Standard Private"
+                "Premium Private" : "Premium Private"
+                "Premium for Couples" : "Premium for Couples"
+                "Private Diving" : "Private Diving"
+                "Professional Fishing" : "Professional Fishing"
+
+        source:
+            label: Source
+            span: auto
+            type: relation
+            tab: Main
+            nameFrom: name
+            emptyOption: '--'
+
+        avail_type:
+            label: 'Availability Type (OTA)'
+            span: auto
+            type: dropdown
+            tab: Main
+            emptyOption: '--'
+            options:
+                shared: Shared
+                private: Private
+
+        category:
+            label: Category
+            type: relation
+            span: auto
+            tab: Main
+
+        description:
+            label: Description
+            size: large
+            span: auto
+            type: richeditor
             tab: Main
             
+
+
+        
+        props:
+            type: nestedform
+            showPanel: false
+            span: auto
+            tab: Props
+            form:
+                fields:
+                    boat_type:
+                        label: 'Boat Type (e.g. Speedboat, Luxury Yacht)'
+                        span: auto
+                        type: text
+                        tab: Props
+                    best_for:
+                        label: 'Best for (e.g. couples & small groups)'
+                        span: auto
+                        type: text
+                        tab: Props
+                    shade:
+                        label: 'Shade'
+                        span: left
+                        type: switch
+                        tab: Props
+                    cabin:
+                        label: 'Cabin'
+                        span: right
+                        type: switch
+                        tab: Props
+                    ac:
+                        label: 'AC'
+                        span: left
+                        type: switch
+                        tab: Props
+                    sound:
+                        label: 'Sound'
+                        span: right
+                        type: switch
+                        tab: Props
+                    toilet:
+                        label: 'Toilet'
+                        span: left
+                        type: switch
+                        tab: Props
+
+        list:
+            label: List
+            prompt: 'Add new item'
+            displayMode: accordion
+            span: auto
+            type: repeater
+            tab: Props
+            form:
+                fields:
+                    icon:
+                        label: Dropdown
+                        options:
+                            check-icon-green: 'Check icon'
+                            none-icon-red: 'None icon'
+                            plus-icon-green: 'Plus icon'
+                            minis-icon-red: 'Minus icon'
+                        showSearch: true
+                        span: auto
+                        type: dropdown
+                    test:
+                        label: Text
+                        span: full
+                        type: text
+
+
+
             
         _section1:
             type: section
@@ -133,67 +220,11 @@ tabs:
             span: auto
             type: number
             tab: Main
-        list:
-            label: List
-            prompt: 'Add new item'
-            displayMode: accordion
-            span: auto
-            type: repeater
-            tab: Main
-            form:
-                fields:
-                    icon:
-                        label: Dropdown
-                        options:
-                            check-icon-green: 'Check icon'
-                            none-icon-red: 'None icon'
-                            plus-icon-green: 'Plus icon'
-                            minis-icon-red: 'Minus icon'
-                        showSearch: true
-                        span: auto
-                        type: dropdown
-                    test:
-                        label: Text
-                        span: full
-                        type: text
+
             
 
             
-        props[boat_type]:
-            label: 'Boat Type (e.g. Speedboat, Luxury Yacht)'
-            span: auto
-            type: text
-            tab: Props
-        props[best_for]:
-            label: 'Best for (e.g. couples & small groups)'
-            span: auto
-            type: text
-            tab: Props
-        props[shade]:
-            label: 'Shade'
-            span: left
-            type: switch
-            tab: Props
-        props[cabin]:
-            label: 'Cabin'
-            span: right
-            type: switch
-            tab: Props
-        props[ac]:
-            label: 'AC'
-            span: left
-            type: switch
-            tab: Props
-        props[sound]:
-            label: 'Sound'
-            span: right
-            type: switch
-            tab: Props
-        props[toilet]:
-            label: 'Toilet'
-            span: left
-            type: switch
-            tab: Props
+
             
   
                         
@@ -255,72 +286,72 @@ tabs:
             
             
 
-        ecategories:
-            label: 'Extras categories'
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: Extras
-        overview:
-            label: 'Tour Overview'
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: Program
-        program:
-            label: 'Tour Program'
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: Program
-        restaurant:
-            label: Restaurants
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: Restaurants
-        transfer:
-            label: Transfer
-            span: full
-            type: relation
-            tab: Transfer
-            context:
-                - update
-                - preview
-        cover:
-            label: Cover
-            span: full
-            type: relation
-            tab: Cover
-            context:
-                - update
-                - preview
-        why:
-            label: Why
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: Includes
+        # ecategories:
+        #     label: 'Extras categories'
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: Extras
+        # overview:
+        #     label: 'Tour Overview'
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: Program
+        # program:
+        #     label: 'Tour Program'
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: Program
+        # restaurant:
+        #     label: Restaurants
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: Restaurants
+        # transfer:
+        #     label: Transfer
+        #     span: full
+        #     type: relation
+        #     tab: Transfer
+        #     context:
+        #         - update
+        #         - preview
+        # cover:
+        #     label: Cover
+        #     span: full
+        #     type: relation
+        #     tab: Cover
+        #     context:
+        #         - update
+        #         - preview
+        # why:
+        #     label: Why
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: Includes
         included:
             label: Included
             nameFrom: name
@@ -341,41 +372,41 @@ tabs:
                 - preview
             type: relation
             tab: Includes
-        reviews:
-            label: Reviews
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: Reviews
-        faq:
-            label: Faq
-            nameFrom: name
-            descriptionFrom: description
-            span: full
-            context:
-                - update
-                - preview
-            type: relation
-            tab: FAQ
-        cancelation:
-            label: Cancelation
-            span: auto
-            type: relation
-            tab: Info
-        meeting:
-            label: 'Meeting Point'
-            span: auto
-            type: relation
-            tab: Info
-        additional:
-            label: 'Additional Info'
-            span: auto
-            type: relation
-            tab: Info
+        # reviews:
+        #     label: Reviews
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: Reviews
+        # faq:
+        #     label: Faq
+        #     nameFrom: name
+        #     descriptionFrom: description
+        #     span: full
+        #     context:
+        #         - update
+        #         - preview
+        #     type: relation
+        #     tab: FAQ
+        # cancelation:
+        #     label: Cancelation
+        #     span: auto
+        #     type: relation
+        #     tab: Info
+        # meeting:
+        #     label: 'Meeting Point'
+        #     span: auto
+        #     type: relation
+        #     tab: Info
+        # additional:
+        #     label: 'Additional Info'
+        #     span: auto
+        #     type: relation
+        #     tab: Info
         images:
             label: Images
             mode: image
@@ -388,32 +419,32 @@ tabs:
             span: full
             type: fileupload
             tab: Images
-        memo:
-            label: Memo
-            mode: file
-            useCaption: 0
-            thumbOptions:
-                mode: crop
-                extension: auto
-            span: auto
-            type: fileupload
-            tab: Images
-        youtube:
-            label: Youtube
-            span: auto
-            type: text
-            tab: Images
-        meta_title:
-            label: Title
-            span: left
-            type: text
-            tab: SEO
-        meta_description:
-            label: Description
-            span: full
-            type: textarea
-            size: small
-            tab: SEO
+        # memo:
+        #     label: Memo
+        #     mode: file
+        #     useCaption: 0
+        #     thumbOptions:
+        #         mode: crop
+        #         extension: auto
+        #     span: auto
+        #     type: fileupload
+        #     tab: Images
+        # youtube:
+        #     label: Youtube
+        #     span: auto
+        #     type: text
+        #     tab: Images
+        # meta_title:
+        #     label: Title
+        #     span: left
+        #     type: text
+        #     tab: SEO
+        # meta_description:
+        #     label: Description
+        #     span: full
+        #     type: textarea
+        #     size: small
+        #     tab: SEO
         amo_tour_name:
             label: 'Amo Tour Name'
             span: auto
@@ -444,13 +475,13 @@ tabs:
             span: auto
             type: text
             tab: Kommo
-        similar:
-            label: 'Similar Tours'
-            span: auto
-            type: relation
-            tab: Similar
-            nameFrom: name
-            emptyOption: '--'
+        # similar:
+        #     label: 'Similar Tours'
+        #     span: auto
+        #     type: relation
+        #     tab: Similar
+        #     nameFrom: name
+        #     emptyOption: '--'
 
             
             

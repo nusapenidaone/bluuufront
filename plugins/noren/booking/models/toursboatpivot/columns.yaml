@@ -1,0 +1,21 @@
+columns:
+    id:
+        label: ID
+        type: number
+        invisible: false
+    odoo_id:
+        label: 'Odoo ID'
+        type: number
+    name:
+        label: Name
+        type: text
+
+    capacity:
+        label: Capacity
+        type: number
+    sort_order:
+        label: Priority
+        type: number
+        select: 'noren_booking_tours_boat.sort_order'
+        searchable: false
+        sortable: false

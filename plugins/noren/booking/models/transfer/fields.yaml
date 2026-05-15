@@ -53,3 +53,8 @@ fields:
         label: 'Amo Name'
         span: auto
         type: text
+
+    odoo_name:
+        label: 'Odoo Car Type'
+        span: auto
+        type: text

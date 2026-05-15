@@ -1,0 +1,34 @@
+<a class="d-flex flex-column h-100" :href="link(tour)" :class="tour.status ? 'inactive' : 'active'">
+    <div class="position-relative rounded-1">
+        <div class="ratio-3x2 img rounded-1 oh">
+            <boat-slider :images="tour.limited_images" />
+        </div>
+        <div v-if="tour.badge" class="bedge" :class="tour.badge.color" v-text="tour.badge.name"></div>
+        <div v-if="tour.status=='booked'" class="boat-status" >Sold out</div>
+        <div v-else-if="tour.status=='exceeded'" class="boat-status" >Over capacity</div>
+    </div>
+    <div class="flex-grow-1 d-flex flex-column">
+        <div class="c-950 fw-600 mt-2 fz-12 notranslate" v-text="tour.name"></div>
+        <ul class="row gx-0 fz-09 c-500 mt-2">
+            <li class="col-auto d-inline-flex align-items-center">
+                
+                <span><span v-text="tour.capacity"></span> people,&nbsp;</span>
+            </li>
+            <li class="col-auto d-inline-flex align-items-center">
+              
+                <span><span v-text="tour.duration"></span> hours,&nbsp;</span>
+            </li>
+            <li class="col-auto d-inline-flex align-items-center">
+          
+                <span><span v-text="tour.size"></span> meters</span>
+            </li>
+        </ul>
+        <div class="row align-items-center mt-2">
+            <div class="col fz-09 fw-600">
+                <span class="c-red-80 " v-if="tour.status=='booked'">Click to check available dates!</span>
+                <span class="c-red-80" v-else-if="tour.status=='exceeded'">Maximum allowable quantity</span>
+                <span class="c-950 tdu" v-else><format-number :number="tour.price" ></format-number>/<span v-text="tour.types_id==1 ? 'person' : 'boat'"></span></span>
+            </div>
+        </div>
+    </div>
+</a>

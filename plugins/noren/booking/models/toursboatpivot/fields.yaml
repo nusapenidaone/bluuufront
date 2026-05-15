@@ -1,0 +1,7 @@
+fields:
+    pivot[sort_order]:
+        label: 'Priority (sort order)'
+        comment: 'Lower number = higher priority. 0 = default.'
+        type: number
+        default: 0
+        span: full

@@ -142,10 +142,14 @@ faq:
         
 boat:
     label: Boats
-    manage:
-        form: $/noren/booking/models/boat/fields.yaml
-        list: $/noren/booking/models/boat/columns.yaml
     view:
-        list: $/noren/booking/models/boat/columns.yaml
+        list: $/noren/booking/models/toursboatpivot/columns.yaml
         toolbarButtons: add|remove
-        
+    manage:
+        list: $/noren/booking/models/boat/columns.yaml
+        showCheckboxes: true
+        showSearch: true
+
+
+    pivot:
+        form: $/noren/booking/models/toursboatpivot/fields.yaml 

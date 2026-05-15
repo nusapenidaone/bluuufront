@@ -1,0 +1,141 @@
+url = "/test1"
+title = "test"
+is_hidden = 1
+==
+<?php
+use Noren\Booking\Models\Order;
+
+
+function onStart()
+{
+    $order = Order::find(3529);
+
+    $name = $order->name;
+    $to = $order->email;
+
+    Mail::send('confirmed', ['order' => $order], function ($message) use ($to, $name) {
+
+        // Основная почта клиента
+        $message->to($to, $name);
+
+        // Вторая почта
+        $message->to('info@bluuu.tours', 'Admin');
+
+    });
+}
+?>
+==
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Bluuu — Nusa Penida Tours</title>
+  <!-- Preconnect to external origins for faster DNS + TCP -->
+  <link rel="preconnect" href="https://www.googletagmanager.com" crossorigin />
+  <link rel="preconnect" href="https://translate.googleapis.com" crossorigin />
+  <link rel="dns-prefetch" href="https://elfsightcdn.com" />
+  <!-- Critical assets -->
+  <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
+  <link rel="preload" as="image" href="https://bluuu.tours/storage/app/media/poster.webp" fetchpriority="high" />
+  <link rel="preload" as="font" type="font/woff2" href="/themes/bluuu/assets/home/PetrovSans-Regular-BXcoTdev.woff2" crossorigin />
+  <link rel="preload" as="font" type="font/woff2" href="/themes/bluuu/assets/home/PetrovSans-SemiBold-qOu9CoxP.woff2" crossorigin />
+  <script src="https://t.contentsquare.net/uxa/bf86ed7c81f77.js"></script>
+  
+  <!-- TikTok Pixel — fires only on /explore -->
+  <script>
+  (function(w,d,t){
+    var path = w.location.pathname.replace(/\/+$/, '') || '/';
+    if (path !== '/explore' && !path.startsWith('/explore/')) return;
+    w.TiktokAnalyticsObject=t;
+    var ttq=w[t]=w[t]||[];
+    ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"];
+    ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};
+    for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);
+    ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e};
+    ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=d.createElement("script");o.type="text/javascript",o.async=!0,o.src=r+"?sdkid="+e+"&lib="+t;var a=d.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+    ttq.load('D7CUMGRC77UA7GO322GG');
+    ttq.page();
+  })(window,document,'ttq');
+  </script>
+  <!-- End TikTok Pixel -->
+  <!-- Meta Pixel — fires only on /discover -->
+  <!-- TODO: replace META_PIXEL_ID with actual pixel ID -->
+  <!--
+  <script>
+  (function(w,d){
+    var path = w.location.pathname.replace(/\/+$/, '') || '/';
+    if (path !== '/discover' && !path.startsWith('/discover/')) return;
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(f,b,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init','META_PIXEL_ID');
+    fbq('track','PageView');
+  })(window,document);
+  </script>
+  -->
+  <!-- End Meta Pixel -->
+  <!-- Google Tag Manager -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+  })(window,document,'script','dataLayer','GTM-5J8KXLX2');</script>
+  <!-- End Google Tag Manager -->
+  <script>
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false,
+      }, 'google_translate_element');
+    }
+
+    // Elfsight — грузим только когда виджет входит во viewport
+    (function() {
+      var loaded = false;
+      function loadElfsight() {
+        if (loaded) return;
+        loaded = true;
+        var s = document.createElement('script');
+        s.src = 'https://elfsightcdn.com/platform.js';
+        s.async = true;
+        document.head.appendChild(s);
+      }
+
+      var io = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting) { loadElfsight(); io.disconnect(); mo.disconnect(); }
+        });
+      }, { rootMargin: '200px' });
+
+      // Ждём пока React отрендерит elfsight-app-* элемент
+      var mo = new MutationObserver(function() {
+        var el = document.querySelector('[class*="elfsight-app"]');
+        if (el) { io.observe(el); mo.disconnect(); }
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    })();
+  </script>
+  <script async src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+  <script type="module" crossorigin src="/themes/bluuu/assets/home/index-BRyMV5xg.js"></script>
+  <link rel="modulepreload" crossorigin href="/themes/bluuu/assets/home/vendor-react-Cgg2GOmP.js">
+  <link rel="modulepreload" crossorigin href="/themes/bluuu/assets/home/vendor-icons-C7kigISd.js">
+  <link rel="stylesheet" crossorigin href="/themes/bluuu/assets/home/index-B96BHNR1.css">
+</head>
+
+<body>
+  <!-- Google Tag Manager (noscript) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5J8KXLX2"
+  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  <div id="preloader" style="position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;z-index:9999;">
+    <style>#preloader-spin{width:36px;height:36px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style>
+    <div id="preloader-spin"></div>
+  </div>
+  <div id="root"></div>
+
+</body>
+
+</html>

@@ -16,3 +16,11 @@ scopes:
         conditions: category_id in (:value)
         nameFrom: name
         scope: FilterByCategory
+    source:
+        label: Source
+        modelClass: Noren\Booking\Models\Source
+        conditions: source_id in (:value)
+        nameFrom: name
+
+
+

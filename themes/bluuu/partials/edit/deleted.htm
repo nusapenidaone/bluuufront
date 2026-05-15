@@ -1,0 +1,2 @@
+<program-selector v-if="order.step==2" :programs="tour.program" @close="showInfo"></program-selector>
+ <restaurant-selector v-if="selectedProgram.restaurant.length" :restaurants="selectedProgram.restaurant" @close="showInfo"></restaurant-selector>
