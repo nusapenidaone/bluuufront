@@ -1,7 +1,11 @@
 columns:
+    sort_order:
+        label: Order
+        type: Number
     id:
         label: ID
         type: Number
+        
     name:
         label: Name
         type: text
@@ -14,6 +18,11 @@ columns:
     #     type: partial
     #     path: link
     #     clickable: '0'
+    source:
+        label: Source
+        type: text
+        relation: source
+        valueFrom: name
     types:
         label: Types
         type: text

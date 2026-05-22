@@ -144,14 +144,18 @@ class ConfirmController extends Controller
 		        $menuLines[] = $meta['course'] . ': ' . (\count($parts) > 0 ? implode(', ', $parts) : '—');
 		    }
 		    $text .= "\nMENU SELECTION (First Class)\n" . implode("\n", $menuLines) . "\n";
-		    KommoService::updateLead($data['lead_id'], [
-		        'custom_fields_values' => [
-		            [
-		                'field_id' => 698740,
-		                'values'   => [['value' => implode("\n", $menuLines)]],
+		    try {
+		        KommoService::updateLead($data['lead_id'], [
+		            'custom_fields_values' => [
+		                [
+		                    'field_id' => 698710,
+		                    'values'   => [['value' => implode("\n", $menuLines)]],
+		                ],
 		            ],
-		        ],
-		    ]);
+		        ]);
+		    } catch (\Exception $e) {
+		        Log::error('Kommo updateLead menu field failed', ['lead_id' => $data['lead_id'], 'error' => $e->getMessage()]);
+		    }
 		}
 
 		$note = [

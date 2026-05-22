@@ -326,59 +326,31 @@ class OdooService
     public static function getOrderInfo(int $odooOrderId): array
     {
         $result = static::post('/json/2/sale.order/search_read', [
-            'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['state', 'x_studio_collect'],
+            'domain' => ['|', ['id', '=', $odooOrderId], ['name', '=', 'S' . $odooOrderId]],
+            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit'],
             'limit'  => 1,
         ]);
 
         if (empty($result[0])) {
+            Log::warning('OdooService::getOrderInfo — order not found in Odoo', ['odoo_id' => $odooOrderId, 'result' => $result]);
             throw new \RuntimeException('Order not found');
         }
 
+        $row = $result[0];
+        Log::info('OdooService::getOrderInfo', [
+            'searched'        => $odooOrderId,
+            'found_id'        => $row['id'] ?? null,
+            'found_name'      => $row['name'] ?? null,
+            'state'           => $row['state'] ?? null,
+            'collect'         => $row['x_studio_collect'] ?? null,
+            'amount_total'    => $row['amount_total'] ?? null,
+            'deposit'         => $row['x_studio_deposit'] ?? null,
+        ]);
+
         return [
-            'state'   => $result[0]['state'] ?? '',
-            'collect' => (float) ($result[0]['x_studio_collect'] ?? 0),
+            'state'   => $row['state'] ?? '',
+            'collect' => (float) ($row['x_studio_collect'] ?? 0),
         ];
-    }
-
-    /**
-     * Called after a weblink (bluuu) payment is confirmed via Xendit callback.
-     * Finds the Odoo sale order via $order->odoo_id, then:
-     *   - increases x_studio_deposit by $amount
-     *   - decreases x_studio_collect by $amount (floored at 0)
-     */
-    public static function registerWebPayment(Order $order, float $amount): void
-    {
-        $odooOrderId = (int) $order->odoo_id;
-
-        if (!$odooOrderId) {
-            Log::warning('OdooService::registerWebPayment — order has no odoo_id', ['order_id' => $order->id]);
-            return;
-        }
-
-        $result = static::post('/json/2/sale.order/search_read', [
-            'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_deposit'],
-            'limit'  => 1,
-        ]);
-
-        if (empty($result[0])) {
-            Log::warning('OdooService::registerWebPayment — odoo order not found', ['odoo_id' => $odooOrderId]);
-            return;
-        }
-
-        $currentDeposit = (float) ($result[0]['x_studio_deposit'] ?? 0);
-
-        static::post('/json/2/sale.order/write', [
-            'ids'  => [$odooOrderId],
-            'vals' => ['x_studio_deposit' => $currentDeposit + $amount],
-        ]);
-
-        Log::info('OdooService::registerWebPayment — done', [
-            'odoo_id'        => $odooOrderId,
-            'amount'         => $amount,
-            'deposit_before' => $currentDeposit,
-        ]);
     }
 
     public static function registerPayment(int $odooOrderId, float $amount): void

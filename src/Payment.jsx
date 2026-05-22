@@ -143,11 +143,13 @@ export default function Payment() {
 
   // ── Session keys ─────────────────────────────────────────────────────────
   const TIMER_SCOPE_KEY = `bluuu_checkout_expires:${window.location.search}`;
+  const DRAFT_EID_KEY   = `bluuu_draft_eid:${window.location.search}`;
   const startUrl = tourType === "shared" ? "/shared-tour-to-nusa-penida" : "/private-tour-to-nusa-penida";
 
   const handleGoToStart = () => {
     try { sessionStorage.removeItem("bluuu_payment_pending"); } catch {}
     try { sessionStorage.removeItem(TIMER_SCOPE_KEY); } catch {}
+    try { sessionStorage.removeItem(DRAFT_EID_KEY); } catch {}
     window.location.href = startUrl;
   };
 
@@ -292,16 +294,31 @@ export default function Payment() {
     const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
     try {
-      // Step 1: save order to DB (fast, no Xendit — order is always recorded)
+      // Step 1: save order to DB — reuse existing external_id if already created this session
       const orderEndpoint = tourType === "shared" ? "order/shared" : "order/private";
       let draft;
-      try {
-        draft = await fetchJson(apiUrl(orderEndpoint), { method: "POST", headers, credentials: "include", body: JSON.stringify(body) }, 15_000);
-      } catch (err) {
-        setError(isNetworkError(err)
-          ? "Connection error. Please check your internet and try again."
-          : err?.message || "Something went wrong. Please try again.");
-        return;
+      const savedEid = (() => { try { return sessionStorage.getItem(DRAFT_EID_KEY); } catch { return null; } })();
+      if (savedEid) {
+        draft = { external_id: savedEid };
+      } else {
+        let lastOrderErr;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            draft = await fetchJson(apiUrl(orderEndpoint), { method: "POST", headers, credentials: "include", body: JSON.stringify(body) }, 15_000);
+            try { sessionStorage.setItem(DRAFT_EID_KEY, draft.external_id); } catch {}
+            break;
+          } catch (err) {
+            lastOrderErr = err;
+            if (!isNetworkError(err)) break;
+            if (attempt < 3) await delay(2000);
+          }
+        }
+        if (!draft) {
+          setError(isNetworkError(lastOrderErr)
+            ? "Connection error. Please check your internet and try again."
+            : lastOrderErr?.message || "Something went wrong. Please try again.");
+          return;
+        }
       }
 
       // Step 2: get payment URL from Xendit/PayPal (retries are safe — no duplicate orders)
@@ -330,6 +347,7 @@ export default function Payment() {
         return;
       }
 
+      try { sessionStorage.removeItem(DRAFT_EID_KEY); } catch {}
       try { sessionStorage.setItem("bluuu_payment_pending", "1"); } catch {}
       window.location.href = payUrl;
     } finally {

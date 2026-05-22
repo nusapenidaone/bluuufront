@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Response;
 use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\OrderPaymentService;
 use Noren\Booking\Classes\KommoService;
-use Noren\Booking\Models\Order;
 use Noren\Booking\Odoo\OdooService;
 
 class VerifyController extends Controller
@@ -45,13 +44,6 @@ class VerifyController extends Controller
 	    if (str_starts_with($external_id, 'bluuu')) {
 	        $status = $statusValue === 'PAID' ? 1 : 2;
 	        (new OrderPaymentService)->handle('1', $external_id, $status, $request->getContent());
-
-	        if ($statusValue === 'PAID') {
-	        	$order = Order::where('external_id', $external_id)->first();
-	        	if ($order) {
-	        		OdooService::registerWebPayment($order, (float) $request->input('amount'));
-	        	}
-	        }
 
 	    } elseif (str_starts_with($external_id, 'odoo_')) {
 
@@ -96,8 +88,8 @@ class VerifyController extends Controller
 
 
         if ($event !== 'CHECKOUT.ORDER.APPROVED') {
-            Log::info("Event $event — not approved, marking order as failed.");
-            (new OrderPaymentService)->handle(2,$referenceId, 2, $request->getContent());
+            Log::info("Event $event — not approved, skipping.");
+            // (new OrderPaymentService)->handle(2,$referenceId, 2, $request->getContent());
             return Response::make('OK', 200);
         }
 
@@ -121,10 +113,9 @@ class VerifyController extends Controller
         	}
         } else {
             Log::warning("PayPal capture failed: " . json_encode($captureResponse));
-            if(str_starts_with($referenceId, 'bluuu')){
-            	(new OrderPaymentService)->handle(2,$referenceId, 2, $combinedData); //$request->getContent()
-            }
-           
+            // if(str_starts_with($referenceId, 'bluuu')){
+            // 	(new OrderPaymentService)->handle(2,$referenceId, 2, $combinedData);
+            // }
         }
 
         return Response::make('OK', 200);
