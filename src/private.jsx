@@ -39,7 +39,8 @@ import {
   setGlobalFormatPrice,
   calculateBoatPrice,
   useBoatPricing,
-  usePricing
+  usePricing,
+  getFlashSaleForDate
 } from "./components/booking/utils";
 
 
@@ -2843,6 +2844,9 @@ function StepTwo({
       if (p !== null) draftPriceValue = p;
     }
 
+    const flashSaleDate = draftDate || (dateMode === "exact" ? exactDate : "");
+    const isFlashSale = flashSaleDate ? getFlashSaleForDate(boat.tourId, flashSaleDate, privateTours) : false;
+
     const isSoon = boat.status === "soon";
     return (
       <div
@@ -2959,6 +2963,13 @@ function StepTwo({
                 <div className="mt-auto border-t border-neutral-100 pt-5">
                   <div className="flex items-center justify-between gap-3">
                     <div className={cn("flex min-w-0 flex-col", (isSoldOut || isLocked) && "opacity-60")}>
+                      {isFlashSale && !isLocked && (
+                        <div className="mb-1">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                            ⚡ Flash Sale
+                          </span>
+                        </div>
+                      )}
                       {showFrom && <span className="text-xs leading-tight font-semibold uppercase tracking-wide text-secondary-400 leading-none mb-0.5">From</span>}
                       <div className="flex items-baseline gap-x-1">
                         <span className="text-xl font-black text-secondary-900 tracking-tight">

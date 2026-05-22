@@ -15,6 +15,7 @@ Route::post('api/verify/paypal', [VerifyController::class, 'VerifyPayPal']);
 require __DIR__ . '/api/routes.php';
 require __DIR__ . '/chatbot/routes.php';
 require __DIR__ . '/viator/routes.php';
+require __DIR__ . '/ota/routes.php';
 require __DIR__ . '/odoo/routes.php';
 require __DIR__ . '/admin/routes.php';
 

@@ -119,6 +119,19 @@ export function calculateBoatPrice(tourId, date, membersCount, privateTours) {
     return priceEntry ? Number(priceEntry.price) + (isShared ? 0 : boatPriceToAdd) : null;
 }
 
+export function getFlashSaleForDate(tourId, date, privateTours) {
+    if (!tourId || !date || !privateTours?.length) return false;
+    const tour = privateTours.find((t) => Number(t.id) === Number(tourId));
+    if (!tour?.pricesbydates?.length) return false;
+    let dateStr = date;
+    if (date instanceof Date) {
+        dateStr = date.toISOString().split('T')[0];
+    } else if (date && typeof date === 'object' && date.startDate) {
+        dateStr = new Date(date.startDate).toISOString().split('T')[0];
+    }
+    return tour.pricesbydates.some((p) => p.flash_sale && dateStr >= p.date_start && dateStr <= p.date_end);
+}
+
 export function useBoatPricing(tourId, date, membersCount, privateTours) {
     return useMemo(() => calculateBoatPrice(tourId, date, membersCount, privateTours), [tourId, date, membersCount, privateTours]);
 }

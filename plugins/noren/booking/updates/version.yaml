@@ -742,3 +742,6 @@ v1.0.247:
 v1.0.248:
     - 'Updated table noren_booking_restaurant: add odoo_name'
     - builder_table_update_noren_booking_restaurant_8.php
+v1.0.249:
+    - 'Updated table noren_booking_tours: add transfer_id and ota_commission'
+    - builder_table_update_noren_booking_tours_44.php

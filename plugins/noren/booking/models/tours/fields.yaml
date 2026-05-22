@@ -112,6 +112,20 @@ tabs:
                 shared: Shared
                 private: Private
 
+        ota_transfer:
+            label: 'Default Transfer (OTA)'
+            span: auto
+            type: relation
+            tab: Main
+            nameFrom: name
+            emptyOption: '--'
+
+        ota_commission:
+            label: 'OTA Commission %'
+            span: auto
+            type: number
+            tab: Main
+
         category:
             label: Category
             type: relation

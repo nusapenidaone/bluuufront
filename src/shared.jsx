@@ -36,7 +36,8 @@ import {
   isDateAvailableForBoat,
   getAvailableDatesForRange,
   useImagePreload,
-  setGlobalFormatPrice
+  setGlobalFormatPrice,
+  getFlashSaleForDate
 } from "./components/booking/utils";
 import {
   BRAND,
@@ -2647,6 +2648,9 @@ function StepTwo({
       if (p !== null) draftPriceValue = p;
     }
 
+    const flashSaleDate = draftDate || (dateMode === "exact" ? exactDate : "");
+    const isFlashSale = flashSaleDate ? getFlashSaleForDate(boat.tourId, flashSaleDate, privateTours) : false;
+
     const isSoon = boat.status === "soon";
     const tierCfg = tierIndex >= 0 ? TIER_CONFIGS[tierIndex] : null;
     // Header strip: always show using tier config fallback
@@ -2765,14 +2769,23 @@ function StepTwo({
             </div>
 
             {/* Price */}
-            <div className={cn("mb-3 flex items-baseline gap-1", (isSoldOut || isLocked) && "opacity-60")}>
-              {showFrom && <span className="text-sm font-semibold text-secondary-400">from</span>}
-              <span className="text-2xl font-black tracking-tight text-secondary-900">
-                {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
-              </span>
-              <span className="text-sm font-medium text-secondary-500">
-                {`/ ${Math.max(1, groupSize)} person${groupSize > 1 ? "s" : ""}`}
-              </span>
+            <div className={cn("mb-3", (isSoldOut || isLocked) && "opacity-60")}>
+              {isFlashSale && (
+                <div className="mb-1">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                    ⚡ Flash Sale
+                  </span>
+                </div>
+              )}
+              <div className="flex items-baseline gap-1">
+                {showFrom && <span className="text-sm font-semibold text-secondary-400">from</span>}
+                <span className="text-2xl font-black tracking-tight text-secondary-900">
+                  {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
+                </span>
+                <span className="text-sm font-medium text-secondary-500">
+                  {`/ ${Math.max(1, groupSize)} person${groupSize > 1 ? "s" : ""}`}
+                </span>
+              </div>
             </div>
 
             {/* Select button */}

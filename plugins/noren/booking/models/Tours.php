@@ -32,6 +32,7 @@ class Tours extends Model
         'additional' => Additional::class,
         'route'=> Route::class,
         'source' => Source::class,
+        'ota_transfer' => [Transfer::class, 'key' => 'transfer_id'],
     ];
     public $hasMany = [
         'pricesbydates' => PricesByDates::class,
