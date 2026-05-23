@@ -444,7 +444,7 @@ export default function Checkout() {
                       label: "Card / Bank transfer",
                       sub: "Visa, Mastercard, BCA, Mandiri, GoPay & more",
                     },
-                    { id: 2, label: "PayPal", sub: "Pay in USD" },
+                    // { id: 2, label: "PayPal", sub: "Pay in USD" }, // временно отключён
                   ].map((opt) => (
                     <label
                       key={opt.id}

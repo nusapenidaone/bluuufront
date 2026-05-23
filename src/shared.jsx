@@ -8506,24 +8506,7 @@ function StepCheckout({
                     {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
                   </div>
                 </button>
-                <button
-                  onClick={() => onSetPayMethod("paypal")}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg border-2 p-3.5 transition",
-                    payMethod === "paypal" ? "border-primary-600 bg-primary-50/30" : "border-neutral-200 hover:border-neutral-300"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <img src="https://bluuu.tours/themes/bluuu/assets/icons/paypal_icon.svg" alt="PayPal" className="h-7 w-auto" />
-                    <div className="text-left">
-                      <div className="font-bold text-secondary-900">Paypal</div>
-                      <div className="text-xs text-secondary-500">Fast checkout</div>
-                    </div>
-                  </div>
-                  <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "paypal" ? "border-primary-600" : "border-neutral-300")}>
-                    {payMethod === "paypal" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-                  </div>
-                </button>
+                {/* PayPal временно отключён */}
               </div>
             )}
 
@@ -8814,24 +8797,7 @@ function CheckoutModal({
                 {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
             </button>
-            <button
-              onClick={() => onSetPayMethod("paypal")}
-              className={cn(
-                "flex w-full items-center justify-between rounded-xl border-2 p-4 transition",
-                payMethod === "paypal" ? "border-primary-600 bg-primary-50/30" : "border-neutral-200 hover:border-neutral-300"
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-5 w-5 font-black text-blue-600 italic">P</div>
-                <div className="text-left">
-                  <div className="font-bold text-secondary-900">Paypal</div>
-                  <div className="text-xs text-secondary-500">Fast checkout</div>
-                </div>
-              </div>
-              <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "paypal" ? "border-primary-600" : "border-neutral-300")}>
-                {payMethod === "paypal" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-              </div>
-            </button>
+            {/* PayPal временно отключён */}
           </div>
         )}
 
