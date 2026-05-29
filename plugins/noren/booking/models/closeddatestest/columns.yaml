@@ -29,8 +29,17 @@ columns:
         sortable: true
     odoo_id:
         label: Odoo ID
-        type: number
+        type: linkage
         searchable: true
+        sortable: true
+        attributes:
+            target: _blank
+        select: concat('https://pt-day-trip-bali.odoo.com/odoo/rental/', odoo_id)
+
+
+    tour_type:
+        label: Tour Type
+        type: text
         sortable: true
     type:
         label: Type

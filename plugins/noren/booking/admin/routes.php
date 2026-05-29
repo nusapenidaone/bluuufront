@@ -4,6 +4,9 @@ use Noren\Booking\Admin\AdminController;
 
 // Admin API — protected by Bearer token (services.config.php → admin_token)
 
+// ── Auth ──────────────────────────────────────────────────────────────────
+Route::post('api/admin/login', [AdminController::class, 'login']);
+
 // ── Products (boats, tours, transfers, covers from local DB) ──────────────
 
 Route::get('api/admin/boats',     [AdminController::class, 'boats']);

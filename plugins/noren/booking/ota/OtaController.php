@@ -100,7 +100,7 @@ class OtaController extends Controller
 
         if ($transfer) {
             $cars         = (int) ceil($members / 5);
-            $transferCost = round((float) ($transfer->price ?? 0) * $cars, 2);
+            $transferCost = $netAmount > 0 ? round((float) ($transfer->price ?? 0) * $cars, 2) : 0;
             $carType      = $transfer->odoo_name ?? '';
             $transferId   = (int) $transfer->id;
             $pickupCars   = ($transferId === 1 || $transferId === 2) ? $cars : 0;
@@ -144,7 +144,7 @@ class OtaController extends Controller
                 'product_id' => (int) $transfer->odoo_id,
                 'name'       => $transfer->name,
                 'qty'        => $cars,
-                'price'      => (float) ($transfer->price ?? 0),
+                'price'      => $netAmount > 0 ? (float) ($transfer->price ?? 0) : 0,
             ];
         }
 

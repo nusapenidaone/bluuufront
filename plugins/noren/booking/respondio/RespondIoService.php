@@ -59,11 +59,6 @@ class RespondIoService
                 ->timeout(10)
                 ->post(static::cfg()['webhook_url'], $payload);
 
-            Log::info('RespondIoService::sendOrder — done', [
-                'order_id'    => $order->id,
-                'external_id' => $order->external_id,
-                'http_status' => $response->status(),
-            ]);
         } catch (\Exception $e) {
             Log::error('RespondIoService::sendOrder — error', [
                 'order_id'   => $order->id,

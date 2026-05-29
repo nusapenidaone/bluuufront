@@ -151,7 +151,6 @@ class Order extends Model
         }
 
         if (!$order->boat_id) {
-            Log::info("Order #{$order->id}: no boat_id, skipping Odoo dispatch");
             return;
         }
 
@@ -159,7 +158,6 @@ class Order extends Model
             $result = OdooService::createLead($order);
             $order->odoo_id = $result['order_id'];
             $order->saveQuietly();
-            Log::info("Order #{$order->id}: Odoo order created #{$order->odoo_id}");
         } catch (\Exception $e) {
             Log::error("Order #{$order->id}: Odoo dispatch failed: " . $e->getMessage());
         }

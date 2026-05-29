@@ -137,8 +137,8 @@ class AccountController extends Controller
             $order->loadMissing('route');
             $routeStart = $order->route?->start ?? '08:00:00';
             $routeEnd   = $order->route?->end   ?? '18:00:00';
-            $odooFields['rental_start_date']  = Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
-            $odooFields['rental_return_date'] = Carbon::parse($date . ' ' . $routeEnd,   'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+            $odooFields['rental_start_date']  = Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s');
+            $odooFields['rental_return_date'] = Carbon::parse($date . ' ' . $routeEnd,   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s');
             $order->travel_date = $date;
         }
 

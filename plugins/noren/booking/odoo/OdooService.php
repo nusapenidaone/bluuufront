@@ -549,8 +549,8 @@ class OdooService
             'partner_id' => $partnerId,
 
             'is_rental_order'    => true,
-            'rental_start_date'  => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
-            'rental_return_date' => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
+            'rental_start_date'  => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
+            'rental_return_date' => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
 
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],

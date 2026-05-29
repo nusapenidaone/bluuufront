@@ -15,4 +15,8 @@ class CloseddatesTest extends Model
     ];
 
     protected $fillable = ['date', 'lead_id', 'boat_id', 'qtty', 'type', 'odoo_id', 'tour_type'];
+
+
+
+
 }

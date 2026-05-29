@@ -1,6 +1,7 @@
 <?php
 
 use Noren\Booking\Api\AccountController;
+use Noren\Booking\Api\CheckinController;
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\MarketingController;
 use Noren\Booking\Api\PrivateOrderController;
@@ -18,11 +19,15 @@ Route::get('api/new/availability/shared/{id}',  [FullController::class, 'getShar
 Route::post('api/new/marketing/lead', [MarketingController::class, 'lead']);
 
 // Orders
-Route::options('api/new/order/{any}', function () {
+Route::options('api/new/order/{any}', function (\Illuminate\Http\Request $request) {
+    $origin = $request->header('Origin', '');
+    $allowed = ['https://www.bluuu.tours', 'https://bluuu.tours'];
+    $allowOrigin = in_array($origin, $allowed) ? $origin : 'https://bluuu.tours';
     return response('', 200)
-        ->header('Access-Control-Allow-Origin', '*')
-        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        ->header('Access-Control-Allow-Headers', '*');
+        ->header('Access-Control-Allow-Origin', $allowOrigin)
+        ->header('Access-Control-Allow-Credentials', 'true')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS')
+        ->header('Access-Control-Allow-Headers', 'Content-Type, X-CSRF-TOKEN, Authorization');
 })->where('any', '.*');
 Route::middleware([
     \Illuminate\Session\Middleware\StartSession::class,
@@ -84,4 +89,15 @@ Route::get  ('api/new/account/{key}',          [AccountController::class, 'show'
 Route::patch('api/new/account/{key}/simple',   [AccountController::class, 'updateSimple']);
 Route::patch('api/new/account/{key}/products', [AccountController::class, 'updateProducts']);
 Route::post ('api/new/account/{key}/pay',      [AccountController::class, 'createPayment']);
+
+// Check-in
+Route::options('api/new/checkin/{any}', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', '*');
+})->where('any', '.*');
+Route::get ('api/new/checkin/{odoo_id}',      [CheckinController::class, 'show']);
+Route::post('api/new/checkin/{odoo_id}/save', [CheckinController::class, 'save']);
+Route::post('api/new/checkin/{odoo_id}/pay',  [CheckinController::class, 'pay']);
 

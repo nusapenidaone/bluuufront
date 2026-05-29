@@ -1,0 +1,998 @@
+url = "/checkin/:odoo_id|^\d+$"
+title = "Check-in — Bluuu Tours"
+is_hidden = 0
+==
+<?php
+use Noren\Booking\Odoo\OdooService;
+use Carbon\Carbon;
+use Noren\Bluuu\Models\Registration;
+
+function formatRegStep(array $s): array
+{
+    $list = [];
+    foreach ((array) ($s['list'] ?? []) as $item) {
+        $item     = (array) $item;
+        $iconPath = $item['icon'] ?? '';
+        $list[]   = [
+            'title' => $item['title'] ?? '',
+            'text'  => $item['text']  ?? '',
+            'icon'  => $iconPath ? '/storage/app/media' . $iconPath : '',
+        ];
+    }
+    return [
+        'title' => $s['title']       ?? '',
+        'desc'  => $s['description'] ?? '',
+        'list'  => $list,
+        'text'  => $s['text']        ?? '',
+    ];
+}
+
+function onStart()
+{
+    $odooId = (int) $this->param('odoo_id');
+
+    try {
+        $order = OdooService::getFullOrder($odooId);
+    } catch (\Exception $e) {
+        return Redirect::to('404');
+    }
+
+    if (empty($order) || ($order['state'] ?? '') === 'cancel') {
+        return Redirect::to('404');
+    }
+
+    if (request()->get('paid') === '1') {
+        return Redirect::to('/checkin/' . $odooId . '/qr');
+    }
+
+    $name      = is_array($order['partner_id']) ? ($order['partner_id'][1] ?? '') : '';
+    $partnerId = is_array($order['partner_id']) ? (int) ($order['partner_id'][0] ?? 0) : 0;
+
+    $email = '';
+    $phone = '';
+    if ($partnerId) {
+        try {
+            $partners = OdooService::readPartners([$partnerId]);
+            $partner  = $partners[$partnerId] ?? [];
+            $email    = $partner['email'] ?? '';
+            $phone    = $partner['phone'] ?? '';
+        } catch (\Exception $e) {}
+    }
+
+    $startDate  = $order['rental_start_date'] ?? null;
+    $travelDate = '';
+    $travelTime = '';
+
+    if ($startDate) {
+        $dt         = Carbon::parse($startDate, 'UTC')->setTimezone('+04:00');
+        $travelDate = $dt->format('Y-m-d');
+        $travelTime = $dt->format('H:i');
+    }
+
+    $reg   = Registration::instance();
+    $regS1 = (array) ($reg->step1 ?? []);
+    $regS2 = (array) ($reg->step2 ?? []);
+    $regS3 = (array) ($reg->step3 ?? []);
+
+    $imgPath = $regS1['img'] ?? '';
+    $imgUrl  = $imgPath ? '/storage/app/media' . $imgPath : '';
+
+    $videoUrl = $regS2['video'] ?? '';
+    $embedUrl = '';
+    if ($videoUrl) {
+        if (strpos($videoUrl, '/embed/') !== false) {
+            $embedUrl = $videoUrl;
+        } elseif (preg_match('/(?:youtu\.be\/|[?&]v=)([\w-]+)/', $videoUrl, $m)) {
+            $embedUrl = 'https://www.youtube.com/embed/' . $m[1] . '?rel=0';
+        } else {
+            $embedUrl = $videoUrl;
+        }
+    }
+
+    $this['order'] = [
+        'odoo_id'         => $odooId,
+        'order_number'    => $order['name'] ?? '',
+        'name'            => $name,
+        'email'           => $email,
+        'phone'           => $phone,
+        'travel_date'     => $travelDate,
+        'travel_time'     => $travelTime,
+        'boat_name'       => $order['x_studio_boat_name'] ?? '',
+        'route'           => $order['x_studio_route_new'] ?? '',
+        'adults'          => (int) ($order['x_studio_adults'] ?? 0),
+        'kids'            => (int) ($order['x_studio_kids'] ?? 0),
+        'count_of_people' => (int) ($order['x_studio_count_of_people'] ?? 0),
+        'collect'         => (float) ($order['x_studio_collect'] ?? 0),
+        'has_lunch'       => ($order['x_studio_tour_type'] ?? '') === 'First Class Shared',
+        'reg' => [
+            's1_img'   => $imgUrl,
+            's1_title' => $regS1['title'] ?? '',
+            's1_desc'  => $regS1['description'] ?? '',
+            's2_title' => $regS2['title'] ?? '',
+            's2_desc'  => $regS2['description'] ?? '',
+            's2_video' => $embedUrl,
+            's3_title' => $regS3['title'] ?? '',
+            's3_desc'  => $regS3['description'] ?? '',
+            's3_map'   => $regS3['map'] ?? '',
+            's3_text'  => $regS3['text'] ?? '',
+            's4'       => $this->formatRegStep((array) ($reg->step4 ?? [])),
+            's5'       => $this->formatRegStep((array) ($reg->step5 ?? [])),
+            's6'       => $this->formatRegStep((array) ($reg->step6 ?? [])),
+            's7'       => $this->formatRegStep((array) ($reg->step7 ?? [])),
+            's8'       => $this->formatRegStep((array) ($reg->step8 ?? [])),
+        ],
+    ];
+}
+?>
+==
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in — Bluuu Tours</title>
+    <link rel="icon" href="/themes/bluuu/assets/favicon.png" type="image/png">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="preload" href="/themes/bluuu/assets/fonts/PetrovSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/themes/bluuu/assets/fonts/PetrovSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+    <style>
+        @font-face { font-family:'PetrovSans'; src:url('/themes/bluuu/assets/fonts/PetrovSans-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+        @font-face { font-family:'PetrovSans'; src:url('/themes/bluuu/assets/fonts/PetrovSans-SemiBold.woff2') format('woff2'); font-weight:600; font-display:swap; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            min-height: 100%;
+            background: #f1f5f9;
+            font-family: 'PetrovSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            color: #0f172a;
+        }
+        input, select, button, textarea { font-family: inherit; }
+        input, select {
+            width: 100%;
+            padding: 11px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 14px;
+            color: #0f172a;
+            background: #fff;
+            outline: none;
+            transition: border-color .15s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input:focus, select:focus { border-color: #0073E0; box-shadow: 0 0 0 3px rgba(0,115,224,0.1); }
+        input::placeholder { color: #94a3b8; }
+        select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+            cursor: pointer;
+        }
+        @keyframes dot { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+        .d1{animation:dot 1.2s 0s infinite} .d2{animation:dot 1.2s .2s infinite} .d3{animation:dot 1.2s .4s infinite}
+        @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        .fade-up { animation: fadeUp .3s ease both; }
+        .pax-row { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        @media (min-width: 520px) { .pax-row { grid-template-columns: 2fr 68px 90px 1fr; } }
+        .contact-row { display: grid; grid-template-columns: 1fr; gap: 14px; }
+        @media (min-width: 520px) { .contact-row { grid-template-columns: 1fr 1fr; } }
+        .info-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        @media (min-width: 400px) { .info-grid { grid-template-columns: 1fr 1fr; } }
+        .rich-text p { margin-bottom: 10px; }
+        .rich-text p:last-child { margin-bottom: 0; }
+        .rich-text ul, .rich-text ol { padding-left: 20px; margin-bottom: 10px; }
+        .rich-text li { margin-bottom: 4px; }
+        .rich-text strong { font-weight: 700; }
+        .map-embed iframe { width: 100% !important; height: 260px !important; border: none !important; border-radius: 14px; display: block; }
+    </style>
+</head>
+<body>
+
+<div style="background:linear-gradient(135deg,#0073E0 0%,#005CB3 100%);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:0 2px 16px rgba(0,115,224,0.3)">
+    <img src="/themes/bluuu/assets/img/logo-white.svg" alt="Bluuu" style="height:26px;display:block">
+    <span style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;letter-spacing:.12em;text-transform:uppercase">Online Check-In</span>
+</div>
+
+<div id="checkin-root" style="padding:28px 16px 80px;display:flex;flex-direction:column;align-items:center"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script>
+const INIT = {{order | json_encode(constant('JSON_NUMERIC_CHECK'))|raw}};
+</script>
+{% verbatim %}
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const BLUE      = '#0073E0';
+const BLUE_DARK = '#005CB3';
+const BLUE_GRAD = `linear-gradient(135deg,${BLUE} 0%,${BLUE_DARK} 100%)`;
+const BLUE_GLOW = '0 6px 20px rgba(0,115,224,0.32)';
+const HEADING   = '#0f172a';
+const BODY      = '#475569';
+const MUTED     = '#94a3b8';
+const BORDER    = '#e2e8f0';
+
+const cardStyle = {
+    background: '#fff',
+    borderRadius: 22,
+    boxShadow: '0 4px 32px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)',
+    border: '1px solid #e8edf2',
+    overflow: 'hidden',
+    width: '100%',
+    maxWidth: 520,
+};
+
+const MENU_COURSES = [
+    { id:'starter',   name:'Starter',     options:[{id:'s1',name:'Gyoza',desc:'Pan-fried dumplings'},{id:'s2',name:'Beef Tataki',desc:'Seared beef slices'},{id:'s3',name:'Brazilian Croquettes',desc:'Crispy cheese croquettes'}] },
+    { id:'main',      name:'Main Course', options:[{id:'m1',name:'BBQ Prawn',desc:'Grilled jumbo prawns'},{id:'m2',name:'Beef Kebab BBQ',desc:'Grilled beef kebab'},{id:'m3',name:'Chicken Gravy Steak',desc:'Pan-seared chicken'}] },
+    { id:'dessert',   name:'Dessert',     options:[{id:'d1',name:'Chocolate Mousse',desc:'Rich dark chocolate mousse'},{id:'d2',name:'Churros',desc:'Crispy fried dough'},{id:'d3',name:'Melting Tiramisu',desc:'Classic Italian dessert'}] },
+    { id:'beverages', name:'Beverages',   options:[{id:'b1',name:'Soft Drinks',desc:'Coke, Sprite, Fanta'},{id:'b2',name:'Freshness',desc:'Fresh juices & smoothies'},{id:'b3',name:'Cocktails',desc:'Classic cocktails'}] },
+];
+
+// ─── Steps ───────────────────────────────────────────────────────────────────
+
+function buildVisibleSteps(ord) {
+    function hasContent(s) {
+        return !!(s && (s.title || s.desc || (s.list && s.list.length > 0) || s.text));
+    }
+    const reg = ord.reg;
+    const steps = ['overview', 'intro', 'video', 'meet'];
+    ['s4','s5','s6','s7','s8'].forEach((k, i) => {
+        if (hasContent(reg[k])) steps.push('info' + (i + 4));
+    });
+    steps.push('passengers');
+    if (ord.has_lunch) steps.push('menu');
+    if (ord.collect > 0) { steps.push('balance'); steps.push('payment'); }
+    return steps;
+}
+
+// ─── Progress bar stepper ─────────────────────────────────────────────────────
+
+function Stepper({ total, current }) {
+    const pct = total > 1 ? Math.round(((current - 1) / (total - 1)) * 100) : 100;
+    return (
+        <div style={{ width:'100%', maxWidth:520, marginBottom:16, padding:'0 4px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', fontSize:11, color:MUTED, marginBottom:6, fontWeight:600 }}>
+                <span style={{ color:BODY }}>Step {current} of {total}</span>
+                <span>{pct}% complete</span>
+            </div>
+            <div style={{ height:5, background:BORDER, borderRadius:3, overflow:'hidden' }}>
+                <div style={{ height:'100%', background:BLUE_GRAD, borderRadius:3, width:pct+'%', transition:'width .3s ease' }} />
+            </div>
+        </div>
+    );
+}
+
+// ─── Common UI ────────────────────────────────────────────────────────────────
+
+function PrimaryBtn({ children, onClick, disabled }) {
+    return (
+        <button onClick={disabled ? undefined : onClick} style={{
+            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            width:'100%', padding:'15px 28px', borderRadius:14,
+            background: disabled ? '#e2e8f0' : BLUE_GRAD,
+            color: disabled ? MUTED : '#fff',
+            fontWeight:700, fontSize:15, border:'none',
+            boxShadow: disabled ? 'none' : BLUE_GLOW,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+        }}>
+            {children}
+        </button>
+    );
+}
+
+function LoadingBtn({ text = 'Please wait' }) {
+    return (
+        <button disabled style={{
+            display:'flex', alignItems:'center', justifyContent:'center', gap:4,
+            width:'100%', padding:'15px 28px', borderRadius:14,
+            background:'#e2e8f0', color:MUTED, fontWeight:700, fontSize:15, border:'none', cursor:'not-allowed',
+        }}>
+            {text}
+            <span className="d1" style={{ opacity:0 }}>·</span>
+            <span className="d2" style={{ opacity:0 }}>·</span>
+            <span className="d3" style={{ opacity:0 }}>·</span>
+        </button>
+    );
+}
+
+const ArrowR = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+);
+
+function BackBtn({ onClick }) {
+    return (
+        <button onClick={onClick} style={{
+            display:'inline-flex', alignItems:'center', gap:6,
+            background:'none', border:'none', color:MUTED,
+            fontSize:13, fontWeight:600, cursor:'pointer', padding:0,
+        }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M19 12H5M12 5l-7 7 7 7"/>
+            </svg>
+            Back
+        </button>
+    );
+}
+
+function TripRow({ label, value, last, accent }) {
+    return (
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 0', borderBottom: last ? 'none' : `1px solid ${BORDER}` }}>
+            <span style={{ color:BODY, fontSize:13 }}>{label}</span>
+            <span style={{ fontWeight:700, color: accent ? BLUE : HEADING, fontSize:13, textAlign:'right', maxWidth:'58%' }}>{value}</span>
+        </div>
+    );
+}
+
+function RadioOpt({ label, sub, checked, onClick, last }) {
+    return (
+        <div onClick={onClick} style={{ display:'flex', alignItems:'center', gap:14, padding:'15px 0', cursor:'pointer', borderBottom: last ? 'none' : `1px solid ${BORDER}` }}>
+            <div style={{
+                flexShrink:0, width:22, height:22, borderRadius:'50%',
+                border:`2px solid ${checked ? BLUE : '#d0d9e3'}`,
+                background: checked ? BLUE : 'transparent',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                transition:'all .15s',
+            }}>
+                {checked && <div style={{ width:8, height:8, borderRadius:'50%', background:'#fff' }} />}
+            </div>
+            <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, fontSize:14, color:HEADING }}>{label}</div>
+                {sub && <div style={{ fontSize:12, color:MUTED, marginTop:2 }}>{sub}</div>}
+            </div>
+        </div>
+    );
+}
+
+function CardHeader({ title, sub, onBack }) {
+    return (
+        <div style={{ padding:'22px 28px 20px', borderBottom:`1px solid ${BORDER}` }}>
+            {onBack && <BackBtn onClick={onBack} />}
+            <div style={{ marginTop: onBack ? 14 : 0 }}>
+                <div style={{ fontSize:22, fontWeight:700, color:HEADING, letterSpacing:'-0.3px' }}>{title}</div>
+                {sub && <div style={{ fontSize:13, color:MUTED, marginTop:4 }}>{sub}</div>}
+            </div>
+        </div>
+    );
+}
+
+function FieldLabel({ children, required }) {
+    return (
+        <div style={{ fontSize:12, fontWeight:600, color:BODY, letterSpacing:'.03em', marginBottom:6 }}>
+            {children}{required && <span style={{ color:'#ef4444', marginLeft:3 }}>*</span>}
+        </div>
+    );
+}
+
+function fmtIDR(n) { return 'IDR ' + Number(n).toLocaleString('id-ID'); }
+
+function fmtDate(d) {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
+}
+
+const COUNTRIES = ["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Belarus","Belgium","Brazil","Bulgaria","Cambodia","Canada","Chile","China","Colombia","Croatia","Czech Republic","Denmark","Egypt","Estonia","Finland","France","Georgia","Germany","Ghana","Greece","Hong Kong","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Japan","Jordan","Kazakhstan","Kenya","Korea, Republic of","Kuwait","Latvia","Lebanon","Lithuania","Malaysia","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Norway","Pakistan","Philippines","Poland","Portugal","Qatar","Romania","Russian Federation","Saudi Arabia","Singapore","Slovakia","Slovenia","South Africa","Spain","Sri Lanka","Sweden","Switzerland","Taiwan","Thailand","Turkey","Ukraine","United Arab Emirates","United Kingdom","United States","Uzbekistan","Viet Nam"];
+
+// ─── Step: Overview ───────────────────────────────────────────────────────────
+
+function StepOverview({ order, goNext }) {
+    return (
+        <div className="fade-up" style={cardStyle}>
+            <div style={{ background:BLUE_GRAD, padding:'32px 28px 28px' }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.5)', letterSpacing:'.12em', textTransform:'uppercase', marginBottom:8 }}>
+                    Check-In · {order.order_number}
+                </div>
+                <div style={{ fontSize:26, fontWeight:700, color:'#fff', lineHeight:1.2, letterSpacing:'-0.5px' }}>
+                    Hello, {order.name}!
+                </div>
+                <div style={{ fontSize:14, color:'rgba(255,255,255,0.72)', marginTop:8, lineHeight:1.6 }}>
+                    We're looking forward to seeing you.<br/>Please review your trip details below.
+                </div>
+            </div>
+            <div style={{ padding:'4px 28px 0' }}>
+                <TripRow label="Travel Date"  value={fmtDate(order.travel_date)} />
+                <TripRow label="Meeting Time" value={order.travel_time || '—'} />
+                <TripRow label="Yacht"        value={order.boat_name || '—'} />
+                {order.route ? <TripRow label="Route" value={order.route} /> : null}
+                <TripRow
+                    label="Passengers"
+                    value={order.adults + order.kids > 0
+                        ? `${order.adults + order.kids} total` + (order.adults ? ` (${order.adults} adults${order.kids ? `, ${order.kids} kids` : ''})` : '')
+                        : '—'
+                    }
+                    last={!order.collect}
+                />
+                {order.collect > 0 && (
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', gap:12 }}>
+                        <div>
+                            <div style={{ fontSize:11, fontWeight:700, color:'#1e40af', letterSpacing:'.08em', textTransform:'uppercase' }}>Remaining Balance</div>
+                            <div style={{ fontSize:12, color:MUTED, marginTop:2 }}>Pay online or at the office</div>
+                        </div>
+                        <div style={{ fontSize:20, fontWeight:700, color:BLUE, flexShrink:0 }}>{fmtIDR(order.collect)}</div>
+                    </div>
+                )}
+            </div>
+            <div style={{ padding:'16px 28px 28px' }}>
+                <PrimaryBtn onClick={goNext}>
+                    Start Check-In &nbsp;<ArrowR />
+                </PrimaryBtn>
+                <div style={{ textAlign:'center', fontSize:12, color:MUTED, marginTop:10 }}>Takes about 2 minutes</div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Registration intro (hero image) ────────────────────────────────────
+
+function StepRegIntro({ order, goBack, goNext }) {
+    const reg = order.reg;
+    return (
+        <div className="fade-up" style={cardStyle}>
+            {reg.s1_img ? (
+                <div style={{ position:'relative', height:240, borderRadius:'22px 22px 0 0', overflow:'hidden' }}>
+                    <img src={reg.s1_img} alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                    <div style={{ position:'absolute', inset:0, background:'linear-gradient(180deg, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.55) 100%)' }} />
+                    {reg.s1_title && (
+                        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'20px 28px' }}>
+                            <div style={{ fontSize:22, fontWeight:700, color:'#fff', letterSpacing:'-0.3px', lineHeight:1.2, textShadow:'0 1px 8px rgba(0,0,0,0.3)' }}>
+                                {reg.s1_title}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div style={{ background:BLUE_GRAD, padding:'28px 28px 20px' }}>
+                    <div style={{ fontSize:22, fontWeight:700, color:'#fff' }}>{reg.s1_title || 'Welcome'}</div>
+                </div>
+            )}
+            <div style={{ padding:'20px 28px 28px' }}>
+                <BackBtn onClick={goBack} />
+                {reg.s1_desc ? (
+                    <div className="rich-text" style={{ fontSize:14, color:BODY, lineHeight:1.7, marginTop:16 }}
+                         dangerouslySetInnerHTML={{ __html: reg.s1_desc }} />
+                ) : null}
+                <div style={{ marginTop:24 }}>
+                    <PrimaryBtn onClick={goNext}>Next Step &nbsp;<ArrowR /></PrimaryBtn>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Registration video ─────────────────────────────────────────────────
+
+function StepRegVideo({ order, goBack, goNext }) {
+    const reg = order.reg;
+    return (
+        <div className="fade-up" style={cardStyle}>
+            <CardHeader title={reg.s2_title || 'Your Tour'} onBack={goBack} />
+            <div>
+                {reg.s2_video ? (
+                    <div style={{ position:'relative', paddingBottom:'56.25%', height:0, overflow:'hidden' }}>
+                        <iframe
+                            src={reg.s2_video}
+                            style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', border:'none' }}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    </div>
+                ) : null}
+                {reg.s2_desc ? (
+                    <div className="rich-text" style={{ padding:'16px 28px 0', fontSize:14, color:BODY, lineHeight:1.7 }}
+                         dangerouslySetInnerHTML={{ __html: reg.s2_desc }} />
+                ) : null}
+                <div style={{ padding:'20px 28px 28px' }}>
+                    <PrimaryBtn onClick={goNext}>Next Step &nbsp;<ArrowR /></PrimaryBtn>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Meeting point ──────────────────────────────────────────────────────
+
+function StepRegMeet({ order, goBack, goNext }) {
+    const reg = order.reg;
+    return (
+        <div className="fade-up" style={cardStyle}>
+            <CardHeader title={reg.s3_title || 'Meeting Point'} onBack={goBack} />
+            <div style={{ padding:'16px 28px' }}>
+                <div style={{ background:'#f8fafc', borderRadius:14, border:`1px solid ${BORDER}`, overflow:'hidden', marginBottom:16 }}>
+                    <div style={{ display:'flex', alignItems:'center', padding:'12px 16px', borderBottom:`1px solid ${BORDER}` }}>
+                        <span style={{ flex:1, color:BODY, fontSize:13 }}>Date</span>
+                        <span style={{ fontWeight:700, color:HEADING, fontSize:13 }}>{fmtDate(order.travel_date)}</span>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', padding:'12px 16px' }}>
+                        <span style={{ flex:1, color:BODY, fontSize:13 }}>Meeting Time</span>
+                        <span style={{ fontWeight:700, color:HEADING, fontSize:13 }}>{order.travel_time || '—'}</span>
+                    </div>
+                </div>
+                {reg.s3_map ? (
+                    <div className="map-embed" style={{ marginBottom:16 }} dangerouslySetInnerHTML={{ __html: reg.s3_map }} />
+                ) : null}
+                {reg.s3_text ? (
+                    <div style={{ fontSize:13, color:BODY, textAlign:'center', marginBottom:16, padding:'10px 14px', background:'#f8fafc', borderRadius:10, border:`1px solid ${BORDER}` }}>
+                        📍 {reg.s3_text}
+                    </div>
+                ) : null}
+                {reg.s3_desc ? (
+                    <div className="rich-text" style={{ fontSize:13, color:BODY, lineHeight:1.65, marginBottom:16 }}
+                         dangerouslySetInnerHTML={{ __html: reg.s3_desc }} />
+                ) : null}
+            </div>
+            <div style={{ padding:'4px 28px 28px' }}>
+                <PrimaryBtn onClick={goNext}>I Agree, Continue &nbsp;<ArrowR /></PrimaryBtn>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Generic info (steps 4–8) ──────────────────────────────────────────
+
+function StepRegInfo({ reg, goBack, goNext }) {
+    return (
+        <div className="fade-up" style={cardStyle}>
+            <CardHeader title={reg.title || 'Information'} onBack={goBack} />
+            <div style={{ padding:'20px 28px 28px' }}>
+                {reg.desc ? (
+                    <div className="rich-text" style={{ fontSize:14, color:BODY, lineHeight:1.7, marginBottom: reg.list && reg.list.length ? 20 : 0 }}
+                         dangerouslySetInnerHTML={{ __html: reg.desc }} />
+                ) : null}
+                {reg.list && reg.list.length > 0 ? (
+                    <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom: reg.text ? 16 : 24 }}>
+                        {reg.list.map((item, i) => (
+                            <div key={i} style={{ background:'#f8fafc', borderRadius:16, padding:'16px 18px', border:`1px solid ${BORDER}`, display:'flex', alignItems:'flex-start', gap:16 }}>
+                                {item.icon ? (
+                                    <div style={{ flexShrink:0, width:64, height:64, background:'#fff', borderRadius:16, border:`1px solid ${BORDER}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,115,224,0.08)' }}>
+                                        <img src={item.icon} alt="" style={{ height:42, width:42, objectFit:'contain' }} />
+                                    </div>
+                                ) : null}
+                                <div style={{ flex:1, paddingTop: item.icon ? 2 : 0 }}>
+                                    {item.title ? <div style={{ fontWeight:700, fontSize:14, color:HEADING, marginBottom:4 }}>{item.title}</div> : null}
+                                    {item.text ? (
+                                        <div className="rich-text" style={{ fontSize:13, color:BODY, lineHeight:1.55 }}
+                                             dangerouslySetInnerHTML={{ __html: item.text }} />
+                                    ) : null}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : null}
+                {reg.text ? (
+                    <div style={{ background:'#f8fafc', borderRadius:10, padding:'12px 14px', border:`1px solid ${BORDER}`, fontSize:13, color:BODY, marginBottom:20 }}>
+                        {reg.text}
+                    </div>
+                ) : null}
+                <PrimaryBtn onClick={goNext}>Next Step &nbsp;<ArrowR /></PrimaryBtn>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Passengers ─────────────────────────────────────────────────────────
+
+function StepPassengers({ order, setOrder, goBack, nextStep, go }) {
+    const [showErr, setShowErr] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(order.email);
+
+    useEffect(() => {
+        if (order.passengers.length !== order.count_of_people) {
+            const ps = Array.from({ length: order.count_of_people }, (_, i) =>
+                order.passengers[i] || { name:'', age:'', gender:'', country:'' }
+            );
+            setOrder(o => ({ ...o, passengers: ps }));
+        }
+    }, []);
+
+    const passengers = order.passengers.length === order.count_of_people
+        ? order.passengers
+        : Array.from({ length: order.count_of_people }, (_, i) =>
+            order.passengers[i] || { name:'', age:'', gender:'', country:'' }
+        );
+
+    function updateP(i, field, val) {
+        const ps = passengers.map((p, idx) => idx === i ? { ...p, [field]: val } : p);
+        setOrder(o => ({ ...o, passengers: ps }));
+    }
+
+    function paxOk(p) {
+        return p.name.trim() && p.age && p.gender && p.country;
+    }
+
+    function allPaxOk() {
+        return passengers.every(paxOk);
+    }
+
+    function submit(paxList) {
+        setLoading(true);
+        const payload = { passengers: paxList, email: order.email };
+        if (nextStep) {
+            setOrder(o => ({ ...o, passengers: paxList }));
+            go(nextStep);
+            return;
+        }
+        axios.post('/api/new/checkin/' + order.odoo_id + '/save', payload)
+            .then(() => { window.location.href = '/checkin/' + order.odoo_id + '/qr'; })
+            .catch(() => { setLoading(false); alert('Something went wrong. Please try again.'); });
+    }
+
+    function proceed() {
+        setShowErr(true);
+        if (!emailOk) return;
+        if (!allPaxOk()) return;
+        submit(passengers);
+    }
+
+    function skip() {
+        if (!emailOk) { setShowErr(true); return; }
+        submit([]);
+    }
+
+    return (
+        <div className="fade-up" style={{ ...cardStyle, maxWidth:560 }}>
+            <CardHeader title="Passenger Details" sub="Required for insurance and boarding documentation" onBack={goBack} />
+            <div style={{ padding:'22px 28px 28px' }}>
+                <div style={{ marginBottom:24 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:HEADING, letterSpacing:'.08em', textTransform:'uppercase', marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${BORDER}` }}>
+                        Contact Info
+                    </div>
+                    <div className="contact-row">
+                        <div>
+                            <FieldLabel required>Email</FieldLabel>
+                            <input type="email" placeholder="your@email.com" value={order.email}
+                                style={{ borderColor: showErr && !emailOk ? '#ef4444' : undefined }}
+                                onChange={e => setOrder(o => ({ ...o, email: e.target.value }))} />
+                            {showErr && !emailOk && (
+                                <div style={{ fontSize:11, color:'#ef4444', marginTop:5 }}>Enter a valid email address</div>
+                            )}
+                        </div>
+                        <div>
+                            <FieldLabel>WhatsApp</FieldLabel>
+                            <input type="tel" placeholder="+62 8xx xxxx xxxx" value={order.phone}
+                                onChange={e => setOrder(o => ({ ...o, phone: e.target.value }))} />
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ fontSize:11, fontWeight:700, color:HEADING, letterSpacing:'.08em', textTransform:'uppercase', marginBottom:14, paddingBottom:10, borderBottom:`1px solid ${BORDER}` }}>
+                    Passengers
+                    <span style={{ fontWeight:400, color:MUTED, marginLeft:8, textTransform:'none', letterSpacing:0, fontSize:13 }}>({order.count_of_people} total)</span>
+                </div>
+
+                {passengers.map((p, i) => {
+                    const err = showErr && !paxOk(p);
+                    return (
+                        <div key={i} style={{ background:'#f8fafc', borderRadius:14, padding:'14px 16px', marginBottom:10, border:`1.5px solid ${err ? '#ef4444' : BORDER}` }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                                <div style={{ fontSize:11, fontWeight:700, color: err ? '#ef4444' : BLUE, letterSpacing:'.08em', textTransform:'uppercase' }}>
+                                    Passenger {i + 1}
+                                </div>
+                                {err && <div style={{ fontSize:11, color:'#ef4444', fontWeight:600 }}>Fill all fields</div>}
+                            </div>
+                            <div className="pax-row">
+                                <input placeholder="Full Name" value={p.name}
+                                    style={{ borderColor: showErr && !p.name.trim() ? '#ef4444' : undefined }}
+                                    onChange={e => updateP(i, 'name', e.target.value)} />
+                                <select value={p.age}
+                                    style={{ borderColor: showErr && !p.age ? '#ef4444' : undefined }}
+                                    onChange={e => updateP(i, 'age', e.target.value)}>
+                                    <option value="" disabled>Age</option>
+                                    {Array.from({ length: 100 }, (_, j) => <option key={j+1} value={j+1}>{j+1}</option>)}
+                                </select>
+                                <select value={p.gender}
+                                    style={{ borderColor: showErr && !p.gender ? '#ef4444' : undefined }}
+                                    onChange={e => updateP(i, 'gender', e.target.value)}>
+                                    <option value="" disabled>Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                                <select value={p.country}
+                                    style={{ borderColor: showErr && !p.country ? '#ef4444' : undefined }}
+                                    onChange={e => updateP(i, 'country', e.target.value)}>
+                                    <option value="" disabled>Country</option>
+                                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    );
+                })}
+
+                <div style={{ marginTop:24, display:'flex', flexDirection:'column', gap:10 }}>
+                    {!loading ? (
+                        <>
+                            <PrimaryBtn onClick={proceed}>
+                                {nextStep ? 'Continue' : 'Complete Check-In'} &nbsp;<ArrowR />
+                            </PrimaryBtn>
+                            <button onClick={skip} style={{
+                                width:'100%', padding:'13px', borderRadius:14,
+                                background:'#f1f5f9', color:BODY, fontWeight:600, fontSize:14,
+                                border:`1px solid ${BORDER}`, cursor:'pointer',
+                            }}>Skip passenger details</button>
+                        </>
+                    ) : <LoadingBtn />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Menu selection ─────────────────────────────────────────────────────
+
+function StepMenu({ order, setOrder, goBack, nextStep, go }) {
+    const total = order.count_of_people;
+    const [menu, setMenu] = useState(() =>
+        Object.fromEntries(MENU_COURSES.map(c => [
+            c.id,
+            Object.fromEntries(c.options.map(o => [o.id, 0]))
+        ]))
+    );
+    const [loading, setLoading] = useState(false);
+
+    function courseTotal(cid) {
+        return Object.values(menu[cid] || {}).reduce((s, v) => s + v, 0);
+    }
+
+    function updateQty(cid, oid, delta) {
+        setMenu(prev => {
+            const ct  = courseTotal(cid);
+            const cur = prev[cid][oid];
+            const nxt = Math.max(0, cur + delta);
+            if (delta > 0 && ct >= total) return prev;
+            return { ...prev, [cid]: { ...prev[cid], [oid]: nxt } };
+        });
+    }
+
+    function isOver() {
+        return MENU_COURSES.some(c => courseTotal(c.id) > total);
+    }
+
+    function finish(selection) {
+        setOrder(o => ({ ...o, menu: selection }));
+        if (!nextStep) {
+            setLoading(true);
+            axios.post('/api/new/checkin/' + order.odoo_id + '/save', {
+                passengers: order.passengers,
+                email: order.email,
+                menu: selection,
+            })
+            .then(() => { window.location.href = '/checkin/' + order.odoo_id + '/qr'; })
+            .catch(() => { setLoading(false); alert('Something went wrong. Please try again.'); });
+        } else {
+            go(nextStep);
+        }
+    }
+
+    return (
+        <div className="fade-up" style={{ ...cardStyle, maxWidth:560 }}>
+            <CardHeader
+                title="Lunch Selection"
+                sub={`Choose your dishes · ${total} ${total === 1 ? 'person' : 'people'}`}
+                onBack={goBack}
+            />
+            <div style={{ padding:'20px 28px 28px' }}>
+                {MENU_COURSES.map(course => {
+                    const ct   = courseTotal(course.id);
+                    const over = ct > total;
+                    return (
+                        <div key={course.id} style={{ marginBottom:20 }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
+                                <div style={{ fontSize:12, fontWeight:700, color:HEADING, letterSpacing:'.06em', textTransform:'uppercase' }}>{course.name}</div>
+                                <div style={{ fontSize:11, color: over ? '#ef4444' : MUTED, fontWeight:600 }}>{ct}/{total}</div>
+                            </div>
+                            {course.options.map(opt => {
+                                const qty = menu[course.id][opt.id];
+                                return (
+                                    <div key={opt.id} style={{ display:'flex', alignItems:'center', padding:'10px 0', borderBottom:`1px solid ${BORDER}` }}>
+                                        <div style={{ flex:1 }}>
+                                            <div style={{ fontWeight:600, fontSize:13, color:HEADING }}>{opt.name}</div>
+                                            <div style={{ fontSize:11, color:MUTED, marginTop:2 }}>{opt.desc}</div>
+                                        </div>
+                                        <div style={{ display:'flex', alignItems:'center', gap:12, flexShrink:0 }}>
+                                            <button onClick={() => updateQty(course.id, opt.id, -1)} style={{
+                                                width:30, height:30, borderRadius:'50%',
+                                                border:`1.5px solid ${qty > 0 ? BORDER : '#f0f0f0'}`,
+                                                background: qty > 0 ? '#fff' : '#f8fafc',
+                                                color: qty > 0 ? HEADING : MUTED,
+                                                fontWeight:700, fontSize:18, lineHeight:1,
+                                                cursor: qty > 0 ? 'pointer' : 'default',
+                                                display:'flex', alignItems:'center', justifyContent:'center',
+                                            }}>−</button>
+                                            <span style={{ width:22, textAlign:'center', fontWeight:700, fontSize:14, color:HEADING }}>{qty}</span>
+                                            <button onClick={() => updateQty(course.id, opt.id, 1)} style={{
+                                                width:30, height:30, borderRadius:'50%', border:'none',
+                                                background: ct >= total ? '#f1f5f9' : BLUE_GRAD,
+                                                color: ct >= total ? MUTED : '#fff',
+                                                fontWeight:700, fontSize:18, lineHeight:1,
+                                                cursor: ct >= total ? 'default' : 'pointer',
+                                                display:'flex', alignItems:'center', justifyContent:'center',
+                                                boxShadow: ct >= total ? 'none' : '0 2px 8px rgba(0,115,224,0.2)',
+                                            }}>+</button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {over && (
+                                <div style={{ marginTop:5, fontSize:11, color:'#ef4444', fontWeight:600 }}>
+                                    Max {total} per course
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                <div style={{ display:'flex', gap:10, marginTop:8 }}>
+                    {!loading ? (
+                        <>
+                            <button onClick={() => finish(null)} style={{
+                                flex:1, padding:'13px', borderRadius:14,
+                                background:'#f1f5f9', color:BODY, fontWeight:600, fontSize:14,
+                                border:`1px solid ${BORDER}`, cursor:'pointer',
+                            }}>Skip</button>
+                            <button onClick={() => !isOver() && finish(menu)} disabled={isOver()} style={{
+                                flex:2, padding:'13px', borderRadius:14,
+                                background: isOver() ? '#e2e8f0' : BLUE_GRAD,
+                                color: isOver() ? MUTED : '#fff',
+                                fontWeight:700, fontSize:14, border:'none',
+                                cursor: isOver() ? 'not-allowed' : 'pointer',
+                                boxShadow: isOver() ? 'none' : BLUE_GLOW,
+                            }}>Confirm Selection</button>
+                        </>
+                    ) : <LoadingBtn />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Balance (pay now / pay later) ──────────────────────────────────────
+
+function StepPay({ order, setOrder, goBack, goNext }) {
+    const [loading, setLoading] = useState(false);
+
+    function finish() {
+        setLoading(true);
+        axios.post('/api/new/checkin/' + order.odoo_id + '/save', {
+            passengers: order.passengers,
+            email: order.email,
+            menu: order.menu || null,
+        })
+        .then(() => { window.location.href = '/checkin/' + order.odoo_id + '/qr'; })
+        .catch(() => { setLoading(false); alert('Something went wrong. Please try again.'); });
+    }
+
+    return (
+        <div className="fade-up" style={cardStyle}>
+            <CardHeader title="Remaining Balance" onBack={goBack} />
+            <div style={{ padding:'20px 28px 28px' }}>
+                <div style={{ textAlign:'center', padding:'20px 0 24px', borderBottom:`1px solid ${BORDER}`, marginBottom:4 }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:MUTED, letterSpacing:'.1em', textTransform:'uppercase', marginBottom:8 }}>Amount due</div>
+                    <div style={{ fontSize:38, fontWeight:800, color:BLUE, letterSpacing:'-1px', lineHeight:1 }}>
+                        {fmtIDR(order.collect)}
+                    </div>
+                </div>
+                <RadioOpt label="Pay Online Now" sub="Skip the morning queue · Secure online payment"
+                    checked={order.pay === true} onClick={() => setOrder(o => ({ ...o, pay: true }))} />
+                <RadioOpt label="Pay at the Office" sub="Cash or card on arrival at Serangan Harbor"
+                    checked={order.pay === false} onClick={() => setOrder(o => ({ ...o, pay: false }))} last />
+                <div style={{ marginTop:24 }}>
+                    {!loading ? (
+                        <>
+                            {order.pay === true  && <PrimaryBtn onClick={goNext}>Continue &nbsp;<ArrowR /></PrimaryBtn>}
+                            {order.pay === false && <PrimaryBtn onClick={finish}>Complete Check-In &nbsp;<ArrowR /></PrimaryBtn>}
+                            {order.pay === null  && <div style={{ textAlign:'center', fontSize:13, color:MUTED, padding:'10px 0' }}>← Please select an option above</div>}
+                        </>
+                    ) : <LoadingBtn />}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Step: Payment method ─────────────────────────────────────────────────────
+
+function StepMethod({ order, goBack }) {
+    const [loading, setLoading] = useState(false);
+    const [status,  setStatus]  = useState('Processing');
+
+    function pay() {
+        setLoading(true); setStatus('Saving');
+        axios.post('/api/new/checkin/' + order.odoo_id + '/save', {
+            passengers: order.passengers,
+            email: order.email,
+            menu: order.menu || null,
+        })
+        .then(() => {
+            setStatus('Redirecting');
+            return axios.post('/api/new/checkin/' + order.odoo_id + '/pay', {
+                method: order.method, email: order.email,
+            });
+        })
+        .then(res => { window.location.href = res.data.payment_url; })
+        .catch(() => { setLoading(false); alert('Payment error. Please try again.'); });
+    }
+
+    return (
+        <div className="fade-up" style={cardStyle}>
+            <CardHeader title="Payment Method" sub={`Amount to pay: ${fmtIDR(order.collect)}`} onBack={goBack} />
+            <div style={{ padding:'20px 28px 28px' }}>
+                <RadioOpt label="Card / Bank Transfer" sub="Processed in IDR · 3% merchant fee"
+                    checked={order.method === 1} onClick={() => {}} last />
+                <div style={{ marginTop:24 }}>
+                    {!loading
+                        ? <PrimaryBtn onClick={pay}>Pay {fmtIDR(order.collect)} &nbsp;<ArrowR /></PrimaryBtn>
+                        : <LoadingBtn text={status} />
+                    }
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+
+function App() {
+    const [step, setStepRaw] = useState('overview');
+    const [order, setOrder]  = useState({
+        ...INIT,
+        passengers: [],
+        pay:    INIT.collect > 0 ? null : false,
+        method: 1,
+        menu:   null,
+    });
+
+    const steps    = buildVisibleSteps(order);
+    const idx      = steps.indexOf(step);
+    const prevStep = idx > 0 ? steps[idx - 1] : null;
+    const nextStep = idx < steps.length - 1 ? steps[idx + 1] : null;
+
+    function go(s) {
+        if (!s) return;
+        setStepRaw(s);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    const props = {
+        order,
+        setOrder,
+        goBack: () => go(prevStep),
+        goNext: () => go(nextStep),
+        nextStep,
+        go,
+    };
+
+    const regStep = (key) => order.reg[key];
+
+    return (
+        <>
+            <Stepper total={steps.length} current={idx + 1} />
+            {step === 'overview'   && <StepOverview   {...props} />}
+            {step === 'intro'      && <StepRegIntro   {...props} />}
+            {step === 'video'      && <StepRegVideo   {...props} />}
+            {step === 'meet'       && <StepRegMeet    {...props} />}
+            {step === 'info4'      && <StepRegInfo    {...props} reg={regStep('s4')} />}
+            {step === 'info5'      && <StepRegInfo    {...props} reg={regStep('s5')} />}
+            {step === 'info6'      && <StepRegInfo    {...props} reg={regStep('s6')} />}
+            {step === 'info7'      && <StepRegInfo    {...props} reg={regStep('s7')} />}
+            {step === 'info8'      && <StepRegInfo    {...props} reg={regStep('s8')} />}
+            {step === 'passengers' && <StepPassengers {...props} />}
+            {step === 'menu'       && <StepMenu       {...props} />}
+            {step === 'balance'    && <StepPay        {...props} />}
+            {step === 'payment'    && <StepMethod     {...props} />}
+        </>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('checkin-root')).render(<App />);
+</script>
+{% endverbatim %}
+</body>
+</html>
