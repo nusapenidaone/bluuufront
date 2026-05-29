@@ -32,6 +32,28 @@ class AdminController extends Controller
         return response()->json(['error' => 'Unauthorized'], 401);
     }
 
+    // ─── POST /api/admin/login ────────────────────────────────────────────────
+
+    public function login(Request $request)
+    {
+        $cfg       = require __DIR__ . '/../odoo/services.config.php';
+        $passwords = $cfg['admin_passwords'] ?? [];
+        $token     = $cfg['admin_token']     ?? null;
+
+        if (!$token) {
+            return response()->json(['error' => 'Server misconfigured'], 500);
+        }
+
+        $page     = $request->input('page', '');
+        $expected = $passwords[$page] ?? null;
+
+        if (!$expected || $request->input('password', '') !== $expected) {
+            return response()->json(['error' => 'Wrong password'], 401);
+        }
+
+        return response()->json(['token' => $token]);
+    }
+
     // =========================================================================
     // ODOO-CENTRIC ENDPOINTS (primary)
     // =========================================================================

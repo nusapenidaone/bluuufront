@@ -1,0 +1,341 @@
+url = "/checkin/:odoo_id/qr"
+title = "Check-in Complete — Bluuu Tours"
+is_hidden = 0
+==
+<?php
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
+use Dompdf\Dompdf;
+use Noren\Booking\Odoo\OdooService;
+use Carbon\Carbon;
+
+function onStart()
+{
+    $odooId = (int) $this->param('odoo_id');
+
+    try {
+        $order = OdooService::getFullOrder($odooId);
+    } catch (\Exception $e) {
+        return Redirect::to('404');
+    }
+
+    if (empty($order)) {
+        return Redirect::to('404');
+    }
+
+    $name      = is_array($order['partner_id']) ? ($order['partner_id'][1] ?? '') : '';
+    $startDate = $order['rental_start_date'] ?? null;
+    $travelDateFmt = '';
+    $travelDate    = '';
+    $meetingTime   = '';
+
+    if ($startDate) {
+        $dt            = Carbon::parse($startDate, 'UTC')->setTimezone('Asia/Makassar');
+        $travelDate    = $dt->format('Y-m-d');
+        $travelDateFmt = $dt->format('d M Y');
+        $meetingTime   = $dt->format('H:i');
+    }
+
+    $boatName = $order['x_studio_boat_name'] ?? '';
+    $orderNum = $order['name'] ?? "#{$odooId}";
+    $people   = (int) ($order['x_studio_count_of_people'] ?? 0);
+    $route    = $order['x_studio_route_new'] ?? '';
+
+    $odooUrl = "https://pt-day-trip-bali.odoo.com/web?debug=assets#id={$odooId}&cids=22-1-18-21-15-16-2-20-19-24-3-14-11-13-12-17&menu_id=526&action=744&model=sale.order&view_type=form";
+    $qr  = $this->generateQr($odooUrl);
+    $pdf = $this->generatePdf($qr, $name, $orderNum, $boatName, $travelDateFmt, $meetingTime, $people);
+
+    $this['name']         = $name;
+    $this['order_number'] = $orderNum;
+    $this['boat_name']    = $boatName;
+    $this['travel_date']  = $travelDate;
+    $this['travel_date_fmt'] = $travelDateFmt;
+    $this['meeting_time'] = $meetingTime;
+    $this['route']        = $route;
+    $this['people']       = $people;
+    $this['qr']           = $qr;
+    $this['pdf']          = $pdf;
+}
+
+function generateQr(string $text): string
+{
+    $options = new QROptions([
+        'outputType' => QRCode::OUTPUT_IMAGE_PNG,
+        'scale'      => 9,
+    ]);
+    return (new QRCode($options))->render($text);
+}
+
+function generatePdf(string $qr, string $name, string $orderNum, string $boatName, string $travelDate, string $meetingTime, int $people): string
+{
+    $dompdf = new Dompdf();
+    $html   = "
+    <style>
+        @page { margin:0; size:A4 portrait; }
+        * { box-sizing:border-box; }
+        body { margin:0; font-family:Arial,sans-serif; color:#1a1a1a; font-size:15px; }
+    </style>
+
+    <!-- Header -->
+    <div style='background-color:#0073E0; color:#fff; padding:36px 36px 28px; text-align:center;'>
+        <div style='font-size:36px; font-weight:bold; letter-spacing:6px; margin-bottom:6px;'>BLUUU</div>
+        <div style='font-size:13px; letter-spacing:2px; color:rgba(255,255,255,0.7); text-transform:uppercase; margin-bottom:20px;'>Nusa Penida Day Tour</div>
+        <div style='display:inline-block; background:rgba(255,255,255,0.18); border-radius:10px; padding:10px 28px;'>
+            <div style='font-size:17px; font-weight:bold; letter-spacing:0.5px;'>Check-In Confirmed</div>
+        </div>
+    </div>
+
+    <!-- Order strip -->
+    <div style='background:#eef6ff; border-bottom:2px solid #cce4ff; padding:12px 36px; text-align:right;'>
+        <span style='color:#888; font-size:13px; letter-spacing:0.5px;'>ORDER </span>
+        <span style='color:#0073E0; font-weight:bold; font-size:18px; letter-spacing:0.5px;'>{$orderNum}</span>
+    </div>
+
+    <!-- Details table -->
+    <div style='padding:24px 36px 16px;'>
+        <table style='width:100%; border-collapse:collapse;'>
+            <tr>
+                <td style='padding:11px 0; color:#888; width:38%; border-bottom:1px solid #f0f0f0; font-size:14px;'>Name</td>
+                <td style='padding:11px 0; font-weight:bold; color:#0f172a; border-bottom:1px solid #f0f0f0; font-size:15px;'>{$name}</td>
+            </tr>
+            <tr>
+                <td style='padding:11px 0; color:#888; border-bottom:1px solid #f0f0f0; font-size:14px;'>Yacht</td>
+                <td style='padding:11px 0; font-weight:bold; color:#0f172a; border-bottom:1px solid #f0f0f0; font-size:15px;'>{$boatName}</td>
+            </tr>
+            <tr>
+                <td style='padding:11px 0; color:#888; border-bottom:1px solid #f0f0f0; font-size:14px;'>Travel Date</td>
+                <td style='padding:11px 0; font-weight:bold; color:#0f172a; border-bottom:1px solid #f0f0f0; font-size:15px;'>{$travelDate}</td>
+            </tr>
+            <tr>
+                <td style='padding:11px 0; color:#888; border-bottom:1px solid #f0f0f0; font-size:14px;'>Meeting Time</td>
+                <td style='padding:11px 0; font-weight:bold; color:#0f172a; border-bottom:1px solid #f0f0f0; font-size:15px;'>{$meetingTime}</td>
+            </tr>
+            <tr>
+                <td style='padding:11px 0; color:#888; font-size:14px;'>Passengers</td>
+                <td style='padding:11px 0; font-weight:bold; color:#0f172a; font-size:15px;'>{$people}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Meeting point -->
+    <div style='margin:4px 36px 20px; padding:14px 18px; background:#f8fafc; border-radius:10px; border-left:4px solid #0073E0;'>
+        <div style='font-size:12px; color:#888; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;'>Meeting Point</div>
+        <div style='font-weight:bold; font-size:16px; color:#0073E0; margin-bottom:2px;'>Bluuu Tours office</div>
+        <div style='color:#555; font-size:14px;'>Serangan Harbor, Bali</div>
+    </div>
+
+    <!-- QR code full width -->
+    <div style='padding:0 36px; text-align:center;'>
+        <img src='{$qr}' style='width:260px; height:260px; display:block; margin:0 auto; border-radius:10px; border:1px solid #e8edf2;'>
+        <div style='margin-top:12px; font-size:13px; color:#94a3b8;'>Present this QR code to our manager at the check-in desk</div>
+    </div>
+
+    <!-- Footer -->
+    <div style='background:#0073E0; padding:14px 36px; text-align:center; margin-top:28px;'>
+        <span style='color:rgba(255,255,255,0.65); font-size:13px; letter-spacing:2px; text-transform:uppercase;'>bluuu.tours</span>
+    </div>";
+
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->set_option('defaultFont', 'Arial');
+    $dompdf->set_option('isHtml5ParserEnabled', true);
+    $dompdf->set_option('isRemoteEnabled', true);
+    $dompdf->render();
+
+    return 'data:application/pdf;base64,' . base64_encode($dompdf->output());
+}
+?>
+==
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check-in Complete — Bluuu Tours</title>
+    <link rel="icon" href="/themes/bluuu/assets/favicon.png" type="image/png">
+    <meta name="robots" content="noindex, nofollow, noarchive">
+    <link rel="preload" href="/themes/bluuu/assets/fonts/PetrovSans-Regular.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/themes/bluuu/assets/fonts/PetrovSans-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+    <style>
+        @font-face { font-family:'PetrovSans'; src:url('/themes/bluuu/assets/fonts/PetrovSans-Regular.woff2') format('woff2'); font-weight:400; font-display:swap; }
+        @font-face { font-family:'PetrovSans'; src:url('/themes/bluuu/assets/fonts/PetrovSans-SemiBold.woff2') format('woff2'); font-weight:600; font-display:swap; }
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        html, body {
+            min-height: 100%;
+            background: #f1f5f9;
+            font-family: 'PetrovSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            color: #0f172a;
+        }
+
+        @keyframes popIn {
+            0%   { transform: scale(0.5); opacity: 0; }
+            70%  { transform: scale(1.12); }
+            100% { transform: scale(1);   opacity: 1; }
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes drawCheck {
+            from { stroke-dashoffset: 40; }
+            to   { stroke-dashoffset: 0; }
+        }
+
+        .check-circle {
+            animation: popIn .5s cubic-bezier(.34,1.56,.64,1) .1s both;
+        }
+        .check-path {
+            stroke-dasharray: 40;
+            stroke-dashoffset: 40;
+            animation: drawCheck .4s ease .55s both;
+        }
+        .fade-up-1 { animation: fadeUp .4s ease .3s both; }
+        .fade-up-2 { animation: fadeUp .4s ease .45s both; }
+        .fade-up-3 { animation: fadeUp .4s ease .55s both; }
+        .fade-up-4 { animation: fadeUp .4s ease .65s both; }
+
+        .card {
+            background: #fff;
+            border-radius: 22px;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04);
+            border: 1px solid #e8edf2;
+            overflow: hidden;
+            width: 100%;
+            max-width: 480px;
+        }
+        .row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 13px 0;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+        }
+        .row:last-child { border-bottom: none; }
+        .row-label { color: #64748b; }
+        .row-value { font-weight: 700; color: #0f172a; text-align: right; max-width: 58%; }
+        .btn-dl {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 15px 24px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #0073E0 0%, #005CB3 100%);
+            color: #fff;
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 15px;
+            border: none;
+            box-shadow: 0 6px 20px rgba(0,115,224,0.32);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-dl:hover { opacity: .92; }
+    </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div style="background:linear-gradient(135deg,#0073E0 0%,#005CB3 100%);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(0,115,224,0.3)">
+    <img src="/themes/bluuu/assets/img/logo-white.svg" alt="Bluuu" style="height:26px;display:block">
+    <span style="font-size:11px;color:rgba(255,255,255,0.7);font-weight:600;letter-spacing:.12em;text-transform:uppercase">Check-In Complete</span>
+</div>
+
+<div style="padding:32px 16px 80px;display:flex;flex-direction:column;align-items:center">
+
+    <!-- Success badge -->
+    <div class="check-circle" style="margin-bottom:20px">
+        <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+            <circle cx="36" cy="36" r="36" fill="url(#cg)"/>
+            <polyline class="check-path" points="22,36 31,45 50,27" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <defs>
+                <linearGradient id="cg" x1="0" y1="0" x2="72" y2="72" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#0073E0"/>
+                    <stop offset="100%" stop-color="#005CB3"/>
+                </linearGradient>
+            </defs>
+        </svg>
+    </div>
+
+    <!-- Heading -->
+    <div class="fade-up-1" style="text-align:center;margin-bottom:24px">
+        <div style="font-size:24px;font-weight:700;color:#0f172a;letter-spacing:-0.4px">Check-In Complete!</div>
+        <div style="font-size:14px;color:#64748b;margin-top:6px;line-height:1.6">
+            Dear {{name}},<br>we look forward to seeing you soon.
+        </div>
+    </div>
+
+    <!-- Trip details -->
+    <div class="card fade-up-2" style="margin-bottom:14px">
+        <div style="padding:18px 24px 0;font-size:11px;font-weight:700;color:#64748b;letter-spacing:.1em;text-transform:uppercase">
+            Your Trip
+        </div>
+        <div style="padding:4px 24px 18px">
+            <div class="row">
+                <span class="row-label">Travel Date</span>
+                <span class="row-value">{{travel_date_fmt}}</span>
+            </div>
+            <div class="row">
+                <span class="row-label">Meeting Time</span>
+                <span class="row-value">{{meeting_time}}</span>
+            </div>
+            <div class="row">
+                <span class="row-label">Yacht</span>
+                <span class="row-value">{{boat_name}}</span>
+            </div>
+            {% if route %}
+            <div class="row">
+                <span class="row-label">Route</span>
+                <span class="row-value">{{route}}</span>
+            </div>
+            {% endif %}
+            <div class="row">
+                <span class="row-label">Meeting Point</span>
+                <a href="https://maps.app.goo.gl/psZ9yCoLiJ7ZyG4S9" target="_blank"
+                   style="font-weight:700;color:#0073E0;font-size:13px;text-align:right;max-width:58%;text-decoration:none;line-height:1.4">
+                    Bluuu Tours office<br>Serangan Harbor
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR code -->
+    <div class="card fade-up-3" style="margin-bottom:14px">
+        <div style="padding:20px 24px 6px;text-align:center">
+            <div style="font-size:16px;font-weight:700;color:#0f172a">Your Check-In QR Code</div>
+            <div style="font-size:12px;color:#94a3b8;margin-top:5px;line-height:1.5">
+                Show this to our manager at the check-in desk<br>on the day of your tour
+            </div>
+        </div>
+        <div style="padding:16px 24px 20px">
+            <img src="{{qr}}" alt="QR Code" style="width:100%;display:block;border-radius:14px;border:1px solid #f1f5f9">
+        </div>
+        <div style="margin:0 24px 20px;padding:12px 16px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;display:flex;align-items:center;gap:10px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0073E0" stroke-width="2" stroke-linecap="round" flex-shrink="0">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span style="font-size:12px;color:#475569;line-height:1.4">
+                This QR links directly to your order in our system. Please arrive 15 minutes before meeting time.
+            </span>
+        </div>
+    </div>
+
+    <!-- Download PDF -->
+    <div class="fade-up-4" style="width:100%;max-width:480px">
+        <a href="{{pdf}}" class="btn-dl" download="bluuu-checkin.pdf">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Download &amp; Save QR Code (PDF)
+        </a>
+        <div style="text-align:center;font-size:12px;color:#94a3b8;margin-top:10px">
+            Save the PDF to your phone for offline access
+        </div>
+    </div>
+
+</div>
+</body>
+</html>

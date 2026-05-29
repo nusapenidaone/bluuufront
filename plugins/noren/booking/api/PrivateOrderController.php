@@ -25,25 +25,16 @@ class PrivateOrderController extends Controller
      */
     public function createOrder(Request $request)
     {
-        header('Access-Control-Allow-Origin: *');
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        $corsOrigin = in_array($origin, ['https://www.bluuu.tours', 'https://bluuu.tours']) ? $origin : 'https://bluuu.tours';
+        header('Access-Control-Allow-Origin: ' . $corsOrigin);
+        header('Access-Control-Allow-Credentials: true');
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        header('Access-Control-Allow-Headers: *');
+        header('Access-Control-Allow-Headers: Content-Type, X-CSRF-TOKEN, Authorization');
 
         try {
 
         $data = $request->all();
-        \Log::info('[PrivateOrder] incoming', [
-            'ip'         => $request->ip(),
-            'email'      => $data['email'] ?? null,
-            'tourId'     => $data['tourId'] ?? null,
-            'boatId'     => $data['boatId'] ?? null,
-            'travelDate' => $data['travelDate'] ?? null,
-            'adults'     => $data['adults'] ?? null,
-            'kids'       => $data['kids'] ?? null,
-            'method'     => $data['method'] ?? null,
-            'deposite'   => $data['deposite'] ?? null,
-            'totalPrice' => $data['totalPrice'] ?? null,
-        ]);
 
         $order = new Order;
 
@@ -133,8 +124,6 @@ class PrivateOrderController extends Controller
 
         Session::put('order_id', $order->id);
 
-        \Log::info('[PrivateOrder] saved', ['order_id' => $order->id, 'external_id' => $order->external_id]);
-
         return response()->json(['external_id' => $order->external_id]);
 
         } catch (\Throwable $e) {
@@ -151,9 +140,12 @@ class PrivateOrderController extends Controller
      */
     public function createPaymentLink(Request $request)
     {
-        header('Access-Control-Allow-Origin: *');
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        $corsOrigin = in_array($origin, ['https://www.bluuu.tours', 'https://bluuu.tours']) ? $origin : 'https://bluuu.tours';
+        header('Access-Control-Allow-Origin: ' . $corsOrigin);
+        header('Access-Control-Allow-Credentials: true');
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-        header('Access-Control-Allow-Headers: *');
+        header('Access-Control-Allow-Headers: Content-Type, X-CSRF-TOKEN, Authorization');
 
         set_time_limit(120);
 
@@ -167,13 +159,6 @@ class PrivateOrderController extends Controller
             if (!$order) {
                 return response()->json(['error' => 'Order not found'], 404);
             }
-
-            \Log::info('[PrivateOrder] createPaymentLink', [
-                'external_id' => $externalId,
-                'method_id'   => $order->method_id,
-                'deposite'    => $order->deposite,
-                'amount'      => $order->deposite_summ,
-            ]);
 
             if ($order->deposite == 0) {
                 return response()->json(url('/new/success') . '?type=request');

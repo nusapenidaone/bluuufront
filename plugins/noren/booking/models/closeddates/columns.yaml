@@ -24,9 +24,16 @@ columns:
         sortable: true
     lead_id:
         label: Lead
-        type: number
+        type: linkage
         searchable: true
         sortable: true
+
+        attributes:
+            target: _blank
+        select: concat('https://baliboattours.kommo.com/leads/detail/', lead_id)
+
+
+
     created_at:
         label: Created
         type: datetime

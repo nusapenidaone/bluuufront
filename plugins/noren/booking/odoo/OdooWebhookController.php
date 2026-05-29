@@ -1,5 +1,6 @@
 <?php namespace Noren\Booking\Odoo;
 
+use Carbon\Carbon;
 use Illuminate\Routing\Controller;
 use Noren\Booking\Models\CloseddatesTest as Closeddates;
 use Noren\Booking\Models\Boat;
@@ -22,32 +23,33 @@ class OdooWebhookController extends Controller
 
         $state = $payload['state'] ?? null;
 
-        Log::info("Odoo webhook | odoo_id={$odooId} | state={$state}");
-
-        // Case 4: cancel → delete record
+        // cancel → delete record
         if ($state === 'cancel') {
             return $this->handleCancel($odooId);
         }
 
-        // Cases 0, 1, 2, 3: sale → create or update record
+        // quotation (draft/sent) → order is no longer confirmed, remove from calendar
+        if (in_array($state, ['draft', 'sent'])) {
+            return $this->handleCancel($odooId);
+        }
+
+        // sale → create or update record
         if ($state === 'sale') {
             return $this->handleSale($odooId, $payload);
         }
 
-        // quotation / draft / sent → ignore (don't touch the record)
         return response()->json(['ok' => true]);
     }
 
-    // ─── Case 4: cancel → delete ──────────────────────────────────────────────
+    // ─── cancel / quotation → delete ─────────────────────────────────────────
 
     protected function handleCancel(int $odooId)
     {
-        $deleted = Closeddates::where('odoo_id', $odooId)->delete();
-        Log::info("Odoo webhook CANCEL | odoo_id={$odooId} | deleted={$deleted}");
+        Closeddates::where('odoo_id', $odooId)->delete();
         return response()->json(['ok' => true]);
     }
 
-    // ─── Cases 0, 1, 2, 3: sale → upsert ─────────────────────────────────────
+    // ─── sale → upsert (create or update) ────────────────────────────────────
 
     protected function handleSale(int $odooId, array $payload)
     {
@@ -59,7 +61,6 @@ class OdooWebhookController extends Controller
 
         $tour = $tourType ? Tours::where('odoo_type', $tourType)->first() : null;
         if (!$tour) {
-            Log::info("Odoo webhook SKIP | odoo_id={$odooId} | tour not found for odoo_type={$tourType}");
             return response()->json(['ok' => true]);
         }
 
@@ -71,7 +72,7 @@ class OdooWebhookController extends Controller
         // ── Case 1: date ──────────────────────────────────────────────────────
         $dateRaw = $payload['rental_start_date'] ?? null;
         $date    = $dateRaw
-            ? substr($dateRaw, 0, 10)
+            ? Carbon::parse($dateRaw, 'UTC')->addHours(4)->format('Y-m-d')
             : ($existing?->date ?? null);
 
         if (!$date) {
@@ -97,8 +98,6 @@ class OdooWebhookController extends Controller
             $qtty = $existing?->qtty ?? 0;
         }
 
-        $action = $existing ? 'UPDATE' : 'CREATE';
-
         Closeddates::updateOrCreate(
             ['odoo_id' => $odooId],
             [
@@ -109,8 +108,6 @@ class OdooWebhookController extends Controller
                 'tour_type' => $tourType ?: null,
             ]
         );
-
-        Log::info("Odoo webhook {$action} | odoo_id={$odooId} | date={$date} | type={$type} | boat_id={$boatId} | qtty={$qtty}");
 
         return response()->json(['ok' => true]);
     }
