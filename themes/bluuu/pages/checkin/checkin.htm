@@ -41,6 +41,10 @@ function onStart()
         return Redirect::to('404');
     }
 
+    if (!empty($order['x_studio_online_check_in_complete'])) {
+        return Redirect::to('/checkin/' . $odooId . '/qr');
+    }
+
     if (request()->get('paid') === '1') {
         return Redirect::to('/checkin/' . $odooId . '/qr');
     }
@@ -64,7 +68,7 @@ function onStart()
     $travelTime = '';
 
     if ($startDate) {
-        $dt         = Carbon::parse($startDate, 'UTC')->setTimezone('+04:00');
+        $dt         = Carbon::parse($startDate, 'UTC')->setTimezone('Asia/Makassar');
         $travelDate = $dt->format('Y-m-d');
         $travelTime = $dt->format('H:i');
     }

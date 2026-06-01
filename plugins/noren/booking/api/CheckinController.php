@@ -57,6 +57,7 @@ class CheckinController extends Controller
         $updateFields = [
             'x_studio_passenger_list'                  => trim($list),
             'x_studio_customer_checked_in_and_cleared' => true,
+            'x_studio_online_check_in_complete'        => true,
         ];
 
         if (!empty($menu) && is_array($menu)) {
@@ -163,7 +164,7 @@ class CheckinController extends Controller
         $meetingTime = '';
 
         if ($startDate) {
-            $dt          = Carbon::parse($startDate, 'UTC')->setTimezone('+04:00');
+            $dt          = Carbon::parse($startDate, 'UTC')->setTimezone('Asia/Makassar');
             $travelDate  = $dt->format('Y-m-d');
             $meetingTime = $dt->format('H:i');
         }
