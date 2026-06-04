@@ -1,9 +1,95 @@
-import React, { useState, useEffect, forwardRef } from "react";
+import React, { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-const DATEPICKER_STYLES = `
+/**
+ * Premium Custom Date Picker using react-datepicker
+ * Dropdown style with luxury Bluuu aesthetic.
+ */
+export default function CustomDatePicker({
+  mode = "single", // "single" | "range"
+  selected, // Date for single, { from, to } for range
+  onSelect,
+  minDate = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })(),
+  filterDate, // optional: (date: Date) => boolean — return false to disable
+  onMonthChange, // optional: (date: Date) => void — called when month is navigated
+  renderDayContents, // optional: (dayOfMonth: number, date: Date) => ReactNode
+  className,
+  inline = false, // when true, renders calendar directly (no input field)
+  fixedRangeDays = 0, // when > 0: single click sets start, end auto-calculated
+}) {
+  const isRange = mode === "range";
+
+  // Track if mobile view
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Track if calendar is open (only used in dropdown mode)
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Handle change for both modes
+  const handleChange = (dates) => {
+    if (isRange && fixedRangeDays > 0) {
+      // Fixed range: single click sets start, end auto-calculated
+      const [from] = dates;
+      if (from) {
+        const end = new Date(from);
+        end.setDate(end.getDate() + fixedRangeDays - 1);
+        onSelect({ from, to: end });
+        if (!inline) {
+          setTimeout(() => setIsOpen(false), 100);
+        }
+      }
+    } else if (isRange) {
+      const [from, to] = dates;
+      onSelect({ from, to });
+      if (to && !inline) {
+        setTimeout(() => setIsOpen(false), 100);
+      }
+    } else {
+      onSelect(dates);
+      if (!inline) {
+        setTimeout(() => setIsOpen(false), 100);
+      }
+    }
+  };
+
+  // Parse selected dates - handle both Date objects and ISO strings
+  let selectedDate = null;
+  let endDate = null;
+
+  if (isRange) {
+    // Range mode: selected is { from: Date|string, to: Date|string }
+    if (selected?.from) {
+      selectedDate = selected.from instanceof Date ? selected.from : new Date(selected.from);
+    }
+    if (selected?.to) {
+      endDate = selected.to instanceof Date ? selected.to : new Date(selected.to);
+    }
+  } else {
+    // Single mode: selected is Date|string
+    if (selected) {
+      selectedDate = selected instanceof Date ? selected : new Date(selected);
+    }
+  }
+
+  // Determine how many months to show: 1 on mobile, 2 on desktop (for range only)
+  const monthsToShow = isMobile ? 1 : (isRange ? 2 : 1);
+
+  return (
+    <div className={`premium-datepicker-wrapper${renderDayContents ? " has-custom-days" : ""}${inline ? " inline-mode" : ""}`}>
+      <style>{`
         .premium-datepicker-wrapper {
           position: relative;
           width: 100%;
@@ -69,6 +155,35 @@ const DATEPICKER_STYLES = `
           border-radius: 12px;
           box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.25);
           padding: 8px;
+        }
+
+        .premium-datepicker-wrapper.inline-mode .react-datepicker,
+        .premium-datepicker-wrapper.inline-mode .react-datepicker__month-container {
+          background: transparent !important;
+          box-shadow: none !important;
+          border: none !important;
+          border-radius: 0 !important;
+        }
+
+        .premium-datepicker-wrapper.inline-mode .react-datepicker__header {
+          background: transparent !important;
+        }
+
+        .premium-datepicker-wrapper .react-datepicker--inline {
+          box-shadow: none !important;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 0 !important;
+          width: 100% !important;
+          max-width: none !important;
+        }
+
+        .premium-datepicker-wrapper .react-datepicker--inline .react-datepicker {
+          box-shadow: none !important;
+          background: transparent !important;
+          border: none !important;
+          width: 100% !important;
+          max-width: none !important;
         }
 
         /* Mobile: reduce overall calendar size */
@@ -143,24 +258,44 @@ const DATEPICKER_STYLES = `
           border-radius: 12px !important;
         }
 
+        .premium-datepicker-wrapper .react-datepicker__month {
+          overflow: hidden;
+        }
+
         .premium-datepicker-wrapper .react-datepicker__day--selected,
         .premium-datepicker-wrapper .react-datepicker__day--range-start,
         .premium-datepicker-wrapper .react-datepicker__day--range-end {
           background-color: var(--primary-600) !important;
           color: white !important;
           font-weight: 800;
-          box-shadow: 0 8px 20px -6px var(--primary-600);
+          border-radius: 12px !important;
+          position: relative;
+          z-index: 1;
+          transform: none !important;
         }
 
         .premium-datepicker-wrapper .react-datepicker__day--in-range {
           background-color: var(--primary-50);
           color: var(--primary-700);
-          border-radius: 12px;
+          border-radius: 4px;
+        }
+
+        .premium-datepicker-wrapper .react-datepicker__day--in-range.react-datepicker__day--range-start,
+        .premium-datepicker-wrapper .react-datepicker__day--in-range.react-datepicker__day--range-end {
+          border-radius: 12px !important;
+        }
+
+        /* Hide outside-month days that bleed into range */
+        .premium-datepicker-wrapper .react-datepicker__day--outside-month {
+          visibility: hidden !important;
+          pointer-events: none !important;
         }
 
         .premium-datepicker-wrapper .react-datepicker__day--keyboard-selected {
           background: none;
-          border: 2px solid var(--primary-600);
+          border: none;
+          outline: 2px solid var(--primary-600);
+          outline-offset: -2px;
         }
 
         .premium-datepicker-wrapper .react-datepicker__day--disabled {
@@ -198,9 +333,9 @@ const DATEPICKER_STYLES = `
           .premium-datepicker-wrapper .react-datepicker {
             flex-direction: column;
             width: 100% !important;
-            max-width: 340px;
+            max-width: 100%;
           }
-
+          
           .premium-datepicker-wrapper .react-datepicker__month-container {
             width: 100%;
             padding: 0 4px;
@@ -211,34 +346,34 @@ const DATEPICKER_STYLES = `
           }
 
           .premium-datepicker-wrapper .react-datepicker__current-month {
-            font-size: 0.8125rem;
-            margin-bottom: 6px;
+            font-size: 0.9375rem;
+            margin-bottom: 8px;
           }
 
           .premium-datepicker-wrapper .react-datepicker__day-name {
-            width: 40px;
+            width: 42px;
             font-size: 0.6875rem;
           }
 
           .premium-datepicker-wrapper .react-datepicker__day {
-            width: 40px;
-            height: 40px;
-            line-height: 40px;
+            width: 42px;
+            height: 42px;
+            line-height: 42px;
             font-size: 0.875rem;
-            margin: 2px;
+            margin: 1px;
           }
 
           .premium-datepicker-wrapper.has-custom-days .react-datepicker__day {
-            height: 48px;
+            height: 42px;
             line-height: normal;
           }
 
           .premium-datepicker-wrapper .day-number {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
           }
 
           .premium-datepicker-wrapper .day-sub {
-            font-size: 0.5625rem;
+            font-size: 0.5rem;
           }
         }
 
@@ -249,92 +384,7 @@ const DATEPICKER_STYLES = `
             gap: 1rem;
           }
         }
-`;
-
-/**
- * Premium Custom Date Picker using react-datepicker
- * Dropdown style with luxury Bluuu aesthetic.
- */
-const ReadOnlyInput = forwardRef((props, ref) => (
-  <input {...props} ref={ref} readOnly />
-));
-
-export default function CustomDatePicker({
-  mode = "single", // "single" | "range"
-  selected, // Date for single, { from, to } for range
-  onSelect,
-  minDate = (() => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(0, 0, 0, 0); return d; })(),
-  filterDate, // optional: (date: Date) => boolean — return false to disable
-  onMonthChange, // optional: (date: Date) => void — called when month is navigated
-  renderDayContents, // optional: (dayOfMonth: number, date: Date) => ReactNode
-  className,
-  inline = false, // when true, renders calendar directly (no input field)
-}) {
-  const isRange = mode === "range";
-
-  // Track if mobile view
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Track if calendar is open (only used in dropdown mode)
-  const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    import("react-datepicker/dist/react-datepicker.css");
-  }, []);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Handle change for both modes
-  const handleChange = (dates) => {
-    if (isRange) {
-      const [from, to] = dates;
-      onSelect({ from, to });
-      // Close calendar after selecting end date (dropdown mode only)
-      if (to && !inline) {
-        setTimeout(() => setIsOpen(false), 100);
-      }
-    } else {
-      onSelect(dates);
-      // Close calendar immediately for single date (dropdown mode only)
-      if (!inline) {
-        setTimeout(() => setIsOpen(false), 100);
-      }
-    }
-  };
-
-  // Parse selected dates - handle both Date objects and ISO strings
-  let selectedDate = null;
-  let endDate = null;
-
-  if (isRange) {
-    // Range mode: selected is { from: Date|string, to: Date|string }
-    if (selected?.from) {
-      selectedDate = selected.from instanceof Date ? selected.from : new Date(selected.from);
-    }
-    if (selected?.to) {
-      endDate = selected.to instanceof Date ? selected.to : new Date(selected.to);
-    }
-  } else {
-    // Single mode: selected is Date|string
-    if (selected) {
-      selectedDate = selected instanceof Date ? selected : new Date(selected);
-    }
-  }
-
-  // Determine how many months to show: 1 on mobile, 2 on desktop (for range only)
-  const monthsToShow = isMobile ? 1 : (isRange ? 2 : 1);
-
-  return (
-    <div className={`premium-datepicker-wrapper${renderDayContents ? " has-custom-days" : ""}`}>
-      <style>{DATEPICKER_STYLES}</style>
+      `}</style>
       {!inline && <CalendarIcon className="date-icon h-5 w-5 text-secondary-300" />}
       <DatePicker
         selected={selectedDate}
@@ -351,7 +401,6 @@ export default function CustomDatePicker({
         placeholderText={isRange ? "Select date range..." : "Select a date..."}
         autoComplete="new-password"
         onKeyDown={(e) => e.preventDefault()}
-        customInput={isMobile ? <ReadOnlyInput /> : undefined}
         showPopperArrow={false}
         popperPlacement="bottom-start"
         inline={inline}

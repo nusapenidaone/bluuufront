@@ -1,3 +1,6 @@
+import React from "react";
+import { motion } from "framer-motion";
+
 const Button = ({
     children,
     variant = "primary",
@@ -9,10 +12,10 @@ const Button = ({
     type = "button",
     ...props
 }) => {
-    const baseStyles = "inline-flex items-center justify-center gap-2 font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none";
+    const baseStyles = "inline-flex items-center justify-center gap-2 font-semibold transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300 focus-visible:ring-offset-2";
 
     const variants = {
-        primary: "bg-primary-600 text-white hover:bg-primary-700 shadow-none",
+        primary: "bg-primary-600 text-white hover:bg-primary-700",
         secondary: "bg-neutral-100 text-secondary-900 border border-neutral-200 hover:bg-neutral-200",
         ghost: "bg-transparent text-secondary-600 hover:bg-neutral-50 hover:text-secondary-900",
         outline: "bg-transparent text-primary-600 border border-primary-600 hover:bg-primary-50",
@@ -26,7 +29,11 @@ const Button = ({
         icon: "p-2 rounded-full"
     };
 
-    const content = <>{children}</>;
+    const content = (
+        <>
+            {children}
+        </>
+    );
 
     if (href) {
         return (
@@ -41,15 +48,17 @@ const Button = ({
     }
 
     return (
-        <button
+        <motion.button
             type={type}
+            whileHover={{}}
+            whileTap={{ scale: 0.98 }}
             onClick={onClick}
             disabled={disabled}
             className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
             {...props}
         >
             {content}
-        </button>
+        </motion.button>
     );
 };
 

@@ -2,6 +2,7 @@
 namespace Noren\Booking\Models;
 
 use Model;
+use Noren\Booking\Models\Extras;
 
 /**
  * Model
@@ -43,4 +44,13 @@ class Route extends Model
     public $attachOne = [
         'map' => [\System\Models\File::class],
     ];
+
+    public function getExtraOptions()
+    {
+        return Extras::whereNull('parent_id')
+            ->orderBy('name')
+            ->get()
+            ->pluck('name', 'id')
+            ->toArray();
+    }
 }

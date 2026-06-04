@@ -10,6 +10,7 @@ export default function PhotoCarousel({
     isLocked = false,
     startIndex = 0,
     alwaysShowControls = false,
+    maximizeLeft = false,
 }) {
     const slides = images?.length ? images : [];
     const total = slides.length;
@@ -79,9 +80,10 @@ export default function PhotoCarousel({
         ? "absolute top-1/2 z-20 flex -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white shadow-sm transition hover:bg-white/30"
         : "absolute top-1/2 z-20 hidden -translate-y-1/2 h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white shadow-sm transition hover:bg-white/30 sm:flex opacity-0 group-hover:opacity-100";
 
+    const maximizePos = maximizeLeft ? "left-3" : "right-3";
     const maximizeCls = alwaysShowControls
-        ? "absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md text-white shadow-sm transition hover:bg-black/60"
-        : "absolute right-3 top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md text-white shadow-sm transition hover:bg-black/60 opacity-0 group-hover:opacity-100";
+        ? `absolute ${maximizePos} top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md text-white shadow-sm transition hover:bg-black/60`
+        : `absolute ${maximizePos} top-3 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-black/40 backdrop-blur-md text-white shadow-sm transition hover:bg-black/60 opacity-0 group-hover:opacity-100`;
 
     const renderIndicator = () => {
         if (total <= 1) return null;
@@ -194,7 +196,7 @@ export default function PhotoCarousel({
                         </>
                     )}
 
-                    {renderIndicator()}
+                    {/* {renderIndicator()} */}
                 </>
             )}
         </div>

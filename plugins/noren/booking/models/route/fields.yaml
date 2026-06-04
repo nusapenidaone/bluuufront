@@ -118,11 +118,24 @@ tabs:
                         label: Title
                         type: text
                         span: auto
+                    is_restaurant:
+                        label: 'Show restaurant'
+                        type: switch
+                        span: auto
+                        default: 0
+                        comment: 'Show restaurant card for this step instead of extras'
                     details:
                         label: Details
                         type: textarea
                         size: small
                         span: full
+                    extras:
+                        label: Extras
+                        type: taglist
+                        span: full
+                        mode: array
+                        options: getExtraOptions
+                        comment: 'Select extras to show as add-ons for this step'
         schedule_after_lunch:
             label: 'Schedule: After lunch'
             span: full
@@ -142,11 +155,24 @@ tabs:
                         label: Title
                         type: text
                         span: auto
+                    is_restaurant:
+                        label: 'Show restaurant'
+                        type: switch
+                        span: auto
+                        default: 0
+                        comment: 'Show restaurant card for this step instead of extras'
                     details:
                         label: Details
                         type: textarea
                         size: small
                         span: full
+                    extras:
+                        label: Extras
+                        type: taglist
+                        span: full
+                        mode: array
+                        options: getExtraOptions
+                        comment: 'Select extras to show as add-ons for this step'
         photos:
             label: Photos
             span: full

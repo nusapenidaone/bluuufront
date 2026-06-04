@@ -75,7 +75,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat', 'included', 'includes'])
             ->whereIn('classes_id', [8])
             ->orderBy('sort_order')
             ->get();
@@ -98,6 +98,19 @@ class FullController extends Controller
                 'fleet_size' => $tour->boat->count(),
                 'categories' => $tour->category->filter(fn($c) => $c->status == 1)->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values(),
                 'boatFeatures' => $tour->props,
+                'included' => $tour->included->map(fn($i) => [
+                    'id'          => $i->id,
+                    'name'        => $i->name,
+                    'description' => $i->description,
+                    'icon_name'   => $i->icon_name,
+                    'icon_svg'    => $i->icon_svg,
+                ])->values(),
+                'includes' => $tour->includes->map(fn($i) => [
+                    'id'       => $i->id,
+                    'name'     => $i->name,
+                    'icon_name'=> $i->icon_name,
+                    'icon_svg' => $i->icon_svg,
+                ])->values(),
             ];
         });
     }

@@ -17,6 +17,7 @@
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.24.12",
     "lucide-react": "^0.562.0",
+    "playwright": "^1.60.0",
     "react": "^19.2.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.2.0",

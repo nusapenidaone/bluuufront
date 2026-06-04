@@ -1,0 +1,63 @@
+<div class="icon-picker-widget" id="<?= $fieldId ?>_wrapper" style="max-width:520px;">
+
+    <!-- icon_name input (CamelCase name) -->
+    <input type="hidden" name="<?= $fieldName ?>" id="<?= $fieldId ?>" value="<?= e($value) ?>" />
+    <!-- icon_svg input -->
+    <input type="hidden" name="<?= $svgFieldName ?>" id="<?= $fieldId ?>_svg" value="<?= e($svgValue) ?>" />
+
+    <!-- Selected preview -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;padding:10px 12px;border:1px solid #e0e4f0;border-radius:10px;background:#f8f9ff;">
+        <div id="<?= $fieldId ?>_preview"
+             style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#eef1ff;color:#4f6bed;flex-shrink:0;">
+            <?php if ($svgValue): ?>
+                <?= $svgValue ?>
+            <?php elseif ($value): ?>
+                <i data-lucide="<?= e(strtolower(preg_replace('/(?<!^)([A-Z])/', '-$1', $value))) ?>" style="width:22px;height:22px;stroke:#4f6bed;"></i>
+            <?php else: ?>
+                <span style="color:#bbb;font-size:18px;">?</span>
+            <?php endif; ?>
+        </div>
+        <div>
+            <div id="<?= $fieldId ?>_label" style="font-size:13px;font-weight:600;color:#333;">
+                <?= e($value) ?: 'No icon selected' ?>
+            </div>
+            <?php if ($value): ?>
+            <button type="button" onclick="iconPickerClear('<?= $fieldId ?>')"
+                    style="margin-top:2px;font-size:11px;color:#e05;background:none;border:none;cursor:pointer;padding:0;">
+                ✕ Clear
+            </button>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <input type="text" id="<?= $fieldId ?>_search" placeholder="🔍 Search icons…"
+           oninput="iconPickerSearch('<?= $fieldId ?>')"
+           style="width:100%;box-sizing:border-box;padding:7px 12px;border:1px solid #dde;border-radius:8px;margin-bottom:8px;font-size:13px;"
+           autocomplete="off" />
+
+    <!-- Grid -->
+    <div id="<?= $fieldId ?>_grid"
+         style="display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:6px;max-height:320px;overflow-y:auto;border:1px solid #eaeef8;border-radius:10px;padding:10px;background:#fafbff;">
+    </div>
+
+    <script>
+    (function() {
+        var fid = '<?= $fieldId ?>';
+        if (!window._ipInited) window._ipInited = {};
+        if (window._ipInited[fid]) return;
+        window._ipInited[fid] = true;
+        function tryInit() {
+            if (typeof lucide !== 'undefined') { iconPickerRender(fid); return; }
+            setTimeout(tryInit, 150);
+        }
+        if (!document.getElementById('lucide-cdn')) {
+            var s = document.createElement('script');
+            s.id = 'lucide-cdn';
+            s.src = 'https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js';
+            s.onload = function() { iconPickerRender(fid); };
+            document.head.appendChild(s);
+        } else { tryInit(); }
+    })();
+    </script>
+</div>

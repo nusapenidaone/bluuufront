@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 @font-face {
     font-family: Petrov Sans;
     font-style: normal;
@@ -570,4 +575,21 @@ img[data-image-loaded="true"] {
     border-left: 2px solid var(--neutral-300);
     padding-left: 0.8rem;
     color: var(--secondary-700);
+}
+
+/* Boat carousel scroll snap (used by private1/private2) */
+.boat-carousel {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: auto;
+}
+.boat-carousel > * {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+@media (min-width: 640px) {
+  .boat-carousel {
+    scroll-snap-type: none !important;
+  }
 }

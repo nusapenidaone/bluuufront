@@ -28,7 +28,7 @@ export function formatYachtPrice(yacht) {
 
 export function formatShortDate(dateStr) {
     if (!dateStr) return "";
-    const date = new Date(dateStr + 'T00:00:00');
+    const date = new Date(dateStr);
     if (Number.isNaN(date.getTime())) return dateStr;
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
@@ -188,7 +188,7 @@ export function useImagePreload(urls, minDelay = 600) {
         const check = () => { count += 1; if (count >= unique.length) { imagesLoaded = true; tryFinish(); } };
         unique.forEach((src) => { const img = new Image(); img.onload = check; img.onerror = check; img.src = src; });
         const minTimer = setTimeout(() => { delayPassed = true; tryFinish(); }, minDelay);
-        const maxTimer = setTimeout(() => { if (!cancelled) setReady(true); }, 1500);
+        const maxTimer = setTimeout(() => { if (!cancelled) setReady(true); }, 5000);
         return () => { cancelled = true; clearTimeout(minTimer); clearTimeout(maxTimer); };
     }, [key, minDelay]);
     return ready;

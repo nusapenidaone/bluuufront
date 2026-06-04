@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
     Globe,
     ArrowRight,
@@ -285,15 +286,23 @@ const Navbar = ({
                 </nav>
             </div>
 
-            {menuOpen && (
-                    <div
+            <AnimatePresence>
+                {menuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
                         onClick={closeMenu}
-                        className="fixed inset-0 z-[10000] bg-black/40 p-4 anim-fade-in"
+                        className="fixed inset-0 z-[10000] bg-black/40 p-4"
                     >
                         <div className="flex h-full items-center justify-center">
-                            <div
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.97, y: 12 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.97, y: 12 }}
+                                transition={{ type: "spring", bounce: 0.15, duration: 0.35 }}
                                 onClick={(event) => event.stopPropagation()}
-                                className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl anim-slide-up"
+                                className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
                             >
                                 <div className="flex items-center justify-between border-b border-neutral-200 px-6 pt-5 shrink-0">
                                     <div className="pb-3 text-sm font-semibold text-secondary-900">
@@ -403,10 +412,11 @@ const Navbar = ({
                                         )}
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                         </div>
-                    </div>
-            )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </>
     );
 };

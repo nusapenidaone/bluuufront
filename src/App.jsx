@@ -4,6 +4,8 @@ import { Suspense, lazy, useEffect, useLayoutEffect } from "react";
 const Home = lazy(() => import("./home.jsx"));
 const Private = lazy(() => import("./private.jsx"));
 const Shared = lazy(() => import("./shared.jsx"));
+const Private1 = lazy(() => import("./private1.jsx"));
+const Shared1 = lazy(() => import("./shared1.jsx"));
 const Payment = lazy(() => import("./Payment.jsx"));
 const PolicyPage = lazy(() => import("./PolicyPage.jsx"));
 const ReviewsPage = lazy(() => import("./ReviewsPage.jsx"));
@@ -202,6 +204,14 @@ export default function App() {
 
     if (path === "/shared-tour-to-nusa-penida") {
       return <Shared />;
+    }
+
+    if (path === "/private1") {
+      return <Private1 />;
+    }
+
+    if (path === "/shared1") {
+      return <Shared1 />;
     }
 
     if (path === "/payment") {

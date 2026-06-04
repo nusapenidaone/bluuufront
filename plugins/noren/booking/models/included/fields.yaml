@@ -3,16 +3,12 @@ fields:
         label: Name
         span: auto
         type: text
+    icon_name:
+        label: 'Icon Name'
+        span: auto
+        type: text
+        comment: 'Lucide icon name. Browse icons at: https://lucide.dev/icons/ — copy exact name e.g: Ship, Waves, UtensilsCrossed, Camera, Shield, BadgeCheck'
     description:
         label: Description
-        size: small
-        span: auto
-        type: richeditor
-    icon:
-        label: Icon
-        mode: image
-        thumbOptions:
-            mode: crop
-            extension: auto
-        span: auto
-        type: mediafinder
+        span: full
+        type: textarea

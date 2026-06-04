@@ -1,13 +1,10 @@
 fields:
     name:
-        label: name
-        span: left
-        type: text
-    icon:
-        label: Icon
-        mode: image
-        thumbOptions:
-            mode: crop
-            extension: auto
+        label: Name
         span: auto
-        type: mediafinder
+        type: text
+    icon_name:
+        label: 'Icon Name'
+        span: auto
+        type: text
+        comment: 'Lucide icon name. Browse icons at: https://lucide.dev/icons/ — copy exact name e.g: BadgeCheck, Shield, Utensils, Camera, Clock, Fish'
