@@ -278,6 +278,7 @@ const Home3 = () => {
   );
 
   return (
+    <>
     <div className="home2-wrapper">
 
 
@@ -763,12 +764,6 @@ const Home3 = () => {
 
 
 {/* ═══════════════════════════════════════
-     FOOTER
-     ═══════════════════════════════════════ */}
-<Footer />
-
-
-{/* ═══════════════════════════════════════
      FLOATING WHATSAPP
      ═══════════════════════════════════════ */}
 <a href={waLink} className="float-wa" target="_blank" rel="noopener" id="floatWa" aria-label="Chat with us on WhatsApp">
@@ -776,12 +771,9 @@ const Home3 = () => {
   <span>Chat with us</span>
 </a>
 
-
-{/* ═══════════════════════════════════════
-     SCRIPTS
-     ═══════════════════════════════════════ */}
-
     </div>
+    <Footer />
+    </>
   );
 };
 
