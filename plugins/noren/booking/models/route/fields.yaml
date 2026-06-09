@@ -76,12 +76,17 @@ tabs:
                         type: text
                         span: auto
                     icon:
-                        label: Icon
+                        label: 'Icon Name (legacy)'
                         type: text
                         span: auto
                         placeholder: MapPin
+                    icon_svg:
+                        label: 'Icon SVG'
+                        type: textarea
+                        size: small
+                        span: full
                         commentHtml: true
-                        comment: 'Choose icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a>. Use key from frontend map (src/private.jsx, ICON_MAP): MapPin, Fish, Clock, LifeBuoy, UtensilsCrossed, Camera, Shield, Waves, Anchor, Sun, BadgeCheck, Ship, Coffee, Ticket, Users, Wine, Globe, Star, Search.'
+                        comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'
 
         add_on_note:
             label: 'Add-on note (e.g. Diving license required)'
@@ -124,6 +129,29 @@ tabs:
                         span: auto
                         default: 0
                         comment: 'Show restaurant card for this step instead of extras'
+                    highlight:
+                        label: 'Highlight'
+                        type: dropdown
+                        span: auto
+                        default: ''
+                        options:
+                            '': None
+                            premium: Premium
+                            first-class: First Class
+                        comment: 'Show highlight badge for this activity'
+                    icon_name:
+                        label: 'Icon Name'
+                        type: text
+                        span: auto
+                        commentHtml: true
+                        comment: 'Icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev</a>, e.g: Waves, Ship, Fish, Camera, UtensilsCrossed'
+                    icon_svg:
+                        label: 'Icon SVG (optional, overrides name)'
+                        type: textarea
+                        size: small
+                        span: full
+                        commentHtml: true
+                        comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'
                     details:
                         label: Details
                         type: textarea
@@ -161,6 +189,29 @@ tabs:
                         span: auto
                         default: 0
                         comment: 'Show restaurant card for this step instead of extras'
+                    highlight:
+                        label: 'Highlight'
+                        type: dropdown
+                        span: auto
+                        default: ''
+                        options:
+                            '': None
+                            premium: Premium
+                            first-class: First Class
+                        comment: 'Show highlight badge for this activity'
+                    icon_name:
+                        label: 'Icon Name'
+                        type: text
+                        span: auto
+                        commentHtml: true
+                        comment: 'Icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev</a>, e.g: Waves, Ship, Fish, Camera, UtensilsCrossed'
+                    icon_svg:
+                        label: 'Icon SVG (optional, overrides name)'
+                        type: textarea
+                        size: small
+                        span: full
+                        commentHtml: true
+                        comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'
                     details:
                         label: Details
                         type: textarea

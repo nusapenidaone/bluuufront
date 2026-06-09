@@ -3,11 +3,13 @@ fields:
         label: Name
         span: auto
         type: text
-    icon_name:
-        label: 'Icon Name'
+    icon_svg:
+        label: 'Icon SVG'
         span: auto
-        type: text
-        comment: 'Lucide icon name. Browse icons at: https://lucide.dev/icons/ — copy exact name e.g: Ship, Waves, UtensilsCrossed, Camera, Shield, BadgeCheck'
+        type: textarea
+        size: small
+        commentHtml: true
+        comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'
     description:
         label: Description
         span: full

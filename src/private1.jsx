@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./Discover.nika.css";
-import ElfsightWidget from "./components/common/ElfsightWidget";
+import ReviewsSection from "./components/common/ReviewsSection";
 import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import { AnimatePresence, motion } from "framer-motion";
 import Modal from "./components/common/Modal";
@@ -219,6 +219,7 @@ function transformTourCards(tourInfoData, iconMap) {
 import { brand as brandData, tourInfo, links as LINKS, trustIncludedShort as TRUST_INCLUDED_SHORT, infoDrawerTabs as INFO_DRAWER_TABS, sections as SECTIONS, bookingMiniFAQ as bookingMiniFAQData } from "./data/private.json";
 // Shared Components
 import CustomDatePicker from "./components/common/CustomDatePicker";
+import DatePickerBody from "./components/common/DatePickerBody";
 import PhoneInput from "./components/common/PhoneInput";
 import PolicyModal, { usePolicyModal } from "./components/common/PolicyModal";
 import ExtraPopup from "./components/booking/ExtraPopup";
@@ -2817,91 +2818,25 @@ function StepOne({
                         })}
                       </div>
                       <div className="h-px w-full bg-neutral-200 my-2" />
-                      {dateMode === "exact" ? (
-                        <div className="space-y-3">
-                          <div id="step1-exact-date">
-                            <CustomDatePicker
-                              mode="single"
-                              inline
-                              selected={exactDate ? new Date(exactDate) : undefined}
-                              onSelect={(date) => {
-                                if (date) {
-                                  const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                                  onExactDateChange(iso);
-                                  scheduleAutoClose(600);
-                                }
-                              }}
-                              filterDate={filterDate}
-                              onMonthChange={onMonthChange}
-                              className="w-full rounded-2xl border-0 bg-transparent shadow-none"
-                            />
-                          </div>
-                          {exactDate && globalAvailabilityMap && globalAvailabilityMap[exactDate] === false && (
-                            <div className="flex items-center gap-3 rounded-2xl bg-red-50 p-3 text-red-800">
-                              <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
-                              <div className="text-sm">
-                                <p className="font-semibold">Sold out for this date</p>
-                                <p className="text-red-600 text-xs">Try flexible dates or chat with our team on WhatsApp.</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-3 max-sm:space-y-2">
-                          <div className="flex gap-2 max-sm:w-full sm:justify-center">
-                            {[7, 10, 14].map((days) => (
-                              <button
-                                key={days}
-                                type="button"
-                                onClick={() => {
-                                  const base = rangeStart || todayISO;
-                                  onRangeStartChange(base);
-                                  const start = new Date(base);
-                                  const end = new Date(start);
-                                  end.setDate(end.getDate() + days - 1);
-                                  onRangeEndChange(end.toISOString().slice(0, 10));
-                                  scheduleAutoClose(800);
-                                }}
-                                className={cn(
-                                  "flex-1 sm:flex-none rounded-full px-4 py-2 max-sm:py-1.5 text-sm font-semibold transition-all whitespace-nowrap text-center",
-                                  rangeDays === days
-                                    ? "bg-primary-600 text-white shadow-sm"
-                                    : "bg-neutral-100 text-secondary-500 hover:bg-neutral-200"
-                                )}
-                              >
-                                {days} Days
-                              </button>
-                            ))}
-                          </div>
-                          <div id="step1-range-start">
-                            <CustomDatePicker
-                              mode="range"
-                              inline
-                              selected={{
-                                from: rangeStart ? new Date(`${rangeStart}T12:00:00`) : undefined,
-                                to: rangeEnd ? new Date(`${rangeEnd}T12:00:00`) : undefined,
-                              }}
-                              fixedRangeDays={rangeDays || 7}
-                              onSelect={(range) => {
-                                if (range?.from) {
-                                  const fromIso = new Date(range.from.getTime() - range.from.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                                  onRangeStartChange(fromIso);
-                                  if (range.to) {
-                                    const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                                    onRangeEndChange(toIso);
-                                  }
-                                  scheduleAutoClose(1500);
-                                } else {
-                                  onRangeStartChange("");
-                                  onRangeEndChange("");
-                                }
-                              }}
-                              className="w-full rounded-2xl border-0 bg-transparent shadow-none"
-                            />
-                          </div>
-                        </div>
-                      )}
-                      <button type="button" onClick={() => setOpenPanel(null)}
+                      <DatePickerBody
+                        dateMode={dateMode}
+                        exactDate={exactDate}
+                        onExactDateChange={onExactDateChange}
+                        rangeStart={rangeStart}
+                        rangeEnd={rangeEnd}
+                        onRangeStartChange={onRangeStartChange}
+                        onRangeEndChange={onRangeEndChange}
+                        onDateComplete={() => {
+                          clearTimeout(autoCloseTimerRef.current);
+                          autoCloseTimerRef.current = setTimeout(() => setOpenPanel("guests"), 350);
+                        }}
+                        filterDate={filterDate}
+                        onMonthChange={onMonthChange}
+                        globalAvailabilityMap={globalAvailabilityMap}
+                        inline
+                        todayISO={todayISO}
+                      />
+                      <button type="button" onClick={() => setOpenPanel("guests")}
                         disabled={!(exactDate || (rangeStart && rangeEnd))}
                         className={cn("sm:hidden mt-3 w-full h-11 rounded-full text-sm font-semibold transition",
                           (exactDate || (rangeStart && rangeEnd))
@@ -3587,16 +3522,14 @@ function StepTwo({
     const now = Date.now();
     if (now - boatSelectGuardRef.current < 250) return;
     boatSelectGuardRef.current = now;
-    if (dateMode === "flex" && hasRange) {
-      // Reset confirmed date when switching to a different boat
+    if (boat.isPartner) {
+      setPartnerBoat(boat);
+    } else if (dateMode === "flex" && hasRange) {
       if (boat.id !== selectedBoatId) {
         onSelectFlexDate("");
       }
       openPickDayMode(boat.id);
-    } else if (boat.isPartner) {
-      setPartnerBoat(boat);
     } else {
-      // Exact date selected - select immediately and show confirm modal
       onSelectBoatId(boat.id);
     }
   };
@@ -4441,18 +4374,17 @@ function StepTwo({
                         </button>
                       ) : hasDateCriteria ? (
                         <button type="button" onClick={() => {
-                            const isFlexMode = dateMode === "flex" && hasRange;
                             const boatId = boat.id;
                             setGridDetailBoat(null);
-                            if (isFlexMode) {
+                            if (boat.isPartner) {
+                              setTimeout(() => setPartnerBoat(boat), 430);
+                            } else if (dateMode === "flex" && hasRange) {
                               if (boatId !== selectedBoatId) {
                                 onSelectFlexDate?.("");
                               }
                               setTimeout(() => openPickDayMode(boatId), 430);
                             } else {
-                              setTimeout(() => {
-                                onSelectBoatId(boatId);
-                              }, 430);
+                              setTimeout(() => onSelectBoatId(boatId), 430);
                             }
                           }}
                           className="shrink-0 h-11 px-6 rounded-full bg-[#2563eb] text-sm font-bold text-white transition hover:bg-[#1d4ed8]">
@@ -4896,6 +4828,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
   );
 
   const infoContent = useCallback((activeTab) => {
+    const row = "flex items-start gap-3 py-3";
+    const iconBlue = "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600";
+    const gridFor = (count) => cn("grid gap-x-6", count === 4 ? "grid-cols-1 sm:grid-cols-2" : count <= 3 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3");
+    const grid = "grid grid-cols-1 sm:grid-cols-3 gap-x-6";
     if (activeTab === "included") {
       const selectedVibe = vibes.find(v => v.id === selectedBoatId) || null;
       const highlightCards = selectedVibe?.included?.length
@@ -5487,10 +5423,12 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                       <div className="mt-3.5 rounded-2xl border border-neutral-200 bg-neutral-50 px-3 py-2.5 sm:px-4 sm:py-3">
                         <div className="grid grid-cols-1 gap-y-2 sm:gap-y-2.5">
                           {chips.map((item) => {
-                            const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
+                            const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : (item.icon || MapPin);
                             return (
                               <div key={item.label} className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-secondary-700">
-                                <Icon className="h-3.5 w-3.5 shrink-0 text-primary-500 sm:h-4 sm:w-4" />
+                                {item.icon_svg
+                                  ? <span className="h-3.5 w-3.5 shrink-0 text-primary-500 sm:h-4 sm:w-4 [&>svg]:h-full [&>svg]:w-full [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                                  : <Icon className="h-3.5 w-3.5 shrink-0 text-primary-500 sm:h-4 sm:w-4" />}
                                 {item.label}
                               </div>
                             );
@@ -5779,10 +5717,13 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                     <h3 className="text-lg font-bold text-secondary-900 mb-3">What's included</h3>
                     <div className="flex flex-wrap gap-2">
                       {chips.map((chip) => {
-                        const Icon = typeof chip.icon === "string" ? ICON_MAP[chip.icon] || MapPin : chip.icon;
+                        const Icon = typeof chip.icon === "string" ? ICON_MAP[chip.icon] || MapPin : (chip.icon || MapPin);
                         return (
                           <span key={chip.label} className="inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-transparent px-3 py-1.5 text-xs font-medium text-secondary-700">
-                            <Icon className="h-3.5 w-3.5 text-primary-600" strokeWidth={1.5} />{chip.label}
+                            {chip.icon_svg
+                              ? <span className="h-3.5 w-3.5 text-primary-600 [&>svg]:h-full [&>svg]:w-full [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: chip.icon_svg }} />
+                              : <Icon className="h-3.5 w-3.5 text-primary-600" strokeWidth={1.5} />}
+                            {chip.label}
                           </span>
                         );
                       })}
@@ -7129,6 +7070,7 @@ function StepExtras({
         selectedExtras={selectedExtras}
         onChangeExtraQty={onChangeExtraQty}
         formatIDR={formatIDR}
+        totalGuests={totalGuests}
       />
     </>
   );
@@ -7299,7 +7241,7 @@ function StepFive({
   };
   const isTransferSelected = selectedTransferId !== null;
   const isProtectionSelected = selectedCoverId !== null;
-  const isReserveEnabled = isDateSelected && isBoatSelected && isTransferSelected && isProtectionSelected;
+  const isReserveEnabled = isDateSelected && isBoatSelected;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
@@ -7728,7 +7670,7 @@ function StepFive({
                 {isReserving ? "Processing..." : reserveLabel}
               </Button>
               <div className="text-center text-sm text-secondary-500">
-                {isReserveEnabled ? "Secure checkout · " + (selectedBoat?.isPartner ? "On Request" : "Instant confirmation") : "Select transfer and protection before booking."}
+                {isReserveEnabled ? "Secure checkout · " + (selectedBoat?.isPartner ? "On Request" : "Instant confirmation") : ""}
               </div>
             </div>
             <div className="mt-auto pt-6 space-y-4">
@@ -11316,13 +11258,7 @@ export default function Premium_Private_With_Vibe() {
             </AnimatePresence>
         </div>
         )}
-        <div className="mt-16 pt-12 mb-8 container">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl mb-2">What guests say</h2>
-            <p className="text-secondary-500 text-base">Real reviews from real travellers</p>
-          </div>
-          <ElfsightWidget appId="1f614ea8-8602-4273-83b3-ab40c213a3d7" />
-        </div>
+        <ReviewsSection />
         <Footer />
       </div>
       <StickyBookingBar

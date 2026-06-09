@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import "./Discover.nika.css";
-import ElfsightWidget from "./components/common/ElfsightWidget";
+import ReviewsSection from "./components/common/ReviewsSection";
 import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import RatingPill from "./components/common/RatingPill";
 import { getBoatFeatures, bfOn } from "./utils/boatFeatures";
@@ -165,6 +165,7 @@ const ICON_MAP = {
 import { tourInfo, bookingMiniFAQ as bookingMiniFAQData } from "./data/shared.json";
 // Shared Components
 import CustomDatePicker from "./components/common/CustomDatePicker";
+import DatePickerBody from "./components/common/DatePickerBody";
 import PhoneInput from "./components/common/PhoneInput";
 import PolicyModal, { usePolicyModal } from "./components/common/PolicyModal";
 import Button from "./components/common/Button";
@@ -661,23 +662,6 @@ function BookingCard({
         </div>
       </div>
     </Card>
-  );
-}
-function ReviewsSection() {
-  const ref = useRef(null);
-  useEffect(() => {
-    if (!ref.current) return;
-    const timer = setTimeout(() => { if (window.eapps?.Platform) window.eapps.Platform.refresh(); }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-  return (
-    <div className="mt-16 pt-12 mb-8 container" ref={ref}>
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold tracking-tight text-secondary-900 sm:text-4xl mb-2">What guests say</h2>
-        <p className="text-secondary-500 text-base">Real reviews from real travellers</p>
-      </div>
-      <ElfsightWidget appId="1f614ea8-8602-4273-83b3-ab40c213a3d7" />
-    </div>
   );
 }
 const MINI_FAQ_ICON_MAP = { BadgeCheck, Users, CloudRain, Clock, Sparkles, Waves };
@@ -2221,92 +2205,25 @@ function StepOne({
 
                       <div className="h-px w-full bg-neutral-200 my-2" />
 
-                      {dateMode === "exact" ? (
-                        <div className="space-y-3">
-                          <div id="step1-exact-date">
-                            <CustomDatePicker
-                              mode="single"
-                              inline
-                              selected={exactDate ? new Date(exactDate) : undefined}
-                              onSelect={(date) => {
-                                if (date) {
-                                  const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                                  onExactDateChange(iso);
-                                  scheduleAutoClose(600);
-                                }
-                              }}
-                              filterDate={filterDate}
-                              onMonthChange={onMonthChange}
-                              className="w-full rounded-xl border-0 bg-transparent shadow-none"
-                            />
-                          </div>
-                          {exactDate && globalAvailabilityMap && globalAvailabilityMap[exactDate] === false && (
-                            <div className="flex items-center gap-3 rounded-xl bg-red-50 p-3 text-red-800">
-                              <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" />
-                              <div className="text-sm">
-                                <p className="font-semibold">Sold out for this date</p>
-                                <p className="text-red-600 text-xs">Try flexible dates or chat with our team on WhatsApp.</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-3 max-sm:space-y-2">
-                          <div className="flex gap-2 max-sm:w-full sm:justify-center">
-                            {[7, 10, 14].map((days) => (
-                              <button
-                                key={days}
-                                type="button"
-                                onClick={() => {
-                                  const base = rangeStart || todayISO;
-                                  onRangeStartChange(base);
-                                  const start = new Date(base);
-                                  const end = new Date(start);
-                                  end.setDate(end.getDate() + days - 1);
-                                  onRangeEndChange(end.toISOString().slice(0, 10));
-                                  scheduleAutoClose(800);
-                                }}
-                                className={cn(
-                                  "flex-1 sm:flex-none rounded-full px-4 py-2 max-sm:py-1.5 text-sm font-semibold transition-all whitespace-nowrap text-center",
-                                  rangeDays === days
-                                    ? "bg-primary-600 text-white shadow-sm"
-                                    : "bg-neutral-100 text-secondary-500 hover:bg-neutral-200"
-                                )}
-                              >
-                                {days} Days
-                              </button>
-                            ))}
-                          </div>
-                          <div id="step1-range-start">
-                            <CustomDatePicker
-                              mode="range"
-                              inline
-                              selected={{
-                                from: rangeStart ? new Date(`${rangeStart}T12:00:00`) : undefined,
-                                to: rangeEnd ? new Date(`${rangeEnd}T12:00:00`) : undefined,
-                              }}
-                              fixedRangeDays={rangeDays || 7}
-                              onSelect={(range) => {
-                                if (range?.from) {
-                                  const fromIso = new Date(range.from.getTime() - range.from.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                                  onRangeStartChange(fromIso);
-                                  if (range.to) {
-                                    const toIso = new Date(range.to.getTime() - range.to.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                                    onRangeEndChange(toIso);
-                                  }
-                                  scheduleAutoClose(1500);
-                                } else {
-                                  onRangeStartChange("");
-                                  onRangeEndChange("");
-                                }
-                              }}
-                              className="w-full rounded-xl border-0 bg-transparent shadow-none"
-                            />
-                          </div>
-                        </div>
-                      )}
-                      {/* Mobile Continue button — always visible, disabled until date selected */}
-                      <button type="button" onClick={() => setOpenPanel(null)}
+                      <DatePickerBody
+                        dateMode={dateMode}
+                        exactDate={exactDate}
+                        onExactDateChange={onExactDateChange}
+                        rangeStart={rangeStart}
+                        rangeEnd={rangeEnd}
+                        onRangeStartChange={onRangeStartChange}
+                        onRangeEndChange={onRangeEndChange}
+                        onDateComplete={() => {
+                          clearTimeout(autoCloseTimerRef.current);
+                          autoCloseTimerRef.current = setTimeout(() => setOpenPanel("guests"), 350);
+                        }}
+                        filterDate={filterDate}
+                        onMonthChange={onMonthChange}
+                        globalAvailabilityMap={globalAvailabilityMap}
+                        inline
+                        todayISO={todayISO}
+                      />
+                      <button type="button" onClick={() => setOpenPanel("guests")}
                         disabled={!(exactDate || (rangeStart && rangeEnd))}
                         className={cn("sm:hidden mt-3 w-full h-11 rounded-full text-sm font-semibold transition",
                           (exactDate || (rangeStart && rangeEnd))
@@ -6613,7 +6530,7 @@ function StepFive({
     onKidsChange(draftKids);
     closeEditor();
   };
-  const isReserveEnabled = isDateSelected && isBoatSelected && transferConfirmed && coverConfirmed;
+  const isReserveEnabled = isDateSelected && isBoatSelected;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
@@ -7217,7 +7134,7 @@ function StepFive({
                 {reserveLabel} {isReserveEnabled ? <ArrowRight className="h-4 w-4" /> : null}
               </Button>
               <div className="text-center text-sm text-secondary-500">
-                {isReserveEnabled ? "Secure checkout · Instant confirmation" : "Select transfer and protection before booking."}
+                {isReserveEnabled ? "Secure checkout · Instant confirmation" : ""}
               </div>
             </div>
             <div className="mt-auto pt-6 space-y-4">
@@ -9941,8 +9858,6 @@ export default function Shared_tour_01() {
               const target = document.getElementById("step-2");
               if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
-            globalAvailabilityMap={globalAvailabilityMap}
-            filterDate={globalFilterDate}
             onMonthChange={handleGlobalMonthChange}
           />
         </Hero>
@@ -9993,8 +9908,6 @@ export default function Shared_tour_01() {
             const target = document.getElementById("step-2");
             if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
-          globalAvailabilityMap={globalAvailabilityMap}
-          filterDate={globalFilterDate}
           onMonthChange={handleGlobalMonthChange}
         />
         <div className="relative pt-6 sm:pt-8">

@@ -223,7 +223,7 @@ export default function CustomDatePicker({
           font-size: 0.9375rem;
           font-weight: 600;
           color: var(--secondary-600);
-          border-radius: 12px;
+          border-radius: 50%;
           margin: 2px;
           transition: all 0.2s;
         }
@@ -255,7 +255,7 @@ export default function CustomDatePicker({
         .premium-datepicker-wrapper .react-datepicker__day:hover {
           background-color: var(--primary-50) !important;
           color: var(--primary-600) !important;
-          border-radius: 12px !important;
+          border-radius: 50% !important;
         }
 
         .premium-datepicker-wrapper .react-datepicker__month {
@@ -268,7 +268,7 @@ export default function CustomDatePicker({
           background-color: var(--primary-600) !important;
           color: white !important;
           font-weight: 800;
-          border-radius: 12px !important;
+          border-radius: 50% !important;
           position: relative;
           z-index: 1;
           transform: none !important;
@@ -277,12 +277,12 @@ export default function CustomDatePicker({
         .premium-datepicker-wrapper .react-datepicker__day--in-range {
           background-color: var(--primary-50);
           color: var(--primary-700);
-          border-radius: 4px;
+          border-radius: 50%;
         }
 
         .premium-datepicker-wrapper .react-datepicker__day--in-range.react-datepicker__day--range-start,
         .premium-datepicker-wrapper .react-datepicker__day--in-range.react-datepicker__day--range-end {
-          border-radius: 12px !important;
+          border-radius: 50% !important;
         }
 
         /* Hide outside-month days that bleed into range */

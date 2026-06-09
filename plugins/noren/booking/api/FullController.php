@@ -102,14 +102,12 @@ class FullController extends Controller
                     'id'          => $i->id,
                     'name'        => $i->name,
                     'description' => $i->description,
-                    'icon_name'   => $i->icon_name,
                     'icon_svg'    => $i->icon_svg,
                 ])->values(),
                 'includes' => $tour->includes->map(fn($i) => [
-                    'id'       => $i->id,
-                    'name'     => $i->name,
-                    'icon_name'=> $i->icon_name,
-                    'icon_svg' => $i->icon_svg,
+                    'id'      => $i->id,
+                    'name'    => $i->name,
+                    'icon_svg'=> $i->icon_svg,
                 ])->values(),
             ];
         });
@@ -612,11 +610,13 @@ class FullController extends Controller
                 return $payload;
             }
             $payload['restaurant'] = [
-                'id' => $restaurant->id,
-                'name' => $restaurant->name,
-                'description' => $restaurant->description,
-                'menu' => $restaurant->menu,
-                'image' => $restaurant->image,
+                'id'            => $restaurant->id,
+                'name'          => $restaurant->name,
+                'description'   => $restaurant->description,
+                'menu'          => $restaurant->menu,
+                'menu_sections' => $restaurant->menu_sections ?: [],
+                'menu_note'     => $restaurant->menu_note,
+                'image'         => $restaurant->image,
                 'images_with_thumbs' => $restaurant->images_with_thumbs,
             ];
             return $payload;

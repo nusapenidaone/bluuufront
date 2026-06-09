@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronDown, Minus, Plus, CheckCircle2, Check } from "lucide-react";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
@@ -22,7 +23,21 @@ const EXTRA_IMAGE_BY_ID = {
 };
 const EXTRA_FALLBACK_IMAGE = "https://bluuu.tours/storage/app/uploads/public/68f/9ed/c1a/68f9edc1a9270720998215.jpg";
 
-export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCatalog, selectedExtras, onChangeExtraQty, formatIDR }) {
+function computeAutoQty(qtyType, totalGuests) {
+  if (qtyType === 'per_car') return Math.ceil(totalGuests / 5);
+  if (qtyType === 'per_person') return totalGuests;
+  if (qtyType === 'fixed') return 1;
+  return null;
+}
+
+function autoQtyLabel(qtyType, qty) {
+  if (qtyType === 'per_car') return `×${qty} car${qty !== 1 ? 's' : ''} (auto)`;
+  if (qtyType === 'per_person') return `×${qty} guest${qty !== 1 ? 's' : ''} (auto)`;
+  if (qtyType === 'fixed') return `×1 (auto)`;
+  return null;
+}
+
+export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCatalog, selectedExtras, onChangeExtraQty, formatIDR, totalGuests = 1 }) {
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [pickerQty, setPickerQty] = useState(1);
   const [justAddedId, setJustAddedId] = useState(null);
@@ -30,7 +45,10 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
   const [initialQuantities, setInitialQuantities] = useState({});
   const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dropdownRect, setDropdownRect] = useState(null);
   const dropdownRef = useRef(null);
+  const dropdownBtnRef = useRef(null);
+  const portalRef = useRef(null);
 
   const activeExtra = useMemo(
     () => (activeExtraId ? extrasCatalog.find((e) => e.id === activeExtraId) : null),
@@ -67,16 +85,29 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
   }, [activeExtra]);
 
   useEffect(() => {
+    if (!isDropdownOpen) return;
     const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+      const insideBtn = dropdownRef.current?.contains(e.target);
+      const insidePortal = portalRef.current?.contains(e.target);
+      if (!insideBtn && !insidePortal) {
         setIsDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isDropdownOpen]);
+
+  const openDropdown = useCallback(() => {
+    if (dropdownBtnRef.current) {
+      setDropdownRect(dropdownBtnRef.current.getBoundingClientRect());
+    }
+    setIsDropdownOpen(true);
   }, []);
 
   const hasChildren = activeExtra?.hasChildren && activeExtra.children?.length > 0;
+  const qtyType = activeExtra?.qtyType || 'manual';
+  const isAutoQty = !hasChildren && qtyType !== 'manual';
+  const autoQty = isAutoQty ? computeAutoQty(qtyType, totalGuests) : null;
 
   const hasChanged = useMemo(() => {
     if (!activeExtra) return false;
@@ -85,8 +116,11 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
         (c) => Number(draftQuantities[c.id] || 0) !== Number(initialQuantities[c.id] || 0)
       );
     }
+    if (isAutoQty) {
+      return Number(selectedExtras[activeExtra.id] || 0) !== autoQty;
+    }
     return Number(draftQuantities[activeExtra.id] || 0) !== Number(initialQuantities[activeExtra.id] || 0);
-  }, [draftQuantities, initialQuantities, activeExtra, hasChildren]);
+  }, [draftQuantities, initialQuantities, activeExtra, hasChildren, isAutoQty, autoQty, selectedExtras]);
 
   const currentItem = hasChildren
     ? activeExtra.children.find((c) => c.id === selectedChildId) || activeExtra.children[0]
@@ -94,9 +128,10 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
   const isSoldOut = currentItem?.available != null && Number(currentItem.available) <= 0;
   const maxQty = currentItem?.available != null ? Math.max(1, Number(currentItem.available)) : Infinity;
   const singleDraftQty = activeExtra && !hasChildren ? Math.max(0, Number(draftQuantities[currentItem?.id] || 0)) : 0;
+  const effectiveQty = isAutoQty ? (autoQty ?? 1) : singleDraftQty;
   const cartTotal = hasChildren
     ? activeExtra.children.reduce((sum, c) => sum + Math.max(0, Number(draftQuantities[c.id] || 0)) * Number(c.price || 0), 0)
-    : (currentItem?.price || 0) * singleDraftQty;
+    : (currentItem?.price || 0) * effectiveQty;
   const imgSrc = activeExtra
     ? (hasChildren && currentItem?.images_with_thumbs?.[0]?.thumb) ||
       activeExtra.images_with_thumbs?.[0]?.thumb ||
@@ -118,6 +153,9 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
       activeExtra.children.forEach((child) => {
         onChangeExtraQty(child.id, Math.max(0, draftQuantities[child.id] ?? 0));
       });
+    } else if (isAutoQty) {
+      const isCurrentlySelected = Number(selectedExtras[currentItem.id] || 0) > 0;
+      onChangeExtraQty(currentItem.id, isCurrentlySelected ? 0 : (autoQty ?? 1));
     } else {
       onChangeExtraQty(currentItem.id, singleDraftQty);
     }
@@ -265,8 +303,9 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                     <div className="space-y-3">
                       <div className="relative" ref={dropdownRef}>
                         <button
+                          ref={dropdownBtnRef}
                           type="button"
-                          onClick={() => setIsDropdownOpen(prev => !prev)}
+                          onClick={() => isDropdownOpen ? setIsDropdownOpen(false) : openDropdown()}
                           className={cn(
                             "flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-left text-sm font-semibold text-secondary-900 transition",
                             isDropdownOpen ? "border-primary-300 ring-1 ring-primary-300" : "border-neutral-200 hover:border-neutral-300"
@@ -277,8 +316,12 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                           </span>
                           <ChevronDown className={cn("ml-2 h-4 w-4 shrink-0 text-secondary-400 transition-transform", isDropdownOpen && "rotate-180")} />
                         </button>
-                        {isDropdownOpen && (
-                          <div className="absolute left-0 right-0 z-50 bottom-full mb-1.5 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+                        {isDropdownOpen && dropdownRect && createPortal(
+                          <div
+                            ref={portalRef}
+                            style={{ position: "fixed", top: dropdownRect.bottom + 6, left: dropdownRect.left, width: dropdownRect.width, zIndex: 10001 }}
+                            className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg"
+                          >
                             <div className="max-h-60 overflow-y-auto py-1">
                               {activeExtra.children.map((child) => {
                                 const childSoldOut = child.available != null && Number(child.available) <= 0;
@@ -309,7 +352,8 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                                 );
                               })}
                             </div>
-                          </div>
+                          </div>,
+                          document.body
                         )}
                       </div>
                       {!selectedSoldOut && (
@@ -400,6 +444,18 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                     <div className="space-y-3">
                       {isSoldOut ? (
                         <div className="rounded-xl border border-neutral-200 px-4 py-3 text-sm text-secondary-400 opacity-50">Sold out</div>
+                      ) : isAutoQty ? (
+                        <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-secondary-900">{autoQtyLabel(qtyType, autoQty ?? 1)}</div>
+                            <div className="mt-0.5 text-xs text-secondary-400">Quantity is set automatically based on your group size</div>
+                          </div>
+                          {currentItem?.price > 0 && (
+                            <span className="text-sm font-bold text-secondary-900 tabular-nums shrink-0">
+                              {formatIDR((autoQty ?? 1) * currentItem.price)}
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <div className="inline-flex h-10 items-center rounded-full border border-neutral-200 bg-white">
@@ -450,7 +506,7 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                           </button>
                         </div>
                       )}
-                      {singleDraftQty > 0 && (
+                      {(isAutoQty ? Number(selectedExtras[activeExtra?.id] || 0) > 0 : singleDraftQty > 0) && (
                         <div className="border-t border-neutral-100 pt-1">
                           <div className="text-[10px] font-bold uppercase tracking-widest text-secondary-400 py-2">Your selection</div>
                           <div className="flex items-center gap-3 py-3">
@@ -462,13 +518,13 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                                 alt={currentItem.name} className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                             ) : null}
                             <span className="flex-1 truncate text-sm font-medium text-secondary-800">{currentItem.name}</span>
-                            <span className="text-sm text-secondary-400">× {singleDraftQty}</span>
+                            <span className="text-sm text-secondary-400">× {isAutoQty ? (autoQty ?? 1) : singleDraftQty}</span>
                             <span className="text-sm font-bold text-secondary-900 min-w-[3rem] text-right">
-                              {formatIDR((currentItem.price || 0) * singleDraftQty)}
+                              {formatIDR((currentItem.price || 0) * (isAutoQty ? (autoQty ?? 1) : singleDraftQty))}
                             </span>
                             <button
                               type="button"
-                              onClick={() => setDraftQuantities((prev) => ({ ...prev, [currentItem.id]: 0 }))}
+                              onClick={() => isAutoQty ? onChangeExtraQty(currentItem.id, 0) : setDraftQuantities((prev) => ({ ...prev, [currentItem.id]: 0 }))}
                               className="flex h-8 w-8 items-center justify-center rounded-xl border border-neutral-200 bg-white text-secondary-400 hover:border-red-200 hover:text-red-500 transition"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -492,13 +548,22 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      onClick={confirmHandler}
-                      disabled={!hasChanged}
-                      className="h-11 px-6"
-                    >
-                      Confirm
-                    </Button>
+                    {isAutoQty && Number(selectedExtras[activeExtra?.id] || 0) > 0 ? (
+                      <Button
+                        onClick={confirmHandler}
+                        className="h-11 px-6 bg-red-50 text-red-600 hover:bg-red-100 border-red-200"
+                      >
+                        Remove
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={confirmHandler}
+                        disabled={!hasChanged}
+                        className="h-11 px-6"
+                      >
+                        {isAutoQty ? "Add" : "Confirm"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

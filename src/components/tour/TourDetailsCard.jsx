@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Check, Shield, CloudRain, Car, HelpCircle, Ship, Compass, Calendar, Clock, Users, Sun, Moon, X } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { resolveScheduleIcon, sanitizeDisplayText, getLunchDisplayData } from "../../utils/tourScheduleUtils";
+import { resolveScheduleIcon, resolveIconByName, sanitizeDisplayText, getLunchDisplayData } from "../../utils/tourScheduleUtils";
 import Modal from "../common/Modal";
 import PhotoCarousel from "../common/PhotoCarousel";
 import { Fancybox } from "@fancyapps/ui";
@@ -15,8 +15,10 @@ const _renderPrice = (str) => {
 const PREMIUM_KEYWORDS = ["prosecco", "secret spot", "photo stop", "gopro rental", "drone", "la rossa"];
 const FIRST_CLASS_KEYWORDS = ["eldorado", "fortune yachts", "acropora", "secret spot"];
 
-const getItemTier = (title, details, tourTier) => {
-  const lower = ((title || "") + " " + (details || "")).toLowerCase();
+const getItemTier = (item, tourTier) => {
+  if (item.highlight === "premium" || item.highlight === "first-class") return item.highlight;
+  if (item.is_premium == 1 || item.is_premium === true) return "premium";
+  const lower = ((item.title || "") + " " + (item.details || "")).toLowerCase();
   const isFC = FIRST_CLASS_KEYWORDS.some(k => lower.includes(k));
   const isPrem = PREMIUM_KEYWORDS.some(k => lower.includes(k));
   if (isFC || isPrem) return tourTier || (isFC ? "first-class" : "premium");
@@ -136,6 +138,55 @@ function getExtrasForActivity(title, extrasCatalog) {
   return [];
 }
 
+function MenuSections({ sections, fallbackHtml, note, dark = false }) {
+  const textMain = dark ? "text-white/90" : "text-secondary-900";
+  const textSub  = dark ? "text-white/50" : "text-secondary-500";
+  const headCls  = dark ? "text-primary-400" : "text-primary-600";
+  const divider  = dark ? "border-white/[0.06]" : "border-neutral-100";
+
+  if (Array.isArray(sections) && sections.length) {
+    return (
+      <div className="mt-3 flex flex-col gap-5">
+        {sections.map((sec, i) => {
+
+          const dishes = Array.isArray(sec.items) ? sec.items : [];
+          return (
+            <div key={i}>
+              {sec.title && (
+                <div className={cn("text-[10px] font-bold uppercase tracking-widest mb-2.5", headCls)}>
+                  {sec.title}
+                </div>
+              )}
+              <div className={cn("divide-y", divider)}>
+                {dishes.map((dish, j) => (
+                  <div key={j} className="py-2 first:pt-0 last:pb-0">
+                    <div className={cn("text-sm font-semibold", textMain)}>{dish.name}</div>
+                    {dish.description && (
+                      <div className={cn("text-xs mt-0.5 leading-relaxed", textSub)}>{dish.description}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+        {note && <p className={cn("mt-4 text-xs leading-relaxed italic", dark ? "text-white/30" : "text-secondary-400")}>{note}</p>}
+      </div>
+    );
+  }
+  if (fallbackHtml) {
+    return (
+      <>
+        <div className={cn("mt-3 restaurant-menu text-sm [&_h4]:text-[10px] [&_h4]:font-bold [&_h4]:uppercase [&_h4]:tracking-widest [&_h4]:mb-1.5 [&_h4]:mt-3 [&_ul]:space-y-1 [&_li]:font-medium [&_p]:mb-1 [&_p]:font-medium",
+          dark ? `${textMain} [&_h4]:text-primary-400` : `${textMain} [&_h4]:text-primary-600`)}
+          dangerouslySetInnerHTML={{ __html: fallbackHtml }} />
+        {note && <p className={cn("mt-3 text-xs leading-relaxed italic", dark ? "text-white/30" : "text-secondary-400")}>{note}</p>}
+      </>
+    );
+  }
+  return null;
+}
+
 function computeAutoQty(qtyType, totalGuests) {
   if (qtyType === 'per_car') return Math.ceil(totalGuests / 5);
   if (qtyType === 'per_person') return totalGuests;
@@ -230,9 +281,9 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
         </div>
         <div className="mt-5 flex items-start">
           {items.map((item, i) => {
-            const Icon = resolveScheduleIcon(item.title);
+            const Icon = (item.icon_name && resolveIconByName(item.icon_name)) || resolveScheduleIcon(item.title);
             const isActive = activeItem === i;
-            const tier = hideTierBadges ? null : getItemTier(item.title, item.details, tourTier);
+            const tier = hideTierBadges ? null : getItemTier(item, tourTier);
             return (
               <button key={i} type="button" onClick={() => handleItemClick(i)} className="flex-1 flex flex-col items-center gap-1.5 transition-all relative">
                 <div {...(isActive ? { "data-active-tier": tier || "classic" } : {})} className={cn("relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
@@ -243,7 +294,9 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.2); } 100% { transform: scale(1); } }
                     @keyframes ripple { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); } 70% { box-shadow: 0 0 0 10px rgba(37,99,235,0); } 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0); } }
                   `}</style>
-                  <Icon className="h-4 w-4" strokeWidth={1.5} />
+                  {item.icon_svg
+                    ? <span className="h-4 w-4 [&>svg]:h-full [&>svg]:w-full [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                    : <Icon className="h-4 w-4" strokeWidth={1.5} />}
                 </div>
                 <span className={cn("text-xs font-medium text-center leading-tight max-w-[100px]", isActive ? "text-white" : "text-white/50")}>{/kelingking|land\s*tour/i.test(item.title) && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : item.title}</span>
                 {tier && <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none", tier === "premium" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-400/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30")}><Sparkles className="h-2 w-2" />{tier === "premium" ? "Premium" : "First Class"}</span>}
@@ -256,7 +309,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
       <div className="mt-4 sm:hidden">
         {items.map((item, i) => {
           const isActive = activeItem === i;
-          const itemTier = hideTierBadges ? null : getItemTier(item.title, item.details, tourTier);
+          const itemTier = hideTierBadges ? null : getItemTier(item, tourTier);
           const isLunchItem = item.is_restaurant == 1 || item.is_restaurant === true || /lunch/i.test(item.title) || (restaurantData && new RegExp(restaurantData.name?.split(/\s+/)[0], 'i').test(item.title));
           const itemDetails = sanitizeDisplayText(isLunchItem ? getLunchDisplayData(item)?.description : item.details, { stripTrailingOne: true });
           const lunchData = isLunchItem ? getLunchDisplayData(item) : null;
@@ -311,7 +364,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
         })}
       </div>
       {selected && (() => {
-        const selectedTier = hideTierBadges ? null : getItemTier(selected.title, selected.details, tourTier);
+        const selectedTier = hideTierBadges ? null : getItemTier(selected, tourTier);
         return (
           <div data-tier-detail className={cn("hidden sm:block mt-5 rounded-2xl backdrop-blur-md overflow-hidden transition-all",
             tourTier === "premium" ? "bg-indigo-500/[0.08] border border-indigo-400/20" : tourTier === "first-class" ? "bg-emerald-500/[0.08] border border-emerald-400/20" : "bg-primary-500/[0.06] border border-primary-400/15"
@@ -427,10 +480,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                       {restaurantData.description && (
                         <p className="text-sm text-white/50 leading-relaxed italic" dangerouslySetInnerHTML={{ __html: restaurantData.description }} />
                       )}
-                      {restaurantData.menu && (
-                        <div className="mt-4 restaurant-menu text-sm text-white/90 [&_h4]:text-[10px] [&_h4]:font-bold [&_h4]:uppercase [&_h4]:tracking-widest [&_h4]:text-primary-500/70 [&_h4]:mb-1.5 [&_h4]:mt-3 [&_ul]:space-y-1 [&_li]:font-medium [&_p]:mb-1 [&_p]:font-medium"
-                          dangerouslySetInnerHTML={{ __html: restaurantData.menu }} />
-                      )}
+                      <MenuSections sections={restaurantData.menu_sections} fallbackHtml={restaurantData.menu} note={restaurantData.menu_note} dark />
                     </div>
                   </div>
                 </div>
@@ -560,13 +610,8 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
             );
           })()}
           <div className="px-5 pt-4 pb-2">
-          {restaurantData?.description && <p className={cn("text-sm leading-relaxed italic mb-3", isLightTheme ? "text-secondary-500" : "text-white/50")} dangerouslySetInnerHTML={{ __html: restaurantData.description }} />}
-          {/* Menu from CMS */}
-          {restaurantData?.menu && (
-            <div className={cn("mt-4 restaurant-menu text-sm [&_h4]:text-[10px] [&_h4]:font-bold [&_h4]:uppercase [&_h4]:tracking-widest [&_h4]:mb-1.5 [&_h4]:mt-3 [&_ul]:space-y-1 [&_li]:font-medium [&_p]:mb-1 [&_p]:font-medium",
-              isLightTheme ? "text-secondary-900 [&_h4]:text-primary-600" : "text-white/90 [&_h4]:text-primary-500/70")}
-              dangerouslySetInnerHTML={{ __html: restaurantData.menu }} />
-          )}
+            {restaurantData?.description && <p className={cn("text-sm leading-relaxed italic mb-3", isLightTheme ? "text-secondary-500" : "text-white/50")} dangerouslySetInnerHTML={{ __html: restaurantData.description }} />}
+            <MenuSections sections={restaurantData?.menu_sections} fallbackHtml={restaurantData?.menu} note={restaurantData?.menu_note} dark={!isLightTheme} />
           </div>
       </Modal>
       {/* Mobile Details Modal — photo header with title overlay */}

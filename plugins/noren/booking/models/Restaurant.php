@@ -20,6 +20,7 @@ class Restaurant extends Model
      */
     public $rules = [
     ];
+    protected $jsonable = ['menu_sections'];
     protected $appends = ['images_with_thumbs'];
 
     protected $hidden = ['images'];

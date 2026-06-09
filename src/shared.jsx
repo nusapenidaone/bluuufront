@@ -162,6 +162,7 @@ const REVIEW_SOURCES = [];
 const INFO_REVIEWS = [];
 // Shared Components
 import CustomDatePicker from "./components/common/CustomDatePicker";
+import DatePickerBody from "./components/common/DatePickerBody";
 import PhoneInput from "./components/common/PhoneInput";
 import PolicyModal, { usePolicyModal } from "./components/common/PolicyModal";
 import Button from "./components/common/Button";
@@ -1741,15 +1742,6 @@ function StepOne({
   const todayISO = useMemo(() => {
     return new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }, [today]);
-  const rangeDays = useMemo(() => {
-    if (!rangeStart || !rangeEnd) return 0;
-    const start = new Date(rangeStart + 'T00:00:00Z');
-    const end = new Date(rangeEnd + 'T00:00:00Z');
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-    const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    return diff > 0 ? diff : 0;
-  }, [rangeStart, rangeEnd]);
-  const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const contacts = useSiteContacts();
   return (
     <PremiumSection
@@ -1796,92 +1788,18 @@ function StepOne({
                 </div>
               </div>
               <div className="h-px w-full bg-neutral-100" />
-              {dateMode === "exact" ? (
-                <div className="space-y-3">
-                  <label className="group flex flex-col gap-1.5">
-                    <span className="text-xs font-black uppercase tracking-widest text-secondary-300 group-focus-within:text-primary-600 transition-colors">Exact day</span>
-                    <div className="relative" id="step1-exact-date">
-                      <CustomDatePicker
-                        mode="single"
-                        selected={exactDate ? new Date(exactDate + 'T00:00:00') : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                            onExactDateChange(iso);
-                          }
-                        }}
-                        className="w-full rounded-xl border border-neutral-200 bg-white shadow-none"
-                      />
-                    </div>
-                  </label>
-                  {exactDate && globalAvailabilityMap && globalAvailabilityMap[exactDate] === false && (
-                    <div className="flex items-center gap-4 rounded-xl border border-red-100 bg-red-50/50 p-4 text-red-800">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100/50">
-                        <AlertTriangle className="h-5 w-5" />
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-black">Sold out for this date</p>
-                        <p className="font-semibold opacity-70">Try flexible dates or chat with our team on WhatsApp.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {[7, 10, 14].map((days) => (
-                        <button
-                          key={days}
-                          type="button"
-                          onClick={() => {
-                            const base = rangeStart || todayISO;
-                            onRangeStartChange(base);
-                            const start = new Date(base + 'T00:00:00Z');
-                            const end = new Date(start);
-                            end.setDate(end.getDate() + days - 1);
-                            onRangeEndChange(end.toISOString().slice(0, 10));
-                          }}
-                          className={cn(
-                            "flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-200",
-                            rangeDays === days
-                              ? "bg-primary-600 text-white shadow-lg scale-102"
-                              : "bg-neutral-100 text-secondary-500 hover:bg-neutral-100"
-                          )}
-                        >
-                          {days} Days
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2" id="step1-range-start">
-                    <CustomDatePicker
-                      mode="range"
-                      selected={{
-                        from: rangeStart ? new Date(rangeStart + 'T00:00:00') : undefined,
-                        to: rangeEnd ? new Date(rangeEnd + 'T00:00:00') : undefined,
-                      }}
-                      onSelect={(range) => {
-                        if (range?.from) {
-                          const fromIso = new Date(range.from.getTime() - range.from.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                          onRangeStartChange(fromIso);
-                        } else {
-                          onRangeStartChange("");
-                        }
-                        if (range?.to && range?.from) {
-                          const maxTo = new Date(range.from.getTime() + 13 * 24 * 60 * 60 * 1000);
-                          const cappedTo = range.to > maxTo ? maxTo : range.to;
-                          const toIso = new Date(cappedTo.getTime() - cappedTo.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                          onRangeEndChange(toIso);
-                        } else {
-                          onRangeEndChange("");
-                        }
-                      }}
-                      className="w-full rounded-xl border border-neutral-200 bg-white shadow-none"
-                    />
-                  </div>
-                </div>
-              )}
+              <DatePickerBody
+                dateMode={dateMode}
+                exactDate={exactDate}
+                onExactDateChange={onExactDateChange}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onRangeStartChange={onRangeStartChange}
+                onRangeEndChange={onRangeEndChange}
+                globalAvailabilityMap={globalAvailabilityMap}
+                todayISO={todayISO}
+                maxRangeDays={14}
+              />
             </div>
             {/* Separator - Horizontal on mobile only */}
             <div className="lg:hidden h-px w-full bg-neutral-100" />

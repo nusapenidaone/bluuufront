@@ -1,0 +1,13 @@
+<?php
+$svg  = $record->icon_svg  ?? null;
+$name = $record->icon_name ?? null;
+?>
+<?php if ($svg): ?>
+    <div style="width:28px;height:28px;color:#4f6bed;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <?= $svg ?>
+    </div>
+<?php elseif ($name): ?>
+    <span style="font-size:11px;font-weight:600;color:#4f6bed;background:#eef1ff;padding:2px 6px;border-radius:5px;"><?= e($name) ?></span>
+<?php else: ?>
+    <span style="color:#ccc;">—</span>
+<?php endif; ?>

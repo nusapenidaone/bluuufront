@@ -1,4 +1,12 @@
-import { Clock, MapPin, Ship, Waves, UtensilsCrossed, Anchor, Camera } from "lucide-react";
+import { Clock, MapPin, Ship, Waves, UtensilsCrossed, Anchor, Camera, Fish, Sun, Shield, BadgeCheck, Coffee, Wine, Star, Users, Sparkles, LifeBuoy, Globe, Ticket, Car, Compass } from "lucide-react";
+
+const SCHEDULE_ICON_MAP = {
+  Clock, MapPin, Ship, Waves, UtensilsCrossed, Anchor, Camera, Fish, Sun,
+  Shield, BadgeCheck, Coffee, Wine, Star, Users, Sparkles, LifeBuoy, Globe,
+  Ticket, Car, Compass,
+};
+
+export const resolveIconByName = (name) => SCHEDULE_ICON_MAP[name] || null;
 
 const decodeBasicEntities = (value = "") =>
   value

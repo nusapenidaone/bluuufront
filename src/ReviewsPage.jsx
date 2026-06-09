@@ -18,7 +18,7 @@ export default function ReviewsPage() {
         cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
 
-      <main className="container flex-1 py-8 sm:py-12">
+      <main className="container flex-1 pt-8 pb-40 sm:pt-12 sm:pb-48">
         <a
           href="/"
           className="mb-6 inline-flex items-center gap-1.5 text-sm font-semibold text-secondary-500 transition hover:text-primary-600"
