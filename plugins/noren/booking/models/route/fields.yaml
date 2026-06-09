@@ -112,6 +112,14 @@ tabs:
             tab: Popup
             form:
                 fields:
+                    type:
+                        label: Тип
+                        type: dropdown
+                        span: auto
+                        options:
+                            item: Обычный слот
+                            or-chip: Разделитель "или"
+                        default: item
                     time:
                         label: Time
                         type: text
@@ -154,7 +162,31 @@ tabs:
                         commentHtml: true
                         comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'
                     details:
-                        label: Details
+                        label: Details / Text
+                        type: textarea
+                        size: small
+                        span: full
+                    info:
+                        label: Подробное описание (попап)
+                        type: textarea
+                        size: small
+                        span: full
+                    is_addon:
+                        label: Платная опция (добавляется отдельно)
+                        type: checkbox
+                        span: auto
+                    extra_id:
+                        label: ID связанного Extra
+                        type: number
+                        span: auto
+                        comment: 'ID из таблицы extras — для кнопки добавления из расписания'
+                    badges:
+                        label: 'Теги (через запятую)'
+                        type: text
+                        span: full
+                        comment: 'Например: 50 min from port, Bumpy road, Amazing views'
+                    images:
+                        label: 'Фото слота (URLs, по одному на строку)'
                         type: textarea
                         size: small
                         span: full
@@ -172,6 +204,14 @@ tabs:
             tab: Popup
             form:
                 fields:
+                    type:
+                        label: Тип
+                        type: dropdown
+                        span: auto
+                        options:
+                            item: Обычный слот
+                            or-chip: Разделитель "или"
+                        default: item
                     time:
                         label: Time
                         type: text
@@ -214,7 +254,31 @@ tabs:
                         commentHtml: true
                         comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'
                     details:
-                        label: Details
+                        label: Details / Text
+                        type: textarea
+                        size: small
+                        span: full
+                    info:
+                        label: Подробное описание (попап)
+                        type: textarea
+                        size: small
+                        span: full
+                    is_addon:
+                        label: Платная опция (добавляется отдельно)
+                        type: checkbox
+                        span: auto
+                    extra_id:
+                        label: ID связанного Extra
+                        type: number
+                        span: auto
+                        comment: 'ID из таблицы extras — для кнопки добавления из расписания'
+                    badges:
+                        label: 'Теги (через запятую)'
+                        type: text
+                        span: full
+                        comment: 'Например: 50 min from port, Bumpy road, Amazing views'
+                    images:
+                        label: 'Фото слота (URLs, по одному на строку)'
                         type: textarea
                         size: small
                         span: full

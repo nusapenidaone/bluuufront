@@ -469,6 +469,8 @@ class FullController extends Controller
         // Returns available_seats and boat_id of the boat with most free seats.
         $calcDate = function (array $boats, string $date) use ($boatIndex): array {
             $totalAvailable = 0;
+            $totalCapacity  = 0;
+            $totalBooked    = 0;
             $firstBoatId    = null;
 
             foreach ($boats as $boat) {
@@ -481,21 +483,27 @@ class FullController extends Controller
                 $rec      = $boatIndex[$boatId]['dates'][$date] ?? null;
 
                 if ($rec === null) {
-                    $avail = $capacity;
+                    $avail  = $capacity;
+                    $booked = 0;
                 } elseif ($rec['blocked']) {
-                    $avail = 0;
+                    $avail  = 0;
+                    $booked = $capacity;
                 } else {
                     $booked = (int) ($rec['qtty'] ?? 0);
                     $avail  = max(0, $capacity - $booked);
                 }
 
                 $totalAvailable += $avail;
+                $totalCapacity  += $capacity;
+                $totalBooked    += $booked;
             }
 
             return [
                 'available_seats' => $totalAvailable,
                 'available'       => $totalAvailable > 0 ? 1 : 0,
                 'boat_id'         => $firstBoatId,
+                'capacity'        => $totalCapacity,
+                'booked'          => $totalBooked,
             ];
         };
 
