@@ -5,11 +5,18 @@ tabs:
             span: auto
             type: text
             tab: Main
-        slug:
-            label: Slug
+        classes:
+            label: Class
+            nameFrom: name
+            descriptionFrom: description
             span: auto
-            type: text
+            type: relation
             tab: Main
+        # slug:
+        #     label: Slug
+        #     span: auto
+        #     type: text
+        #     tab: Main
             
         start:
             label: 'Start Time'
@@ -24,13 +31,7 @@ tabs:
             type: datepicker
             tab: Main
             
-        classes:
-            label: Class
-            nameFrom: name
-            descriptionFrom: description
-            span: auto
-            type: relation
-            tab: Main
+
         restaurant:
             label: Restaurant
             nameFrom: name

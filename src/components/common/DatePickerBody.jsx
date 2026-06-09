@@ -97,6 +97,9 @@ export default function DatePickerBody({
 
   return (
     <div className={cn("space-y-3", inline && "max-sm:space-y-2", className)}>
+      {maxRangeDays > 0 && (
+        <p className="text-xs text-secondary-400 text-center">Max {maxRangeDays} days</p>
+      )}
       <div className={cn("flex gap-2", inline && "max-sm:w-full sm:justify-center")}>
         {[7, 10, 14].map((days) => (
           <button
@@ -133,6 +136,7 @@ export default function DatePickerBody({
             to: rangeEnd ? new Date(`${rangeEnd}T12:00:00`) : undefined,
           }}
           fixedRangeDays={0}
+          maxRangeDays={maxRangeDays || 0}
           onSelect={(range) => {
             if (range?.from) {
               const fromIso = new Date(range.from.getTime() - range.from.getTimezoneOffset() * 60000)

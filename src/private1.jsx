@@ -2835,6 +2835,7 @@ function StepOne({
                         globalAvailabilityMap={globalAvailabilityMap}
                         inline
                         todayISO={todayISO}
+                        maxRangeDays={14}
                       />
                       <button type="button" onClick={() => setOpenPanel("guests")}
                         disabled={!(exactDate || (rangeStart && rangeEnd))}

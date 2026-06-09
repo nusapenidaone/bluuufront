@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
@@ -19,6 +19,7 @@ export default function CustomDatePicker({
   className,
   inline = false, // when true, renders calendar directly (no input field)
   fixedRangeDays = 0, // when > 0: single click sets start, end auto-calculated
+  maxRangeDays = 0, // when > 0: max selectable range length in days
 }) {
   const isRange = mode === "range";
 
@@ -27,6 +28,9 @@ export default function CustomDatePicker({
 
   // Track if calendar is open (only used in dropdown mode)
   const [isOpen, setIsOpen] = useState(false);
+
+  // Track pending range start (when user picked start but not end yet)
+  const [pendingStart, setPendingStart] = useState(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -41,29 +45,37 @@ export default function CustomDatePicker({
   // Handle change for both modes
   const handleChange = (dates) => {
     if (isRange && fixedRangeDays > 0) {
-      // Fixed range: single click sets start, end auto-calculated
       const [from] = dates;
       if (from) {
         const end = new Date(from);
         end.setDate(end.getDate() + fixedRangeDays - 1);
         onSelect({ from, to: end });
-        if (!inline) {
-          setTimeout(() => setIsOpen(false), 100);
-        }
+        if (!inline) setTimeout(() => setIsOpen(false), 100);
       }
     } else if (isRange) {
       const [from, to] = dates;
-      onSelect({ from, to });
-      if (to && !inline) {
-        setTimeout(() => setIsOpen(false), 100);
+      if (from && !to) {
+        setPendingStart(from);
+      } else {
+        setPendingStart(null);
       }
+      let clampedTo = to;
+      if (to && from && maxRangeDays > 0) {
+        const maxTo = new Date(from.getTime() + (maxRangeDays - 1) * 24 * 60 * 60 * 1000);
+        if (to > maxTo) clampedTo = maxTo;
+      }
+      onSelect({ from, to: clampedTo });
+      if (clampedTo && !inline) setTimeout(() => setIsOpen(false), 100);
     } else {
       onSelect(dates);
-      if (!inline) {
-        setTimeout(() => setIsOpen(false), 100);
-      }
+      if (!inline) setTimeout(() => setIsOpen(false), 100);
     }
   };
+
+  // Dynamic maxDate when user is picking range end (gray out days beyond limit)
+  const effectiveMaxDate = isRange && maxRangeDays > 0 && pendingStart && !endDate
+    ? new Date(pendingStart.getTime() + (maxRangeDays - 1) * 24 * 60 * 60 * 1000)
+    : undefined;
 
   // Parse selected dates - handle both Date objects and ISO strings
   let selectedDate = null;
@@ -392,6 +404,7 @@ export default function CustomDatePicker({
         endDate={endDate}
         onChange={handleChange}
         minDate={minDate}
+        maxDate={effectiveMaxDate}
         filterDate={filterDate}
         onMonthChange={onMonthChange}
         renderDayContents={renderDayContents}
