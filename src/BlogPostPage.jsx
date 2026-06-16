@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
+import { schemaArticle } from "./lib/schemas";
 import { ArrowLeft, BookOpen, Calendar, Clock, ArrowRight } from "lucide-react";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
@@ -210,11 +211,6 @@ export default function BlogPostPage({ slug }) {
   const [related, setRelated] = useState([]);
   const articleRef = useRef(null);
 
-  useSEO({
-    title: post?.seo_title || post?.title || "Blog | Bluuu Tours",
-    description: post?.seo_description || post?.description || "",
-  });
-
   useEffect(() => {
     setLoading(true); setPost(null); setNotFound(false);
     fetchBlogPost(slug)
@@ -252,8 +248,21 @@ export default function BlogPostPage({ slug }) {
   const readTime = post ? estimateReadTime(post) : 0;
   const { blockImages } = distributeImages(images, htmlBlocks.length);
 
+  const seoTitle = post?.seo_title || post?.title || "Blog | Bluuu Tours";
+  const seoDescription = post?.seo_description || post?.description || "";
+  const seoImage = post?.cover || null;
+  const seoCanonical = slug ? `https://bluuu.tours/blog/${slug}` : undefined;
+
   return (
     <div className="min-h-screen bg-white text-secondary-900">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        image={seoImage}
+        canonical={seoCanonical}
+        type="article"
+        schema={post ? schemaArticle(post, slug) : undefined}
+      />
       <ReadingProgress />
       <Navbar
         variant="fullbar"

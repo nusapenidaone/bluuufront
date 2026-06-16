@@ -215,7 +215,7 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
 import {
   REVIEW_SOURCE_ICON_MAP,
@@ -8065,10 +8065,6 @@ export default function Premium_Private_With_Vibe() {
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
     return () => cancelAnimationFrame(raf);
   }, []);
-  useSEO({
-    title: "Private Yacht Tour to Nusa Penida | Bluuu Tours",
-    description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",
-  });
   const { selectedCurrency } = useCurrency();
   const { privateTours, privateTransfers: transfers, privateCovers: allCovers, loading: toursLoading, error: toursError } = useTours();
   const { extras, privateRoutes } = useExtras();
@@ -8898,6 +8894,12 @@ export default function Premium_Private_With_Vibe() {
 
   return (
     <>
+      <SEO
+        title="Private Yacht Tour to Nusa Penida from Bali | Bluuu Tours"
+        description="Exclusive private yacht tour from Bali to Nusa Penida — manta rays, snorkeling, cliff views & gourmet lunch. Up to 13 guests, fully crewed."
+        image="https://bluuu.tours/storage/app/media/bluuu/private.webp"
+        canonical="https://bluuu.tours/private-tour-to-nusa-penida"
+      />
       <CurrencyBridge />
 
       {backFromPayment && (

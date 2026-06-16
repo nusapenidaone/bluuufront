@@ -9,7 +9,6 @@ use Noren\Booking\Models\Rates;
 use Log;
 use Mail;
 use Noren\Booking\Classes\ArrayDiff;
-use Noren\Booking\Classes\KommoService;
 
 class EditController extends Controller
 {
@@ -190,8 +189,6 @@ class EditController extends Controller
 
         // Сохраняем заказ
         $order->save();
-        $lead_id=$order->amo_lead_id;
-		self::sendNote($lead_id, $note);
 		self::sendEmail($order, $note);
         return response()->json(url('/success/edit-success'));
     }
@@ -200,30 +197,15 @@ class EditController extends Controller
     {
     	$id = $request->input('id');
     	$order = Order::find($id);
-    	$lead_id=$order->amo_lead_id;
     	$order->status_id=5;
     	$order->save();
     	
     	$note='Lead canceled by user';
-    	self::sendNote($lead_id, $note);
     	self::sendEmail($order, $note);
     	return response()->json(url('/success/cancel-success'));
     	
     }
     
-    private function sendNote($lead_id, $note){
-        $dataForKommo = [
-            [
-                "note_type"=> "common",
-                "entity_id"=> $lead_id,
-                "params"=>[
-                    "text"=>$note
-                ]
-            ]
-        ];
-    	
-    	KommoService::sendNote($dataForKommo);
-    }
     
     
     protected function sendEmail($order, $note)

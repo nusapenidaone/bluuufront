@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import { ChevronLeft, CircleHelp, Mail, MessageCircle, Phone, Plus } from "lucide-react";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
@@ -53,16 +53,17 @@ function FaqItem({ question, answer }) {
 }
 
 export default function FaqPage() {
-  useSEO({
-    title: "Frequently Asked Questions | Bluuu Tours",
-    description: "Got questions about our Nusa Penida tours? Find answers about booking, cancellation, what's included, health requirements, and more.",
-  });
   const { faqs, loading } = useTours();
   const contacts = useSiteContacts();
   const normalizedFaqs = useMemo(() => normalizeFaqs(faqs), [faqs]);
 
   return (
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
+      <SEO
+        title="Frequently Asked Questions | Bluuu Tours"
+        description="Got questions about our Nusa Penida tours? Find answers about booking, cancellation, what's included, health requirements, and more."
+        canonical="https://bluuu.tours/faq"
+      />
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}

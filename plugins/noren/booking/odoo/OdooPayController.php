@@ -15,8 +15,8 @@ class OdooPayController extends Controller
             return view('noren.booking::odoo_pay_error', ['message' => 'Order not found']);
         }
 
-        if ($info['state'] !== 'sale') {
-            return view('noren.booking::odoo_pay_error', ['message' => 'Order is not confirmed']);
+        if ($info['state'] === 'cancel') {
+            return view('noren.booking::odoo_pay_error', ['message' => 'Order is cancelled']);
         }
 
         $amount = $info['collect'];

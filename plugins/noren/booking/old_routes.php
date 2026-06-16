@@ -55,5 +55,5 @@ Route::post('api/closeddates/delete/{id}', [WebhookController::class, 'deleteBoa
 // cron: closes all boats for tomorrow (runs daily at 21:30 Bali time)
 Route::post('api/boats/close', [WebhookController::class, 'closeCalendar']);
 
-// Kommo CRM webhook (source_id = 2 orders)
-Route::post('api/kommo/webhook', [WebhookController::class, 'getData']);
+// Kommo CRM webhook — disabled, switched to Odoo
+// Route::post('api/kommo/webhook', [WebhookController::class, 'getData']);

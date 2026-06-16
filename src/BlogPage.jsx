@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import { ArrowRight, BookOpen, Calendar, Clock, ChevronLeft } from "lucide-react";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
@@ -167,11 +167,6 @@ function BlogCardSkeleton() {
 }
 
 export default function BlogPage() {
-  useSEO({
-    title: "Blog | Nusa Penida Travel Guide — Bluuu Tours",
-    description: "Discover tips, guides and stories about Nusa Penida. Plan your perfect trip with expert advice from the Bluuu Tours team.",
-  });
-
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -187,6 +182,11 @@ export default function BlogPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50 text-secondary-900">
+      <SEO
+        title="Blog | Nusa Penida Travel Guide — Bluuu Tours"
+        description="Discover tips, guides and stories about Nusa Penida. Plan your perfect trip with expert advice from the Bluuu Tours team."
+        canonical="https://bluuu.tours/blog"
+      />
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}

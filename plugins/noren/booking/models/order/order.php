@@ -3,7 +3,6 @@
 use Model;
 use Mail;
 use Log;
-use Noren\Booking\Classes\KommoDataBuilder;
 use Noren\Booking\Classes\Ga4Service;
 
 /**
@@ -83,27 +82,18 @@ class Order extends Model
         });
     }
 
-	//send request to kommo
     public function afterCreate()
-    {    
-        if($this->status_id==4){
-            $data= KommoDataBuilder::createLead($this->id);
-        }elseif($this->status_id==1){
+    {
+        if($this->status_id==1){
             $this->handleEmailOnCreated();
         }
     }
-    
-    
-    //send order if status confirmed    
+
     public function afterUpdate()
     {
         if ($this->isDirty('status_id')) {
             if($this->status_id==2){
-                $data = KommoDataBuilder::createLead($this->id);
                 $this->handleEmailOnPaymentStatus();
-                Ga4Service::sendPurchase($this);
-            }elseif($this->status_id==4){
-                $data= KommoDataBuilder::createLead($this->id);
                 Ga4Service::sendPurchase($this);
             }
         }

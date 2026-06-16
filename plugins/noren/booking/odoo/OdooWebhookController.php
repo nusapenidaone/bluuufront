@@ -2,7 +2,7 @@
 
 use Carbon\Carbon;
 use Illuminate\Routing\Controller;
-use Noren\Booking\Models\CloseddatesTest as Closeddates;
+use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Odoo\OdooService;

@@ -252,6 +252,9 @@ class AdminController extends Controller
             'x_studio_adults',         'x_studio_kids', 'x_studio_count_of_people',
             'x_studio_deposit',        'x_studio_collect',
             'x_studio_free_shuttle_bus',
+            'x_studio_customer_checked_in_and_cleared',
+            'x_studio_collected_by_cash',
+            'x_studio_collected_by_edcbank',
         ];
 
         $fields = $request->only($allowed);
@@ -377,11 +380,15 @@ class AdminController extends Controller
                 )));
                 $partners = OdooService::readPartners($partnerIds);
 
+                $orderIds = array_column($orders, 'id');
+                $linesMap = OdooService::getLinesForOrders($orderIds);
+
                 foreach ($orders as &$order) {
                     $pid = is_array($order['partner_id']) ? $order['partner_id'][0] : null;
                     $p   = $pid ? ($partners[$pid] ?? null) : null;
                     $order['odoo_email'] = $p['email'] ?? null;
                     $order['odoo_phone'] = $p['phone'] ?? null;
+                    $order['lines']      = $linesMap[$order['id']] ?? [];
                 }
                 unset($order);
             }

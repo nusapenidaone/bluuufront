@@ -4,7 +4,6 @@ use Model;
 use Mail;
 use Log;
 use App;
-use Noren\Booking\Classes\KommoDataBuilder;
 use Noren\Booking\Classes\Ga4Service;
 use Noren\Booking\Odoo\OdooService;
 use Noren\Booking\RespondIo\RespondIoService;
@@ -79,13 +78,7 @@ class Order extends Model
     {
         $order = $this;
 
-        if ($this->status_id == 4) {
-
-            App::after(function () use ($order) {
-                KommoDataBuilder::createLead($order->id);
-            });
-
-        } elseif ($this->status_id == 1) {
+        if ($this->status_id == 1) {
 
             $this->sendEmailAsyncSimple('created', 'info@bluuu.tours');
 
@@ -114,14 +107,6 @@ class Order extends Model
             $this->sendEmailAsyncSimple('confirmed', 'info@bluuu.tours', $this->name);
             $this->sendEmailAsyncSimple('confirmed', $this->email, $this->name);
         }
-
-        // ✅ статус 4
-        elseif ($this->status_id == 4) {
-
-            App::after(function () use ($order) {
-                static::dispatchLead($order);
-            });
-        }
     }
 
 
@@ -130,12 +115,6 @@ class Order extends Model
     // =========================
     protected static function dispatchLead(Order $order, bool $withRespondIo = false): void
     {
-        try {
-            KommoDataBuilder::createLead($order->id);
-        } catch (\Exception $e) {
-            Log::error("Order #{$order->id}: Kommo failed: " . $e->getMessage());
-        }
-
         try {
             Ga4Service::sendPurchase($order);
         } catch (\Exception $e) {

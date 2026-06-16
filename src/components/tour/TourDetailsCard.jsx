@@ -6,6 +6,8 @@ import { resolveScheduleIcon, resolveIconByName, sanitizeDisplayText, getLunchDi
 import Modal from "../common/Modal";
 import PhotoCarousel from "../common/PhotoCarousel";
 import { Fancybox } from "@fancyapps/ui";
+import ScheduleItemCompact from "./ScheduleItemCompact";
+import RestaurantCard from "./RestaurantCard";
 
 const _renderPrice = (str) => {
   if (!str) return str;
@@ -216,6 +218,21 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
 
   const allItemsCount = sections.flatMap(s => s.items).length;
 
+  const lt = isLightTheme;
+  const textMain  = lt ? "text-secondary-900" : "text-white";
+  const textSub   = lt ? "text-secondary-500" : "text-white/50";
+  const textMuted = lt ? "text-secondary-400" : "text-white/40";
+  const textFaint = lt ? "text-secondary-300" : "text-white/25";
+  const textCaption = lt ? "text-secondary-600" : "text-white/70";
+  const border    = lt ? "border-neutral-200"  : "border-white/10";
+  const borderSep = lt ? "border-neutral-100"  : "border-white/[0.08]";
+  const borderFaint = lt ? "border-neutral-100" : "border-white/[0.06]";
+  const bg        = lt ? "bg-neutral-100"      : "bg-white/5";
+  const bgBtn     = lt ? `border ${border} ${bg} text-secondary-600 hover:bg-neutral-200 hover:text-secondary-800` : `border border-white/10 bg-white/5 text-white/60 hover:bg-white/10 hover:text-white`;
+  const inactiveIconCls = lt
+    ? "border-2 border-neutral-200 bg-neutral-50 text-primary-500 hover:border-neutral-300"
+    : "border-2 border-white/15 bg-white/5 text-primary-500 hover:border-white/30";
+
   useEffect(() => {
     if (!autoPlay || allItemsCount <= 1) return;
     const isMobile = window.innerWidth < 640;
@@ -262,21 +279,21 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-4">
-        <h3 className="text-lg font-bold text-white">Your day on the water</h3>
+        <h3 className={cn("text-lg font-bold", textMain)}>Your day on the water</h3>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70"><Clock className="h-3.5 w-3.5 text-primary-500" />10 hours</span>
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/70"><Users className="h-3.5 w-3.5 text-primary-500" />{capacityLabel || "Shared · up to 14"}</span>
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold", border, bg, textCaption)}><Clock className="h-3.5 w-3.5 text-primary-500" />10 hours</span>
+          <span className={cn("hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold", border, bg, textCaption)}><Users className="h-3.5 w-3.5 text-primary-500" />{capacityLabel || "Shared · up to 14"}</span>
         </div>
       </div>
       <div className="mt-6 hidden sm:block">
         <div className="flex items-end">
           {items.map((item, i) => (
             <div key={i} className="flex-1 text-center">
-              <span className={cn("text-sm font-bold tabular-nums transition-colors", activeItem === i ? "text-primary-500" : "text-white/40")}>{item.time ? item.time.replace(/\./g, ":") : ""}</span>
+              <span className={cn("text-sm font-bold tabular-nums transition-colors", activeItem === i ? "text-primary-500" : textMuted)}>{item.time ? item.time.replace(/\./g, ":") : ""}</span>
             </div>
           ))}
         </div>
-        <div className="relative mt-2 h-0.5 w-full bg-white/10 rounded-full">
+        <div className={cn("relative mt-2 h-0.5 w-full rounded-full", lt ? "bg-neutral-200" : "bg-white/10")}>
           <div className="absolute top-0 left-0 h-full bg-primary-600 rounded-full transition-all duration-300" style={{ width: `${((activeItem + 1) / items.length) * 100}%` }} />
         </div>
         <div className="mt-5 flex items-start">
@@ -288,7 +305,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
               <button key={i} type="button" onClick={() => handleItemClick(i)} className="flex-1 flex flex-col items-center gap-1.5 transition-all relative">
                 <div {...(isActive ? { "data-active-tier": tier || "classic" } : {})} className={cn("relative flex h-10 w-10 items-center justify-center rounded-full transition-all duration-300",
                   isActive ? (tier === "premium" ? "bg-indigo-500 text-white animate-[pop_0.4s_ease-out]" : tier === "first-class" ? "bg-emerald-500 text-white animate-[pop_0.4s_ease-out]" : "bg-primary-600 text-white animate-[pop_0.4s_ease-out]")
-                    : (tier === "premium" ? "border-2 border-indigo-400/30 bg-white/5 text-indigo-400 hover:border-indigo-400/50" : tier === "first-class" ? "border-2 border-emerald-400/30 bg-white/5 text-emerald-400 hover:border-emerald-400/50" : "border-2 border-white/15 bg-white/5 text-primary-500 hover:border-white/30")
+                    : (tier === "premium" ? (lt ? "border-2 border-indigo-400/30 bg-indigo-50 text-indigo-500 hover:border-indigo-400/50" : "border-2 border-indigo-400/30 bg-white/5 text-indigo-400 hover:border-indigo-400/50") : tier === "first-class" ? (lt ? "border-2 border-emerald-400/30 bg-emerald-50 text-emerald-500 hover:border-emerald-400/50" : "border-2 border-emerald-400/30 bg-white/5 text-emerald-400 hover:border-emerald-400/50") : inactiveIconCls)
                 )}>
                   <style>{`
                     @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.2); } 100% { transform: scale(1); } }
@@ -298,7 +315,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     ? <span className="h-4 w-4 [&>svg]:h-full [&>svg]:w-full [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
                     : <Icon className="h-4 w-4" strokeWidth={1.5} />}
                 </div>
-                <span className={cn("text-xs font-medium text-center leading-tight max-w-[100px]", isActive ? "text-white" : "text-white/50")}>{/kelingking|land\s*tour/i.test(item.title) && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : item.title}</span>
+                <span className={cn("text-xs font-medium text-center leading-tight max-w-[100px]", isActive ? textMain : textSub)}>{/kelingking|land\s*tour/i.test(item.title) && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : item.title}</span>
                 {tier && <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none", tier === "premium" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-400/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30")}><Sparkles className="h-2 w-2" />{tier === "premium" ? "Premium" : "First Class"}</span>}
               </button>
             );
@@ -324,18 +341,18 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     : itemTier === "first-class" ? "text-[#d4a44a]"
                     : "text-primary-500"
                   )}>{item.time ? item.time.replace(/\./g, ":") : ""}</span>
-                  <span className={cn("text-[15px] font-semibold flex-1", isActive ? "text-white" : "text-white/50")}>{lunchData?.title || item.title}</span>
-                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/25 mt-[3px] transition-transform", isActive && "rotate-180")} />
+                  <span className={cn("text-[15px] font-semibold flex-1", isActive ? textMain : textSub)}>{lunchData?.title || item.title}</span>
+                  <ChevronDown className={cn("h-4 w-4 shrink-0 mt-[3px] transition-transform", textFaint, isActive && "rotate-180")} />
                 </div>
               </button>
               {isActive && (
                 <div className="pb-3 pl-[3.75rem] -mt-1 space-y-1.5">
                   {isLunchItem && restaurantData ? (
-                    <p className="text-xs leading-relaxed text-white/40">
+                    <p className={cn("text-xs leading-relaxed", textMuted)}>
                       {restaurantData.name} — infinity pool and daybeds
                     </p>
                   ) : (
-                    itemDetails && <p className="text-xs leading-relaxed text-white/40">{itemDetails}</p>
+                    itemDetails && <p className={cn("text-xs leading-relaxed", textMuted)}>{itemDetails}</p>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
                     {itemTier && (
@@ -358,7 +375,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                   </div>
                 </div>
               )}
-              {!isLast && <div className="itinerary-sep border-b border-white/[0.08] ml-[3.75rem]" />}
+              {!isLast && <div className={cn("itinerary-sep border-b ml-[3.75rem]", borderSep)} />}
             </div>
           );
         })}
@@ -379,24 +396,24 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
               transition={{ duration: 0.25, ease: "easeInOut" }}
               className="hidden sm:flex px-5 py-4 items-center gap-4 min-h-[88px]">
               <button type="button" onClick={() => handleItemClick((activeItem - 1 + allItemsCount) % allItemsCount)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition-all hover:bg-white/10 hover:text-white">
+                className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all", bgBtn)}>
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <span className={cn("text-3xl font-bold tabular-nums shrink-0 leading-none", selectedTier === "premium" ? "text-indigo-400" : selectedTier === "first-class" ? "text-emerald-400" : "text-primary-500")}>{displayTime}</span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-base font-bold text-white">{displayTitle}</span>
+                  <span className={cn("text-base font-bold", textMain)}>{displayTitle}</span>
                   {isKelingkingItem && extrasCatalog != null && <span className="inline-flex items-center rounded-full border border-primary-200 bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-primary-600">Add-on</span>}
                   {selectedTier && <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold uppercase tracking-wider", selectedTier === "premium" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-400/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30")}><Sparkles className="h-2.5 w-2.5" />{selectedTier === "premium" ? "Premium" : "First Class"}</span>}
                 </div>
                 <div className="flex items-center gap-3 mt-1">
-                  {isLunch && restaurantData?.name && <span className="text-sm text-white/50">{restaurantData.name} — infinity pool and daybeds</span>}
+                  {isLunch && restaurantData?.name && <span className={cn("text-sm", textSub)}>{restaurantData.name} — infinity pool and daybeds</span>}
                   {isLunch && restaurantData && (
                     <button type="button" onClick={(e) => { e.stopPropagation(); setMenuExpanded(!menuExpanded); }} className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary-500 hover:text-primary-400">
                       {menuExpanded ? "Hide" : "Menu"}<ChevronDown className={cn("h-4 w-4 transition-transform", menuExpanded && "rotate-180")} />
                     </button>
                   )}
-                  {!isLunch && detailsText && <p className="text-sm text-white/50 leading-relaxed">{detailsText}</p>}
+                  {!isLunch && detailsText && <p className={cn("text-sm leading-relaxed", textSub)}>{detailsText}</p>}
                   {!isLunch && extrasCatalog != null && (
                     <button type="button" onClick={(e) => { e.stopPropagation(); setAutoPlay(false); setDetailsExpanded(!detailsExpanded); setMenuExpanded(false); }} className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary-500 hover:text-primary-400">
                       {detailsExpanded ? "Hide" : "Details"}<ChevronDown className={cn("h-4 w-4 transition-transform", detailsExpanded && "rotate-180")} />
@@ -405,7 +422,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                 </div>
               </div>
               <button type="button" onClick={() => handleItemClick((activeItem + 1) % allItemsCount)}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/60 transition-all hover:bg-white/10 hover:text-white">
+                className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all", bgBtn)}>
                 <ChevronRight className="h-4 w-4" />
               </button>
             </motion.div>
@@ -414,11 +431,11 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
             <div className="sm:hidden px-4 py-3.5">
               <span className={cn("text-xl font-bold tabular-nums leading-none", selectedTier === "premium" ? "text-indigo-400" : selectedTier === "first-class" ? "text-emerald-400" : "text-primary-500")}>{displayTime}</span>
               <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-bold text-white">{displayTitle}</span>
+                <span className={cn("text-sm font-bold", textMain)}>{displayTitle}</span>
                 {selectedTier && <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-2xs font-bold uppercase tracking-wider", selectedTier === "premium" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-400/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30")}><Sparkles className="h-2 w-2" />{selectedTier === "premium" ? "Premium" : "First Class"}</span>}
               </div>
-              {isLunch && restaurantData?.name && <p className="mt-1 text-xs text-white/50">{restaurantData.name} — infinity pool and daybeds</p>}
-              {detailsText && !isLunch && <p className="mt-1 text-xs text-white/50 leading-relaxed">{detailsText}</p>}
+              {isLunch && restaurantData?.name && <p className={cn("mt-1 text-xs", textSub)}>{restaurantData.name} — infinity pool and daybeds</p>}
+              {detailsText && !isLunch && <p className={cn("mt-1 text-xs leading-relaxed", textSub)}>{detailsText}</p>}
               {isLunch && restaurantData && (
                 <button type="button" onClick={() => setMenuExpanded(!menuExpanded)} className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-500 hover:text-primary-400">
                   {menuExpanded ? "Hide" : "Menu"}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", menuExpanded && "rotate-180")} />
@@ -431,7 +448,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
               )}
             </div>
             {isLunch && restaurantData && menuExpanded && (
-              <div className="border-t border-white/[0.06]" onClick={(e) => e.stopPropagation()}>
+              <div className={cn("border-t", borderFaint)} onClick={(e) => e.stopPropagation()}>
                 {/* Restaurant hero */}
                 <div className="relative overflow-hidden rounded-b-2xl">
                   <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -476,11 +493,11 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                       })()}
                     </div>
                     {/* Content */}
-                    <div className="flex-1 min-w-0 px-6 py-5 bg-white/[0.02] flex flex-col">
+                    <div className={cn("flex-1 min-w-0 px-6 py-5 flex flex-col", lt ? "bg-neutral-50" : "bg-white/[0.02]")}>
                       {restaurantData.description && (
-                        <p className="text-sm text-white/50 leading-relaxed italic" dangerouslySetInnerHTML={{ __html: restaurantData.description }} />
+                        <p className={cn("text-sm leading-relaxed italic", textSub)} dangerouslySetInnerHTML={{ __html: restaurantData.description }} />
                       )}
-                      <MenuSections sections={restaurantData.menu_sections} fallbackHtml={restaurantData.menu} note={restaurantData.menu_note} dark />
+                      <MenuSections sections={restaurantData.menu_sections} fallbackHtml={restaurantData.menu} note={restaurantData.menu_note} dark={!lt} />
                     </div>
                   </div>
                 </div>
@@ -488,7 +505,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
             )}
             {/* Details panel for non-lunch items */}
             {!isLunch && detailsExpanded && (
-              <div className="border-t border-white/[0.06]" onClick={(e) => e.stopPropagation()}>
+              <div className={cn("border-t", borderFaint)} onClick={(e) => e.stopPropagation()}>
                 <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
                   {/* Photo — left column like restaurant */}
                   {(() => {
@@ -716,8 +733,6 @@ export default function TourDetailsCard({
   extrasCatalog, allExtrasCatalog, selectedExtras, onChangeExtraQty, formatPrice, onOpenExtra,
   hideTierBadges, totalGuests = 1,
 }) {
-  const [activeTab, setActiveTab] = useState("itinerary");
-  const [activeDrawer, setActiveDrawer] = useState(null);
   const [mobileRestaurantModal, setMobileRestaurantModal] = useState(false);
   const isLightTheme = true;
   const tierClass = /first.class/i.test(sectionTitle || "") ? "tier-first-class" : /premium/i.test(sectionTitle || "") ? "tier-premium" : "tier-classic";
@@ -737,7 +752,7 @@ export default function TourDetailsCard({
 
   const sections = schedule ? [
     { label: "Morning", items: schedule.beforeLunch || [] },
-    { label: "Afternoon", items: schedule.afterLunch || [] },
+    { label: "Midday & Afternoon", items: schedule.afterLunch || [] },
   ].filter((s) => s.items.length > 0) : [];
 
   const hasNav = onPrev || onNext;
@@ -823,41 +838,35 @@ export default function TourDetailsCard({
             </div>
           </div>
 
-          {/* Tabs + content in bordered block */}
-          <div className="mt-2 sm:mt-1" data-tier-block>
-            {/* File-folder tabs */}
-            <div className="no-scrollbar flex items-end overflow-x-auto sm:justify-start justify-between w-full">
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 sm:gap-2 whitespace-nowrap px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition-all rounded-t-2xl border border-b-0",
-                      isActive
-                        ? "border-neutral-200 bg-white text-primary-500 relative z-10"
-                        : "border-transparent bg-transparent text-secondary-400 hover:text-secondary-600"
+          {/* Content block */}
+          <div className="mt-2 sm:mt-1 rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6" data-tier-block>
+            {sections.length > 0 ? (
+              <div className="grid gap-3">
+                {sections.map((section, sectionIdx) => (
+                  <div key={section.label}>
+                    <div className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-secondary-300">
+                      {section.label}
+                    </div>
+                    <div className="divide-y divide-neutral-100 border-t border-neutral-100">
+                      {section.items.map((item, idx) => (
+                        <ScheduleItemCompact key={idx} item={item} />
+                      ))}
+                    </div>
+                    {sectionIdx === 0 && restaurant && (
+                      <div className="mt-3">
+                        <RestaurantCard restaurant={restaurant} />
+                      </div>
                     )}
-                  >
-                    <tab.icon className={cn("h-4 w-4", isActive ? "text-primary-500" : "text-secondary-400")} />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-            {/* Content block — solid white */}
-            <div className={cn("rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6 -mt-px", activeTab === "itinerary" && "rounded-tl-none", activeTab === "faq" && "rounded-tr-none sm:rounded-tr-3xl")}>
-              {activeTab === "itinerary" ? (
-                <>
-                  <ItineraryTimeline sections={sections} restaurant={restaurant} sectionTitle={sectionTitle} isLightTheme={isLightTheme} capacityLabel={capacityLabel} extrasCatalog={extrasCatalog} allExtrasCatalog={allExtrasCatalog} selectedExtras={selectedExtras} onChangeExtraQty={onChangeExtraQty} formatPrice={formatPrice} onOpenExtra={onOpenExtra} hideTierBadges={hideTierBadges} totalGuests={totalGuests} />
-                  {scheduleExtrasSlot}
-                </>
-              ) : (
-                infoContent?.(activeTab)
-              )}
-            </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <Ship className="h-12 w-12 text-neutral-300" strokeWidth={1} />
+                <p className="text-sm font-semibold text-secondary-500">Itinerary not available yet</p>
+              </div>
+            )}
+            {scheduleExtrasSlot}
           </div>
           </motion.div>
           </AnimatePresence>
@@ -869,21 +878,6 @@ export default function TourDetailsCard({
               {onNext ? <button type="button" onClick={onNext} className="inline-flex items-center gap-1.5 text-sm font-bold text-primary-500 hover:text-primary-400 transition-colors">{nextLabel}<ChevronRight className="h-4 w-4" /></button> : <span />}
             </div>
           )}
-
-          {/* Trust band */}
-          <div className="mt-6 sm:mt-6 pb-5 sm:pb-6 grid grid-cols-3 gap-2 sm:gap-3">
-            {TRUST_CARDS.map((card) => (
-              <button key={card.id} type="button" onClick={() => setActiveDrawer(card.id)}
-                className="group flex flex-col items-center sm:items-start gap-1.5 sm:gap-2 rounded-2xl border border-neutral-200 bg-white px-2 sm:px-4 py-3 sm:py-3 text-center sm:text-left transition-all">
-                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-2">
-                  <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", card.bg, card.color)}><card.icon className="h-4 w-4" strokeWidth={1.5} /></span>
-                  <span className="text-xs sm:text-base font-semibold text-secondary-900">{card.title}</span>
-                </div>
-                <p className="hidden sm:block text-sm text-secondary-500 leading-relaxed">{card.summary}</p>
-                <span className="text-2xs sm:text-xs font-semibold text-primary-600 group-hover:text-primary-500 transition-colors">Read more →</span>
-              </button>
-            ))}
-          </div>
 
           {/* Footer: nav (desktop only for arrows) */}
           <div className="py-5 hidden sm:flex items-center justify-between">
@@ -922,13 +916,6 @@ export default function TourDetailsCard({
           </div>
         </div>
       </div>
-
-      {/* Trust detail popup */}
-      <Modal open={!!activeDrawer} onClose={() => setActiveDrawer(null)} maxWidth="max-w-xl" showClose={true} hideDragHandle dark={!isLightTheme}
-        title={activeDrawer === "safety" ? "Safety" : activeDrawer === "cancellation" ? "Cancellation" : "Weather Guarantee"}
-        bodyClassName="px-5 pt-0 pb-6 sm:px-6">
-        <div className={cn(isLightTheme && "tour-modal-light")}>{infoContent?.(activeDrawer)}</div>
-      </Modal>
 
     </>
   );

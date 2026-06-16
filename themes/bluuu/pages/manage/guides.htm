@@ -1,6 +1,6 @@
 url = "/manage/guides"
 title = "Guides"
-is_hidden = 1
+is_hidden = 0
 ==
 <!DOCTYPE html>
 <html lang="en">
@@ -8,6 +8,7 @@ is_hidden = 1
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bluuu Guides</title>
+     <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -119,6 +120,20 @@ function OrderCard({ o }) {
                 <Field label="Pickup"    value={pickup} />
                 <Field label="Drop-off"  value={dropoff} />
                 <Field label="Names"     value={pax_list} pre />
+                <Field label="Special Requests" value={strVal(o.x_studio_special_requests)} pre />
+                {o.lines && o.lines.length > 0 && (
+                    <div className="border-b border-slate-100 pb-2">
+                        <span className="font-semibold text-slate-700 text-sm">Products</span>
+                        <div className="mt-1 space-y-0.5">
+                            {o.lines.map(l => (
+                                <div key={l.id} className="flex items-baseline justify-between gap-2">
+                                    <span className="text-slate-600 text-sm truncate">{l.name}</span>
+                                    <span className="text-slate-400 text-xs shrink-0">×{Number(l.product_uom_qty ?? 0)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Footer */}
@@ -261,16 +276,17 @@ function App() {
     return (
         <div>
             {/* Sticky header */}
-            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
-                <select className={SELECT} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
+            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex flex-wrap items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
+                <select className={SELECT + ' flex-1 min-w-[120px]'} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
                     <option value="">All guides</option>
                     {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
                 </select>
-                <select className={SELECT} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                <select className={SELECT + ' flex-1 min-w-[120px]'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
                     <option value="">All Boats</option>
                     {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
 
+                <div className="w-full md:hidden" />
                 <div className="flex-1" />
                 {loading && <span className="text-[10px] text-blue-500 animate-pulse uppercase tracking-widest">Loading…</span>}
                 {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}

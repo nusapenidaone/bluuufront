@@ -174,6 +174,27 @@ class OdooService
         return is_array($result) ? count($result) : 0;
     }
 
+    // ─── Get all order lines for a list of order IDs (one Odoo call) ────────────
+
+    public static function getLinesForOrders(array $orderIds): array
+    {
+        if (empty($orderIds)) return [];
+
+        $lines = static::post('/json/2/sale.order.line/search_read', [
+            'domain' => [['order_id', 'in', array_values($orderIds)]],
+            'fields' => ['id', 'order_id', 'name', 'product_uom_qty', 'price_unit'],
+            'limit'  => count($orderIds) * 20,
+        ]) ?: [];
+
+        $grouped = [];
+        foreach ($lines as $line) {
+            $oid = is_array($line['order_id']) ? $line['order_id'][0] : (int)$line['order_id'];
+            $grouped[$oid][] = $line;
+        }
+
+        return $grouped;
+    }
+
     // ─── Get orders for a date range (UTC) — daily leads/briefing view ─────────
 
     public static function getLeadsForDate(string $startUtc, string $endUtc): array
@@ -202,6 +223,9 @@ class OdooService
                 'amount_total',
                 'x_studio_guide_1_1', 'x_studio_guide_2_1',
                 'x_studio_special_requests',
+                'x_studio_customer_checked_in_and_cleared',
+                'x_studio_collected_by_cash',
+                'x_studio_collected_by_edcbank',
             ],
             'order' => 'rental_start_date asc',
         ]) ?: [];
@@ -358,18 +382,39 @@ class OdooService
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_deposit', 'x_studio_collect'],
+            'fields' => ['x_studio_collected_by_xendit'],
             'limit'  => 1,
         ]);
 
         if (empty($result[0])) return;
 
-        $currentDeposit = (float) ($result[0]['x_studio_deposit'] ?? 0);
+        $current = (float) ($result[0]['x_studio_collected_by_xendit'] ?? 0);
 
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
-            'vals' => ['x_studio_deposit' => $currentDeposit + $amount],
+            'vals' => ['x_studio_collected_by_xendit' => $current + $amount],
         ]);
+
+        static::addLogNote($odooOrderId,
+            '<p>💳 Weblink payment received: <strong>' . number_format($amount, 0, '.', ',') . ' IDR</strong> via Xendit.</p>'
+        );
+    }
+
+    public static function addLogNote(int $odooOrderId, string $html): void
+    {
+        try {
+            static::post('/json/2/sale.order/message_post', [
+                'ids'           => [$odooOrderId],
+                'body'          => $html,
+                'message_type'  => 'comment',
+                'subtype_xmlid' => 'mail.mt_note',
+            ]);
+        } catch (\Exception $e) {
+            Log::warning('OdooService::addLogNote failed', [
+                'odoo_id' => $odooOrderId,
+                'error'   => $e->getMessage(),
+            ]);
+        }
     }
 
     // ─── Build data array ─────────────────────────────────────────────────────
@@ -550,8 +595,8 @@ class OdooService
             'partner_id' => $partnerId,
 
             'is_rental_order'    => true,
-            'rental_start_date'  => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->addHours(8)->format('Y-m-d H:i:s'),
-            'rental_return_date' => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->addHours(8)->format('Y-m-d H:i:s'),
+            'rental_start_date'  => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
+            'rental_return_date' => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
 
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],

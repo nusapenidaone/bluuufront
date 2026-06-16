@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 
 const TOKEN_KEY = "bluuu_admin_token";
 
@@ -100,6 +100,7 @@ export default function LeadAdmin() {
   const [page, setPage]             = useState(1);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError]   = useState("");
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
 
   // Detail state
   const [odoo, setOdoo]             = useState(null);   // live Odoo data
@@ -436,6 +437,31 @@ export default function LeadAdmin() {
   // RENDER: Orders list (from Odoo)
   // ─────────────────────────────────────────────────────────────────────────
 
+  const toggleSort = (key) => {
+    setSort(prev => prev.key === key
+      ? { key, dir: prev.dir === "asc" ? "desc" : "asc" }
+      : { key, dir: "asc" }
+    );
+  };
+
+  const sortedOrders = useMemo(() => {
+    if (!sort.key) return orders;
+    return [...orders].sort((a, b) => {
+      let av = a[sort.key];
+      let bv = b[sort.key];
+      if (sort.key === "partner_id") {
+        av = Array.isArray(av) ? av[1] : av;
+        bv = Array.isArray(bv) ? bv[1] : bv;
+      }
+      av = av ?? "";
+      bv = bv ?? "";
+      const cmp = (typeof av === "number" && typeof bv === "number")
+        ? av - bv
+        : String(av).localeCompare(String(bv));
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
+  }, [orders, sort]);
+
   if (view === "list") {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -486,22 +512,33 @@ export default function LeadAdmin() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
-                      <th className="px-4 py-3">Odoo #</th>
-                      <th className="px-4 py-3">Ref</th>
-                      <th className="px-4 py-3">Customer</th>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Boat</th>
-                      <th className="px-4 py-3">Tour</th>
-                      <th className="px-4 py-3">Route</th>
-                      <th className="px-4 py-3">People</th>
-                      <th className="px-4 py-3">Deposit</th>
-                      <th className="px-4 py-3">Collect</th>
-                      <th className="px-4 py-3">State</th>
+                      {[
+                        { label: "Odoo #",    key: "id" },
+                        { label: "Ref",       key: "client_order_ref" },
+                        { label: "Customer",  key: "partner_id" },
+                        { label: "Date",      key: "rental_start_date" },
+                        { label: "Boat",      key: "x_studio_boat_name" },
+                        { label: "Tour",      key: "tour_name" },
+                        { label: "Route",     key: "x_studio_route" },
+                        { label: "People",    key: "x_studio_count_of_people" },
+                        { label: "Deposit",   key: "x_studio_deposit" },
+                        { label: "Collect",   key: "x_studio_collect" },
+                        { label: "State",     key: "state" },
+                      ].map(col => (
+                        <th
+                          key={col.key}
+                          className="px-4 py-3 cursor-pointer select-none hover:text-slate-600 whitespace-nowrap"
+                          onClick={() => toggleSort(col.key)}
+                        >
+                          {col.label}
+                          {sort.key === col.key ? (sort.dir === "asc" ? " ↑" : " ↓") : ""}
+                        </th>
+                      ))}
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map(o => {
+                    {sortedOrders.map(o => {
                       const partner = Array.isArray(o.partner_id) ? o.partner_id[1] : o.partner_id;
                       return (
                         <tr key={o.id} className="border-b border-slate-100 last:border-0 transition hover:bg-slate-50">

@@ -1,23 +1,41 @@
-fields:
-    date:
-        label: Date
-        span: auto
-        type: datepicker
-        mode: date
-    boat:
-        label: 'Boat id'
-        span: auto
-        type: relation
-        nameFrom: amo_name
-    lead_id:
-        label: 'Lead id'
-        span: auto
-        type: number
-    qtty:
-        label: Qtty
-        span: auto
-        type: number
-    type:
-        label: Type
-        span: auto
-        type: number
+tabs:
+    fields:
+        date:
+            label: Date
+            span: auto
+            type: datepicker
+            mode: date
+            tab: Record
+        boat:
+            label: Boat
+            span: auto
+            type: relation
+            nameFrom: amo_name
+            tab: Record
+        lead_id:
+            label: Lead id
+            span: auto
+            type: number
+            tab: Record
+        odoo_id:
+            label: Odoo id
+            span: auto
+            type: number
+            tab: Record
+        qtty:
+            label: Qtty
+            span: auto
+            type: number
+            tab: Record
+        type:
+            label: Type
+            span: auto
+            type: number
+            tab: Record
+        revision_history:
+            label: 'Revision History'
+            type: relation
+            tab: History
+            context:
+                - update
+                - preview

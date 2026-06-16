@@ -1,5 +1,6 @@
 import { StrictMode, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import "./index.css";
 import "./gtranslate.css";
 import App from "./App.jsx";
@@ -41,6 +42,8 @@ if (path.startsWith("/explore")) {
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Root />
+    <HelmetProvider>
+      <Root />
+    </HelmetProvider>
   </StrictMode>
 );

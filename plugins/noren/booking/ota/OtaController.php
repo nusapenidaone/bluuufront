@@ -94,17 +94,21 @@ class OtaController extends Controller
         $transfer       = $tour->ota_transfer;
         $cars           = 0;
         $transferCost   = 0;
-        $carType        = '';
+        $carType        = 'No Transfer';
         $pickupCars     = 0;
         $dropOffCars    = 0;
 
         if ($transfer) {
             $cars         = (int) ceil($members / 5);
             $transferCost = $netAmount > 0 ? round((float) ($transfer->price ?? 0) * $cars, 2) : 0;
-            $carType      = $transfer->odoo_name ?? '';
             $transferId   = (int) $transfer->id;
             $pickupCars   = ($transferId === 1 || $transferId === 2) ? $cars : 0;
             $dropOffCars  = ($transferId === 2) ? $cars : 0;
+            if ($transferId === 3) {
+                $carType = 'Free Shuttle Bus';
+            } elseif (in_array($transferId, [1, 2])) {
+                $carType = 'Private Car';
+            }
         }
 
         $tourNet    = round($netAmount - $transferCost, 2);
@@ -159,17 +163,14 @@ class OtaController extends Controller
             'x_studio_source'         => $tour->source?->name    ?? '',
             'x_studio_payment_source' => $tour->source?->name    ?? '',
             'company_id'              => $company?->odoo_id ? (int) $company->odoo_id : null,
-            'rental_start_date'       => Carbon::parse("{$date} {$start}", 'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
-            'rental_return_date'      => Carbon::parse("{$date} {$end}",   'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
+            'rental_start_date'       => Carbon::parse("{$date} {$start}", 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
+            'rental_return_date'      => Carbon::parse("{$date} {$end}",   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
             'x_studio_deposit'        => $netAmount,
+            'x_studio_car_type'       => $carType,
+            'x_studio_pickup_cars'    => $pickupCars,
+            'x_studio_drop_off_cars'  => $dropOffCars,
             'order_lines'             => $orderLines,
         ];
-
-        if ($transfer) {
-            $odoo['x_studio_car_type']       = $carType;
-            $odoo['x_studio_pickup_cars']    = $pickupCars;
-            $odoo['x_studio_drop_off_cars']  = $dropOffCars;
-        }
 
         return response()->json([
             'tour_id'   => $tour->id,

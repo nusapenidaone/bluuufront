@@ -235,7 +235,7 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
 import {
   SECTION_BACKGROUNDS,
@@ -4806,10 +4806,6 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     hasSwipedRef.current = hasSwiped;
   }, [hasSwiped]);
   const { cancellationSummaryCards, weatherGuaranteeCards } = useMemo(() => transformTourCards(tourInfo, ICON_MAP), []);
-  const includedSections = useMemo(() => (tourInfo.includedSections ?? []).map(section => ({
-    ...section,
-    items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })),
-  })), []);
 
   const classifyExtra = useCallback((extra) => {
     const name = (extra.name || "").toLowerCase();
@@ -4835,49 +4831,32 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     const grid = "grid grid-cols-1 sm:grid-cols-3 gap-x-6";
     if (activeTab === "included") {
       const selectedVibe = vibes.find(v => v.id === selectedBoatId) || null;
-      const highlightCards = selectedVibe?.included?.length
-        ? selectedVibe.included.map(i => ({ svg: i.icon_svg, icon: ICON_MAP[i.icon_name] || Ship, title: i.name, desc: i.description || "" }))
-        : [
-            { icon: Ship, title: "Private boat", desc: "Your group only, no shared seats" },
-            { icon: Waves, title: "Snorkeling & manta rays", desc: "Crystal-clear water at top spots" },
-            { icon: UtensilsCrossed, title: "Lunch included", desc: "Restaurant stop on the route" },
-            { icon: Camera, title: "GoPro footage", desc: "Underwater highlights by crew" },
-          ];
-      const chipItems = selectedVibe?.includes?.length
-        ? selectedVibe.includes.map(i => ({ svg: i.icon_svg, icon: ICON_MAP[i.icon_name] || BadgeCheck, label: i.name }))
-        : includedSections.flatMap((s) => s.items);
+      const highlightCards = (selectedVibe?.included ?? []).map(i => ({ svg: i.icon_svg, title: i.name, desc: i.description || "" }));
+      const chipItems = (selectedVibe?.includes ?? []).map(i => ({ svg: i.icon_svg, label: i.name }));
       const cols = highlightCards.length <= 2 ? "grid-cols-2" : highlightCards.length === 3 ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4";
       return (
         <div className="space-y-5">
           <div className={cn("grid gap-3", cols)}>
-            {highlightCards.map((card) => {
-              const Icon = card.icon || Ship;
-              return (
-                <div key={card.title} className="flex flex-col items-center text-center rounded-2xl border border-primary-200/50 bg-primary-50/50 px-3 py-4 transition-all hover:bg-primary-50/70">
+            {highlightCards.map((card) => (
+              <div key={card.title} className="flex flex-col items-center text-center rounded-2xl border border-primary-200/50 bg-primary-50/50 px-3 py-4 transition-all hover:bg-primary-50/70">
+                {card.svg && (
                   <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-primary-500/10 text-primary-600">
-                    {card.svg
-                      ? <span className="h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: card.svg }} />
-                      : <Icon className="h-5 w-5 text-primary-600" strokeWidth={1.5} />}
+                    <span className="h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: card.svg }} />
                   </div>
-                  <div className="text-sm font-semibold text-secondary-900">{card.title}</div>
-                  {card.desc && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{card.desc}</div>}
-                </div>
-              );
-            })}
+                )}
+                <div className="text-sm font-semibold text-secondary-900">{card.title}</div>
+                {card.desc && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{card.desc}</div>}
+              </div>
+            ))}
           </div>
           {chipItems.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {chipItems.map((item) => {
-                const Icon = item.icon || BadgeCheck;
-                return (
-                  <span key={item.label} className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-primary-200/50 bg-primary-50/50 px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-secondary-700">
-                    {item.svg
-                      ? <span className="h-4 w-4 shrink-0 text-primary-600 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.svg }} />
-                      : <Icon className="h-4 w-4 shrink-0 text-primary-600" strokeWidth={1.5} />}
-                    {item.label}
-                  </span>
-                );
-              })}
+              {chipItems.map((item) => (
+                <span key={item.label} className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full border border-primary-200/50 bg-primary-50/50 px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-secondary-700">
+                  {item.svg && <span className="h-4 w-4 shrink-0 text-primary-600 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.svg }} />}
+                  {item.label}
+                </span>
+              ))}
             </div>
           )}
         </div>
@@ -5159,7 +5138,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
       );
     }
     return null;
-  }, [cancellationSummaryCards, weatherGuaranteeCards, includedSections, includedExtras, selectedExtras, onExtraQtyChange, openIncludedCategories, pickupModalOpen, showPickupMap, skipPickupAddress, samePickupDropoff, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, formatPrice]);
+  }, [cancellationSummaryCards, weatherGuaranteeCards, includedExtras, selectedExtras, onExtraQtyChange, openIncludedCategories, pickupModalOpen, showPickupMap, skipPickupAddress, samePickupDropoff, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, formatPrice]);
 
   const addOnNoteByStyleId = styles.reduce((acc, s) => {
     if (s.add_on_note) acc[s.id || s.slug] = s.add_on_note;
@@ -10139,10 +10118,6 @@ export default function Premium_Private_With_Vibe() {
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
     return () => cancelAnimationFrame(raf);
   }, []);
-  useSEO({
-    title: "Private Yacht Tour to Nusa Penida | Bluuu Tours",
-    description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",
-  });
   const { selectedCurrency } = useCurrency();
   const { privateTours, privateTransfers: transfers, privateCovers: allCovers } = useTours();
   const { extras, privateRoutes } = useExtras();
@@ -10902,6 +10877,12 @@ export default function Premium_Private_With_Vibe() {
   const { activePolicyKey: globalPolicyKey, activePolicy: globalPolicy, closePolicy: closeGlobalPolicy } = usePolicyModal();
   return (
     <>
+      <SEO
+        title="Private Yacht Tour to Nusa Penida from Bali | Bluuu Tours"
+        description="Exclusive private yacht tour from Bali to Nusa Penida — manta rays, snorkeling, cliff views & gourmet lunch. Up to 13 guests, fully crewed."
+        image="https://bluuu.tours/storage/app/media/bluuu/private.webp"
+        canonical="https://bluuu.tours/private-tour-to-nusa-penida"
+      />
       <CurrencyBridge />
       <div
         className="home2-wrapper min-h-screen text-secondary-900 bg-neutral-100"

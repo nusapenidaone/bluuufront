@@ -45,7 +45,7 @@ class CalendarController extends Controller
     {
         if ($this->isUnauthorized($request)) return $this->cors(response()->json(['error' => 'Unauthorized'], 401));
 
-        $data = $request->all();
+        $data = $this->sanitize($request->all());
         $item = new Closeddates();
         $item->fill($data);
         if (!$item->type) $item->type = 3;
@@ -59,7 +59,7 @@ class CalendarController extends Controller
         if ($this->isUnauthorized($request)) return $this->cors(response()->json(['error' => 'Unauthorized'], 401));
 
         if ($item = Closeddates::find($id)) {
-            $item->fill($request->all());
+            $item->fill($this->sanitize($request->all()));
             $item->save();
             return $this->cors(response()->json(['success' => true]));
         }
@@ -77,6 +77,16 @@ class CalendarController extends Controller
         }
 
         return $this->cors(response()->json(['error' => 'Not found'], 404));
+    }
+
+    protected function sanitize(array $data): array
+    {
+        foreach (['qtty', 'type', 'boat_id', 'lead_id', 'odoo_id'] as $int) {
+            if (array_key_exists($int, $data) && $data[$int] === '') {
+                $data[$int] = null;
+            }
+        }
+        return $data;
     }
 
     protected function isUnauthorized(Request $request)

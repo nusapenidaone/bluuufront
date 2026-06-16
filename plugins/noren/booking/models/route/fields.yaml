@@ -76,11 +76,6 @@ tabs:
                         label: Label
                         type: text
                         span: auto
-                    icon:
-                        label: 'Icon Name (legacy)'
-                        type: text
-                        span: auto
-                        placeholder: MapPin
                     icon_svg:
                         label: 'Icon SVG'
                         type: textarea

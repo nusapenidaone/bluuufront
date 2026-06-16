@@ -1,9 +1,10 @@
+// Deprecated: use <SEO> component from src/components/SEO.jsx instead.
+// Kept for compatibility; only sets document.title and meta description via DOM.
 import { useEffect } from "react";
 
 export function useSEO({ title, description }) {
   useEffect(() => {
     if (title) document.title = title;
-
     if (description) {
       let meta = document.querySelector('meta[name="description"]');
       if (!meta) {

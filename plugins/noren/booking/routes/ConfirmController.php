@@ -11,9 +11,9 @@ use Mail;
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Rates;
 
-use Noren\Booking\Classes\KommoService;
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PayPalService;
+use Noren\Booking\Odoo\OdooService;
 
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -144,34 +144,12 @@ class ConfirmController extends Controller
 		        $menuLines[] = $meta['course'] . ': ' . (\count($parts) > 0 ? implode(', ', $parts) : '—');
 		    }
 		    $text .= "\nMENU SELECTION (First Class)\n" . implode("\n", $menuLines) . "\n";
-		    try {
-		        KommoService::updateLead($data['lead_id'], [
-		            'custom_fields_values' => [
-		                [
-		                    'field_id' => 698710,
-		                    'values'   => [['value' => implode("\n", $menuLines)]],
-		                ],
-		            ],
-		        ]);
-		    } catch (\Exception $e) {
-		        Log::error('Kommo updateLead menu field failed', ['lead_id' => $data['lead_id'], 'error' => $e->getMessage()]);
-		    }
 		}
 
-		$note = [
-		    [
-		        "note_type" => "common",
-		        "entity_id" => $data['lead_id'],
-		        "params" => [
-		            "text" => $text
-		        ]
-		    ]
-		];
+		if (!empty($odoo_id)) {
+		    OdooService::addLogNote((int) $odoo_id, '<p>' . nl2br(htmlspecialchars($text)) . '</p>');
+		}
 
-
-        $k=KommoService::sendNote($note);
-		
-		
 	}
 	
 	

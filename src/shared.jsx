@@ -170,7 +170,7 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
 
 function SkeletonCard() {
@@ -3738,6 +3738,12 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 onContinue={onContinue}
                 continueLabel="Choose your tour"
+                infoContent={(activeTab) => {
+                  const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }));
+                  const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
+                  const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
+                  return <TourTabContent activeTab={activeTab} includedSections={includedSections} cancellationSummaryCards={cancellationSummaryCards} weatherGuaranteeCards={weatherGuaranteeCards} />;
+                }}
               />
             );
           })()}
@@ -6969,10 +6975,6 @@ export default function Shared_tour_01() {
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
     return () => cancelAnimationFrame(raf);
   }, []);
-  useSEO({
-    title: "Shared Speedboat Tour to Nusa Penida | Bluuu Tours",
-    description: "Affordable shared speedboat day tour from Bali to Nusa Penida. Manta rays, snorkeling & land tour — all-inclusive from IDR 1,300,000 per person.",
-  });
   const { selectedCurrency } = useCurrency();
   const { sharedTours, sharedTransfers: transfers, sharedCovers: allCovers, loading, error: toursError } = useTours();
   const { extras, sharedRoutes: privateRoutes } = useExtras();
@@ -7847,6 +7849,12 @@ export default function Shared_tour_01() {
 
   return (
     <>
+      <SEO
+        title="Shared Yacht Tour to Nusa Penida | Bluuu"
+        description="Book a shared yacht tour to Nusa Penida — enjoy group snorkeling, island sights, and manta rays on a day trip from Bali."
+        image="https://bluuu.tours/storage/app/media/bluuu/shared.webp"
+        canonical="https://bluuu.tours/shared-tour-to-nusa-penida"
+      />
       <CurrencyBridge />
       <div
         className="min-h-screen text-secondary-900 bg-neutral-100"
@@ -8058,6 +8066,12 @@ export default function Shared_tour_01() {
                     onContinue={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                     continueLabel="Add extras"
                     anotherRouteLabel="Another option"
+                    infoContent={(activeTab) => {
+                      const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }));
+                      const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
+                      const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
+                      return <TourTabContent activeTab={activeTab} includedSections={includedSections} cancellationSummaryCards={cancellationSummaryCards} weatherGuaranteeCards={weatherGuaranteeCards} />;
+                    }}
                   />
                 )}
               </PremiumContainer>

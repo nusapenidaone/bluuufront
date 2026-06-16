@@ -72,11 +72,6 @@ export default function CustomDatePicker({
     }
   };
 
-  // Dynamic maxDate when user is picking range end (gray out days beyond limit)
-  const effectiveMaxDate = isRange && maxRangeDays > 0 && pendingStart && !endDate
-    ? new Date(pendingStart.getTime() + (maxRangeDays - 1) * 24 * 60 * 60 * 1000)
-    : undefined;
-
   // Parse selected dates - handle both Date objects and ISO strings
   let selectedDate = null;
   let endDate = null;
@@ -95,6 +90,11 @@ export default function CustomDatePicker({
       selectedDate = selected instanceof Date ? selected : new Date(selected);
     }
   }
+
+  // Dynamic maxDate when user is picking range end (gray out days beyond limit)
+  const effectiveMaxDate = isRange && maxRangeDays > 0 && pendingStart && !endDate
+    ? new Date(pendingStart.getTime() + (maxRangeDays - 1) * 24 * 60 * 60 * 1000)
+    : undefined;
 
   // Determine how many months to show: 1 on mobile, 2 on desktop (for range only)
   const monthsToShow = isMobile ? 1 : (isRange ? 2 : 1);

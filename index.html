@@ -64,31 +64,6 @@
       }, 'google_translate_element');
     }
 
-    // Elfsight — грузим только когда виджет входит во viewport
-    (function() {
-      var loaded = false;
-      function loadElfsight() {
-        if (loaded) return;
-        loaded = true;
-        var s = document.createElement('script');
-        s.src = 'https://elfsightcdn.com/platform.js';
-        s.async = true;
-        document.head.appendChild(s);
-      }
-
-      var io = new IntersectionObserver(function(entries) {
-        entries.forEach(function(e) {
-          if (e.isIntersecting) { loadElfsight(); io.disconnect(); mo.disconnect(); }
-        });
-      }, { rootMargin: '200px' });
-
-      // Ждём пока React отрендерит elfsight-app-* элемент
-      var mo = new MutationObserver(function() {
-        var el = document.querySelector('[class*="elfsight-app"]');
-        if (el) { io.observe(el); mo.disconnect(); }
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
   </script>
   <script async src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 

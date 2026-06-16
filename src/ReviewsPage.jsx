@@ -1,17 +1,18 @@
 import React from "react";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import { ChevronLeft, Star } from "lucide-react";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import ElfsightWidget from "./components/common/ElfsightWidget";
 
 export default function ReviewsPage() {
-  useSEO({
-    title: "Guest Reviews | Bluuu Tours",
-    description: "Read thousands of verified reviews from guests who experienced our Nusa Penida tours. Rated 4.9/5 across TripAdvisor, Viator, Klook, and Google.",
-  });
   return (
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
+      <SEO
+        title="Guest Reviews | Bluuu Tours"
+        description="Read thousands of verified reviews from guests who experienced our Nusa Penida tours. Rated 4.9/5 across TripAdvisor, Viator, Klook, and Google."
+        canonical="https://bluuu.tours/reviews"
+      />
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}

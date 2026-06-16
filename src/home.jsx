@@ -5,6 +5,8 @@ import 'react-phone-number-input/style.css';
 import './home.css';
 import Footer from './components/common/Footer';
 import { useSiteContacts } from './hooks/useSiteContacts';
+import SEO from './components/SEO';
+import { schemaWebSite, schemaLocalBusiness } from './lib/schemas';
 const MEDIA = 'https://bluuu.tours/storage/app/media/bluuu';
 const imgPoster   = 'https://bluuu.tours/storage/app/media/poster.webp';
 const imgPosterMd = 'https://bluuu.tours/storage/app/media/poster-md.webp';
@@ -279,6 +281,13 @@ const Home3 = () => {
 
   return (
     <>
+    <SEO
+      title="Nusa Penida Yacht Tours from Bali | Bluuu Tours"
+      description="Book private and shared yacht tours to Nusa Penida, Bali. Award-winning service with 8,500+ five-star reviews. Manta rays, cliffs, and gourmet lunch included."
+      image="https://bluuu.tours/storage/app/media/poster.webp"
+      canonical="https://bluuu.tours/"
+      schema={[schemaWebSite, schemaLocalBusiness]}
+    />
     <div className="home2-wrapper">
 
 

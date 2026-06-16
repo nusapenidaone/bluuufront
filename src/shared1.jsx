@@ -173,7 +173,7 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
 
 function SkeletonCard() {
@@ -8907,10 +8907,6 @@ export default function Shared_tour_01() {
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
     return () => cancelAnimationFrame(raf);
   }, []);
-  useSEO({
-    title: "Shared Speedboat Tour to Nusa Penida | Bluuu Tours",
-    description: "Affordable shared speedboat day tour from Bali to Nusa Penida. Manta rays, snorkeling & land tour — all-inclusive from IDR 1,300,000 per person.",
-  });
   const { selectedCurrency } = useCurrency();
   const contacts = useSiteContacts();
   const { sharedTours, sharedTransfers: transfers, sharedCovers: allCovers, loading } = useTours();
@@ -9828,6 +9824,12 @@ export default function Shared_tour_01() {
   };
   return (
     <>
+      <SEO
+        title="Shared Yacht Tour to Nusa Penida | Bluuu"
+        description="Book a shared yacht tour to Nusa Penida — enjoy group snorkeling, island sights, and manta rays on a day trip from Bali."
+        image="https://bluuu.tours/storage/app/media/bluuu/shared.webp"
+        canonical="https://bluuu.tours/shared-tour-to-nusa-penida"
+      />
       <CurrencyBridge />
       <div
         className="home2-wrapper min-h-screen text-secondary-900 bg-neutral-100"
