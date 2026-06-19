@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSiteContacts } from "./hooks/useSiteContacts";
+import { WA, EMAIL } from "./lib/contacts";
 
 const API = "/api/new/account/";
 
@@ -66,7 +67,7 @@ function Btn({ children, onClick, disabled, variant = "primary", small = false }
 
 export default function AccountPage() {
   const contacts = useSiteContacts();
-  const waLink = contacts?.whatsapp?.link || "https://wa.me/6281547483381";
+  const waLink = contacts?.whatsapp?.link || `https://wa.me/${WA.google}`;
   const params = new URLSearchParams(window.location.search);
   const key = params.get("key") || "";
   const justPaid = params.get("paid") === "1";
@@ -331,7 +332,7 @@ export default function AccountPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <span style={{ fontSize: 13, color: "#64748b" }}>Questions? Contact us:</span>
             <a href={waLink} target="_blank" rel="noreferrer" style={{ color: "#1a9fd4", fontWeight: 600, textDecoration: "none" }}>WhatsApp</a>
-            <a href="mailto:info@bluuu.tours" style={{ color: "#1a9fd4", fontWeight: 600, textDecoration: "none" }}>info@bluuu.tours</a>
+            <a href={`mailto:${EMAIL}`} style={{ color: "#1a9fd4", fontWeight: 600, textDecoration: "none" }}>{EMAIL}</a>
           </div>
         </Card>
 

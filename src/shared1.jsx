@@ -2045,19 +2045,17 @@ function StepOne({
     document.body.classList.add("wa-hidden");
     // Scroll the dropdown panel into center of viewport when dates panel opens (skip if omitId = sticky bar)
     if (openPanel === "dates" && !omitId) {
-      // Allow body scroll temporarily for scrollIntoView, then re-lock
       document.body.style.overflow = orig;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const panel = panelRef.current;
-          if (panel) {
-            const panelRect = panel.getBoundingClientRect();
-            const targetY = window.scrollY + panelRect.top + panelRect.height / 2 - window.innerHeight / 2;
-            window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+      setTimeout(() => {
+        const bar = barRef.current;
+        if (bar) {
+          const rect = bar.getBoundingClientRect();
+          if (rect.top > 80) {
+            bar.style.scrollMarginTop = "120px";
+            bar.scrollIntoView({ behavior: "smooth", block: "start" });
           }
-          setTimeout(() => { document.body.style.overflow = "hidden"; }, 500);
-        });
-      });
+        }
+      }, 50);
     }
     return () => { document.body.style.overflow = orig; document.body.classList.remove("wa-hidden"); };
   }, [openPanel]);
@@ -2589,19 +2587,28 @@ const TIER_EXTRA_CHIPS = {
   ],
 };
 
-function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellationSummaryCards, weatherGuaranteeCards, onRestaurantClick }) {
+function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellationSummaryCards, weatherGuaranteeCards, onRestaurantClick, tourIncluded, tourIncludes }) {
   const row = "flex items-start gap-3 py-3";
   const iconBlue = "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-primary-400";
   const gridFor = (count) => cn("grid gap-x-6", count === 4 ? "grid-cols-1 sm:grid-cols-2" : count <= 3 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3");
   const grid = "grid grid-cols-1 sm:grid-cols-3 gap-x-6";
   if (activeTab === "included") {
-    const highlightCards = TIER_HIGHLIGHT_CARDS[tierIndex] || TIER_HIGHLIGHT_CARDS[1];
-    const extraChips = TIER_EXTRA_CHIPS[tierIndex] || [];
+    // Use tourIncluded/tourIncludes from backend if available, otherwise fallback to static data
+    const hasTourData = tourIncluded?.length || tourIncludes?.length;
+    const highlightCards = hasTourData && tourIncluded?.length
+      ? tourIncluded.map(i => ({ title: i.name, desc: i.description, icon_svg: i.icon_svg }))
+      : TIER_HIGHLIGHT_CARDS[tierIndex] || TIER_HIGHLIGHT_CARDS[1];
     const MINOR_LABELS = ["Snorkeling equipment", "Drinking water", "Towels", "Light breakfast & snacks", "In-built sound system & onboard shower"];
-    const baseChips = includedSections.flatMap((s) => s.items);
-    const allRawChips = [...extraChips, ...baseChips.map((item) => ({ icon: item.icon, label: item.label }))];
-    const mainChips = allRawChips.filter((item) => !MINOR_LABELS.includes(item.label)).sort((a, b) => a.label.length - b.label.length);
-    const minorItems = [...baseChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label), ...extraChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label)];
+    const backendChips = hasTourData && tourIncludes?.length
+      ? tourIncludes.map(i => ({ label: i.name, icon_svg: i.icon_svg }))
+      : null;
+    const extraChips = backendChips || TIER_EXTRA_CHIPS[tierIndex] || [];
+    const baseChips = (includedSections || []).flatMap((s) => s.items);
+    const allRawChips = backendChips
+      ? backendChips
+      : [...extraChips, ...baseChips.map((item) => ({ icon: item.icon, label: item.label }))];
+    const mainChips = allRawChips.filter((item) => !MINOR_LABELS.includes(item.label || item.name)).sort((a, b) => (a.label||a.name||"").length - (b.label||b.name||"").length);
+    const minorItems = backendChips ? [] : [...baseChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label), ...extraChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label)];
     const tierColors = {
       0: { card: "border border-primary-200/50 bg-primary-50/50 hover:bg-primary-50/70", iconBg: "bg-primary-500/10", iconText: "text-primary-600", chip: "border border-primary-200 bg-transparent", chipIcon: "text-primary-600" },
       1: { card: "border border-indigo-200/50 bg-indigo-50/50 hover:bg-indigo-50/70", iconBg: "bg-indigo-500/10", iconText: "text-indigo-600", chip: "border border-primary-200 bg-transparent", chipIcon: "text-primary-600" },
@@ -2614,13 +2621,17 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
       <div className={cn("grid gap-3", highlightCards.length <= 3 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-4")}>
         {highlightCards.map((card) => {
           const Icon = card.icon;
+          const title = card.title || card.name;
+          const desc = card.desc || card.description;
           return (
-            <div key={card.title} className={cn("flex flex-col items-center text-center rounded-2xl px-3 py-4 transition-all", tc.card)}>
+            <div key={title} className={cn("flex flex-col items-center text-center rounded-2xl px-3 py-4 transition-all", tc.card)}>
               <div className={cn("mb-2.5 flex h-11 w-11 items-center justify-center rounded-full", tc.iconBg)}>
-                <Icon className={cn("h-5 w-5", tc.iconText)} strokeWidth={1.5} />
+                {card.icon_svg
+                  ? <span className={cn("h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current", tc.iconText)} dangerouslySetInnerHTML={{ __html: card.icon_svg }} />
+                  : Icon ? <Icon className={cn("h-5 w-5", tc.iconText)} strokeWidth={1.5} /> : null}
               </div>
-              <div className="text-sm font-semibold text-secondary-900">{card.title}</div>
-              <div className="mt-0.5 text-xs leading-normal text-secondary-500">{card.desc}</div>
+              <div className="text-sm font-semibold text-secondary-900">{title}</div>
+              {desc && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{desc}</div>}
             </div>
           );
         })}
@@ -2629,10 +2640,13 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
       <div className="flex flex-wrap gap-2">
         {mainChips.map((item) => {
           const Icon = item.icon;
+          const label = item.label || item.name;
           return (
-            <span key={item.label} className={cn("inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-secondary-700", tc.chip)}>
-              <Icon className={cn("h-4 w-4 shrink-0", tc.chipIcon)} strokeWidth={1.5} />
-              {item.label}
+            <span key={label} className={cn("inline-flex items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-secondary-700", tc.chip)}>
+              {item.icon_svg
+                ? <span className={cn("h-4 w-4 shrink-0 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:stroke-current", tc.chipIcon)} dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                : Icon ? <Icon className={cn("h-4 w-4 shrink-0", tc.chipIcon)} strokeWidth={1.5} /> : null}
+              {label}
             </span>
           );
         })}
@@ -2649,7 +2663,7 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
       <div>
         {/* Shuttle info */}
         <div className="flex flex-col sm:flex-row gap-5">
-          <img src="https://bluuu.tours/storage/app/uploads/public/69b/8eb/aa7/thumb_4732_800_500_0_0_crop.webp" alt="Bluuu shuttle bus" className="h-40 w-full sm:w-48 shrink-0 rounded-xl object-cover" />
+          <img src="https://bluuu.tours/storage/app/media/driver.webp" alt="Bluuu shuttle bus" className="h-40 w-full sm:w-48 shrink-0 rounded-xl object-cover" />
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
@@ -3222,6 +3236,7 @@ function StepTwo({
         if (!alive) return;
         setFcSchedule({
           title: data.popup_title || data.title || fcModalBoat.name,
+          highlights: Array.isArray(data.highlights) ? data.highlights : [],
           beforeLunch: Array.isArray(data.schedule_before_lunch) ? data.schedule_before_lunch : [],
           afterLunch: Array.isArray(data.schedule_after_lunch) ? data.schedule_after_lunch : [],
         });
@@ -4229,12 +4244,12 @@ function StepTwo({
           const boat = fcModalBoat;
           const tierIdx = boat._tierIndex ?? 2;
           const slides = boat.images?.length ? boat.images : [boat.cover];
-          const highlights = TIER_HIGHLIGHT_CARDS[tierIdx] || [];
-          const chips = TIER_EXTRA_CHIPS[tierIdx] || [];
           const schedule = fcSchedule || boat.routeSchedule;
           const scheduleItems = schedule
             ? [...(schedule.beforeLunch || []), ...(schedule.afterLunch || [])]
             : [];
+          const highlights = boat.included?.length ? boat.included : TIER_HIGHLIGHT_CARDS[tierIdx] || [];
+          const chips = boat.includes?.length ? boat.includes : TIER_EXTRA_CHIPS[tierIdx] || [];
           const restaurant = fcRestaurant;
           const restaurantPhotos = restaurant?.images_with_thumbs?.length
             ? restaurant.images_with_thumbs.map(img => ({ thumb: img.thumb, path: img.thumb }))
@@ -4349,13 +4364,17 @@ function StepTwo({
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {highlights.map((card) => {
                       const Icon = card.icon;
+                      const title = card.name || card.title;
+                      const desc = card.description || card.desc;
                       return (
-                        <div key={card.title} className={cn("flex flex-col items-center text-center rounded-2xl border px-3 py-4 transition-all", c.card)}>
+                        <div key={title} className={cn("flex flex-col items-center text-center rounded-2xl border px-3 py-4 transition-all", c.card)}>
                           <div className={cn("mb-2.5 flex h-11 w-11 items-center justify-center rounded-full", c.iconBg)}>
-                            <Icon className={cn("h-5 w-5", c.iconText)} strokeWidth={1.5} />
+                            {card.icon_svg
+                              ? <span className={cn("h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current", c.iconText)} dangerouslySetInnerHTML={{ __html: card.icon_svg }} />
+                              : Icon ? <Icon className={cn("h-5 w-5", c.iconText)} strokeWidth={1.5} /> : null}
                           </div>
-                          <div className="text-sm font-semibold text-secondary-900">{card.title}</div>
-                          <div className="mt-0.5 text-xs leading-normal text-secondary-500">{card.desc}</div>
+                          <div className="text-sm font-semibold text-secondary-900">{title}</div>
+                          {desc && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{desc}</div>}
                         </div>
                       );
                     })}
@@ -4374,10 +4393,13 @@ function StepTwo({
                   <div className="flex flex-wrap gap-2">
                     {chips.map((chip) => {
                       const Icon = chip.icon;
+                      const label = chip.name || chip.label;
                       return (
-                        <span key={chip.label} className={cn("inline-flex items-center gap-1.5 rounded-full border bg-transparent px-3 py-1.5 text-xs font-medium text-secondary-700", cc.border)}>
-                          <Icon className={cn("h-3.5 w-3.5", cc.icon)} strokeWidth={1.5} />
-                          {chip.label}
+                        <span key={label} className={cn("inline-flex items-center gap-1.5 rounded-full border bg-transparent px-3 py-1.5 text-xs font-medium text-secondary-700", cc.border)}>
+                          {chip.icon_svg
+                            ? <span className={cn("h-3.5 w-3.5 [&>svg]:h-3.5 [&>svg]:w-3.5 [&>svg]:stroke-current", cc.icon)} dangerouslySetInnerHTML={{ __html: chip.icon_svg }} />
+                            : Icon ? <Icon className={cn("h-3.5 w-3.5", cc.icon)} strokeWidth={1.5} /> : null}
+                          {label}
                         </span>
                       );
                     })}
@@ -5084,18 +5106,30 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             const note = addOnNoteByStyleId[selectedStyleId];
             return (
               <TourDetailsCard
+                withTimeline
                 style={style}
                 schedule={schedule}
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
+                onRestaurantClick={setRestaurantDataPopup}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 onContinue={onContinue}
                 continueLabel="Choose your tour"
                 infoContent={(activeTab) => {
+                  if (activeTab === "included") return (
+                    <TourTabContent
+                      activeTab="included"
+                      includedSections={tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }))}
+                      cancellationSummaryCards={[]}
+                      weatherGuaranteeCards={[]}
+                      tourIncluded={style?.included}
+                      tourIncludes={style?.includes}
+                    />
+                  );
                   if (activeTab === "pickup") return (
                     <div>
                       <div className="flex flex-col sm:flex-row gap-5">
-                        <img src="https://bluuu.tours/storage/app/uploads/public/69b/8eb/aa7/thumb_4732_800_500_0_0_crop.webp" alt="Bluuu transfer" className="h-40 w-full sm:w-48 shrink-0 rounded-xl object-cover" />
+                        <img src="https://bluuu.tours/storage/app/media/driver.webp" alt="Bluuu transfer" className="h-40 w-full sm:w-48 shrink-0 rounded-xl object-cover" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-3">
                             <h4 className="text-lg font-bold text-white">Complimentary shuttle</h4>
@@ -6977,14 +7011,14 @@ function StepFive({
                     const name = (transferDetailPopup.name || "").toLowerCase();
                     const isShuttle = name.includes("shuttle") || name.includes("free");
                     const isDropoff = name.includes("drop");
-                    const TRANSFER_IMAGE = "https://bluuu.tours/storage/app/uploads/public/69b/8eb/aa7/thumb_4732_800_500_0_0_crop.webp";
+                    const TRANSFER_IMAGE = "https://bluuu.tours/storage/app/media/driver.webp";
                     const PRIVATE_DESC = "Book your transfer with us for a smooth trip! If you come on your own, you can take an online taxi (Go-Jek or Grab) to Serangan in the morning. But for the return, online taxis are not allowed by local government. You'll need a local taxi, which is very expensive. It's best to book your return transfer in advance with us!";
                     const SHUTTLE_HUBS = ["Canggu/Berawa", "Batu Belig", "Seminyak", "Legian/Kuta"];
 
                     if (isShuttle) {
                       return (
                         <>
-                        <img src="https://bluuu.tours/storage/app/uploads/public/69b/8eb/aa7/thumb_4732_800_500_0_0_crop.webp" alt="Shuttle bus" className="w-full h-44 object-cover" />
+                        <img src="https://bluuu.tours/storage/app/media/driver.webp" alt="Shuttle bus" className="w-full h-44 object-cover" />
                         <div className="p-5 space-y-3">
                           <h4 className="text-lg font-bold text-secondary-900">Complimentary shuttle</h4>
                           <p className="text-sm text-secondary-600 leading-relaxed">
@@ -9065,6 +9099,8 @@ export default function Shared_tour_01() {
         badgeColor: tour.badge_color || null,
         boatProps: tour.props || {},
         headline: tour.json?.subtitle || tour.json?.headline || "",
+        included: Array.isArray(tour.included) ? tour.included : [],
+        includes: Array.isArray(tour.includes) ? tour.includes : [],
       };
     });
     // Final uniqueness sweep to prevent React duplicate key errors
@@ -9829,6 +9865,7 @@ export default function Shared_tour_01() {
         description="Book a shared yacht tour to Nusa Penida — enjoy group snorkeling, island sights, and manta rays on a day trip from Bali."
         image="https://bluuu.tours/storage/app/media/bluuu/shared.webp"
         canonical="https://bluuu.tours/shared-tour-to-nusa-penida"
+        noindex
       />
       <CurrencyBridge />
       <div
@@ -10061,6 +10098,7 @@ export default function Shared_tour_01() {
                     const boatUnavailable = boatSoldOut || boatTooSmall;
                     return (
                       <TourDetailsCard
+                        withTimeline
                         sectionTitle={selectedYacht?.name || "Shared Tour"}
                         style={{
                           title: inlineRouteSchedule?.title || selectedStyleTitle || selectedYacht?.name,
@@ -10073,6 +10111,7 @@ export default function Shared_tour_01() {
                           footerNotes: inlineRouteSchedule?.footerNotes || selectedYacht?.routeSchedule?.footerNotes || [],
                         }}
                         restaurant={inlineRouteSchedule?.restaurant || selectedYacht?.routeSchedule?.restaurant}
+                        onRestaurantClick={setInlineRestaurantPopup}
                         priceDisplay={selectedYacht ? formatIDR((() => { const dateForPrice = dateMode === "exact" ? exactDate : selectedFlexDate; if (dateForPrice && selectedYacht.tourId) { const p = calculateBoatPrice(selectedYacht.tourId, dateForPrice, totalGuests, sharedTours); if (p !== null) return p; } return selectedYacht.priceValue; })()) : null}
                         dateDisplay={dateMode === "exact" ? (exactDate ? new Date(exactDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null) : (selectedFlexDate ? new Date(selectedFlexDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : rangeStart && rangeEnd ? `${new Date(rangeStart + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(rangeEnd + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : null)}
                         guestsDisplay={`${adults} adult${adults !== 1 ? "s" : ""}${kids > 0 ? `, ${kids} kid${kids !== 1 ? "s" : ""}` : ""}`}

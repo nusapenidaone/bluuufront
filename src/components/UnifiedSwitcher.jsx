@@ -241,6 +241,9 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
                                                         );
                                                     })}
                                                 </div>
+                                                <p className="mt-4 text-xs text-secondary-400">
+                                                    Prices in currencies other than IDR are for reference only. Final payment will be charged in IDR.
+                                                </p>
                                             </motion.div>
                                         )}
                                     </AnimatePresence>

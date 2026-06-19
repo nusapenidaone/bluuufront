@@ -724,15 +724,17 @@ const TRUST_CARDS = [
 ];
 
 export default function TourDetailsCard({
-  sectionTitle, style, schedule, note, restaurant,
+  sectionTitle, style, schedule, note, restaurant, onRestaurantClick,
   prevLabel, nextLabel, onPrev, onNext,
   infoTabs, infoContent, includedChips,
   isUnavailable, unavailableReason, onChangeParams, onReserve,
   priceDisplay, dateDisplay, guestsDisplay,
   capacityLabel, scheduleExtrasSlot, reserveLabel,
   extrasCatalog, allExtrasCatalog, selectedExtras, onChangeExtraQty, formatPrice, onOpenExtra,
-  hideTierBadges, totalGuests = 1,
+  hideTierBadges, totalGuests = 1, withTimeline = false,
 }) {
+  const [activeTab, setActiveTab] = useState("itinerary");
+  const [activeDrawer, setActiveDrawer] = useState(null);
   const [mobileRestaurantModal, setMobileRestaurantModal] = useState(false);
   const isLightTheme = true;
   const tierClass = /first.class/i.test(sectionTitle || "") ? "tier-first-class" : /premium/i.test(sectionTitle || "") ? "tier-premium" : "tier-classic";
@@ -838,38 +840,92 @@ export default function TourDetailsCard({
             </div>
           </div>
 
-          {/* Content block */}
-          <div className="mt-2 sm:mt-1 rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6" data-tier-block>
-            {sections.length > 0 ? (
-              <div className="grid gap-3">
-                {sections.map((section, sectionIdx) => (
-                  <div key={section.label}>
-                    <div className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-secondary-300">
-                      {section.label}
-                    </div>
-                    <div className="divide-y divide-neutral-100 border-t border-neutral-100">
-                      {section.items.map((item, idx) => (
-                        <ScheduleItemCompact key={idx} item={item} />
-                      ))}
-                    </div>
-                    {sectionIdx === 0 && restaurant && (
-                      <div className="mt-3">
-                        <RestaurantCard restaurant={restaurant} />
+          {withTimeline ? (
+            /* Tabbed + ItineraryTimeline design */
+            <div className="mt-2 sm:mt-1" data-tier-block>
+              <div className="no-scrollbar flex items-end overflow-x-auto sm:justify-start justify-between w-full">
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id)}
+                      className={cn(
+                        "inline-flex shrink-0 items-center gap-1.5 sm:gap-2 whitespace-nowrap px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold transition-all rounded-t-2xl border border-b-0",
+                        isActive
+                          ? "border-neutral-200 bg-white text-primary-500 relative z-10"
+                          : "border-transparent bg-transparent text-secondary-400 hover:text-secondary-600"
+                      )}
+                    >
+                      <tab.icon className={cn("h-4 w-4", isActive ? "text-primary-500" : "text-secondary-400")} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className={cn("rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6 -mt-px", activeTab === "itinerary" && "rounded-tl-none", activeTab === "faq" && "rounded-tr-none sm:rounded-tr-3xl")}>
+                {activeTab === "itinerary" ? (
+                  <>
+                    <ItineraryTimeline sections={sections} restaurant={restaurant} sectionTitle={sectionTitle} isLightTheme={isLightTheme} capacityLabel={capacityLabel} extrasCatalog={extrasCatalog} allExtrasCatalog={allExtrasCatalog} selectedExtras={selectedExtras} onChangeExtraQty={onChangeExtraQty} formatPrice={formatPrice} onOpenExtra={onOpenExtra} hideTierBadges={hideTierBadges} totalGuests={totalGuests} />
+                    {scheduleExtrasSlot}
+                  </>
+                ) : (
+                  infoContent?.(activeTab)
+                )}
+              </div>
+            </div>
+          ) : (
+            /* Simple list design */
+            <div className="mt-2 sm:mt-1 rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6" data-tier-block>
+              {sections.length > 0 ? (
+                <div className="grid gap-3">
+                  {sections.map((section, sectionIdx) => (
+                    <div key={section.label}>
+                      <div className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-secondary-300">
+                        {section.label}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-16 gap-4">
-                <Ship className="h-12 w-12 text-neutral-300" strokeWidth={1} />
-                <p className="text-sm font-semibold text-secondary-500">Itinerary not available yet</p>
-              </div>
-            )}
-            {scheduleExtrasSlot}
-          </div>
+                      <div className="divide-y divide-neutral-100 border-t border-neutral-100">
+                        {section.items.map((item, idx) => (
+                          <ScheduleItemCompact key={idx} item={item} />
+                        ))}
+                      </div>
+                      {sectionIdx === 0 && restaurant && (
+                        <div className="mt-3">
+                          <RestaurantCard restaurant={restaurant} onClick={onRestaurantClick} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <Ship className="h-12 w-12 text-neutral-300" strokeWidth={1} />
+                  <p className="text-sm font-semibold text-secondary-500">Itinerary not available yet</p>
+                </div>
+              )}
+              {scheduleExtrasSlot}
+            </div>
+          )}
           </motion.div>
           </AnimatePresence>
+
+          {/* Trust band (withTimeline only) */}
+          {withTimeline && (
+            <div className="mt-6 sm:mt-6 pb-5 sm:pb-6 grid grid-cols-3 gap-2 sm:gap-3">
+              {TRUST_CARDS.map((card) => (
+                <button key={card.id} type="button" onClick={() => setActiveDrawer(card.id)}
+                  className="group flex flex-col items-center sm:items-start gap-1.5 sm:gap-2 rounded-2xl border border-neutral-200 bg-white px-2 sm:px-4 py-3 sm:py-3 text-center sm:text-left transition-all">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-2">
+                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", card.bg, card.color)}><card.icon className="h-4 w-4" strokeWidth={1.5} /></span>
+                    <span className="text-xs sm:text-base font-semibold text-secondary-900">{card.title}</span>
+                  </div>
+                  <p className="hidden sm:block text-sm text-secondary-500 leading-relaxed">{card.summary}</p>
+                  <span className="text-2xs sm:text-xs font-semibold text-primary-600 group-hover:text-primary-500 transition-colors">Read more →</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Mobile nav — between content and trust band */}
           {hasNav && (
@@ -916,6 +972,15 @@ export default function TourDetailsCard({
           </div>
         </div>
       </div>
+
+      {/* Trust detail popup (withTimeline only) */}
+      {withTimeline && (
+        <Modal open={!!activeDrawer} onClose={() => setActiveDrawer(null)} maxWidth="max-w-xl" showClose={true} hideDragHandle dark={!isLightTheme}
+          title={activeDrawer === "safety" ? "Safety" : activeDrawer === "cancellation" ? "Cancellation" : "Weather Guarantee"}
+          bodyClassName="px-5 pt-0 pb-6 sm:px-6">
+          <div className={cn(isLightTheme && "tour-modal-light")}>{infoContent?.(activeDrawer)}</div>
+        </Modal>
+      )}
 
     </>
   );

@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet-async";
 const DEFAULT_IMAGE = "https://bluuu.tours/storage/app/media/poster.webp";
 const BASE_URL = "https://bluuu.tours";
 
-export default function SEO({ title, description, image, canonical, type = "website", schema }) {
+export default function SEO({ title, description, image, canonical, type = "website", schema, noindex = false }) {
   const img = image || DEFAULT_IMAGE;
   const url = canonical || (BASE_URL + (typeof window !== "undefined" ? window.location.pathname : "/"));
 
@@ -11,6 +11,11 @@ export default function SEO({ title, description, image, canonical, type = "webs
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
+      {noindex ? (
+        <meta name="robots" content="noindex, nofollow" />
+      ) : (
+        <meta name="robots" content="index, follow" />
+      )}
       <link rel="canonical" href={url} />
 
       <meta property="og:type" content={type} />

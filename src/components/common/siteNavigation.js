@@ -22,6 +22,8 @@ export const POLICY_LINKS = [
   { label: "Health & Safety", href: "/policy/health" },
 ];
 
+import { INSTAGRAM, YOUTUBE } from "../../lib/contacts";
+
 export const SOCIAL_LINKS = [
   { label: "Instagram", key: "instagram" },
   { label: "WhatsApp", key: "whatsapp" },
@@ -31,9 +33,9 @@ export const SOCIAL_LINKS = [
 export function resolveSocialHref(contacts, key) {
   if (!contacts || typeof contacts !== "object") return "#";
 
-  if (key === "instagram") return contacts.instagram || "#";
+  if (key === "instagram") return contacts.instagram || INSTAGRAM;
   if (key === "whatsapp") return contacts.whatsapp?.link || "#";
-  if (key === "youtube") return contacts.youtube || "#";
+  if (key === "youtube") return contacts.youtube || YOUTUBE;
 
   return "#";
 }

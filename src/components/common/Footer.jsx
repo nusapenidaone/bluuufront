@@ -14,7 +14,7 @@ export default function Footer() {
   const contacts = useSiteContacts();
 
   return (
-    <footer className="overflow-hidden pb-0 pt-20" style={{ background: 'var(--h2-dark-bg3, #070F1F)' }}>
+    <footer className="overflow-hidden pb-0 pt-20" style={{ background: 'var(--h2-dark-bg3, #070F1F)', paddingTop: '5rem' }}>
       <div className="container">
         <div className="mb-24 grid grid-cols-1 gap-12 md:grid-cols-4 md:gap-8">
           <div className="flex flex-col gap-6">
@@ -79,6 +79,9 @@ export default function Footer() {
       <div className="relative z-10 py-6" style={{ borderTop: '1px solid var(--h2-divider-bot, rgba(255,255,255,0.06))' }}>
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
           <span className="text-xs" style={{ color: 'var(--h2-text-subtle, rgba(255,255,255,0.3))' }}>&copy; 2026 Bluuu Inc. All rights reserved.</span>
+          <span className="text-xs text-center" style={{ color: 'var(--h2-text-subtle, rgba(255,255,255,0.3))' }}>
+            Prices in currencies other than IDR are for reference only. Final payment will be charged in IDR.
+          </span>
           <button
             type="button"
             onClick={() => window.dispatchEvent(new CustomEvent("open-settings"))}

@@ -69,6 +69,10 @@ class SharedOrderController extends Controller
             );
             $order->travel_date = $data['travelDate'];
 
+            if ($order->boat_id === null) {
+                return response()->json(['error' => 'No available boats for this date'], 422);
+            }
+
             // ── Guests ────────────────────────────────────────────────────
             $order->adults = $data['adults'] ?? 0;
             $order->kids = $data['kids'] ?? 0;

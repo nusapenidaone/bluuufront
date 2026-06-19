@@ -64,7 +64,7 @@ class OdooWebhookController extends Controller
             return response()->json(['ok' => true]);
         }
 
-        $type = (int) $tour->types_id === 1 ? 1 : 2;
+        $type = (int) $tour->classes_id === 9 ? 1 : 2;
 
         // Load existing record so we can preserve fields missing from payload
         $existing = Closeddates::where('odoo_id', $odooId)->first();

@@ -107,4 +107,39 @@ class CalendarController extends Controller
     {
         return $this->cors(response('', 200));
     }
+
+    public function closeTomorrow(Request $request)
+    {
+        if ($this->isUnauthorized($request)) {
+            return $this->cors(response()->json(['error' => 'Unauthorized'], 401));
+        }
+
+        $tomorrow = Carbon::tomorrow()->format('Y-m-d');
+        $boats    = Boat::all();
+        $count    = 0;
+
+        foreach ($boats as $boat) {
+            $alreadyClosed = Closeddates::where('boat_id', $boat->id)
+                ->where('date', $tomorrow)
+                ->where('type', 4)
+                ->exists();
+
+            if (!$alreadyClosed) {
+                $item = new Closeddates();
+                $item->boat_id = $boat->id;
+                $item->date    = $tomorrow;
+                $item->type    = 4;
+                $item->lead_id = 0;
+                $item->save();
+                $count++;
+            }
+        }
+
+        return $this->cors(response()->json([
+            'success'  => true,
+            'date'     => $tomorrow,
+            'created'  => $count,
+            'skipped'  => $boats->count() - $count,
+        ]));
+    }
 }

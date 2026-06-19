@@ -4865,7 +4865,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
     if (activeTab === "pickup") return (
       <div>
         <div className="flex flex-col sm:flex-row gap-5">
-          <img src="https://bluuu.tours/storage/app/uploads/public/69b/8eb/aa7/thumb_4732_800_500_0_0_crop.webp" alt="Bluuu transfer" className="h-40 w-full sm:w-48 shrink-0 rounded-xl object-cover" />
+          <img src="https://bluuu.tours/storage/app/media/driver.webp" alt="Bluuu transfer" className="h-40 w-full sm:w-48 shrink-0 rounded-xl object-cover" />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-lg font-bold text-white">Private transfer</h4>
@@ -5563,12 +5563,14 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
             const nextStyle = styles.length > 1 ? styles[(currentIdx + 1) % styles.length] : null;
             return (
               <TourDetailsCard
+                withTimeline
                 hideTierBadges
                 sectionTitle={style?.title || "Private Tour"}
                 style={style}
                 schedule={schedule}
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
+                onRestaurantClick={setRestaurantDataPopup}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 onContinue={onContinue}
                 continueLabel="Choose your boat"
@@ -6456,6 +6458,12 @@ function StepExtras({
     const qty = selectedExtras[extra.id] || 0;
     const isHighlighted = extra.id === highlightExtraId;
     const defaultQty = getDefaultQty(extra);
+    const isAutoQty = extra.qtyType === 'per_car' || extra.per_car || extra.qtyType === 'per_person' || extra.qtyType === 'fixed';
+    const autoQty = (extra.qtyType === 'per_car' || extra.per_car)
+      ? (Math.ceil(totalGuests / 5) || 1)
+      : extra.qtyType === 'per_person'
+        ? (totalGuests || 1)
+        : 1;
     return (
       <div
         key={extra.id}
@@ -6519,6 +6527,39 @@ function StepExtras({
             >
               {extra.children.length} options
             </button>
+          ) : isAutoQty ? (
+            qty > 0 ? (
+              <div className="flex items-center gap-2 sm:w-full sm:justify-end">
+                <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onChangeExtraQty(extra.id, 0);
+                    }}
+                    className="grid h-7 w-7 place-items-center rounded-full text-secondary-700 transition-colors hover:text-primary-600 active:scale-90 sm:h-8 sm:w-8"
+                    aria-label={`Remove ${extra.name}`}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <div className="min-w-6 text-center text-base font-bold leading-none text-secondary-900 sm:min-w-7 sm:text-lg">
+                    ×{autoQty}
+                  </div>
+                  <div className="h-7 w-7 sm:h-8 sm:w-8" />
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChangeExtraQty(extra.id, autoQty);
+                }}
+                className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primary-50 bg-neutral-100 px-2.5 text-sm font-bold text-primary-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-10 sm:px-3"
+              >
+                Add
+              </button>
+            )
           ) : qty > 0 ? (
             <div className="flex items-center gap-2 sm:w-full sm:justify-end">
               <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
@@ -10882,6 +10923,7 @@ export default function Premium_Private_With_Vibe() {
         description="Exclusive private yacht tour from Bali to Nusa Penida — manta rays, snorkeling, cliff views & gourmet lunch. Up to 13 guests, fully crewed."
         image="https://bluuu.tours/storage/app/media/bluuu/private.webp"
         canonical="https://bluuu.tours/private-tour-to-nusa-penida"
+        noindex
       />
       <CurrencyBridge />
       <div

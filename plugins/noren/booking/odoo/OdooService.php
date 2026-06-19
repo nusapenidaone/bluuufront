@@ -259,10 +259,6 @@ class OdooService
             'vals' => $fields,
         ]);
 
-        Log::info('OdooService::updateOrderFields', [
-            'odoo_id' => $odooOrderId,
-            'fields'  => array_keys($fields),
-        ]);
     }
 
     // ─── Get full order data from Odoo ───────────────────────────────────────
@@ -362,15 +358,6 @@ class OdooService
         }
 
         $row = $result[0];
-        Log::info('OdooService::getOrderInfo', [
-            'searched'        => $odooOrderId,
-            'found_id'        => $row['id'] ?? null,
-            'found_name'      => $row['name'] ?? null,
-            'state'           => $row['state'] ?? null,
-            'collect'         => $row['x_studio_collect'] ?? null,
-            'amount_total'    => $row['amount_total'] ?? null,
-            'deposit'         => $row['x_studio_deposit'] ?? null,
-        ]);
 
         return [
             'state'   => $row['state'] ?? '',

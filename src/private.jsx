@@ -3990,7 +3990,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                       <div className="mt-4 border-t border-neutral-100 pt-4 flex flex-col gap-2">
                         <div className="flex flex-wrap gap-x-4 gap-y-2">
                           {chips.map((item) => {
-                            const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
+                            const Icon = (typeof item.icon === 'string' ? ICON_MAP[item.icon] : item.icon) || MapPin;
                             return (
                               <div key={item.label} className="flex items-center gap-1.5 text-sm font-medium text-secondary-700">
                                 <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
@@ -4132,9 +4132,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 schedule={schedule}
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
+                onRestaurantClick={setRestaurantDataPopup}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                onContinue={onContinue}
-                continueLabel="Choose your boat"
+                onReserve={onContinue}
+                reserveLabel="Choose your boat"
               />
             );
           })()}
@@ -4825,7 +4826,12 @@ function StepExtras({
     const qty = selectedExtras[extra.id] || 0;
     const isHighlighted = extra.id === highlightExtraId;
     const defaultQty = getDefaultQty(extra);
-    const carsQty = Math.ceil(totalGuests / 5) || 1;
+    const isAutoQty = extra.qtyType === 'per_car' || extra.per_car || extra.qtyType === 'per_person' || extra.qtyType === 'fixed';
+    const autoQty = (extra.qtyType === 'per_car' || extra.per_car)
+      ? (Math.ceil(totalGuests / 5) || 1)
+      : extra.qtyType === 'per_person'
+        ? (totalGuests || 1)
+        : 1;
     return (
       <div
         key={extra.id}
@@ -4889,7 +4895,7 @@ function StepExtras({
             >
               {extra.children.length} options
             </button>
-          ) : extra.per_car ? (
+          ) : isAutoQty ? (
             qty > 0 ? (
               <div className="flex items-center gap-2 sm:w-full sm:justify-end">
                 <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
@@ -4905,7 +4911,7 @@ function StepExtras({
                     <Minus className="h-4 w-4" />
                   </button>
                   <div className="min-w-6 text-center text-base font-bold leading-none text-secondary-900 sm:min-w-7 sm:text-lg">
-                    ×{carsQty}
+                    ×{autoQty}
                   </div>
                   <div className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
@@ -4915,7 +4921,7 @@ function StepExtras({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onChangeExtraQty(extra.id, carsQty);
+                  onChangeExtraQty(extra.id, autoQty);
                 }}
                 className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primary-50 bg-neutral-100 px-2.5 text-sm font-bold text-primary-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-10 sm:px-3"
               >
@@ -8471,6 +8477,7 @@ export default function Premium_Private_With_Vibe() {
       })),
       hasChildren: (e.children || []).length > 0,
       per_car: !!e.per_car,
+      qtyType: e.qty_type || 'manual',
     });
     // Use global extras
     return (extras || []).map(e => mapExtra(e, null));

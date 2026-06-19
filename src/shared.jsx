@@ -3735,9 +3735,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 schedule={schedule}
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
+                onRestaurantClick={setRestaurantDataPopup}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                onContinue={onContinue}
-                continueLabel="Choose your tour"
+                onReserve={onContinue}
+                reserveLabel="Choose your tour"
                 infoContent={(activeTab) => {
                   const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }));
                   const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
@@ -5026,6 +5027,7 @@ function StepFive({
   onRangeEndChange,
   onAdultsChange,
   onKidsChange,
+  onSelectBoatId,
   groupSize,
   selectedBoat,
   selectedStyleTitle,
@@ -5100,16 +5102,32 @@ function StepFive({
     closeEditor();
   };
   const applyGuestEdit = () => {
+    const newGroupSize = draftAdults + draftKids;
     onAdultsChange(draftAdults);
     onKidsChange(draftKids);
+    if (selectedBoat) {
+      const exceedsCapacity = newGroupSize > selectedBoat.people;
+      const entry = exactDate ? availabilityMap?.[selectedBoat.id]?.[exactDate] : null;
+      const notEnoughSeats = entry != null && entry.available_seats < newGroupSize;
+      if (exceedsCapacity || notEnoughSeats) {
+        onSelectBoatId?.(null);
+      }
+    }
     closeEditor();
   };
-  const isReserveEnabled = isDateSelected && isBoatSelected;
+  const boatSeatsEntry = selectedBoat && exactDate ? availabilityMap?.[selectedBoat.id]?.[exactDate] : null;
+  const boatHasEnoughSeats = !selectedBoat || !exactDate || boatSeatsEntry == null
+    ? true
+    : boatSeatsEntry.available_seats >= groupSize;
+  const boatFitsGroup = !selectedBoat || groupSize <= selectedBoat.people;
+  const isReserveEnabled = isDateSelected && isBoatSelected && boatFitsGroup && boatHasEnoughSeats;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
       ? "Select option to continue"
-      : "Reserve Now";
+      : (!boatFitsGroup || !boatHasEnoughSeats)
+        ? "Not enough seats — change option"
+        : "Reserve Now";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -5346,6 +5364,19 @@ function StepFive({
                                 </div>
                               </div>
                             </div>
+                            {(() => {
+                              const draftSize = draftAdults + draftKids;
+                              const entry = exactDate ? availabilityMap?.[selectedBoat?.id]?.[exactDate] : null;
+                              const exceedsCapacity = selectedBoat && draftSize > selectedBoat.people;
+                              const notEnoughSeats = entry != null && draftSize > entry.available_seats;
+                              if (!selectedBoat || (!exceedsCapacity && !notEnoughSeats)) return null;
+                              const seatsLeft = entry != null ? entry.available_seats : selectedBoat.people;
+                              return (
+                                <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                                  Only {seatsLeft} seat{seatsLeft !== 1 ? "s" : ""} available on this date. You'll need to choose a new option after applying.
+                                </div>
+                              );
+                            })()}
                             <div className="mt-4 flex flex-wrap gap-2">
                               <Button type="button" onClick={applyGuestEdit} size="sm">
                                 Apply
@@ -8062,9 +8093,10 @@ export default function Shared_tour_01() {
                       footerNotes: inlineRouteSchedule?.footerNotes || selectedYacht?.routeSchedule?.footerNotes || [],
                     }}
                     restaurant={inlineRouteSchedule?.restaurant || selectedYacht?.routeSchedule?.restaurant}
+                    onRestaurantClick={setInlineRestaurantPopup}
                     onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    onContinue={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    continueLabel="Add extras"
+                    onReserve={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    reserveLabel="Add extras"
                     anotherRouteLabel="Another option"
                     infoContent={(activeTab) => {
                       const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }));
@@ -8143,6 +8175,7 @@ export default function Shared_tour_01() {
               onRangeEndChange={setRangeEnd}
               onAdultsChange={setAdults}
               onKidsChange={setKids}
+              onSelectBoatId={setSelectedBoatId}
               groupSize={totalGuests}
               selectedBoat={selectedYacht}
               selectedStyleTitle={selectedStyleTitle}

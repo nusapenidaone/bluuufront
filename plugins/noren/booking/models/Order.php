@@ -130,6 +130,26 @@ class Order extends Model
         }
 
         if (!$order->boat_id) {
+            Log::warning("Order #{$order->id} ({$order->external_id}): Odoo dispatch SKIPPED — no boat assigned. Tour: {$order->tours_id}, Date: {$order->travel_date}, Members: {$order->members}");
+
+            App::after(function () use ($order) {
+                try {
+                    $body = "Order #{$order->id} ({$order->external_id}) was PAID but NOT sent to Odoo.\n\n"
+                          . "Reason: no boat assigned (shared tour — no available slot).\n\n"
+                          . "Tour:     {$order->tours_id}\n"
+                          . "Date:     {$order->travel_date}\n"
+                          . "Members:  {$order->members}\n"
+                          . "Customer: {$order->name} ({$order->email})";
+
+                    Mail::raw($body, function ($message) use ($order) {
+                        $message->to('info@bluuu.tours')
+                                ->subject("⚠️ Order #{$order->id} paid but NOT sent to Odoo — no boat");
+                    });
+                } catch (\Exception $e) {
+                    Log::error("Order #{$order->id}: no_boat_alert email failed: " . $e->getMessage());
+                }
+            });
+
             return;
         }
 

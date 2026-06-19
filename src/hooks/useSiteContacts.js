@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { apiUrl } from "../api/base";
+import { WA, WA_MSG, EMAIL, INSTAGRAM, YOUTUBE } from "../lib/contacts";
 
 // ── WhatsApp routing by utm_source ───────────────────────────────────────────
 // number — E.164 без + (для wa.me)
 // message — pre-filled текст (plain, не encoded)
 // Default используется когда utm_source не задан или не в списке
 const WA_DEFAULT = {
-  number:  "6281547483381",
-  message: "Hi Bluuu! I want to book a tour [G]",
+  number:  WA.google,
+  message: WA_MSG.google,
 };
 
 const UTM_WHATSAPP_MAP = {
-  meta:    { number: "628213845159",  message: "Hi Bluuu! I want to book a tour [M]" },
-  tiktok:  { number: "628214097657",  message: "Hi Bluuu! I just submitted my inquiry [T]" },
-  google:  { number: "6281547483381", message: "Hi Bluuu! I want to book a tour [G]" },
+  meta:    { number: WA.meta,   message: WA_MSG.meta   },
+  tiktok:  { number: WA.tiktok, message: WA_MSG.tiktok },
+  google:  { number: WA.google, message: WA_MSG.google },
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -43,10 +44,10 @@ const DEFAULT_CONTACTS = {
     number: "",
     link: "",
   },
-  email: "",
+  email: EMAIL,
   facebook: "",
-  youtube: "",
-  instagram: "",
+  youtube: YOUTUBE,
+  instagram: INSTAGRAM,
   map: "",
 };
 

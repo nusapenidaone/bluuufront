@@ -1,11 +1,13 @@
+import { WA } from "./contacts";
+
 const PHONE_MAP = {
-  meta:      "628213845159",
-  facebook:  "628213845159",
-  instagram: "628213845159",
-  google:    "6281547483381",
-  tiktok:    "628214097657",
+  meta:      WA.meta,
+  facebook:  WA.facebook,
+  instagram: WA.instagram,
+  google:    WA.google,
+  tiktok:    WA.tiktok,
 };
-const PHONE_DEFAULT = "6281547483381";
+const PHONE_DEFAULT = WA.google;
 const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content"];
 
 function getUtmSource() {
