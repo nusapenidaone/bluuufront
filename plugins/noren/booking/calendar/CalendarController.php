@@ -89,10 +89,12 @@ class CalendarController extends Controller
         return $data;
     }
 
-    protected function isUnauthorized(Request $request)
+    protected function isUnauthorized(Request $request): bool
     {
-        $key = $request->get('key');
-        return $key !== 'e4f3b1a9c2d8e7f6a1b2c3d4e5f67890';
+        $cfg    = require __DIR__ . '/../odoo/services.config.php';
+        $token  = $cfg['admin_token'] ?? null;
+        if (!$token) return true;
+        return $request->header('Authorization', '') !== 'Bearer ' . $token;
     }
 
     protected function cors($response)
@@ -110,7 +112,9 @@ class CalendarController extends Controller
 
     public function closeTomorrow(Request $request)
     {
-        if ($this->isUnauthorized($request)) {
+        $cfg     = require __DIR__ . '/../odoo/services.config.php';
+        $cronKey = $cfg['cron_key'] ?? null;
+        if (!$cronKey || $request->get('key') !== $cronKey) {
             return $this->cors(response()->json(['error' => 'Unauthorized'], 401));
         }
 

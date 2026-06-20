@@ -367,11 +367,18 @@ class AdminController extends Controller
 
         if ($to->lt($from)) $to = $from->copy();
 
-        $startUtc = $from->copy()->startOfDay()->utc()->format('Y-m-d H:i:s');
-        $endUtc   = $to->copy()->endOfDay()->utc()->format('Y-m-d H:i:s');
+        $startUtc  = $from->copy()->startOfDay()->utc()->format('Y-m-d H:i:s');
+        $endUtc    = $to->copy()->endOfDay()->utc()->format('Y-m-d H:i:s');
+        $singleDay = $from->toDateString() === $to->toDateString();
+
+        $perPage = 20;
+        $page    = max(1, (int) $request->get('page', 1));
+        $limit   = $singleDay ? 0 : $perPage;
+        $offset  = $singleDay ? 0 : ($page - 1) * $perPage;
 
         try {
-            $orders = OdooService::getLeadsForDate($startUtc, $endUtc);
+            $orders = OdooService::getLeadsForDate($startUtc, $endUtc, $limit, $offset);
+            $total  = $singleDay ? count($orders) : OdooService::countLeadsForDate($startUtc, $endUtc);
 
             if (!empty($orders)) {
                 $partnerIds = array_unique(array_filter(array_map(
@@ -394,10 +401,13 @@ class AdminController extends Controller
             }
 
             return response()->json([
-                'date_from' => $from->toDateString(),
-                'date_to'   => $to->toDateString(),
-                'total'     => count($orders),
-                'orders'    => $orders,
+                'date_from'    => $from->toDateString(),
+                'date_to'      => $to->toDateString(),
+                'total'        => $total,
+                'orders'       => $orders,
+                'current_page' => $page,
+                'last_page'    => $limit > 0 ? (int) ceil($total / max(1, $perPage)) : 1,
+                'per_page'     => $limit ?: $total,
             ]);
         } catch (\Throwable $e) {
             Log::error('Admin leads: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());

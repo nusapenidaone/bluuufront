@@ -197,9 +197,9 @@ class OdooService
 
     // ─── Get orders for a date range (UTC) — daily leads/briefing view ─────────
 
-    public static function getLeadsForDate(string $startUtc, string $endUtc): array
+    public static function getLeadsForDate(string $startUtc, string $endUtc, int $limit = 0, int $offset = 0): array
     {
-        return static::post('/json/2/sale.order/search_read', [
+        $params = [
             'domain' => [
                 ['rental_start_date', '>=', $startUtc],
                 ['rental_start_date', '<=', $endUtc],
@@ -228,7 +228,26 @@ class OdooService
                 'x_studio_collected_by_edcbank',
             ],
             'order' => 'rental_start_date asc',
-        ]) ?: [];
+        ];
+
+        if ($limit > 0) {
+            $params['limit']  = $limit;
+            $params['offset'] = $offset;
+        }
+
+        return static::post('/json/2/sale.order/search_read', $params) ?: [];
+    }
+
+    public static function countLeadsForDate(string $startUtc, string $endUtc): int
+    {
+        $result = static::post('/json/2/sale.order/search_count', [
+            'domain' => [
+                ['rental_start_date', '>=', $startUtc],
+                ['rental_start_date', '<=', $endUtc],
+                ['state', '=', 'sale'],
+            ],
+        ]);
+        return is_int($result) ? $result : 0;
     }
 
     // Used by BriefingController for daily restaurant emails
@@ -782,7 +801,8 @@ class OdooService
                     'Authorization'   => 'bearer ' . static::apiKey(),
                     'X-Odoo-Database' => static::db(),
                 ])
-                ->timeout(30)
+                ->timeout(60)
+                ->connectTimeout(15)
                 ->post(static::url() . $endpoint, $body);
 
             if ($response->successful()) {
