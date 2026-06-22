@@ -32,22 +32,44 @@ class AdminController extends Controller
         return response()->json(['error' => 'Unauthorized'], 401);
     }
 
+    // ─── GET /api/admin/managers ─────────────────────────────────────────────
+    // Returns list of manager names (no passwords) — public endpoint for login screen
+
+    public function managers(Request $request)
+    {
+        $cfg      = require __DIR__ . '/../odoo/services.config.php';
+        $managers = $cfg['managers'] ?? [];
+        return response()->json(['managers' => array_keys($managers)]);
+    }
+
     // ─── POST /api/admin/login ────────────────────────────────────────────────
 
     public function login(Request $request)
     {
         $cfg       = require __DIR__ . '/../odoo/services.config.php';
         $passwords = $cfg['admin_passwords'] ?? [];
+        $managers  = $cfg['managers']        ?? [];
         $token     = $cfg['admin_token']     ?? null;
 
         if (!$token) {
             return response()->json(['error' => 'Server misconfigured'], 500);
         }
 
-        $page     = $request->input('page', '');
-        $expected = $passwords[$page] ?? null;
+        $username = (string) $request->input('username', '');
+        $password = (string) $request->input('password', '');
+        $page     = (string) $request->input('page', '');
 
-        if (!$expected || $request->input('password', '') !== $expected) {
+        // Per-manager login: username provided and found in managers config
+        if ($username && isset($managers[$username])) {
+            if ($password !== $managers[$username]) {
+                return response()->json(['error' => 'Wrong password'], 401);
+            }
+            return response()->json(['token' => $token, 'manager_name' => $username]);
+        }
+
+        // Legacy page-based login (guides, drivers, vendors, manage without username)
+        $expected = $passwords[$page] ?? null;
+        if (!$expected || $password !== $expected) {
             return response()->json(['error' => 'Wrong password'], 401);
         }
 
@@ -253,8 +275,10 @@ class AdminController extends Controller
             'x_studio_deposit',        'x_studio_collect',
             'x_studio_free_shuttle_bus',
             'x_studio_customer_checked_in_and_cleared',
+            'x_studio_checked_in_by',
             'x_studio_collected_by_cash',
             'x_studio_collected_by_edcbank',
+            'x_studio_group_lanyard_color',
         ];
 
         $fields = $request->only($allowed);

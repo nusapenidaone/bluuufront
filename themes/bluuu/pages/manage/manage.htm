@@ -23,7 +23,8 @@ is_hidden = 0
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const TOKEN_KEY = 'bluuu_admin_token';
+const TOKEN_KEY   = 'bluuu_admin_token';
+const MANAGER_KEY = 'bluuu_admin_manager';
 
 const INPUT  = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-blue-400';
 const SELECT = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 h-9 text-sm outline-none';
@@ -31,6 +32,26 @@ const GLASS  = 'bg-white border border-slate-200 rounded-2xl shadow-sm';
 const BTN    = 'bg-white border border-slate-200 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm';
 const TH     = 'px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 whitespace-nowrap bg-slate-50';
 const TD     = 'px-3 py-2.5 border-b border-slate-100 align-top text-sm text-slate-700 whitespace-nowrap';
+
+const LANYARD_COLORS = [
+    { value: 'Blue',              color: '#3b82f6' },
+    { value: 'Turquoise',         color: '#06b6d4' },
+    { value: 'Black',             color: '#1e293b' },
+    { value: 'White',             color: '#e2e8f0', border: '#94a3b8' },
+    { value: 'Grey',              color: '#94a3b8' },
+    { value: 'Indigo/Royal Blue', color: '#4f46e5' },
+    { value: 'Violet/Purple',     color: '#8b5cf6' },
+    { value: 'Sea Green',         color: '#0d9488' },
+    { value: 'Emerald Green',     color: '#10b981' },
+    { value: 'Forrest Green',     color: '#15803d' },
+    { value: 'Yello',             color: '#eab308' },
+    { value: 'Orange',            color: '#f97316' },
+    { value: 'Brown',             color: '#92400e' },
+    { value: 'Pink',              color: '#ec4899' },
+];
+function lanyardColorInfo(value) {
+    return LANYARD_COLORS.find(c => c.value === value) || null;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
@@ -680,13 +701,78 @@ function OrderDetailModal({ order: o, onClose }) {
     );
 }
 
-const CHECKIN_BY = ['Weda', 'Ryan', 'Widya', 'Chida', 'Jelin'];
+const CHECKIN_BY = ['Weda', 'Ryan', 'Widya', 'Chida', 'Jelin', 'Finance Team', 'MODs', 'Management', 'Guides', 'Porters'];
+
+// ─── LanyardColorPicker ───────────────────────────────────────────────────────
+function LanyardColorPicker({ value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const [pos,  setPos]  = useState({ top: 0, left: 0 });
+    const btnRef  = useRef(null);
+    const dropRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = e => {
+            if (btnRef.current?.contains(e.target) || dropRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const toggle = e => {
+        e.stopPropagation();
+        if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 4, left: r.left });
+        }
+        setOpen(o => !o);
+    };
+
+    const info = lanyardColorInfo(value);
+    const dotStyle = info
+        ? { background: info.color, border: info.border ? `1.5px solid ${info.border}` : '2px solid transparent' }
+        : { background: '#f1f5f9', border: '1.5px dashed #cbd5e1' };
+
+    return (
+        <div onClick={e => e.stopPropagation()}>
+            <button ref={btnRef} onClick={toggle} title={value || 'Set lanyard color'}
+                className="w-6 h-6 rounded-full flex-shrink-0 transition-transform hover:scale-110"
+                style={dotStyle} />
+            {open && ReactDOM.createPortal(
+                <div ref={dropRef} onClick={e => e.stopPropagation()}
+                    style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+                    className="bg-white border border-slate-200 rounded-xl shadow-xl p-2">
+                    <div className="grid grid-cols-7 gap-1">
+                        {LANYARD_COLORS.map(c => (
+                            <button key={c.value} title={c.value}
+                                onClick={() => { onChange(c.value); setOpen(false); }}
+                                style={{
+                                    background: c.color,
+                                    border: c.value === value ? '2px solid #0f172a' : (c.border ? `1.5px solid ${c.border}` : '2px solid transparent'),
+                                }}
+                                className="w-6 h-6 rounded-full transition-transform hover:scale-125" />
+                        ))}
+                        <button title="Clear" onClick={() => { onChange(false); setOpen(false); }}
+                            className="w-6 h-6 rounded-full bg-slate-100 border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-400 transition-colors">
+                            ×
+                        </button>
+                    </div>
+                    {value && <div className="text-[10px] text-slate-500 text-center mt-1.5">{value}</div>}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
 
 // ─── LeadsTable ───────────────────────────────────────────────────────────────
 function LeadsTable({ orders, onRow, updateOrder }) {
-    const [amtDialog,     setAmtDialog]     = useState(null);
-    const [checkinDialog, setCheckinDialog] = useState(null);
+    const [checkPayDialog, setCheckPayDialog] = useState(null);
+    const [saving,         setSaving]         = useState(false);
     const [sort, setSort] = useState({ key: null, dir: 'asc' });
+
+    const currentManager = localStorage.getItem(MANAGER_KEY) || '';
 
     const toggleSort = key => setSort(prev =>
         prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
@@ -710,38 +796,40 @@ function LeadsTable({ orders, onRow, updateOrder }) {
 
     const SI = ({ k }) => sort.key === k ? (sort.dir === 'asc' ? ' ^' : ' v') : '';
 
-    const openCheckin = (e, o) => {
+    const openCheckPay = (e, o) => {
         e.stopPropagation();
-        setCheckinDialog({
-            orderId:   o.id,
+        const existingBy = (o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false)
+            ? String(o.x_studio_checked_in_by) : '';
+        setCheckPayDialog({
+            orderId:    o.id,
             clientName: partnerName(o),
-            checkedIn: !!o.x_studio_customer_checked_in_and_cleared,
-            checkedBy: (o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false)
-                ? String(o.x_studio_checked_in_by) : '',
+            checkedIn:  !!o.x_studio_customer_checked_in_and_cleared,
+            checkedBy:  existingBy || currentManager,
+            collect:    Number(o.x_studio_collect ?? 0),
+            cash:       Number(o.x_studio_collected_by_cash ?? 0),
+            edc:        Number(o.x_studio_collected_by_edcbank ?? 0),
+            payMethod:  null,
+            payAmount:  '',
         });
     };
 
-    const saveCheckin = async () => {
+    const saveCheckPay = async () => {
+        setSaving(true);
+        const d = checkPayDialog;
+        const fields = {
+            x_studio_customer_checked_in_and_cleared: d.checkedIn,
+            x_studio_checked_in_by: d.checkedIn ? (d.checkedBy || false) : false,
+        };
+        if (d.payMethod && d.payAmount !== '') {
+            const amt = parseFloat(d.payAmount) || 0;
+            if (d.payMethod === 'cash') fields.x_studio_collected_by_cash    = amt;
+            else                        fields.x_studio_collected_by_edcbank = amt;
+        }
         try {
-            await updateOrder(checkinDialog.orderId, {
-                x_studio_customer_checked_in_and_cleared: checkinDialog.checkedIn,
-                x_studio_checked_in_by: checkinDialog.checkedBy || false,
-            });
-            setCheckinDialog(null);
+            await updateOrder(d.orderId, fields);
+            setCheckPayDialog(null);
         } catch (err) { alert(err.message); }
-    };
-
-    const openAmt = (e, orderId, field, label, current) => {
-        e.stopPropagation();
-        const cur = current && current !== false ? Number(current) : 0;
-        setAmtDialog({ orderId, field, label, value: cur > 0 ? String(cur) : '' });
-    };
-
-    const confirmAmt = async () => {
-        const amount = parseFloat(amtDialog.value) || 0;
-        try { await updateOrder(amtDialog.orderId, { [amtDialog.field]: amount }); }
-        catch (err) { alert(err.message); }
-        setAmtDialog(null);
+        setSaving(false);
     };
 
     return (
@@ -762,8 +850,8 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                         { label: 'Special Req', key: null,                                      w: 180 },
                         { label: 'Pax',         key: 'x_studio_count_of_people', align: 'right', w: 54 },
                         { label: 'Finance',     key: 'amount_total',              align: 'right', w: 130},
-                        { label: 'Check In',    key: 'x_studio_customer_checked_in_and_cleared', w: 110},
-                        { label: 'Collect',     key: null,                                      w: 160 },
+                        { label: 'Check In',    key: 'x_studio_customer_checked_in_and_cleared', w: 260},
+                        { label: 'Lanyard',     key: null,                                      w: 48  },
                         { label: 'Products',    key: null,                                      w: 220 },
                     ].map(col => (
                         <div
@@ -894,9 +982,10 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                 )}
                             </div>
 
-                            {/* Check In */}
-                            <div className="w-[110px] shrink-0 pt-0.5">
-                                <button onClick={e => openCheckin(e, o)}
+                            {/* Check In + Collect — combined column */}
+                            <div className="w-[260px] shrink-0 pt-0.5">
+                                {/* Check-in status button */}
+                                <button onClick={e => openCheckPay(e, o)}
                                     className={`text-[11px] font-bold px-2 py-1 rounded-lg transition-colors leading-snug ${
                                         o.x_studio_customer_checked_in_and_cleared
                                             ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
@@ -906,27 +995,34 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                 </button>
                                 {o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false && (
                                     <div className="text-[10px] text-slate-500 font-medium mt-0.5 px-1">
-                                        {String(o.x_studio_checked_in_by)}
+                                        by {String(o.x_studio_checked_in_by)}
+                                    </div>
+                                )}
+                                {/* Collected amounts — only show if there's something to collect or already collected */}
+                                {(collect > 0 || o.x_studio_collected_by_cash > 0 || o.x_studio_collected_by_edcbank > 0) && (
+                                    <div className="mt-1.5 space-y-1">
+                                        <button onClick={e => openCheckPay(e, o)} className="flex items-center gap-2 w-full group/btn">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 group-hover/btn:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors shrink-0">Cash</span>
+                                            <span className={`text-[12px] font-semibold tabular-nums ${o.x_studio_collected_by_cash > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>
+                                                {o.x_studio_collected_by_cash > 0 ? fmtMoney(o.x_studio_collected_by_cash) : '—'}
+                                            </span>
+                                        </button>
+                                        <button onClick={e => openCheckPay(e, o)} className="flex items-center gap-2 w-full group/btn">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 group-hover/btn:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors shrink-0">EDC</span>
+                                            <span className={`text-[12px] font-semibold tabular-nums ${o.x_studio_collected_by_edcbank > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>
+                                                {o.x_studio_collected_by_edcbank > 0 ? fmtMoney(o.x_studio_collected_by_edcbank) : '—'}
+                                            </span>
+                                        </button>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Collect */}
-                            <div className="w-[160px] shrink-0 pt-0.5 space-y-1.5">
-                                <button onClick={e => openAmt(e, o.id, 'x_studio_collected_by_cash', 'Cash collected', o.x_studio_collected_by_cash)}
-                                    className="flex items-center gap-2 w-full group/btn">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 group-hover/btn:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors shrink-0">Cash</span>
-                                    <span className={`text-[12px] font-semibold tabular-nums ${o.x_studio_collected_by_cash > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>
-                                        {o.x_studio_collected_by_cash > 0 ? fmtMoney(o.x_studio_collected_by_cash) : '—'}
-                                    </span>
-                                </button>
-                                <button onClick={e => openAmt(e, o.id, 'x_studio_collected_by_edcbank', 'EDC / Bank collected', o.x_studio_collected_by_edcbank)}
-                                    className="flex items-center gap-2 w-full group/btn">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 group-hover/btn:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors shrink-0">EDC</span>
-                                    <span className={`text-[12px] font-semibold tabular-nums ${o.x_studio_collected_by_edcbank > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>
-                                        {o.x_studio_collected_by_edcbank > 0 ? fmtMoney(o.x_studio_collected_by_edcbank) : '—'}
-                                    </span>
-                                </button>
+                            {/* Lanyard */}
+                            <div className="w-[48px] shrink-0 flex items-center">
+                                <LanyardColorPicker
+                                    value={o.x_studio_group_lanyard_color && o.x_studio_group_lanyard_color !== false ? String(o.x_studio_group_lanyard_color) : ''}
+                                    onChange={v => updateOrder(o.id, { x_studio_group_lanyard_color: v })}
+                                />
                             </div>
 
                             {/* Products */}
@@ -950,30 +1046,88 @@ function LeadsTable({ orders, onRow, updateOrder }) {
             })}
             </div>
 
-            {/* Checkin dialog */}
-            {checkinDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setCheckinDialog(null)}>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-xs w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+            {/* ─── Check In + Collect combined popup ─── */}
+            {checkPayDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setCheckPayDialog(null)}>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+
+                        {/* Header */}
                         <div className="flex justify-between items-start mb-5">
                             <div>
                                 <div className="text-sm font-bold text-slate-800 uppercase tracking-widest">Check In</div>
-                                <div className="text-xs text-slate-400 mt-0.5 truncate max-w-[200px]">{checkinDialog.clientName}</div>
+                                <div className="text-xs text-slate-400 mt-0.5 truncate max-w-[220px]">{checkPayDialog.clientName}</div>
                             </div>
-                            <button onClick={() => setCheckinDialog(null)} className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none">×</button>
+                            <button onClick={() => setCheckPayDialog(null)}
+                                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none">×</button>
                         </div>
 
+                        {/* Collect section */}
+                        {checkPayDialog.collect > 0 && (
+                            <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-3">
+                                    To collect: {fmtMoney(checkPayDialog.collect)}
+                                </div>
+                                <div className="flex gap-2 mb-3">
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, payMethod: 'cash', payAmount: String(d.collect), checkedIn: true }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                                            checkPayDialog.payMethod === 'cash'
+                                                ? 'bg-slate-800 border-slate-700 text-white'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                                        }`}>
+                                        Cash
+                                    </button>
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, payMethod: 'edc', payAmount: String(d.collect), checkedIn: true }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                                            checkPayDialog.payMethod === 'edc'
+                                                ? 'bg-slate-800 border-slate-700 text-white'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                                        }`}>
+                                        EDC
+                                    </button>
+                                </div>
+                                {checkPayDialog.payMethod && (
+                                    <input
+                                        type="number"
+                                        placeholder="Amount"
+                                        value={checkPayDialog.payAmount}
+                                        onChange={e => setCheckPayDialog(d => ({ ...d, payAmount: e.target.value }))}
+                                        className={INPUT + ' w-full text-base'}
+                                        autoFocus
+                                    />
+                                )}
+                                {/* Already collected */}
+                                {(checkPayDialog.cash > 0 || checkPayDialog.edc > 0) && (
+                                    <div className="mt-3 flex gap-3 text-[11px] text-slate-400">
+                                        {checkPayDialog.cash > 0 && <span>Cash: {fmtMoney(checkPayDialog.cash)}</span>}
+                                        {checkPayDialog.edc > 0  && <span>EDC: {fmtMoney(checkPayDialog.edc)}</span>}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Check-in status */}
                         <div className="space-y-4">
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Status</label>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setCheckinDialog(d => ({ ...d, checkedIn: true }))}
-                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${checkinDialog.checkedIn ? 'bg-emerald-100 border-emerald-300 text-emerald-700' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: true }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
+                                            checkPayDialog.checkedIn
+                                                ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                        }`}>
                                         ✓ Checked In
                                     </button>
                                     <button
-                                        onClick={() => setCheckinDialog(d => ({ ...d, checkedIn: false }))}
-                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${!checkinDialog.checkedIn ? 'bg-red-50 border-red-200 text-red-500' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
+                                            !checkPayDialog.checkedIn
+                                                ? 'bg-red-50 border-red-200 text-red-500'
+                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                        }`}>
                                         ✗ Not In
                                     </button>
                                 </div>
@@ -981,52 +1135,21 @@ function LeadsTable({ orders, onRow, updateOrder }) {
 
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Checked-in by</label>
-                                <select
-                                    className={SELECT + ' w-full'}
-                                    value={checkinDialog.checkedBy}
-                                    onChange={e => setCheckinDialog(d => ({ ...d, checkedBy: e.target.value }))}>
-                                    <option value="">— not selected —</option>
-                                    {CHECKIN_BY.map(name => <option key={name} value={name}>{name}</option>)}
-                                </select>
+                                <div className={INPUT + ' w-full text-slate-500 bg-slate-50 cursor-default'}>
+                                    {checkPayDialog.checkedBy || '—'}
+                                </div>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 mt-6">
-                            <button onClick={() => setCheckinDialog(null)}
+                            <button onClick={() => setCheckPayDialog(null)}
                                 className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm uppercase tracking-widest transition-colors">
                                 Cancel
                             </button>
-                            <button onClick={saveCheckin}
-                                className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm uppercase tracking-widest transition-colors">
-                                Save
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Amount dialog */}
-            {amtDialog && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setAmtDialog(null)}>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-xs w-full shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <div className="text-sm font-bold text-slate-800 mb-4 uppercase tracking-widest">{amtDialog.label}</div>
-                        <input
-                            type="number"
-                            className={INPUT + ' w-full mb-4 text-lg'}
-                            placeholder="0"
-                            value={amtDialog.value}
-                            onChange={e => setAmtDialog(d => ({ ...d, value: e.target.value }))}
-                            onKeyDown={e => e.key === 'Enter' && confirmAmt()}
-                            autoFocus
-                        />
-                        <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => setAmtDialog(null)}
-                                className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm uppercase tracking-widest transition-colors">
-                                Cancel
-                            </button>
-                            <button onClick={confirmAmt}
-                                className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm uppercase tracking-widest transition-colors">
-                                Save
+                            <button onClick={saveCheckPay}
+                                disabled={saving || (checkPayDialog.collect > 0 && (!checkPayDialog.payMethod || !parseFloat(checkPayDialog.payAmount)))}
+                                className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                {saving ? '...' : 'Save'}
                             </button>
                         </div>
                     </div>
@@ -1081,7 +1204,7 @@ function LeadsView() {
         if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
         setData(prev => ({
             ...prev,
-            orders: prev.orders.map(o => o.id === odooId ? { ...o, ...json.odoo } : o),
+            orders: prev.orders.map(o => o.id === odooId ? { ...o, ...fields, ...json.odoo } : o),
         }));
     }, [token]);
 
@@ -1304,23 +1427,36 @@ function TotalsView({ orders }) {
 
 // ─── LoginScreen ──────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
+    const [managers, setManagers] = useState([]);
+    const [name,     setName]     = useState('');
     const [password, setPassword] = useState('');
     const [loading,  setLoading]  = useState(false);
     const [error,    setError]    = useState('');
+
+    useEffect(() => {
+        fetch('/api/admin/managers')
+            .then(r => r.json())
+            .then(json => setManagers(Array.isArray(json.managers) ? json.managers : []))
+            .catch(() => setManagers(CHECKIN_BY));
+    }, []);
 
     const submit = async e => {
         e.preventDefault();
         setLoading(true);
         setError('');
         try {
+            const body = { password, page: 'manage' };
+            if (name) body.username = name;
             const res  = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, page: 'manage' }),
+                body: JSON.stringify(body),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || 'Wrong password');
             localStorage.setItem(TOKEN_KEY, json.token);
+            const managerName = json.manager_name || name || '';
+            if (managerName) localStorage.setItem(MANAGER_KEY, managerName);
             onLogin(json.token);
         } catch (e) {
             setError(e.message);
@@ -1334,13 +1470,20 @@ function LoginScreen({ onLogin }) {
             <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 w-full max-w-xs">
                 <h1 className="text-base font-bold text-slate-800 mb-6 uppercase tracking-[0.2em] text-center">Bluuu Admin</h1>
                 <form onSubmit={submit} className="space-y-3">
+                    <select
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className={SELECT + ' w-full'}
+                    >
+                        <option value="">Select your name…</option>
+                        {managers.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
                     <input
                         type="password"
                         placeholder="Password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         className={INPUT + ' w-full'}
-                        autoFocus
                     />
                     {error && <div className="text-xs text-red-500 font-semibold">{error}</div>}
                     <button type="submit" disabled={loading}
@@ -1355,12 +1498,19 @@ function LoginScreen({ onLogin }) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
-    const [token,     setToken]     = useState(() => localStorage.getItem(TOKEN_KEY) || '');
+    const [token,     setToken]     = useState(() => {
+        const t = localStorage.getItem(TOKEN_KEY) || '';
+        if (t && !localStorage.getItem(MANAGER_KEY)) {
+            localStorage.removeItem(TOKEN_KEY);
+            return '';
+        }
+        return t;
+    });
     const [activeTab, setActiveTab] = useState('leads');
 
     if (!token) return <LoginScreen onLogin={setToken} />;
 
-    const logout = () => { localStorage.removeItem(TOKEN_KEY); setToken(''); };
+    const logout = () => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(MANAGER_KEY); setToken(''); };
 
     const tabs = [
         { id: 'calendar', label: 'Calendar' },

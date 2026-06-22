@@ -54,6 +54,13 @@ function isPrivate(o) {
 function strVal(v) {
     return v && v !== false ? String(v) : null;
 }
+const LANYARD_HEX = {
+    'Blue': '#3b82f6', 'Turquoise': '#06b6d4', 'Black': '#1e293b',
+    'White': '#e2e8f0', 'Grey': '#94a3b8', 'Indigo/Royal Blue': '#4f46e5',
+    'Violet/Purple': '#8b5cf6', 'Sea Green': '#0d9488', 'Emerald Green': '#10b981',
+    'Forrest Green': '#15803d', 'Yello': '#eab308', 'Orange': '#f97316',
+    'Brown': '#92400e', 'Pink': '#ec4899',
+};
 function copyPhone(phone) {
     navigator.clipboard.writeText(phone).catch(() => {});
 }
@@ -76,6 +83,8 @@ function OrderCard({ o }) {
     const pax_list = strVal(o.x_studio_passenger_list);
     const tourTitle = o.local_name || (priv ? 'Private Boat Tour' : 'Shared Boat Tour');
     const clientName = partnerName(o);
+    const lanyard  = strVal(o.x_studio_group_lanyard_color);
+    const lanyardHex = lanyard ? (LANYARD_HEX[lanyard] || '#94a3b8') : null;
 
     const Field = ({ label, value, pre }) => {
         if (!value) return null;
@@ -104,8 +113,17 @@ function OrderCard({ o }) {
                         {total} ({kids} kids) persons
                     </span>
                 </div>
-                <div className="text-sm font-semibold text-slate-700">
-                    {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
+                <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <div className="text-sm font-semibold text-slate-700">
+                        {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
+                    </div>
+                    {lanyard && (
+                        <div className="flex items-center gap-1.5 shrink-0" title={`Lanyard: ${lanyard}`}>
+                            <div className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                                 style={{ background: lanyardHex, border: lanyard === 'White' ? '1px solid #94a3b8' : 'none' }} />
+                            <span className="text-xs font-bold" style={{ color: lanyardHex }}>{lanyard}</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -212,8 +230,9 @@ function App() {
     const [data,        setData]        = useState(null);
     const [loading,     setLoading]     = useState(false);
     const [error,       setError]       = useState('');
-    const [filterGuide, setFilterGuide] = useState('');
-    const [filterBoat,  setFilterBoat]  = useState('');
+    const [filterGuide,   setFilterGuide]   = useState('');
+    const [filterBoat,    setFilterBoat]    = useState('');
+    const [filterLanyard, setFilterLanyard] = useState('');
 
     if (!token) return <LoginScreen onLogin={setToken} />;
 
@@ -229,6 +248,7 @@ function App() {
             setData(json);
             setFilterGuide('');
             setFilterBoat('');
+            setFilterLanyard('');
         } catch (e) {
             setError(e.message);
         } finally {
@@ -253,6 +273,12 @@ function App() {
         [...new Set(orders.map(o => o.x_studio_boat_name).filter(Boolean))].sort()
     , [orders]);
 
+    const lanyardOptions = useMemo(() =>
+        LANYARD_HEX
+            ? Object.keys(LANYARD_HEX).filter(c => orders.some(o => strVal(o.x_studio_group_lanyard_color) === c))
+            : []
+    , [orders]);
+
     const filtered = useMemo(() => {
         return orders
             .filter(o => {
@@ -262,6 +288,7 @@ function App() {
                     const g2 = o.x_studio_guide_2_1 && o.x_studio_guide_2_1 !== false ? String(o.x_studio_guide_2_1) : '';
                     if (g1 !== filterGuide && g2 !== filterGuide) return false;
                 }
+                if (filterLanyard && strVal(o.x_studio_group_lanyard_color) !== filterLanyard) return false;
                 return true;
             })
             .sort((a, b) => {
@@ -269,7 +296,7 @@ function App() {
                 const tb = b.rental_start_date || '';
                 return ta < tb ? -1 : ta > tb ? 1 : 0;
             });
-    }, [orders, filterGuide, filterBoat]);
+    }, [orders, filterGuide, filterBoat, filterLanyard]);
 
     const isToday = date === todayBali();
 
@@ -286,6 +313,31 @@ function App() {
                     {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
                 </select>
 
+                {lanyardOptions.length > 0 && (
+                    <div className="w-full flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Lanyard:</span>
+                        {lanyardOptions.map(c => {
+                            const hex    = LANYARD_HEX[c] || '#94a3b8';
+                            const active = filterLanyard === c;
+                            return (
+                                <button key={c} title={c}
+                                    onClick={() => setFilterLanyard(active ? '' : c)}
+                                    style={{
+                                        background: hex,
+                                        border: active ? '2.5px solid #0f172a' : (c === 'White' ? '1.5px solid #94a3b8' : '2.5px solid transparent'),
+                                        boxShadow: active ? '0 0 0 2px #fff, 0 0 0 4px ' + hex : 'none',
+                                    }}
+                                    className="w-6 h-6 rounded-full transition-all hover:scale-110 flex-shrink-0" />
+                            );
+                        })}
+                        {filterLanyard && (
+                            <button onClick={() => setFilterLanyard('')}
+                                className="text-[10px] font-bold text-red-400 hover:text-red-500 uppercase tracking-widest ml-1 transition-colors">
+                                clear
+                            </button>
+                        )}
+                    </div>
+                )}
                 <div className="w-full md:hidden" />
                 <div className="flex-1" />
                 {loading && <span className="text-[10px] text-blue-500 animate-pulse uppercase tracking-widest">Loading…</span>}

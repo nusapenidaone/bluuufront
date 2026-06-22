@@ -83,6 +83,8 @@ class OdooService
             ]);
         }
 
+        static::addLogNote($newOdooId, static::buildOrderNote($order));
+
         Log::info('OdooService::recreateLead — done', [
             'old_odoo_id' => $odooOrderId,
             'new_odoo_id' => $newOdooId,
@@ -109,6 +111,7 @@ class OdooService
         $partnerId   = static::createOrFindPartner($order);
         $odooOrderId = static::createSaleOrder($data, $partnerId);
         static::addOrderLines($order, $odooOrderId);
+        static::addLogNote($odooOrderId, static::buildOrderNote($order));
 
         return [
             'partner_id' => $partnerId,
@@ -224,8 +227,10 @@ class OdooService
                 'x_studio_guide_1_1', 'x_studio_guide_2_1',
                 'x_studio_special_requests',
                 'x_studio_customer_checked_in_and_cleared',
+                'x_studio_checked_in_by',
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
+                'x_studio_group_lanyard_color',
             ],
             'order' => 'rental_start_date asc',
         ];
@@ -305,6 +310,11 @@ class OdooService
                 'x_studio_guide_1_1', 'x_studio_guide_2_1',
                 'x_studio_special_requests',
                 'x_studio_online_check_in_complete',
+                'x_studio_customer_checked_in_and_cleared',
+                'x_studio_checked_in_by',
+                'x_studio_collected_by_cash',
+                'x_studio_collected_by_edcbank',
+                'x_studio_group_lanyard_color',
                 'order_line',
             ],
             'limit'  => 1,
@@ -406,12 +416,69 @@ class OdooService
         );
     }
 
+    protected static function buildOrderNote(Order $order): string
+    {
+        $fmt = fn($v) => htmlspecialchars((string)$v, ENT_QUOTES);
+
+        $tour     = optional($order->tours);
+        $boat     = optional($order->boat);
+        $transfer = optional($order->transfer);
+        $cover    = optional($order->cover);
+        $route    = optional($order->route);
+        $restaurant = optional($order->restaurant);
+
+        $extras = [];
+        $extrasRaw = $order->extras;
+        if (!empty($extrasRaw)) {
+            $extrasData = is_string($extrasRaw) ? json_decode($extrasRaw, true) : (array)$extrasRaw;
+            foreach ($extrasData as $item) {
+                $extras[] = $fmt($item['name'] ?? '—') . ' × ' . (int)($item['qty'] ?? $item['quantity'] ?? 1);
+            }
+        }
+
+        $rows = [
+            ['Website Order',  '#' . $fmt($order->id) . ' / ' . $fmt($order->external_id)],
+            ['Customer',       $fmt($order->name)],
+            ['Email',          $fmt($order->email)],
+            ['WhatsApp',       $fmt($order->whatsapp ?? '—')],
+            ['Tour',           $fmt($tour->name ?? '—')],
+            ['Boat',           $fmt($boat->name ?? '—')],
+            ['Date',           $fmt($order->travel_date)],
+            ['Route',          $fmt($route->odoo_name ?? $route->name ?? '—')],
+            ['Restaurant',     $fmt($restaurant->name ?? '—')],
+            ['Adults',         (int)($order->adults ?? 0)],
+            ['Kids',           (int)($order->kids ?? 0)],
+            ['Transfer',       $fmt($transfer->name ?? 'No transfer')],
+            ['Pickup address', $fmt($order->pickup_address ?? '—')],
+            ['Dropoff address',$fmt($order->dropoff_address ?? '—')],
+            ['Cars',           (int)($order->cars ?? 0)],
+            ['Cover',          $fmt($cover->name ?? '—')],
+            ['Extras',         $extras ? implode('<br/>', $extras) : '—'],
+            ['Total',          number_format((float)($order->total_price ?? 0), 0, '.', ',') . ' IDR'],
+            ['Deposit paid',   number_format((float)($order->deposite_summ ?? 0), 0, '.', ',') . ' IDR'],
+            ['Payment method', $fmt(optional($order->method)->name ?? '—')],
+            ['Special requests', $fmt($order->comment ?? '—')],
+        ];
+
+        $trs = '';
+        foreach ($rows as [$label, $value]) {
+            $trs .= '<tr>'
+                . '<td style="padding:3px 8px;font-weight:bold;white-space:nowrap;vertical-align:top">' . $label . '</td>'
+                . '<td style="padding:3px 8px;vertical-align:top">' . $value . '</td>'
+                . '</tr>';
+        }
+
+        return '<p><strong>📋 Order from Bluuu website</strong></p>'
+            . '<table style="border-collapse:collapse;font-size:13px">' . $trs . '</table>';
+    }
+
     public static function addLogNote(int $odooOrderId, string $html): void
     {
         try {
             static::post('/json/2/sale.order/message_post', [
                 'ids'           => [$odooOrderId],
                 'body'          => $html,
+                'body_is_html'  => true,
                 'message_type'  => 'comment',
                 'subtype_xmlid' => 'mail.mt_note',
             ]);
@@ -656,8 +723,6 @@ class OdooService
             }
         }
 
-        static::post('/json/2/sale.order/action_confirm', ['ids' => [$odooId]]);
-
         return $odooId;
     }
 
@@ -775,7 +840,10 @@ class OdooService
 
         if (empty($vals)) return;
 
-        static::post('/json/2/sale.order.line/create', ['vals_list' => $vals]);
+        static::post('/json/2/sale.order.line/create', [
+            'vals_list' => $vals,
+            'context'   => ['no_price_recompute' => true],
+        ]);
     }
 
     // ─── Resolve car type for Odoo ────────────────────────────────────────────
