@@ -78,7 +78,7 @@ class Order extends Model
     {
         $order = $this;
 
-        if ($this->status_id == 1) {
+        if ($this->status_id == 1 || $this->status_id == 4) {
 
             $this->sendEmailAsyncSimple('created', 'info@bluuu.tours');
 
@@ -106,6 +106,10 @@ class Order extends Model
             // 📩 письмо клиенту
             $this->sendEmailAsyncSimple('confirmed', 'info@bluuu.tours', $this->name);
             $this->sendEmailAsyncSimple('confirmed', $this->email, $this->name);
+        }
+
+        if ($this->status_id == 4) {
+            $this->sendEmailAsyncSimple('created', 'info@bluuu.tours');
         }
     }
 

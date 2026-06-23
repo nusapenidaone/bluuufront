@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ElfsightWidget from "./components/common/ElfsightWidget";
 import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import Modal from "./components/common/Modal";
@@ -3038,7 +3039,7 @@ function StepTwo({
             </div>
           );
         })()}
-        {isPickDayMode && (
+        {isPickDayMode && createPortal(
             <>
               <div
                 className="fixed inset-0 z-40 bg-black/40 anim-fade-in"
@@ -3146,7 +3147,8 @@ function StepTwo({
                 </button>
               </div>
             </div>
-          </>
+          </>,
+          document.body
         )}
     </div>
     );

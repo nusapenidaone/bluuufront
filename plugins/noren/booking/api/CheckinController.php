@@ -86,7 +86,7 @@ class CheckinController extends Controller
                 }
             }
             if ($parts) {
-                $updateFields['x_studio_first_class_menu'] = implode(' | ', $parts);
+                $updateFields['x_studio_first_class_menu_selection'] = implode(' | ', $parts);
             }
         }
 

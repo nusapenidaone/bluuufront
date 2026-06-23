@@ -12,5 +12,18 @@ return [
         'drivers' => 'Drivers2026!',
         'vendors' => 'Vendors2026!',
     ],
+    // Per-manager passwords for the /manage page (Login with name + password)
+    'managers' => [
+        'Weda'         => 'EP^OZr*ZIYMIFgnJ',
+        'Ryan'         => 'e@ubs7#qVvvxrexi',
+        'Widya'        => 'rQFHTCca4IaYvsj4',
+        'Chida'        => '260ylBSL2aCMYn8p',
+        'Jelin'        => 'F!tZncySFz8wE%^O',
+        'Finance Team' => '&xcAriQ*mR%utlDC',
+        'MODs'         => 'PsbYy9W!xD9Los83',
+        'Management'   => 'beapkgspX%BXiF**',
+        'Guides'       => 'f*ro2ft@QsZwUSZ2',
+        'Porters'      => 'RLTVwlFiL!6nhXn2',
+    ],
 ];
 

@@ -777,15 +777,12 @@ class OdooService
                 'price_unit'      => 0.0,
             ];
         } else {
-            $price = $members < 6
-                ? (float)($order->transfer->price     ?? 0)
-                : (float)($order->transfer->bus_price ?? 0);
             $vals[] = [
                 'order_id'        => $odooOrderId,
                 'name'            => $order->transfer->name ?? 'Transfer',
                 'product_id'      => (int) $order->transfer->odoo_id,
                 'product_uom_qty' => max(1, $cars),
-                'price_unit'      => $price,
+                'price_unit'      => (float)($order->transfer->price ?? 0),
             ];
         }
 
