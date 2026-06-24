@@ -5,6 +5,7 @@ use Mail;
 use Log;
 use App;
 use Noren\Booking\Classes\Ga4Service;
+use Noren\Booking\Classes\ZelixLabsService;
 use Noren\Booking\Odoo\OdooService;
 use Noren\Booking\RespondIo\RespondIoService;
 
@@ -79,9 +80,13 @@ class Order extends Model
         $order = $this;
 
         if ($this->status_id == 1 || $this->status_id == 4) {
-
             $this->sendEmailAsyncSimple('created', 'info@bluuu.tours');
+        }
 
+        if ($this->status_id == 4) {
+            App::after(function () use ($order) {
+                static::dispatchLead($order, withRespondIo: false, confirm: false);
+            });
         }
     }
 
@@ -100,7 +105,7 @@ class Order extends Model
         if ($this->status_id == 2) {
 
             App::after(function () use ($order) {
-                static::dispatchLead($order, withRespondIo: true);
+                static::dispatchLead($order, withRespondIo: true, confirm: true);
             });
 
             // 📩 письмо клиенту
@@ -117,7 +122,7 @@ class Order extends Model
     // =========================
     // LEAD ROUTING
     // =========================
-    protected static function dispatchLead(Order $order, bool $withRespondIo = false): void
+    protected static function dispatchLead(Order $order, bool $withRespondIo = false, bool $confirm = true): void
     {
         try {
             Ga4Service::sendPurchase($order);
@@ -132,6 +137,12 @@ class Order extends Model
                 Log::error("Order #{$order->id}: RespondIO failed: " . $e->getMessage());
             }
         }
+
+        // try {
+        //     ZelixLabsService::sendPurchase($order);
+        // } catch (\Exception $e) {
+        //     Log::error("Order #{$order->id}: ZelixLabs failed: " . $e->getMessage());
+        // }
 
         if (!$order->boat_id) {
             Log::warning("Order #{$order->id} ({$order->external_id}): Odoo dispatch SKIPPED — no boat assigned. Tour: {$order->tours_id}, Date: {$order->travel_date}, Members: {$order->members}");
@@ -158,7 +169,7 @@ class Order extends Model
         }
 
         try {
-            $result = OdooService::createLead($order);
+            $result = OdooService::createLead($order, confirm: $confirm);
             $order->odoo_id = $result['order_id'];
             $order->saveQuietly();
         } catch (\Exception $e) {

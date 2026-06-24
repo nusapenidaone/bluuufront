@@ -40,7 +40,7 @@ class OdooService
      * Preserves the deposit: if the Odoo order already has a higher deposit
      * (web payments were registered there), that amount is copied to the new order.
      */
-    public static function recreateLead(Order $order): array
+    public static function recreateLead(Order $order, bool $confirm = false): array
     {
         $odooOrderId = (int) $order->odoo_id;
         if (!$odooOrderId) {
@@ -83,6 +83,10 @@ class OdooService
             ]);
         }
 
+        if ($confirm) {
+            static::confirmOrder($newOdooId);
+        }
+
         static::addLogNote($newOdooId, static::buildOrderNote($order));
 
         Log::info('OdooService::recreateLead — done', [
@@ -101,7 +105,7 @@ class OdooService
         ];
     }
 
-    public static function createLead(Order $order): array
+    public static function createLead(Order $order, bool $confirm = false): array
     {
         $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant', 'method']);
 
@@ -111,12 +115,24 @@ class OdooService
         $partnerId   = static::createOrFindPartner($order);
         $odooOrderId = static::createSaleOrder($data, $partnerId);
         static::addOrderLines($order, $odooOrderId);
+
+        if ($confirm) {
+            static::confirmOrder($odooOrderId);
+        }
+
         static::addLogNote($odooOrderId, static::buildOrderNote($order));
 
         return [
             'partner_id' => $partnerId,
             'order_id'   => $odooOrderId,
         ];
+    }
+
+    public static function confirmOrder(int $odooOrderId): void
+    {
+        static::post('/json/2/sale.order/action_confirm', ['ids' => [$odooOrderId]]);
+
+        Log::info('OdooService::confirmOrder — done', ['odoo_id' => $odooOrderId]);
     }
 
     // ─── Get order collect amount ─────────────────────────────────────────────
@@ -231,6 +247,7 @@ class OdooService
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
                 'x_studio_group_lanyard_color',
+                'x_studio_boat_status',
             ],
             'order' => 'rental_start_date asc',
         ];

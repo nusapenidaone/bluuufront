@@ -172,7 +172,7 @@ class AdminController extends Controller
         $local->saveQuietly();
 
         try {
-            $result = OdooService::recreateLead($local);
+            $result = OdooService::recreateLead($local, $local->status_id == 2);
             Order::where('id', $local->id)->update(['odoo_id' => $result['order_id']]);
 
             return response()->json([
@@ -279,6 +279,7 @@ class AdminController extends Controller
             'x_studio_collected_by_cash',
             'x_studio_collected_by_edcbank',
             'x_studio_group_lanyard_color',
+            'x_studio_boat_status',
         ];
 
         $fields = $request->only($allowed);
@@ -311,7 +312,7 @@ class AdminController extends Controller
         }
 
         try {
-            $result = OdooService::recreateLead($local);
+            $result = OdooService::recreateLead($local, $local->status_id == 2);
             Order::where('id', $local->id)->update(['odoo_id' => $result['order_id']]);
 
             return response()->json([
@@ -354,7 +355,7 @@ class AdminController extends Controller
         $local->saveQuietly();
 
         try {
-            $result = OdooService::recreateLead($local);
+            $result = OdooService::recreateLead($local, $local->status_id == 2);
             Order::where('id', $local->id)->update(['odoo_id' => $result['order_id']]);
 
             return response()->json([
@@ -534,8 +535,10 @@ class AdminController extends Controller
         if (!$order) return response()->json(['error' => 'Order not found'], 404);
 
         try {
+            $confirm = $order->status_id == 2;
+
             if (!$order->odoo_id) {
-                $created = OdooService::createLead($order);
+                $created = OdooService::createLead($order, $confirm);
                 Order::where('id', $order->id)->update(['odoo_id' => $created['order_id']]);
 
                 return response()->json([
@@ -544,7 +547,7 @@ class AdminController extends Controller
                 ]);
             }
 
-            $result = OdooService::recreateLead($order);
+            $result = OdooService::recreateLead($order, $confirm);
             Order::where('id', $order->id)->update(['odoo_id' => $result['order_id']]);
 
             return response()->json([

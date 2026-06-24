@@ -95,6 +95,34 @@ class PrivateOrderController extends Controller
         $order->discount_price = $data['discountPrice'] ?? 0;
         $order->discount       = $data['discount']      ?? 0;
 
+        // Partner boat request (deposite=0): frontend sends 0 prices — calculate server-side
+        if ($order->status_id == 4 && $order->tour_price == 0) {
+            $tourForPricing = Tours::with(['packages', 'pricesbydates.packages'])->find($data['tourId']);
+            if ($tourForPricing) {
+                $pricelist = $tourForPricing->packages?->pricelist ?? [];
+                if ($order->travel_date && $tourForPricing->pricesbydates->isNotEmpty()) {
+                    $seasonal = $tourForPricing->pricesbydates->first(
+                        fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
+                    );
+                    if ($seasonal?->packages?->pricelist) {
+                        $pricelist = $seasonal->packages->pricelist;
+                    }
+                }
+                $members = (int) ($order->members ?? 0);
+                $tierPrice = 0;
+                if (!empty($pricelist) && $members > 0) {
+                    $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
+                    $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
+                    $tierPrice = (int) ($entry['price'] ?? 0);
+                }
+                $boatPrice = (int) ($tourForPricing->boat_price ?? 0);
+                $order->tour_price  = $tierPrice;
+                $order->boat_price  = $boatPrice;
+                $order->total_price = $tierPrice + $boatPrice;
+                $order->full_price  = $tierPrice + $boatPrice;
+            }
+        }
+
         // ── Promo / agent ─────────────────────────────────────────────
         $order->promocode  = $data['promocode']  ?? null;
         $order->agent_fee  = $data['agent_fee']  ?? 0;
