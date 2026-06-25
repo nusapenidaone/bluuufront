@@ -291,7 +291,7 @@ function CalendarView() {
     const [data,          setData]          = useState({ boats: [], tours: [] });
     const [loading,       setLoading]       = useState(true);
     const [startDate,     setStartDate]     = useState(() => todayBali());
-    const [endDate,       setEndDate]       = useState(() => baliOffset(6));
+    const [endDate,       setEndDate]       = useState(() => baliOffset(2));
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedTour,  setSelectedTour]  = useState('');
     const [editItem,      setEditItem]      = useState(null);
@@ -314,10 +314,13 @@ function CalendarView() {
         return result;
     }, [startDate, endDate]);
 
-    const shiftMonth = d => {
-        const base = new Date(startDate + 'T00:00:00');
-        const r = monthRange(base.getFullYear(), base.getMonth() + d);
-        setStartDate(r.start); setEndDate(r.end);
+    const shiftRange = d => {
+        const s = new Date(startDate + 'T00:00:00');
+        s.setDate(s.getDate() + d * 3);
+        setStartDate(fmt(s));
+        const e = new Date(s);
+        e.setDate(s.getDate() + 2);
+        setEndDate(fmt(e));
     };
     const visibleTours = useMemo(() =>
         selectedClass ? data.tours.filter(t => t.classes_id === parseInt(selectedClass)) : data.tours,
@@ -383,8 +386,9 @@ function CalendarView() {
             <div className="sticky top-[52px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 mb-5 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
                 <DateRangeBar
                     dateFrom={startDate} dateTo={endDate}
-                    onFrom={setStartDate} onTo={setEndDate}
-                    navPrev={() => shiftMonth(-1)} navNext={() => shiftMonth(1)}
+                    onFrom={v => { setStartDate(v); const mx = new Date(v+'T00:00:00'); mx.setDate(mx.getDate()+2); if (endDate > fmt(mx)) setEndDate(fmt(mx)); if (v > endDate) setEndDate(v); }}
+                    onTo={v => { setEndDate(v); const mn = new Date(v+'T00:00:00'); mn.setDate(mn.getDate()-2); if (startDate < fmt(mn)) setStartDate(fmt(mn)); if (v < startDate) setStartDate(v); }}
+                    navPrev={() => shiftRange(-1)} navNext={() => shiftRange(1)}
                     loading={loading}
                     trailing={
                         <>
@@ -841,7 +845,8 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                     {[
                         { label: 'Date',        key: 'rental_start_date',                       w: 84  },
                         { label: 'Client',      key: 'partner_id',                              w: 140 },
-                        { label: 'Boat',        key: 'x_studio_boat_name',                      w: 140 },
+                        { label: 'Lanyard',     key: null,                                      w: 48  },
+                        { label: 'Boat',        key: 'x_studio_boat_name',                      w: 160 },
                         { label: 'Type',        key: 'x_studio_tour_type',                      w: 110 },
                         { label: 'Route',       key: 'x_studio_route_new',                      w: 120 },
                         { label: 'Guides',      key: null,                                      w: 110 },
@@ -851,7 +856,6 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                         { label: 'Pax',         key: 'x_studio_count_of_people', align: 'right', w: 54 },
                         { label: 'Finance',     key: 'amount_total',              align: 'right', w: 130},
                         { label: 'Check In',    key: 'x_studio_customer_checked_in_and_cleared', w: 260},
-                        { label: 'Lanyard',     key: null,                                      w: 48  },
                         { label: 'Products',    key: null,                                      w: 220 },
                     ].map(col => (
                         <div
@@ -906,11 +910,23 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                 )}
                             </div>
 
+                            {/* Lanyard */}
+                            <div className="w-[48px] shrink-0 flex items-start pt-1">
+                                <LanyardColorPicker
+                                    value={o.x_studio_group_lanyard_color && o.x_studio_group_lanyard_color !== false ? String(o.x_studio_group_lanyard_color) : ''}
+                                    onChange={v => updateOrder(o.id, { x_studio_group_lanyard_color: v })}
+                                />
+                            </div>
+
                             {/* Boat */}
-                            <div className="w-[140px] shrink-0 pt-0.5">
+                            <div className="w-[160px] shrink-0 pt-0.5">
                                 <div className={`text-sm font-bold truncate ${priv ? 'text-violet-600' : 'text-blue-600'}`}>
                                     {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
                                 </div>
+                                <button onClick={e => { e.stopPropagation(); const newStatus = o.x_studio_boat_status === 'Boat Ready' ? 'Not Ready' : 'Boat Ready'; const boatDate = odooDateBali(o.rental_start_date); orders.filter(other => other.x_studio_boat_name === o.x_studio_boat_name && odooDateBali(other.rental_start_date) === boatDate).forEach(other => updateOrder(other.id, { x_studio_boat_status: newStatus })); }}
+                                    className={`mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md transition-colors ${o.x_studio_boat_status === 'Boat Ready' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}>
+                                    {o.x_studio_boat_status === 'Boat Ready' ? '✓ Boat Ready' : '✗ Not Ready'}
+                                </button>
                             </div>
 
                             {/* Tour type */}
@@ -1015,14 +1031,6 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                         </button>
                                     </div>
                                 )}
-                            </div>
-
-                            {/* Lanyard */}
-                            <div className="w-[48px] shrink-0 flex items-center">
-                                <LanyardColorPicker
-                                    value={o.x_studio_group_lanyard_color && o.x_studio_group_lanyard_color !== false ? String(o.x_studio_group_lanyard_color) : ''}
-                                    onChange={v => updateOrder(o.id, { x_studio_group_lanyard_color: v })}
-                                />
                             </div>
 
                             {/* Products */}
@@ -1171,6 +1179,7 @@ function LeadsView() {
     const [showTotals,  setShowTotals] = useState(false);
     const [filters,     setFilters]   = useState({ boat: '', transfer: '', type: '' });
     const [page,        setPage]      = useState(1);
+    const [search,      setSearch]    = useState('');
     const singleDay = dateFrom === dateTo;
     const load = useCallback(async (from, to, pg = 1) => {
         setLoading(true);
@@ -1187,6 +1196,7 @@ function LeadsView() {
             setData(json);
             setDetail(null);
             setFilters({ boat: '', transfer: '', type: '' });
+            setSearch('');
         } catch (e) {
             setError(e.message);
         } finally {
@@ -1212,18 +1222,26 @@ function LeadsView() {
 
     const filtered = useMemo(() => {
         if (!data) return [];
+        const q = search.trim().toLowerCase();
         return data.orders.filter(o => {
             if (filters.boat     && (o.x_studio_boat_name || '') !== filters.boat)                                                        return false;
             if (filters.transfer && (o.x_studio_car_type && o.x_studio_car_type !== false ? String(o.x_studio_car_type) : '') !== filters.transfer) return false;
             if (filters.type     && (o.x_studio_tour_type || '') !== filters.type)                                                        return false;
+            if (q) {
+                const hay = [
+                    partnerName(o), o.x_studio_boat_name, String(o.id),
+                    o.name, o.odoo_phone, o.client_order_ref,
+                ].filter(Boolean).join(' ').toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
             return true;
         });
-    }, [data, filters]);
+    }, [data, filters, search]);
 
     const boats     = useMemo(() => data ? [...new Set(data.orders.map(o => o.x_studio_boat_name).filter(Boolean))].sort() : [], [data]);
     const transfers = useMemo(() => data ? [...new Set(data.orders.map(o => o.x_studio_car_type && o.x_studio_car_type !== false ? String(o.x_studio_car_type) : '').filter(Boolean))].sort() : [], [data]);
     const types     = useMemo(() => data ? [...new Set(data.orders.map(o => o.x_studio_tour_type || '').filter(Boolean))].sort() : [], [data]);
-    const hasFilter = filters.boat || filters.transfer || filters.type;
+    const hasFilter = filters.boat || filters.transfer || filters.type || search;
 
     return (
         <div>
@@ -1235,6 +1253,13 @@ function LeadsView() {
                     extraPresets={[{ label: 'Next month', fn: () => { const r = baliMonthRange(1); setDateFrom(r.start); setDateTo(r.end); setPage(1); } }]}
                     trailing={
                         <>
+                            <input
+                                type="text"
+                                placeholder="Search…"
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                className={INPUT + ' h-9 w-40'}
+                            />
                             <select className={SELECT} value={filters.boat} onChange={e => setFilters(f => ({...f, boat: e.target.value}))}>
                                 <option value="">All boats</option>
                                 {boats.map(b => <option key={b} value={b}>{b}</option>)}
@@ -1248,7 +1273,7 @@ function LeadsView() {
                                 {types.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                             {hasFilter && (
-                                <button onClick={() => setFilters({ boat: '', transfer: '', type: '' })}
+                                <button onClick={() => { setFilters({ boat: '', transfer: '', type: '' }); setSearch(''); }}
                                     className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
                                     Clear
                                 </button>

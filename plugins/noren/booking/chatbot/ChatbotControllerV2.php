@@ -547,10 +547,10 @@ class ChatbotControllerV2 extends ChatbotController
         $transferType = $transfer?->type ?? '';
 
         $rentalStart = $date
-            ? Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->format('Y-m-d H:i:s')
+            ? Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s')
             : null;
         $rentalEnd = $date
-            ? Carbon::parse($date . ' ' . $routeEnd, 'Asia/Makassar')->utc()->format('Y-m-d H:i:s')
+            ? Carbon::parse($date . ' ' . $routeEnd, 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s')
             : null;
 
         // ── Order — exact fields sent to Odoo createSaleOrder ────────────

@@ -955,7 +955,7 @@ export default function TourDetailsCard({
             {hasNav && onNext ? <button type="button" onClick={onNext} className="inline-flex items-center gap-1.5 text-sm font-bold text-primary-500 hover:text-primary-400 transition-colors">{nextLabel}<ChevronRight className="h-4 w-4" /></button> : <span />}
           </div>
           {/* Mobile reserve — full width, no icon */}
-          <div className="sm:hidden pb-4 flex justify-center">
+          <div className="sm:hidden pb-8 flex justify-center">
             {isUnavailable ? (
               onChangeParams && (
                 <button type="button" onClick={onChangeParams}
