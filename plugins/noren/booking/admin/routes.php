@@ -52,3 +52,21 @@ Route::patch('api/admin/order/{id}', [AdminController::class, 'update']);
 
 // Push local order to Odoo (create if new, recreate if exists)
 Route::post('api/admin/order/{id}/push', [AdminController::class, 'pushToOdoo']);
+
+// ── Blog ────────────────────────────────────────────────────────────────────────
+// NOTE: static segments (authors) must be declared BEFORE wildcard {id} routes
+
+Route::get('api/admin/blog',                        [AdminController::class, 'blogList']);
+Route::post('api/admin/blog',                       [AdminController::class, 'blogCreate']);
+
+// Authors — declared before blog/{id} so Laravel doesn't swallow 'authors' as {id}
+Route::get('api/admin/blog/authors',                [AdminController::class, 'authorList']);
+Route::post('api/admin/blog/authors',               [AdminController::class, 'authorCreate']);
+Route::get('api/admin/blog/authors/{id}',           [AdminController::class, 'authorGet']);
+Route::patch('api/admin/blog/authors/{id}',         [AdminController::class, 'authorUpdate']);
+Route::delete('api/admin/blog/authors/{id}',        [AdminController::class, 'authorDelete']);
+
+// Blog by ID — after static segments
+Route::get('api/admin/blog/{id}',                   [AdminController::class, 'blogGet']);
+Route::patch('api/admin/blog/{id}',                 [AdminController::class, 'blogUpdate']);
+Route::delete('api/admin/blog/{id}',                [AdminController::class, 'blogDelete']);

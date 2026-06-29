@@ -132,7 +132,6 @@ class OdooService
     {
         static::post('/json/2/sale.order/action_confirm', ['ids' => [$odooOrderId]]);
 
-        Log::info('OdooService::confirmOrder — done', ['odoo_id' => $odooOrderId]);
     }
 
     // ─── Get order collect amount ─────────────────────────────────────────────
@@ -244,6 +243,7 @@ class OdooService
                 'x_studio_special_requests',
                 'x_studio_customer_checked_in_and_cleared',
                 'x_studio_checked_in_by',
+                'x_studio_no_show_1',
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
                 'x_studio_group_lanyard_color',
@@ -329,6 +329,7 @@ class OdooService
                 'x_studio_online_check_in_complete',
                 'x_studio_customer_checked_in_and_cleared',
                 'x_studio_checked_in_by',
+                'x_studio_no_show_1',
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
                 'x_studio_group_lanyard_color',
@@ -681,12 +682,25 @@ class OdooService
         $lead = $data['lead'];
 
         // Non-selection fields only — safe to include in create
+        $rentalStart = Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+        $rentalEnd   = Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+
+        Log::info(
+            'OdooService::createSaleOrder — dates' .
+            ' | ext=' . $lead['external_id'] .
+            ' | travel=' . $lead['travel_date'] .
+            ' | route_start=' . $lead['route_start'] .
+            ' | rental_start=' . $rentalStart .
+            ' | server=' . date('Y-m-d H:i:s') .
+            ' | tz=' . date_default_timezone_get()
+        );
+
         $vals = [
             'partner_id' => $partnerId,
 
             'is_rental_order'    => true,
-            'rental_start_date'  => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
-            'rental_return_date' => Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s'),
+            'rental_start_date'  => $rentalStart,
+            'rental_return_date' => $rentalEnd,
 
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
@@ -888,7 +902,24 @@ class OdooService
                 ->post(static::url() . $endpoint, $body);
 
             if ($response->successful()) {
-                return $response->json();
+                $json = $response->json();
+
+                // Odoo sometimes returns 200 with {"error": {...}} in JSON-RPC
+                if (isset($json['error'])) {
+                    $errorMsg = $json['error']['data']['message']
+                        ?? $json['error']['message']
+                        ?? json_encode($json['error']);
+
+                    Log::error('OdooService JSON-RPC error', [
+                        'endpoint' => $endpoint,
+                        'request'  => $body,
+                        'error'    => $errorMsg,
+                        'full'     => $json['error'],
+                    ]);
+                    throw new \RuntimeException('Odoo JSON-RPC error: ' . $errorMsg);
+                }
+
+                return $json;
             }
 
             if ($response->status() === 429 && $attempt < $maxRetries) {
@@ -903,10 +934,11 @@ class OdooService
                 continue;
             }
 
-            Log::error('OdooService error', [
+            Log::error('OdooService HTTP error', [
                 'endpoint' => $endpoint,
                 'status'   => $response->status(),
-                'body'     => $response->body(),
+                'request'  => $body,
+                'response' => $response->body(),
             ]);
             throw new \RuntimeException('Odoo API error ' . $response->status() . ': ' . $response->body());
         }

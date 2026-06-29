@@ -383,7 +383,7 @@ function CalendarView() {
 
     return (
         <div>
-            <div className="sticky top-[52px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 mb-5 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
+            <div className="sticky top-[40px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 mb-5 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
                 <DateRangeBar
                     dateFrom={startDate} dateTo={endDate}
                     onFrom={v => { setStartDate(v); const mx = new Date(v+'T00:00:00'); mx.setDate(mx.getDate()+2); if (endDate > fmt(mx)) setEndDate(fmt(mx)); if (v > endDate) setEndDate(v); }}
@@ -808,6 +808,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
             orderId:    o.id,
             clientName: partnerName(o),
             checkedIn:  !!o.x_studio_customer_checked_in_and_cleared,
+            noShow:     !!o.x_studio_no_show_1,
             checkedBy:  existingBy || currentManager,
             collect:    Number(o.x_studio_collect ?? 0),
             cash:       Number(o.x_studio_collected_by_cash ?? 0),
@@ -823,6 +824,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
         const fields = {
             x_studio_customer_checked_in_and_cleared: d.checkedIn,
             x_studio_checked_in_by: d.checkedIn ? (d.checkedBy || false) : false,
+            x_studio_no_show_1: d.noShow,
         };
         if (d.payMethod && d.payAmount !== '') {
             const amt = parseFloat(d.payAmount) || 0;
@@ -914,7 +916,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                             <div className="w-[48px] shrink-0 flex items-start pt-1">
                                 <LanyardColorPicker
                                     value={o.x_studio_group_lanyard_color && o.x_studio_group_lanyard_color !== false ? String(o.x_studio_group_lanyard_color) : ''}
-                                    onChange={v => updateOrder(o.id, { x_studio_group_lanyard_color: v })}
+                                    onChange={v => { const boatDate = odooDateBali(o.rental_start_date); orders.filter(other => other.x_studio_boat_name === o.x_studio_boat_name && odooDateBali(other.rental_start_date) === boatDate).forEach(other => updateOrder(other.id, { x_studio_group_lanyard_color: v })); }}
                                 />
                             </div>
 
@@ -1005,9 +1007,11 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                     className={`text-[11px] font-bold px-2 py-1 rounded-lg transition-colors leading-snug ${
                                         o.x_studio_customer_checked_in_and_cleared
                                             ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                            : o.x_studio_no_show_1
+                                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
                                     }`}>
-                                    {o.x_studio_customer_checked_in_and_cleared ? '✓ Checked In' : '✗ Not In'}
+                                    {o.x_studio_customer_checked_in_and_cleared ? '✓ Checked In' : o.x_studio_no_show_1 ? '✗ No-Show' : '✗ Not In'}
                                 </button>
                                 {o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false && (
                                     <div className="text-[10px] text-slate-500 font-medium mt-0.5 px-1">
@@ -1121,7 +1125,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Status</label>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: true }))}
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: true, noShow: false }))}
                                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
                                             checkPayDialog.checkedIn
                                                 ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
@@ -1130,13 +1134,22 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                         ✓ Checked In
                                     </button>
                                     <button
-                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false }))}
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: false }))}
                                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
-                                            !checkPayDialog.checkedIn
+                                            !checkPayDialog.checkedIn && !checkPayDialog.noShow
                                                 ? 'bg-red-50 border-red-200 text-red-500'
                                                 : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
                                         }`}>
                                         ✗ Not In
+                                    </button>
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: true }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
+                                            checkPayDialog.noShow
+                                                ? 'bg-red-600 border-red-700 text-white'
+                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                        }`}>
+                                        ✗ No-Show
                                     </button>
                                 </div>
                             </div>
@@ -1245,7 +1258,7 @@ function LeadsView() {
 
     return (
         <div>
-            <div className="sticky top-[52px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
+            <div className="sticky top-[40px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
                 <DateRangeBar
                     dateFrom={dateFrom} dateTo={dateTo}
                     onFrom={v => { setDateFrom(v); setPage(1); }}
@@ -1301,9 +1314,18 @@ function LeadsView() {
                 <div className="flex justify-center mt-16 text-blue-500 font-bold animate-pulse tracking-[0.2em] text-sm">LOADING FROM ODOO...</div>
             )}
             {!loading && data && (
-                <div className={GLASS + ' overflow-hidden'}>
+                <div className={GLASS + (showTotals ? '' : ' overflow-hidden')}>
                     {showTotals
-                        ? <TotalsView orders={filtered} />
+                        ? <div className="flex" style={{ height: 'calc(100vh - 110px)' }}>
+                            <div className="flex-1 min-w-0 overflow-y-auto h-full">
+                                <TotalsView orders={filtered} />
+                            </div>
+                            {singleDay && (
+                                <div className="w-72 shrink-0 border-l border-slate-100 p-6 overflow-y-auto h-full">
+                                    <BoatAvailabilityPanel date={dateFrom} />
+                                </div>
+                            )}
+                          </div>
                         : filtered.length === 0
                             ? <div className="py-16 text-center text-sm text-slate-400">No orders for {fmtDisplayDate(dateFrom)}{dateFrom !== dateTo ? ` — ${fmtDisplayDate(dateTo)}` : ''}</div>
                             : <LeadsTable orders={filtered} onRow={setDetail} updateOrder={updateOrder} />
@@ -1450,6 +1472,154 @@ function TotalsView({ orders }) {
     );
 }
 
+// ─── BoatAvailabilityPanel ────────────────────────────────────────────────────
+function BoatAvailabilityPanel({ date }) {
+    const [data,     setData]     = useState(null);
+    const [loading,  setLoading]  = useState(false);
+    const [editItem, setEditItem] = useState(null);
+
+    const calHeaders = () => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem(TOKEN_KEY) || ''}`,
+    });
+
+    const fetchData = useCallback(async () => {
+        if (!date) return;
+        setLoading(true);
+        try {
+            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${date}&end=${date}`);
+            const json = await res.json();
+            setData(json);
+        } catch (e) { console.error(e); }
+        setLoading(false);
+    }, [date]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const saveItem = async item => {
+        try {
+            const url = item.id
+                ? `https://bluuu.tours/api/new/calendar/update/${item.id}`
+                : `https://bluuu.tours/api/new/calendar/create`;
+            await fetch(url, { method: 'POST', headers: calHeaders(), body: JSON.stringify(item) });
+            await fetchData();
+            setEditItem(null);
+        } catch (e) { alert('Failed'); }
+    };
+
+    const deleteItem = async id => {
+        if (!confirm('Delete this record?')) return;
+        try {
+            await fetch(`https://bluuu.tours/api/new/calendar/delete/${id}`, { method: 'POST', headers: calHeaders(), body: JSON.stringify({}) });
+            await fetchData();
+            setEditItem(null);
+        } catch (e) { alert('Failed'); }
+    };
+
+    if (!data) return (
+        <div className="flex justify-center items-center h-24 text-blue-500 text-xs font-bold animate-pulse uppercase tracking-widest">Loading…</div>
+    );
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Boat Availability</div>
+                <button onClick={fetchData} disabled={loading} title="Refresh"
+                    className="text-slate-400 hover:text-slate-600 transition-colors text-base leading-none disabled:opacity-40">↺</button>
+            </div>
+            <div className="space-y-1.5">
+                {data.boats.map(boat => {
+                    const records = boat.closed_dates.filter(c => c.date === date);
+                    const primary = records[0];
+                    const isOpen  = records.length === 0;
+                    const pax     = primary?.type === 1 ? records.reduce((s, r) => s + (Number(r.qtty) || 0), 0) : null;
+                    const full    = pax !== null && boat.capacity && pax >= boat.capacity;
+
+                    let sc, lbl;
+                    if      (isOpen)          { sc = 'bg-emerald-100 text-emerald-700'; lbl = 'Open'; }
+                    else if (full)            { sc = 'bg-orange-100  text-orange-600';  lbl = `Full ${pax}/${boat.capacity}`; }
+                    else if (primary?.type === 1) { sc = 'bg-blue-100 text-blue-700';   lbl = `Shared ${pax}/${boat.capacity}`; }
+                    else if (primary?.type === 3) { sc = 'bg-red-100   text-red-600';   lbl = 'Manual Block'; }
+                    else if (primary?.type === 4) { sc = 'bg-slate-200 text-slate-500'; lbl = 'Auto'; }
+                    else                      { sc = 'bg-violet-100 text-violet-600';    lbl = 'CRM'; }
+
+                    return (
+                        <div key={boat.id}
+                            onClick={() => setEditItem({ ...(records[0] || {}), boatName: boat.name, boat_id: boat.id, date, allRecords: records, capacity: boat.capacity })}
+                            className="flex items-center justify-between px-3 py-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-colors">
+                            <div className="min-w-0 mr-2">
+                                <div className="text-sm font-semibold text-slate-700 leading-tight truncate">{boat.name}</div>
+                                <div className="text-[10px] text-slate-400">cap {boat.capacity}</div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase tracking-wide whitespace-nowrap ${sc}`}>{lbl}</span>
+                                {isOpen && (
+                                    <button onClick={e => { e.stopPropagation(); saveItem({ boat_id: boat.id, date, type: 3 }); }}
+                                        className="text-[10px] font-bold text-slate-300 hover:text-red-500 transition-colors leading-none">
+                                        Block
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {editItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditItem(null)}>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800">{editItem.boatName}</h2>
+                                <p className="text-blue-600 text-sm font-semibold uppercase tracking-widest mt-1">{fmtDisplayDate(date)}</p>
+                            </div>
+                            <button onClick={() => setEditItem(null)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none">×</button>
+                        </div>
+                        <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+                            {editItem.allRecords.map((r, i) => (
+                                <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Record #{i+1}</span>
+                                        <button onClick={() => deleteItem(r.id)} className="text-red-500 hover:text-red-400 p-1 text-sm font-bold">✕</button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Type</label>
+                                            <select className={SELECT + ' w-full'} value={r.type} onChange={e => saveItem({...r, type: e.target.value})}>
+                                                <option value="1">Shared</option>
+                                                <option value="2">CRM</option>
+                                                <option value="3">Manual</option>
+                                                <option value="4">Auto</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Qty</label>
+                                            <input type="number" className={INPUT + ' w-full'} value={r.qtty || 0} onChange={e => saveItem({...r, qtty: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {!editItem.allRecords.length && (
+                                <div className="text-center py-6 text-slate-400 text-sm italic">No closeddate records for this date.</div>
+                            )}
+                        </div>
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            <button onClick={() => saveItem({ boat_id: editItem.boat_id, date, type: 3 })}
+                                className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-sm uppercase tracking-widest border border-slate-200 transition-colors">
+                                + Block
+                            </button>
+                            <button onClick={() => setEditItem(null)}
+                                className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm uppercase tracking-widest transition-colors">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── LoginScreen ──────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
     const [managers, setManagers] = useState([]);
@@ -1544,7 +1714,7 @@ function App() {
 
     return (
         <div>
-            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex gap-1 items-center border-b border-slate-200/80">
+            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-1.5 flex gap-1 items-center border-b border-slate-200/80">
                 {tabs.map(tab => (
                     <button key={tab.id}
                         onClick={() => !tab.disabled && setActiveTab(tab.id)}

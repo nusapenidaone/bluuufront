@@ -276,6 +276,7 @@ class AdminController extends Controller
             'x_studio_free_shuttle_bus',
             'x_studio_customer_checked_in_and_cleared',
             'x_studio_checked_in_by',
+            'x_studio_no_show_1',
             'x_studio_collected_by_cash',
             'x_studio_collected_by_edcbank',
             'x_studio_group_lanyard_color',
@@ -563,5 +564,131 @@ class AdminController extends Controller
             Log::error("Admin pushToOdoo error order #{$id}: " . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    // =========================================================================
+    // BLOG ENDPOINTS
+    // =========================================================================
+
+    private static $authorFields = [
+        'name', 'slug', 'title', 'bio', 'avatar',
+    ];
+
+    private static $blogFields = [
+        'title', 'slug', 'description', 'seo_title', 'seo_description',
+        'status', 'author_id', 'category', 'overline', 'published_at',
+        'hero_caption', 'pull_quote',
+        'content', 'content1', 'content2', 'content3', 'content4',
+        'content_blocks', 'meta_keywords', 'og_image', 'faq',
+    ];
+
+    public function blogList(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $posts = \Noren\Bluuu\Models\Blog::orderBy('id', 'desc')
+            ->get(['id', 'title', 'slug', 'status', 'category', 'published_at', 'created_at', 'updated_at']);
+
+        return response()->json($posts);
+    }
+
+    public function blogGet(Request $request, $id)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $post = \Noren\Bluuu\Models\Blog::find($id);
+        if (!$post) return response()->json(['error' => 'Not found'], 404);
+
+        return response()->json($post);
+    }
+
+    public function blogCreate(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $post = new \Noren\Bluuu\Models\Blog();
+        $post->fill($request->only(self::$blogFields));
+        $post->save();
+
+        return response()->json($post, 201);
+    }
+
+    public function blogUpdate(Request $request, $id)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $post = \Noren\Bluuu\Models\Blog::find($id);
+        if (!$post) return response()->json(['error' => 'Not found'], 404);
+
+        $post->fill($request->only(self::$blogFields));
+        $post->save();
+
+        return response()->json($post);
+    }
+
+    public function blogDelete(Request $request, $id)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $post = \Noren\Bluuu\Models\Blog::find($id);
+        if (!$post) return response()->json(['error' => 'Not found'], 404);
+
+        $post->delete();
+        return response()->json(['ok' => true]);
+    }
+
+    // ── Author CRUD ───────────────────────────────────────────────────────────
+
+    public function authorList(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $authors = \Noren\Bluuu\Models\Author::orderBy('name')->get();
+        return response()->json($authors);
+    }
+
+    public function authorGet(Request $request, $id)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $author = \Noren\Bluuu\Models\Author::find($id);
+        if (!$author) return response()->json(['error' => 'Not found'], 404);
+
+        return response()->json($author);
+    }
+
+    public function authorCreate(Request $request)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $author = new \Noren\Bluuu\Models\Author();
+        $author->fill($request->only(self::$authorFields));
+        $author->save();
+
+        return response()->json($author, 201);
+    }
+
+    public function authorUpdate(Request $request, $id)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $author = \Noren\Bluuu\Models\Author::find($id);
+        if (!$author) return response()->json(['error' => 'Not found'], 404);
+
+        $author->fill($request->only(self::$authorFields));
+        $author->save();
+
+        return response()->json($author);
+    }
+
+    public function authorDelete(Request $request, $id)
+    {
+        if (!$this->auth($request)) return $this->unauthorized();
+
+        $author = \Noren\Bluuu\Models\Author::find($id);
+        if (!$author) return response()->json(['error' => 'Not found'], 404);
+
+        $author->delete();
+        return response()->json(['ok' => true]);
     }
 }

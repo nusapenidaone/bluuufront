@@ -138,11 +138,11 @@ class Order extends Model
             }
         }
 
-        // try {
-        //     ZelixLabsService::sendPurchase($order);
-        // } catch (\Exception $e) {
-        //     Log::error("Order #{$order->id}: ZelixLabs failed: " . $e->getMessage());
-        // }
+        try {
+            ZelixLabsService::sendPurchase($order);
+        } catch (\Exception $e) {
+            Log::error("Order #{$order->id}: ZelixLabs failed: " . $e->getMessage());
+        }
 
         if (!$order->boat_id) {
             Log::warning("Order #{$order->id} ({$order->external_id}): Odoo dispatch SKIPPED — no boat assigned. Tour: {$order->tours_id}, Date: {$order->travel_date}, Members: {$order->members}");

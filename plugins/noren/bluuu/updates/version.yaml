@@ -102,3 +102,18 @@ v1.0.34:
 v1.0.35:
     - 'Updated table noren_bluuu_blog'
     - builder_table_update_noren_bluuu_blog_3.php
+v1.0.36:
+    - 'Updated table noren_bluuu_blog: add blog admin fields'
+    - builder_table_update_noren_bluuu_blog_4.php
+v1.0.37:
+    - 'Created table noren_bluuu_authors'
+    - builder_table_create_noren_bluuu_authors.php
+v1.0.38:
+    - 'Updated table noren_bluuu_blog: add author_id and content_blocks'
+    - builder_table_update_noren_bluuu_blog_5.php
+v1.0.39:
+    - 'Updated table noren_bluuu_blog: add sections repeater field'
+    - builder_table_update_noren_bluuu_blog_6.php
+v1.0.40:
+    - 'Created pivot table noren_bluuu_blog_faq'
+    - builder_table_create_noren_bluuu_blog_faq.php

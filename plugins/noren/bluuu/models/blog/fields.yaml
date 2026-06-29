@@ -1,5 +1,6 @@
 tabs:
     fields:
+        # ── Main ──────────────────────────────────────────────────────────────
         title:
             label: Title
             span: auto
@@ -12,6 +13,12 @@ tabs:
                 field: title
                 type: slug
             type: text
+            tab: Main
+        author:
+            label: Author
+            span: left
+            type: relation
+            nameFrom: name
             tab: Main
         images:
             label: Images
@@ -31,24 +38,6 @@ tabs:
             span: auto
             type: textarea
             tab: Main
-        content:
-            label: Content
-            size: giant
-            span: full
-            type: richeditor
-            tab: Main
-        content1:
-            label: 'Content 1'
-            size: giant
-            span: full
-            type: richeditor
-            tab: Main
-        content2:
-            label: 'Content 2'
-            size: giant
-            span: full
-            type: richeditor
-            tab: Main
         tours:
             label: Tours
             nameFrom: name
@@ -56,6 +45,52 @@ tabs:
             span: auto
             type: relation
             tab: Main
+
+        # ── Content ───────────────────────────────────────────────────────────
+        content:
+            label: Content
+            size: giant
+            span: full
+            type: richeditor
+            tab: Content
+        content1:
+            label: 'Content 1'
+            size: giant
+            span: full
+            type: richeditor
+            tab: Content
+        content2:
+            label: 'Content 2'
+            size: giant
+            span: full
+            type: richeditor
+            tab: Content
+        sections:
+            label: Content Sections
+            span: full
+            type: repeater
+            tab: Content
+            form:
+                fields:
+                    title:
+                        label: Section Title
+                        type: text
+                        span: full
+                        placeholder: 'Why Nusa Penida belongs on your Bali itinerary'
+                    content:
+                        label: Content
+                        type: richeditor
+                        size: giant
+                        span: full
+
+        # ── FAQ ───────────────────────────────────────────────────────────────
+        faq:
+            label: FAQ
+            span: full
+            type: relation
+            tab: FAQ
+
+        # ── SEO ───────────────────────────────────────────────────────────────
         seo_title:
             label: 'SEO title'
             span: auto

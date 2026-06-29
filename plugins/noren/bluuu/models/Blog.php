@@ -15,20 +15,23 @@ class Blog extends Model
      */
     public $table = 'noren_bluuu_blog';
 
-    /**
-     * @var array rules for validation.
-     */
-    public $rules = [
-    ];
-    
+    public $guarded = [];
+
+    public $jsonable = ['sections'];
+
+    public $rules = [];
+
     public $attachMany = [
-        'images' => \System\Models\File::class
+        'images' => \System\Models\File::class,
     ];
-    
-    
-    
+
+    public $belongsTo = [
+        'author' => [Author::class, 'key' => 'author_id'],
+    ];
+
     public $belongsToMany = [
         'tours' => [\Noren\Booking\Models\Tours::class, 'table' => 'noren_bluuu_blog_tours'],
+        'faq'   => [Faq::class, 'table' => 'noren_bluuu_blog_faq'],
     ];
 
 }

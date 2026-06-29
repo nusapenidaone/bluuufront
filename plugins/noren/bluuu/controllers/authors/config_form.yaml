@@ -1,0 +1,10 @@
+name: Author
+form: $/noren/bluuu/models/author/fields.yaml
+modelClass: Noren\Bluuu\Models\Author
+defaultRedirect: noren/bluuu/authors
+create:
+    redirect: 'noren/bluuu/authors/update/:id'
+    redirectClose: noren/bluuu/authors
+update:
+    redirect: noren/bluuu/authors
+    redirectClose: noren/bluuu/authors

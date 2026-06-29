@@ -1,0 +1,8 @@
+faq:
+    label: FAQ
+    view:
+        list: $/noren/bluuu/models/faq/columns.yaml
+        toolbarButtons: create|add|remove
+    manage:
+        list: $/noren/bluuu/models/faq/columns.yaml
+        form: $/noren/bluuu/models/faq/fields.yaml

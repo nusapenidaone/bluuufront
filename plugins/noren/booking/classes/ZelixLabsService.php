@@ -6,8 +6,8 @@ use Noren\Booking\Models\Order;
 
 class ZelixLabsService
 {
-    const ENDPOINT = 'https://www.zelixlabs.com/api/bluutours/webhook/';
-    const SECRET   = '0c9e6552d32aaeb69a0e25a08b73004fd974def9addddf7c3b2f8b9e1b52b804';
+    const ENDPOINT = 'https://bluuutours.zelixlabs.com/api/webhooks/bluu-purchase';
+    const SECRET   = 'eb63fa2c0dc04c3dc88aaf2b5df685b600fac56a99f67a748f792a809b9c7d27';
 
     public static function sendPurchase(Order $order): void
     {
@@ -39,13 +39,9 @@ class ZelixLabsService
             'ttclid'          => $utm['ttclid']       ?? null,
         ];
 
-        $response = Http::withHeaders([
+        Http::withHeaders([
             'Content-Type'     => 'application/json',
             'x-webhook-secret' => self::SECRET,
         ])->timeout(10)->post(self::ENDPOINT, $payload);
-
-        Log::info("ZelixLabsService::sendPurchase — order #{$order->id}", [
-            'http_status' => $response->status(),
-        ]);
     }
 }

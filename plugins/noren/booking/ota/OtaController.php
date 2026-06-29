@@ -60,9 +60,21 @@ class OtaController extends Controller
         $members = max(1, (int) $request->query('members', 1));
         $amount  = (float) $request->query('amount', 0);
 
+        \Log::info('OTA availability request'
+            . ' | tour_id=' . $id
+            . ' | date=' . $date
+            . ' | members=' . $members
+            . ' | amount=' . $amount
+            . ' | ip=' . $request->ip()
+            . ' | server=' . date('Y-m-d H:i:s')
+        );
+
         if (!$date) {
             return response()->json(['error' => 'date required'], 422);
         }
+
+        // MAINTENANCE: OTA availability temporarily disabled
+        // return response()->json(['tour_id' => $id, 'date' => $date, 'available' => false]);
 
         $tour = Tours::with(['boat.closeddates', 'boat.company', 'route.restaurant', 'source', 'ota_transfer'])->find($id);
 
@@ -157,8 +169,8 @@ class OtaController extends Controller
         $start = $route?->start ?? '08:00:00';
         $end   = $route?->end   ?? '18:00:00';
 
-        $rentalStart = Carbon::parse("{$date} {$start}", 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s');
-        $rentalEnd   = Carbon::parse("{$date} {$end}",   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s');
+        $rentalStart = Carbon::parse("{$date} {$start}", 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+        $rentalEnd   = Carbon::parse("{$date} {$end}",   'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
 
         $odoo = [
             'x_studio_tour_type'      => $tour->odoo_type        ?? '',
@@ -176,6 +188,7 @@ class OtaController extends Controller
             'x_studio_drop_off_cars'  => $dropOffCars,
             'order_lines'             => $orderLines,
         ];
+
 
         return response()->json([
             'tour_id'   => $tour->id,

@@ -53,6 +53,10 @@ navigation:
                 label: Blog
                 url: noren/bluuu/blog
                 icon: icon-newspaper-o
+            side-menu-item11:
+                label: Authors
+                url: noren/bluuu/authors
+                icon: icon-user
     main-menu-item2:
         label: Reviews
         url: noren/bluuu/reviews
