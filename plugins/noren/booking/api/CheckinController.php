@@ -56,7 +56,6 @@ class CheckinController extends Controller
 
         $updateFields = [
             'x_studio_passenger_list'                  => trim($list),
-            'x_studio_customer_checked_in_and_cleared' => true,
             'x_studio_online_check_in_complete'        => true,
         ];
 

@@ -16,6 +16,7 @@ const BlogPage = lazy(() => import("./BlogPage.jsx"));
 const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
 const AccountPage = lazy(() => import("./AccountPage.jsx"));
+const Cabinet = lazy(() => import("./cabinet.jsx"));
 const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImagePreloader.jsx"));
 
 function NotFound() {
@@ -224,6 +225,11 @@ export default function App() {
 
     if (path === "/account") {
       return <AccountPage />;
+    }
+
+    const cabinetMatch = path.match(/^\/cabinet\/(\d+)$/);
+    if (cabinetMatch) {
+      return <Cabinet odooId={cabinetMatch[1]} />;
     }
 
     if (path === "/reviews") {

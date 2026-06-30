@@ -270,6 +270,7 @@ class AdminController extends Controller
             'rental_start_date', 'rental_return_date',
             'x_studio_boat_name',
             'x_studio_pickup_address', 'x_studio_drop_off_address',
+            'x_studio_special_requests',
             'x_studio_pickup_cars',    'x_studio_drop_off_cars',
             'x_studio_adults',         'x_studio_kids', 'x_studio_count_of_people',
             'x_studio_deposit',        'x_studio_collect',
@@ -291,6 +292,19 @@ class AdminController extends Controller
         try {
             OdooService::updateOrderFields($odooId, $fields);
             $updated = OdooService::getFullOrder($odooId);
+
+            // Adults/kids changed directly on Odoo (no recreate) — the order
+            // lines don't auto-update, so sync the ones that scale with
+            // headcount: shared tour qty/price, transfer cars qty.
+            if (array_key_exists('x_studio_adults', $fields) || array_key_exists('x_studio_kids', $fields)) {
+                $local = Order::where('odoo_id', $odooId)->first();
+                if ($local) {
+                    $members = (int) ($updated['x_studio_count_of_people']
+                        ?? ((int) ($updated['x_studio_adults'] ?? 0) + (int) ($updated['x_studio_kids'] ?? 0)));
+                    OdooService::syncOrderLineQuantities($local, $odooId, $members);
+                    $updated = OdooService::getFullOrder($odooId);
+                }
+            }
 
             return response()->json(['success' => true, 'odoo' => $updated]);
         } catch (\Exception $e) {

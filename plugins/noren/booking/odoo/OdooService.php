@@ -302,12 +302,93 @@ class OdooService
 
     }
 
+    /**
+     * Keep order line quantities in sync after a passenger-count-only field
+     * update (admin editing x_studio_adults/x_studio_kids directly, without
+     * a full recreateLead()). Only the lines that actually scale with
+     * headcount need touching:
+     *  - shared tour line: qty = members, price_unit recomputed from the
+     *    tier pricelist so qty × price_unit still equals the group total
+     *  - transfer line (types 1/2 only): qty = cars = ceil(members / 5)
+     * Private tours and transfers that don't need cars (free shuttle, none)
+     * are left untouched since their line qty doesn't depend on headcount.
+     */
+    public static function syncOrderLineQuantities(Order $order, int $odooOrderId, int $members): void
+    {
+        $order->loadMissing(['tours.packages', 'tours.pricesbydates.packages', 'transfer']);
+
+        $tour = $order->tours;
+        if (!$tour) {
+            return;
+        }
+
+        $isShared = (int) $tour->classes_id === 9;
+
+        $lines = static::post('/json/2/sale.order.line/search_read', [
+            'domain' => [['order_id', '=', $odooOrderId]],
+            'fields' => ['id', 'product_id'],
+        ]);
+
+        if (empty($lines)) {
+            return;
+        }
+
+        $tourOdooId     = $tour->odoo_id;
+        $transferOdooId = optional($order->transfer)->odoo_id;
+
+        foreach ($lines as $line) {
+            $productId = is_array($line['product_id'] ?? null) ? $line['product_id'][0] : ($line['product_id'] ?? null);
+            if (!$productId) {
+                continue;
+            }
+
+            if ($isShared && $tourOdooId && (int) $productId === (int) $tourOdooId) {
+                $pricelist = $tour->packages?->pricelist ?? [];
+                if ($order->travel_date && $tour->pricesbydates->isNotEmpty()) {
+                    $seasonal = $tour->pricesbydates->first(
+                        fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
+                    );
+                    if ($seasonal?->packages?->pricelist) {
+                        $pricelist = $seasonal->packages->pricelist;
+                    }
+                }
+
+                $tierPrice = 0;
+                if (!empty($pricelist)) {
+                    $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
+                    $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
+                    $tierPrice = (int) ($entry['price'] ?? 0);
+                }
+
+                static::post('/json/2/sale.order.line/write', [
+                    'ids'  => [$line['id']],
+                    'vals' => [
+                        'product_uom_qty' => $members,
+                        'price_unit'      => $members > 0 ? $tierPrice / $members : 0.0,
+                    ],
+                ]);
+                continue;
+            }
+
+            if ($transferOdooId && in_array((int) $order->transfer_id, [1, 2]) && (int) $productId === (int) $transferOdooId) {
+                static::post('/json/2/sale.order.line/write', [
+                    'ids'  => [$line['id']],
+                    'vals' => ['product_uom_qty' => max(1, (int) ceil($members / 5))],
+                ]);
+            }
+        }
+    }
+
     // ─── Get full order data from Odoo ───────────────────────────────────────
 
     public static function getFullOrder(int $odooOrderId): array
     {
         $orders = static::post('/json/2/sale.order/search_read', [
-            'domain' => [['id', '=', $odooOrderId]],
+            'domain'  => [['id', '=', $odooOrderId]],
+            // Cancelled/archived rental orders have active=false in Odoo —
+            // without this they're invisible to search_read even though the
+            // record exists and opens fine directly by URL in the Odoo UI.
+            'context' => ['active_test' => false],
             'fields' => [
                 'id', 'name', 'state', 'partner_id',
                 'rental_start_date',
@@ -475,7 +556,7 @@ class OdooService
             ['Total',          number_format((float)($order->total_price ?? 0), 0, '.', ',') . ' IDR'],
             ['Deposit paid',   number_format((float)($order->deposite_summ ?? 0), 0, '.', ',') . ' IDR'],
             ['Payment method', $fmt(optional($order->method)->name ?? '—')],
-            ['Special requests', $fmt($order->comment ?? '—')],
+            ['Special requests', $fmt($order->requests ?? '—')],
         ];
 
         $trs = '';
@@ -530,6 +611,7 @@ class OdooService
             'travel_date'      => $date,
             'pickup_address'   => $order->pickup_address  ?? '',
             'dropoff_address'  => $order->dropoff_address ?? '',
+            'special_requests' => $order->requests ?? '',
             'cars'             => (int)($order->cars ?? 0),
             'transfer_type'    => optional($order->transfer)->type ?? '',
             'route_name'       => optional($order->route)->odoo_name ?? '',
@@ -705,6 +787,7 @@ class OdooService
             'x_studio_deposit'          => $lead['deposite_summ'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_drop_off_address' => $lead['dropoff_address'],
+            'x_studio_special_requests' => $lead['special_requests'],
             'x_studio_adults'           => $lead['adults'],
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],

@@ -1,6 +1,7 @@
 <?php
 
 use Noren\Booking\Api\AccountController;
+use Noren\Booking\Api\CabinetController;
 use Noren\Booking\Api\CheckinController;
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\MarketingController;
@@ -89,6 +90,17 @@ Route::get  ('api/new/account/{key}',          [AccountController::class, 'show'
 Route::patch('api/new/account/{key}/simple',   [AccountController::class, 'updateSimple']);
 Route::patch('api/new/account/{key}/products', [AccountController::class, 'updateProducts']);
 Route::post ('api/new/account/{key}/pay',      [AccountController::class, 'createPayment']);
+
+// Cabinet (личный кабинет по odoo_id)
+Route::options('api/new/cabinet/{any}', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS')
+        ->header('Access-Control-Allow-Headers', '*');
+})->where('any', '.*');
+Route::get  ('api/new/cabinet/{odooId}',     [CabinetController::class, 'show'])->where('odooId', '[0-9]+');
+Route::patch('api/new/cabinet/{odooId}',     [CabinetController::class, 'update'])->where('odooId', '[0-9]+');
+Route::post ('api/new/cabinet/{odooId}/pay', [CabinetController::class, 'createPayment'])->where('odooId', '[0-9]+');
 
 // Check-in
 Route::options('api/new/checkin/{any}', function () {
