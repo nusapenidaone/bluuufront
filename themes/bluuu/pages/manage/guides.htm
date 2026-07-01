@@ -64,6 +64,9 @@ const LANYARD_HEX = {
 function copyPhone(phone) {
     navigator.clipboard.writeText(phone).catch(() => {});
 }
+function waLink(phone) {
+    return `https://wa.me/${String(phone).replace(/[^\d]/g, '')}`;
+}
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
 function OrderCard({ o, updateOrder }) {
@@ -165,7 +168,7 @@ function OrderCard({ o, updateOrder }) {
                 <span className="text-sm font-semibold text-slate-700 truncate">{clientName}</span>
                 {phone && (
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <a href={`tel:${phone}`}
+                        <a href={waLink(phone)} target="_blank" rel="noopener noreferrer"
                             className="text-sm font-semibold text-emerald-600 hover:text-emerald-500 transition-colors tabular-nums">
                             {phone}
                         </a>
@@ -239,6 +242,8 @@ function App() {
     const [filterGuide,   setFilterGuide]   = useState('');
     const [filterBoat,    setFilterBoat]    = useState('');
     const [filterLanyard, setFilterLanyard] = useState('');
+    const [search,        setSearch]        = useState('');
+    const [showFilters,   setShowFilters]   = useState(false);
 
     if (!token) return <LoginScreen onLogin={setToken} />;
 
@@ -269,6 +274,8 @@ function App() {
             setFilterGuide('');
             setFilterBoat('');
             setFilterLanyard('');
+            setSearch('');
+            setShowFilters(false);
         } catch (e) {
             setError(e.message);
         } finally {
@@ -300,6 +307,7 @@ function App() {
     , [orders]);
 
     const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
         return orders
             .filter(o => {
                 if (filterBoat && (o.x_studio_boat_name || '') !== filterBoat) return false;
@@ -309,6 +317,10 @@ function App() {
                     if (g1 !== filterGuide && g2 !== filterGuide) return false;
                 }
                 if (filterLanyard && strVal(o.x_studio_group_lanyard_color) !== filterLanyard) return false;
+                if (q) {
+                    const hay = [partnerName(o), o.odoo_phone].filter(Boolean).join(' ').toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
                 return true;
             })
             .sort((a, b) => {
@@ -316,25 +328,46 @@ function App() {
                 const tb = b.rental_start_date || '';
                 return ta < tb ? -1 : ta > tb ? 1 : 0;
             });
-    }, [orders, filterGuide, filterBoat, filterLanyard]);
+    }, [orders, filterGuide, filterBoat, filterLanyard, search]);
 
-    const isToday = date === todayBali();
+    const isToday   = date === todayBali();
+    const hasFilter = filterGuide || filterBoat || filterLanyard || search;
+    const clearFilters = () => { setFilterGuide(''); setFilterBoat(''); setFilterLanyard(''); setSearch(''); };
 
     return (
         <div>
             {/* Sticky header */}
             <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex flex-wrap items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
-                <select className={SELECT + ' flex-1 min-w-[120px]'} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
-                    <option value="">All guides</option>
-                    {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <select className={SELECT + ' flex-1 min-w-[120px]'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
-                    <option value="">All Boats</option>
-                    {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
+                <div className="hidden md:flex items-center gap-2 flex-1 min-w-[280px]">
+                    <input type="text" placeholder="Search name or phone…" value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className={INPUT + ' h-9 w-48'} />
+                    <select className={SELECT + ' flex-1 min-w-[120px] max-w-[200px]'} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
+                        <option value="">All guides</option>
+                        {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                    <select className={SELECT + ' flex-1 min-w-[120px] max-w-[200px]'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                        <option value="">All Boats</option>
+                        {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    {hasFilter && (
+                        <button onClick={clearFilters}
+                            className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
+                            Clear
+                        </button>
+                    )}
+                </div>
+
+                <button onClick={() => setShowFilters(v => !v)} title="Filters"
+                    className={`md:hidden h-9 w-9 flex items-center justify-center border rounded-lg transition-all shadow-sm relative ${showFilters ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <polygon points="4 4 20 4 14 12 14 19 10 21 10 12 4 4" />
+                    </svg>
+                    {hasFilter && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-slate-100" />}
+                </button>
 
                 {lanyardOptions.length > 0 && (
-                    <div className="w-full flex items-center gap-1.5 flex-wrap">
+                    <div className="hidden md:flex w-full items-center gap-1.5 flex-wrap">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Lanyard:</span>
                         {lanyardOptions.map(c => {
                             const hex    = LANYARD_HEX[c] || '#94a3b8';
@@ -358,7 +391,6 @@ function App() {
                         )}
                     </div>
                 )}
-                <div className="w-full md:hidden" />
                 <div className="flex-1" />
                 {loading && <span className="text-[10px] text-blue-500 animate-pulse uppercase tracking-widest">Loading…</span>}
                 {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}
@@ -382,6 +414,50 @@ function App() {
                     className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all disabled:opacity-40 text-base">
                     ↺
                 </button>
+
+                {showFilters && (
+                    <div className="md:hidden w-full mt-2 flex flex-col gap-2">
+                        <input type="text" placeholder="Search name or phone…" value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className={INPUT + ' h-9 w-full'} />
+                        <select className={SELECT + ' w-full'} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
+                            <option value="">All guides</option>
+                            {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <select className={SELECT + ' w-full'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                            <option value="">All Boats</option>
+                            {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        {lanyardOptions.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Lanyard:</span>
+                                {lanyardOptions.map(c => {
+                                    const hex    = LANYARD_HEX[c] || '#94a3b8';
+                                    const active = filterLanyard === c;
+                                    return (
+                                        <button key={c} title={c}
+                                            onClick={() => setFilterLanyard(active ? '' : c)}
+                                            style={{
+                                                background: hex,
+                                                border: active ? '2.5px solid #0f172a' : (c === 'White' ? '1.5px solid #94a3b8' : '2.5px solid transparent'),
+                                                boxShadow: active ? '0 0 0 2px #fff, 0 0 0 4px ' + hex : 'none',
+                                            }}
+                                            className="w-6 h-6 rounded-full transition-all hover:scale-110 flex-shrink-0" />
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                            {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}
+                            {hasFilter && (
+                                <button onClick={clearFilters}
+                                    className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Content */}

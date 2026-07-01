@@ -64,6 +64,9 @@ function numVal(v) {
 function copyPhone(phone) {
     navigator.clipboard.writeText(phone).catch(() => {});
 }
+function waLink(phone) {
+    return `https://wa.me/${String(phone).replace(/[^\d]/g, '')}`;
+}
 function shareCard(o) {
     const carType   = strVal(o.x_studio_car_type) || 'No transfer';
     const boat      = o.x_studio_boat_name || '—';
@@ -181,7 +184,7 @@ function DriverCard({ o }) {
                 <span className="text-sm font-semibold text-slate-700 truncate">{clientName}</span>
                 {phone && (
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <a href={`tel:${phone}`}
+                        <a href={waLink(phone)} target="_blank" rel="noopener noreferrer"
                             className="text-sm font-semibold text-emerald-600 hover:text-emerald-500 transition-colors tabular-nums">
                             {phone}
                         </a>
