@@ -42,6 +42,26 @@ function toISODate(d) {
   return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
+// ─── qty_type helpers (mirrors ExtraPopup.jsx / private.jsx) ────────────────
+// manual  — user sets quantity via stepper
+// per_car — ceil(guests / 5), auto, no stepper
+// per_person — guests, auto, no stepper
+// fixed   — always 1, auto, no stepper
+
+function computeAutoQty(qtyType, members) {
+  if (qtyType === "per_car") return Math.max(1, Math.ceil(members / 5));
+  if (qtyType === "per_person") return Math.max(1, members);
+  if (qtyType === "fixed") return 1;
+  return null; // manual
+}
+
+function autoQtyLabel(qtyType, qty) {
+  if (qtyType === "per_car") return `×${qty} car${qty !== 1 ? "s" : ""} (auto)`;
+  if (qtyType === "per_person") return `×${qty} guest${qty !== 1 ? "s" : ""} (auto)`;
+  if (qtyType === "fixed") return `×1 (auto)`;
+  return null;
+}
+
 function SectionCard({ title, icon: Icon, hint, children }) {
   return (
     <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm sm:p-7">
@@ -98,15 +118,11 @@ function StepperRow({ value, onChange, min = 0 }) {
   );
 }
 
-// ─── Date field: button + dropdown panel with the same CustomDatePicker used
-// across the site, with days disabled when the tour has no availability.
-// Mirrors the site's own logic (private.jsx / shared.jsx):
-//  - private: date is binary available/not (boat exclusivity), not guest-aware
-//  - shared: date must have available_seats >= guests (shared.jsx:7286) ────────
+// ─── Date field: button + dropdown with availability-aware CustomDatePicker ──
 function DateField({ tourId, isPrivate, guests, value, onChange, open, onToggle, onClose }) {
   const panelRef = useRef(null);
   const [monthCursor, setMonthCursor] = useState(() => (value ? new Date(value) : new Date()));
-  const [availByDate, setAvailByDate] = useState({}); // private: {date: 0|1} | shared: {date: available_seats}
+  const [availByDate, setAvailByDate] = useState({});
 
   useEffect(() => {
     function onDocClick(e) {
@@ -128,10 +144,8 @@ function DateField({ tourId, isPrivate, guests, value, onChange, open, onToggle,
       .then(r => r.json())
       .then(data => {
         if (isPrivate) {
-          // {date: 0|1}
           setAvailByDate(prev => ({ ...prev, ...data }));
         } else {
-          // [{date, available_seats, ...}, ...]
           const seatsByDate = {};
           for (const entry of (data || [])) {
             if (entry?.date) seatsByDate[entry.date] = entry.available_seats ?? 0;
@@ -144,8 +158,8 @@ function DateField({ tourId, isPrivate, guests, value, onChange, open, onToggle,
 
   const filterDate = (date) => {
     const key = toISODate(date);
-    if (key === value) return true; // the order's current date is always selectable
-    if (!(key in availByDate)) return true; // unknown yet — don't block while loading
+    if (key === value) return true;
+    if (!(key in availByDate)) return true;
     return isPrivate ? availByDate[key] !== 0 : availByDate[key] >= guests;
   };
 
@@ -195,8 +209,7 @@ function DateField({ tourId, isPrivate, guests, value, onChange, open, onToggle,
   );
 }
 
-// ─── Guests field: button + dropdown panel with adult/kid steppers, same
-// visual pattern used in the booking flow ─────────────────────────────────
+// ─── Guests field: dropdown panel with adult/kid steppers ────────────────────
 function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggle, onClose }) {
   const panelRef = useRef(null);
 
@@ -261,7 +274,7 @@ function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggl
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-secondary-900">Kids</div>
-                      <div className="text-xs text-secondary-400">Ages 3-11</div>
+                      <div className="text-xs text-secondary-400">Ages 3–11</div>
                     </div>
                   </div>
                   <StepperRow value={kids} onChange={v => onKidsChange(Math.max(0, v))} min={0} />
@@ -298,7 +311,6 @@ export default function Cabinet({ odooId }) {
   const [error, setError] = useState(null);
   const [openPanel, setOpenPanel] = useState(null); // "date" | "guests" | null
 
-  // Edit state
   const [editDate, setEditDate] = useState("");
   const [editPickup, setEditPickup] = useState("");
   const [editDropoff, setEditDropoff] = useState("");
@@ -307,7 +319,8 @@ export default function Cabinet({ odooId }) {
   const [editTransfer, setEditTransfer] = useState("");
   const [editCover, setEditCover] = useState("");
   const [editRoute, setEditRoute] = useState("");
-  const [editExtras, setEditExtras] = useState({}); // id -> { id, name, price, qty }
+  // editExtras: id → { id, name, price, qty, qty_type }
+  const [editExtras, setEditExtras] = useState({});
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -330,10 +343,25 @@ export default function Cabinet({ odooId }) {
       setEditTransfer(json.local.transfer_id ? String(json.local.transfer_id) : "");
       setEditCover(json.local.cover_id ? String(json.local.cover_id) : "");
       setEditRoute(json.local.route_id ? String(json.local.route_id) : "");
+
+      // Build a flat extras-by-id from all routes' catalogs to recover qty_type
+      const allExtrasById = {};
+      for (const route of (json.options?.routes || [])) {
+        for (const e of (route.extras || [])) {
+          allExtrasById[e.id] = e;
+        }
+      }
       const extrasMap = {};
       for (const item of (json.local.extras || [])) {
         if (!item?.id) continue;
-        extrasMap[item.id] = { id: item.id, name: item.name, price: Number(item.price) || 0, qty: Number(item.qty ?? item.quantity ?? 1) };
+        const cat = allExtrasById[item.id];
+        extrasMap[item.id] = {
+          id: item.id,
+          name: item.name,
+          price: Number(item.price) || 0,
+          qty: Number(item.qty ?? item.quantity ?? 1),
+          qty_type: cat?.qty_type || "manual",
+        };
       }
       setEditExtras(extrasMap);
     } catch {
@@ -351,27 +379,83 @@ export default function Cabinet({ odooId }) {
   }, [data, editRoute]);
 
   const catalogExtras = selectedRoute?.extras || [];
-  const lockedExtras = Object.values(editExtras).filter(
-    e => e.qty > 0 && !catalogExtras.some(c => c.id === e.id)
+
+  // Extras selected but not in the current route's catalog
+  const lockedExtras = useMemo(
+    () => Object.values(editExtras).filter(e => !catalogExtras.some(c => c.id === e.id)),
+    [editExtras, catalogExtras]
   );
 
+  // Manual extras: stepper
   const setExtraQty = (item, qty) => {
     setEditExtras(prev => {
       const next = { ...prev };
       if (qty <= 0) {
         delete next[item.id];
       } else {
-        next[item.id] = { id: item.id, name: item.name, price: item.price, qty };
+        next[item.id] = { id: item.id, name: item.name, price: item.price, qty, qty_type: item.qty_type || "manual" };
       }
       return next;
     });
   };
+
+  // Auto extras (per_car / per_person / fixed): toggle on/off only
+  const toggleAutoExtra = (item) => {
+    setEditExtras(prev => {
+      const next = { ...prev };
+      if (next[item.id]) {
+        delete next[item.id];
+      } else {
+        next[item.id] = { id: item.id, name: item.name, price: item.price, qty: 1, qty_type: item.qty_type || "manual" };
+      }
+      return next;
+    });
+  };
+
+  // Live price estimate: recalculates immediately as the user edits —
+  // only covers add-ons (transfer / cover / extras); tour base price is
+  // date-dependent and only the server can compute it.
+  const livePrices = useMemo(() => {
+    if (!data) return null;
+    const members = editAdults + editKids;
+    const isPrivate = !!data.local.is_private;
+
+    let transferPrice = 0;
+    if (editTransfer) {
+      const tId = Number(editTransfer);
+      const t = (data.options.transfers || []).find(t => Number(t.id) === tId);
+      if (t) {
+        const cars = [1, 2].includes(tId) ? Math.max(1, Math.ceil(members / 5)) : 0;
+        const unitPrice = members > 5 && t.bus_price ? t.bus_price : t.price;
+        transferPrice = unitPrice * Math.max(1, cars);
+      }
+    }
+
+    let coverPrice = 0;
+    if (editCover) {
+      const cId = Number(editCover);
+      const c = (data.options.covers || []).find(c => Number(c.id) === cId);
+      if (c) {
+        coverPrice = c.price * (isPrivate ? 1 : Math.max(1, members));
+      }
+    }
+
+    let extrasTotal = 0;
+    for (const item of Object.values(editExtras)) {
+      const autoQty = computeAutoQty(item.qty_type, members);
+      const qty = autoQty !== null ? autoQty : item.qty;
+      extrasTotal += item.price * Math.max(1, qty || 1);
+    }
+
+    return { transferPrice, coverPrice, extrasTotal, total: transferPrice + coverPrice + extrasTotal };
+  }, [data, editAdults, editKids, editTransfer, editCover, editExtras]);
 
   const saveAll = async () => {
     setSaving(true);
     setSaved(false);
     setSaveError("");
     try {
+      const members = editAdults + editKids;
       const isPrivate = !!data?.local?.is_private;
       const payload = {
         date: editDate,
@@ -381,7 +465,12 @@ export default function Cabinet({ odooId }) {
         kids: editKids,
         transfer_id: editTransfer ? Number(editTransfer) : null,
         cover_id: editCover ? Number(editCover) : null,
-        extras: Object.values(editExtras).map(({ id, name, price, qty }) => ({ id, name, price, qty })),
+        // For auto extras, send the effective qty so the server can validate;
+        // server also recomputes from qty_type so client value is just a hint.
+        extras: Object.values(editExtras).map(({ id, name, price, qty, qty_type }) => {
+          const autoQty = computeAutoQty(qty_type, members);
+          return { id, name, price, qty: autoQty !== null ? autoQty : qty };
+        }),
       };
       if (isPrivate && editRoute) {
         payload.route_id = Number(editRoute);
@@ -457,6 +546,7 @@ export default function Cabinet({ odooId }) {
   const { local, odoo, options } = data;
   const collect = odoo.collect || 0;
   const depositPaid = odoo.deposit_paid || 0;
+  const editMembers = editAdults + editKids;
 
   return renderShell(
     <>
@@ -481,6 +571,7 @@ export default function Cabinet({ odooId }) {
         )}
       </div>
 
+      {/* ── Summary ── */}
       <SectionCard title="Order Summary" icon={Map}>
         <SummaryRow label="Date" value={fmtDate(local.travel_date)} />
         <SummaryRow label="Boat" value={odoo.boat_name} />
@@ -492,9 +583,18 @@ export default function Cabinet({ odooId }) {
         {local.dropoff_address && <SummaryRow label="Drop-off" value={local.dropoff_address} />}
       </SectionCard>
 
+      {/* ── Pricing ── */}
       <SectionCard title="Pricing" icon={Wallet}>
         <SummaryRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />
-        {lastPrices && <SummaryRow label="Updated total" value={`IDR ${fmt(lastPrices.full_price)}`} />}
+        {lastPrices && (
+          <>
+            <SummaryRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
+            {lastPrices.transfer_price > 0 && <SummaryRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
+            {lastPrices.cover_price > 0 && <SummaryRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
+            {lastPrices.extras_total > 0 && <SummaryRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
+            <SummaryRow label="Updated total" value={`IDR ${fmt(lastPrices.full_price)}`} />
+          </>
+        )}
         <div className="flex items-center justify-between py-3">
           <span className={`text-sm font-bold ${collect > 0 ? "text-red-500" : "text-emerald-600"}`}>
             {collect > 0 ? "Remaining to pay" : "Fully paid"}
@@ -508,6 +608,7 @@ export default function Cabinet({ odooId }) {
         )}
       </SectionCard>
 
+      {/* ── Edit booking ── */}
       <SectionCard
         title="Change Your Booking"
         icon={CalendarDays}
@@ -517,7 +618,7 @@ export default function Cabinet({ odooId }) {
           <DateField
             tourId={local.tours_id}
             isPrivate={local.is_private}
-            guests={editAdults + editKids}
+            guests={editMembers}
             value={editDate}
             onChange={setEditDate}
             open={openPanel === "date"}
@@ -547,7 +648,7 @@ export default function Cabinet({ odooId }) {
           </div>
         )}
 
-        {local.transfer_id && (
+        {editTransfer && (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label className={fieldLabel}>Pickup address</label>
@@ -579,9 +680,18 @@ export default function Cabinet({ odooId }) {
             </label>
             <select value={editTransfer} onChange={e => setEditTransfer(e.target.value)} className={fieldInput}>
               <option value="">No transfer</option>
-              {(options.transfers || []).map(t => (
-                <option key={t.id} value={t.id}>{t.name} — IDR {fmt(t.price)}</option>
-              ))}
+              {(options.transfers || []).map(t => {
+                const tId = Number(t.id);
+                const cars = [1, 2].includes(tId) ? Math.max(1, Math.ceil(editMembers / 5)) : 0;
+                const unitPrice = editMembers > 5 && t.bus_price ? t.bus_price : t.price;
+                const totalPrice = unitPrice * Math.max(1, cars);
+                const carsLabel = cars > 0 ? ` ×${cars}` : "";
+                return (
+                  <option key={t.id} value={t.id}>
+                    {t.name} — IDR {fmt(totalPrice)}{carsLabel}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div>
@@ -590,13 +700,21 @@ export default function Cabinet({ odooId }) {
             </label>
             <select value={editCover} onChange={e => setEditCover(e.target.value)} className={fieldInput}>
               <option value="">No insurance</option>
-              {(options.covers || []).map(c => (
-                <option key={c.id} value={c.id}>{c.name} — IDR {fmt(c.price)}</option>
-              ))}
+              {(options.covers || []).map(c => {
+                const qty = local.is_private ? 1 : Math.max(1, editMembers);
+                const totalPrice = c.price * qty;
+                const qtyLabel = !local.is_private && qty > 1 ? ` ×${qty}` : "";
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — IDR {fmt(totalPrice)}{qtyLabel}
+                  </option>
+                );
+              })}
             </select>
           </div>
         </div>
 
+        {/* ── Extras (private tours only) ── */}
         {local.is_private && (
           <div className="mt-6">
             <div className="mb-2 flex items-center gap-2 text-sm font-bold text-secondary-900">
@@ -608,37 +726,111 @@ export default function Cabinet({ odooId }) {
             )}
             <div className="divide-y divide-neutral-100">
               {catalogExtras.map(item => {
-                const qty = editExtras[item.id]?.qty || 0;
+                const isAuto = item.qty_type && item.qty_type !== "manual";
+                const isSelected = !!editExtras[item.id];
+                const autoQty = isAuto ? computeAutoQty(item.qty_type, editMembers) : null;
+                const manualQty = editExtras[item.id]?.qty || 0;
+                const effectiveQty = isAuto ? (isSelected ? autoQty : 0) : manualQty;
+                const displayPrice = effectiveQty > 0 ? effectiveQty * item.price : item.price;
+
                 return (
-                  <div key={item.id} className="flex items-center justify-between py-3">
-                    <div>
+                  <div key={item.id} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
                       <div className="text-sm font-semibold text-secondary-900">{item.name}</div>
-                      <div className="text-xs text-secondary-500">IDR {fmt(item.price)}</div>
+                      <div className="mt-0.5 text-xs text-secondary-500">
+                        IDR {fmt(displayPrice)}
+                        {isAuto && autoQty && (
+                          <span className="ml-1.5 text-secondary-400">
+                            {autoQtyLabel(item.qty_type, autoQty)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <StepperRow value={qty} onChange={v => setExtraQty(item, v)} min={0} />
+                    {isAuto ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleAutoExtra(item)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                          isSelected
+                            ? "border-secondary-900 bg-secondary-900 text-white hover:bg-secondary-700"
+                            : "border-neutral-300 text-secondary-600 hover:border-secondary-900 hover:text-secondary-900"
+                        )}
+                      >
+                        {isSelected ? "Remove" : "Add"}
+                      </button>
+                    ) : (
+                      <StepperRow value={manualQty} onChange={v => setExtraQty(item, v)} min={0} />
+                    )}
                   </div>
                 );
               })}
-              {lockedExtras.map(item => (
-                <div key={item.id} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="text-sm font-semibold text-secondary-900">{item.name}</div>
-                    <div className="text-xs text-secondary-400">IDR {fmt(item.price)} · kept from previous route</div>
+
+              {lockedExtras.map(item => {
+                const isAuto = item.qty_type && item.qty_type !== "manual";
+                const autoQty = isAuto ? computeAutoQty(item.qty_type, editMembers) : null;
+                const effectiveQty = isAuto ? autoQty : item.qty;
+                return (
+                  <div key={item.id} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-secondary-900">{item.name}</div>
+                      <div className="mt-0.5 text-xs text-secondary-400">
+                        IDR {fmt((effectiveQty || 1) * item.price)}
+                        {isAuto && autoQty && (
+                          <span className="ml-1.5">{autoQtyLabel(item.qty_type, autoQty)}</span>
+                        )}
+                        <span className="ml-1.5">· kept from previous route</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setExtraQty(item, 0)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-secondary-600 transition-colors hover:border-red-400 hover:text-red-500"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setExtraQty(item, Math.max(0, item.qty - 1))}
-                    className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-300 text-secondary-600 transition-colors hover:border-secondary-900 hover:text-secondary-900"
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
 
-        <div className="mt-7 flex items-center gap-4">
+        {/* ── Live price preview ── */}
+        {livePrices && livePrices.total > 0 && (
+          <div className="mt-5 rounded-xl bg-neutral-50 p-4">
+            <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-secondary-400">
+              Add-ons estimate
+            </div>
+            {livePrices.transferPrice > 0 && (
+              <div className="flex items-center justify-between py-1 text-sm">
+                <span className="text-secondary-500">Transfer</span>
+                <span className="font-semibold text-secondary-900">IDR {fmt(livePrices.transferPrice)}</span>
+              </div>
+            )}
+            {livePrices.coverPrice > 0 && (
+              <div className="flex items-center justify-between py-1 text-sm">
+                <span className="text-secondary-500">Insurance</span>
+                <span className="font-semibold text-secondary-900">IDR {fmt(livePrices.coverPrice)}</span>
+              </div>
+            )}
+            {livePrices.extrasTotal > 0 && (
+              <div className="flex items-center justify-between py-1 text-sm">
+                <span className="text-secondary-500">Extras</span>
+                <span className="font-semibold text-secondary-900">IDR {fmt(livePrices.extrasTotal)}</span>
+              </div>
+            )}
+            <div className="mt-1.5 flex items-center justify-between border-t border-neutral-200 pt-2 text-sm">
+              <span className="font-bold text-secondary-900">Add-ons total</span>
+              <span className="font-bold text-secondary-900">IDR {fmt(livePrices.total)}</span>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-secondary-400">
+              Tour base price depends on date &amp; guests — full updated total shown after saving.
+            </p>
+          </div>
+        )}
+
+        <div className="mt-6 flex items-center gap-4">
           <Button onClick={saveAll} disabled={saving}>
             {saving ? "Updating…" : "Save changes"}
           </Button>

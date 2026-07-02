@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Models\Cover;
+use Noren\Booking\Models\Extras;
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Route;
 use Noren\Booking\Models\Transfer;
@@ -120,9 +121,10 @@ class CabinetController extends Controller
                         ->flatMap(fn($cat) => $cat->extras)
                         ->unique('id')
                         ->map(fn($e) => [
-                            'id'    => $e->id,
-                            'name'  => $e->name,
-                            'price' => (int) $e->price,
+                            'id'       => $e->id,
+                            'name'     => $e->name,
+                            'price'    => (int) $e->price,
+                            'qty_type' => $e->qty_type ?? 'manual',
                         ])->values(),
                 ])
                 ->values();
@@ -204,6 +206,33 @@ class CabinetController extends Controller
 
         $members   = $adults + $kids;
         $isPrivate = in_array((int) $order->tours?->classes_id, [8]);
+
+        // Recompute qty for auto-qty extras server-side so the stored value
+        // always reflects the current guest count, regardless of what the
+        // client sent (per_person, per_car, fixed types are never user-editable).
+        if (!empty($extras)) {
+            $extraIds    = array_filter(array_column((array) $extras, 'id'));
+            $extraModels = Extras::whereIn('id', $extraIds)->get()->keyBy('id');
+            $normalized  = [];
+            foreach ((array) $extras as $item) {
+                $mdl = $extraModels->get($item['id'] ?? null);
+                if (!$mdl) continue;
+                $qtyType = $mdl->qty_type ?? 'manual';
+                $qty = match ($qtyType) {
+                    'per_person' => max(1, $members),
+                    'per_car'    => max(1, (int) ceil($members / 5)),
+                    'fixed'      => 1,
+                    default      => max(1, (int) ($item['qty'] ?? $item['quantity'] ?? 1)),
+                };
+                $normalized[] = [
+                    'id'    => (int) $mdl->id,
+                    'name'  => $item['name'] ?? $mdl->name,
+                    'price' => (int) ($item['price'] ?? $mdl->price ?? 0),
+                    'qty'   => $qty,
+                ];
+            }
+            $extras = $normalized;
+        }
 
         if ($date && $date !== $order->travel_date && !$this->isDateAvailable($order, $date, $members)) {
             return response()->json(['success' => false, 'error' => 'Selected date is not available for this many guests'], 422);
