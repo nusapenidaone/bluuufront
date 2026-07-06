@@ -3995,7 +3995,14 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                             const Icon = (typeof item.icon === 'string' ? ICON_MAP[item.icon] : item.icon) || MapPin;
                             return (
                               <div key={item.label} className="flex items-center gap-1.5 text-sm font-medium text-secondary-700">
-                                <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                                {item.icon_svg ? (
+                                  <span
+                                    className="h-3.5 w-3.5 shrink-0 text-secondary-400 [&>svg]:h-full [&>svg]:w-full"
+                                    dangerouslySetInnerHTML={{ __html: item.icon_svg }}
+                                  />
+                                ) : (
+                                  <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                                )}
                                 {item.label}
                               </div>
                             );

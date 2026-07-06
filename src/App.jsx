@@ -227,9 +227,9 @@ export default function App() {
       return <AccountPage />;
     }
 
-    const cabinetMatch = path.match(/^\/cabinet\/(\d+)$/);
+    const cabinetMatch = path.match(/^\/cabinet\/(\d+)\/(.+)$/);
     if (cabinetMatch) {
-      return <Cabinet odooId={cabinetMatch[1]} />;
+      return <Cabinet odooId={cabinetMatch[1]} uniqueKey={cabinetMatch[2]} />;
     }
 
     if (path === "/reviews") {

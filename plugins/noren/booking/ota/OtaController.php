@@ -60,14 +60,6 @@ class OtaController extends Controller
         $members = max(1, (int) $request->query('members', 1));
         $amount  = (float) $request->query('amount', 0);
 
-        \Log::info('OTA availability request'
-            . ' | tour_id=' . $id
-            . ' | date=' . $date
-            . ' | members=' . $members
-            . ' | amount=' . $amount
-            . ' | ip=' . $request->ip()
-            . ' | server=' . date('Y-m-d H:i:s')
-        );
 
         if (!$date) {
             return response()->json(['error' => 'date required'], 422);

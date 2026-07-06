@@ -96,8 +96,9 @@ export function TransfersCompact({
   dropoffAddress,
   setDropoffAddress,
   totalGuests,
+  defaultExpanded = false,
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [activeTransferDetails, setActiveTransferDetails] = useState(null);
   const selectedTransfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
   const selectedTransferDescription = getOptionDescription(selectedTransfer);

@@ -8,6 +8,11 @@ use Noren\Booking\Admin\AdminController;
 Route::post('api/admin/login',    [AdminController::class, 'login']);
 Route::get('api/admin/managers',  [AdminController::class, 'managers']);
 
+// Per-restaurant login (/manage/restaurant) — HMAC-signed, scoped tokens
+Route::get('api/admin/restaurant/accounts', [AdminController::class, 'restaurantAccounts']);
+Route::post('api/admin/restaurant/login',   [AdminController::class, 'restaurantLogin']);
+Route::get('api/admin/restaurant/leads',    [AdminController::class, 'restaurantLeads']);
+
 // ── Products (boats, tours, transfers, covers from local DB) ──────────────
 
 Route::get('api/admin/boats',     [AdminController::class, 'boats']);

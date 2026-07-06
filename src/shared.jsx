@@ -3610,7 +3610,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         {chips.map((item) => {
                           const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
                           return (
-                            <Pill key={item.label} icon={Icon}>
+                            <Pill key={item.label} icon={Icon} iconSvg={item.icon_svg}>
                               {item.label}
                             </Pill>
                           );

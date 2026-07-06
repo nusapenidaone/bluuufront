@@ -76,6 +76,78 @@ class AdminController extends Controller
         return response()->json(['token' => $token]);
     }
 
+    // ─── Restaurant auth (per-restaurant / Management, HMAC-signed tokens) ─────
+    // Password structure mirrors 'managers' (display name is the key). Unlike
+    // admin_token (one shared token for everyone), each restaurant login still
+    // needs its own scope so /api/admin/restaurant/leads can filter server-side
+    // to that restaurant's bookings only. Tokens are stateless: base64(name)
+    // + HMAC signature, verified against restaurant_token_secret.
+
+    protected function issueRestaurantToken(string $name, string $secret): string
+    {
+        $payload = base64_encode($name);
+        return $payload . '.' . hash_hmac('sha256', $payload, $secret);
+    }
+
+    protected function restaurantAuth(Request $request): ?array
+    {
+        $cfg    = require __DIR__ . '/../odoo/services.config.php';
+        $secret = $cfg['restaurant_token_secret'] ?? null;
+        $logins = $cfg['restaurant_logins'] ?? [];
+        if (!$secret) return null;
+
+        $header = $request->header('Authorization', '');
+        if (!str_starts_with($header, 'Bearer ')) return null;
+
+        $parts = explode('.', substr($header, 7));
+        if (count($parts) !== 2) return null;
+
+        [$payload, $sig] = $parts;
+        if (!hash_equals(hash_hmac('sha256', $payload, $secret), $sig)) return null;
+
+        $name = base64_decode($payload, true);
+        if (!$name || !isset($logins[$name])) return null;
+
+        return ['name' => $name] + $logins[$name];
+    }
+
+    // ─── GET /api/admin/restaurant/accounts ────────────────────────────────────
+    // Public list of restaurant names (no passwords) — for the /manage/restaurant
+    // login screen dropdown. Same shape as /api/admin/managers.
+
+    public function restaurantAccounts(Request $request)
+    {
+        $cfg    = require __DIR__ . '/../odoo/services.config.php';
+        $logins = $cfg['restaurant_logins'] ?? [];
+        return response()->json(['accounts' => array_keys($logins)]);
+    }
+
+    // ─── POST /api/admin/restaurant/login ─────────────────────────────────────
+
+    public function restaurantLogin(Request $request)
+    {
+        $cfg    = require __DIR__ . '/../odoo/services.config.php';
+        $secret = $cfg['restaurant_token_secret'] ?? null;
+        $logins = $cfg['restaurant_logins'] ?? [];
+
+        if (!$secret) {
+            return response()->json(['error' => 'Server misconfigured'], 500);
+        }
+
+        $name     = (string) $request->input('name', '');
+        $password = (string) $request->input('password', '');
+
+        if (!$name || !isset($logins[$name]) || $password !== $logins[$name]['password']) {
+            return response()->json(['error' => 'Wrong name or password'], 401);
+        }
+
+        return response()->json([
+            'token'         => $this->issueRestaurantToken($name, $secret),
+            'name'          => $name,
+            'is_management' => $logins[$name]['keywords'] === null,
+        ]);
+    }
+
     // =========================================================================
     // ODOO-CENTRIC ENDPOINTS (primary)
     // =========================================================================
@@ -451,6 +523,59 @@ class AdminController extends Controller
             ]);
         } catch (\Throwable $e) {
             Log::error('Admin leads: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // ─── GET /api/admin/restaurant/leads ───────────────────────────────────────
+    // Odoo orders for a date range, scoped to the authenticated restaurant's
+    // lunch bookings only (Management sees all). No product lines / partner
+    // enrichment — restaurants only need boat grouping, pax, guides, passengers,
+    // special requests.
+
+    public function restaurantLeads(Request $request)
+    {
+        $account = $this->restaurantAuth($request);
+        if (!$account) return $this->unauthorized();
+
+        $baliTz = 'Asia/Makassar';
+
+        try {
+            $from = Carbon::createFromFormat('Y-m-d', $request->get('date_from') ?: $request->get('date') ?: Carbon::now($baliTz)->format('Y-m-d'), $baliTz);
+            $to   = Carbon::createFromFormat('Y-m-d', $request->get('date_to')   ?: $request->get('date') ?: Carbon::now($baliTz)->format('Y-m-d'), $baliTz);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Invalid date. Use YYYY-MM-DD.'], 422);
+        }
+
+        if ($to->lt($from)) $to = $from->copy();
+
+        $startUtc = $from->copy()->startOfDay()->utc()->format('Y-m-d H:i:s');
+        $endUtc   = $to->copy()->endOfDay()->utc()->format('Y-m-d H:i:s');
+
+        try {
+            $orders = OdooService::getLeadsForDate($startUtc, $endUtc);
+
+            $keywords = $account['keywords'] ?? null;
+            $orders   = array_values(array_filter($orders, function ($o) use ($keywords) {
+                $lunch = (string) ($o['x_studio_lunch'] ?? '');
+                if ($lunch === '') return false;
+                if ($keywords === null) return true; // Management sees every restaurant
+                foreach ($keywords as $kw) {
+                    if (stripos($lunch, $kw) !== false) return true;
+                }
+                return false;
+            }));
+
+            return response()->json([
+                'date_from'     => $from->toDateString(),
+                'date_to'       => $to->toDateString(),
+                'restaurant'    => $account['name'],
+                'is_management' => $keywords === null,
+                'total'         => count($orders),
+                'orders'        => $orders,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Admin restaurantLeads: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             return response()->json(['error' => $e->getMessage()], 500);
         }
     }

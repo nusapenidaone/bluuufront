@@ -130,8 +130,204 @@ class OdooService
 
     public static function confirmOrder(int $odooOrderId): void
     {
-        static::post('/json/2/sale.order/action_confirm', ['ids' => [$odooOrderId]]);
+        static::post('/json/2/sale.order/action_confirm', [
+            'ids'     => [$odooOrderId],
+            'context' => ['no_price_recompute' => true],
+        ]);
+    }
 
+    public static function draftOrder(int $odooOrderId): void
+    {
+        static::post('/json/2/sale.order/action_draft', ['ids' => [$odooOrderId]]);
+    }
+
+    // ─── Update Odoo order header fields only (no order lines touched) ──────────
+    // ─── Order line helpers (cabinet) ────────────────────────────────────────
+
+    public static function writeOrderLine(int $lineId, array $vals): void
+    {
+        static::post('/json/2/sale.order.line/write', ['ids' => [$lineId], 'vals' => $vals]);
+    }
+
+    public static function unlinkOrderLines(array $lineIds): void
+    {
+        if (empty($lineIds)) return;
+        static::post('/json/2/sale.order.line/unlink', ['ids' => array_values($lineIds)]);
+    }
+
+    public static function addOrderLine(int $orderId, int $productId, float $qty, float $price, string $name): void
+    {
+        static::post('/json/2/sale.order.line/create', [
+            'vals_list' => [[
+                'order_id'        => $orderId,
+                'product_id'      => $productId,
+                'product_uom_qty' => $qty,
+                'price_unit'      => $price,
+                'name'            => $name,
+            ]],
+            'context' => ['no_price_recompute' => true],
+        ]);
+    }
+
+    public static function bulkAddOrderLines(int $orderId, array $lines): void
+    {
+        if (empty($lines)) return;
+        $vals = array_map(fn($l) => array_merge(['order_id' => $orderId], $l), $lines);
+        static::post('/json/2/sale.order.line/create', [
+            'vals_list' => $vals,
+            'context'   => ['no_price_recompute' => true],
+        ]);
+    }
+
+    // Used by the cabinet for orders without a local record.
+    // Fields: rental dates, guests, addresses, car counts. Order lines stay unchanged.
+
+    public static function updateOrderHeaderFields(int $odooOrderId, array $fields): void
+    {
+        // Selection fields must be written one-by-one because Odoo rejects invalid values per-field.
+        // Rental date fields are separated so a write failure there doesn't block x_studio_* updates.
+        $selections  = ['x_studio_boat_name', 'x_studio_route_new', 'x_studio_lunch',
+                        'x_studio_tour_type', 'x_studio_car_type', 'x_studio_payment_source'];
+        $rentalDates = ['rental_start_date', 'rental_return_date'];
+
+        $regular = [];
+        $dates   = [];
+
+        foreach ($fields as $k => $value) {
+            if (in_array($k, $rentalDates)) {
+                $dates[$k] = $value;
+            } elseif (in_array($k, $selections)) {
+                if ($value !== false && $value !== '') {
+                    try {
+                        static::post('/json/2/sale.order/write', ['ids' => [$odooOrderId], 'vals' => [$k => $value]]);
+                    } catch (\Exception $e) {
+                        Log::warning("OdooService::updateOrderHeaderFields — {$k} skipped", ['error' => $e->getMessage()]);
+                    }
+                }
+            } else {
+                $regular[$k] = $value;
+            }
+        }
+
+        if (!empty($regular)) {
+            static::post('/json/2/sale.order/write', ['ids' => [$odooOrderId], 'vals' => $regular]);
+        }
+
+        if (!empty($dates)) {
+            try {
+                static::post('/json/2/sale.order/write', ['ids' => [$odooOrderId], 'vals' => $dates]);
+            } catch (\Exception $e) {
+                Log::warning('OdooService::updateOrderHeaderFields — rental dates not written', ['error' => $e->getMessage()]);
+            }
+        }
+    }
+
+    // ─── Update existing Odoo order in-place (no cancel/recreate) ────────────
+    // Used by the cabinet when a client edits their booking.
+    // Flow: if confirmed → cancel → draft → delete lines → write fields + add lines → confirm.
+
+    public static function updateInPlace(Order $order, int $odooOrderId): void
+    {
+        $order->loadMissing(['tours', 'boat.company', 'transfer', 'cover', 'route', 'program', 'restaurant', 'method']);
+
+        // 1. Read current state and deposit from Odoo
+        $current = static::post('/json/2/sale.order/search_read', [
+            'domain'  => [['id', '=', $odooOrderId]],
+            'context' => ['active_test' => false],
+            'fields'  => ['state', 'x_studio_deposit', 'order_line'],
+            'limit'   => 1,
+        ]);
+
+        if (empty($current[0])) {
+            throw new \RuntimeException("Odoo order #{$odooOrderId} not found");
+        }
+
+        $state        = $current[0]['state'] ?? 'draft';
+        $odooDeposit  = (float) ($current[0]['x_studio_deposit'] ?? 0);
+        $lineIds      = array_filter((array) ($current[0]['order_line'] ?? []));
+        $wasConfirmed = $state === 'sale';
+
+        // 2. To edit lines the order must be in draft state
+        if ($wasConfirmed) {
+            static::post('/json/2/sale.order/action_cancel', ['ids' => [$odooOrderId]]);
+            static::post('/json/2/sale.order/action_draft',  ['ids' => [$odooOrderId]]);
+        }
+
+        // 3. Delete existing order lines
+        if (!empty($lineIds)) {
+            static::post('/json/2/sale.order.line/unlink', ['ids' => array_values($lineIds)]);
+        }
+
+        // 4. Update header fields
+        $data       = static::buildOrderData($order);
+        $lead       = $data['lead'];
+        $transferId = (int) $lead['transfer_id'];
+        $members    = (int) $lead['members'];
+
+        $rentalStart = Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+        $rentalEnd   = Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+
+        $localDeposit = (float) ($order->deposite_summ ?? 0);
+
+        $vals = [
+            'rental_start_date'         => $rentalStart,
+            'rental_return_date'        => $rentalEnd,
+            'x_studio_adults'           => $lead['adults'],
+            'x_studio_kids'             => $lead['kids'],
+            'x_studio_count_of_people'  => $members,
+            'x_studio_pickup_address'   => $lead['pickup_address'],
+            'x_studio_drop_off_address' => $lead['dropoff_address'],
+            'x_studio_special_requests' => $lead['special_requests'],
+            'x_studio_deposit'          => max($odooDeposit, $localDeposit),
+            'x_studio_pickup_cars'      => in_array($transferId, [1, 2]) ? (int) $lead['cars'] : 0,
+            'x_studio_drop_off_cars'    => $transferId === 2 ? (int) $lead['cars'] : 0,
+        ];
+
+        static::post('/json/2/sale.order/write', [
+            'ids'  => [$odooOrderId],
+            'vals' => $vals,
+        ]);
+
+        // Selection fields — each in its own write so a bad value doesn't block the rest
+        $selectionFields = [
+            'x_studio_boat_name' => $lead['boat_name']       ?? '',
+            'x_studio_route_new' => $lead['route_name']      ?? '',
+            'x_studio_lunch'     => $lead['restaurant_name'] ?? '',
+            'x_studio_tour_type' => $lead['tour_type']       ?? '',
+            'x_studio_car_type'  => static::resolveCarType($transferId, $members),
+        ];
+
+        foreach ($selectionFields as $field => $value) {
+            if ($value === false || $value === '') continue;
+            try {
+                static::post('/json/2/sale.order/write', [
+                    'ids'  => [$odooOrderId],
+                    'vals' => [$field => $value],
+                ]);
+            } catch (\Exception $e) {
+                Log::warning("OdooService::updateInPlace — {$field} not set", [
+                    'odoo_id' => $odooOrderId,
+                    'value'   => $value,
+                    'error'   => $e->getMessage(),
+                ]);
+            }
+        }
+
+        // 5. Add fresh order lines
+        static::addOrderLines($order, $odooOrderId);
+
+        // 6. Restore confirmed state
+        if ($wasConfirmed) {
+            static::confirmOrder($odooOrderId);
+        }
+
+        static::addLogNote($odooOrderId, static::buildOrderNote($order));
+
+        Log::info('OdooService::updateInPlace — done', [
+            'odoo_id'  => $odooOrderId,
+            'order_id' => $order->id,
+            'state'    => $wasConfirmed ? 'restored to sale' : 'left in draft',
+        ]);
     }
 
     // ─── Get order collect amount ─────────────────────────────────────────────
@@ -414,6 +610,7 @@ class OdooService
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
                 'x_studio_group_lanyard_color',
+                'x_studio_unique_key',
                 'order_line',
             ],
             'limit'  => 1,
@@ -767,15 +964,6 @@ class OdooService
         $rentalStart = Carbon::parse($lead['travel_date'] . ' ' . $lead['route_start'], 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
         $rentalEnd   = Carbon::parse($lead['travel_date'] . ' ' . $lead['route_end'],   'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
 
-        Log::info(
-            'OdooService::createSaleOrder — dates' .
-            ' | ext=' . $lead['external_id'] .
-            ' | travel=' . $lead['travel_date'] .
-            ' | route_start=' . $lead['route_start'] .
-            ' | rental_start=' . $rentalStart .
-            ' | server=' . date('Y-m-d H:i:s') .
-            ' | tz=' . date_default_timezone_get()
-        );
 
         $vals = [
             'partner_id' => $partnerId,
@@ -1011,6 +1199,7 @@ class OdooService
                     'endpoint' => $endpoint,
                     'attempt'  => $attempt,
                     'delay'    => $delay,
+                    'response' => $response->body(),
                 ]);
                 sleep($delay);
                 $delay *= 2;

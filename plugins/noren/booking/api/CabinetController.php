@@ -2,14 +2,15 @@
 
 namespace Noren\Booking\Api;
 
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
-use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Route;
+use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Transfer;
 use Noren\Booking\Odoo\OdooService;
 
@@ -22,68 +23,127 @@ class CabinetController extends Controller
         header('Access-Control-Allow-Headers: *');
     }
 
-    private function findOrder(int $odooId): ?Order
+    // Fetch Odoo order and verify x_studio_unique_key matches the key in the URL.
+    // Returns the Odoo order array on success, null if not found or key mismatch.
+    private function fetchAndVerify(int $odooId, string $key): ?array
     {
-        return Order::where('odoo_id', $odooId)->first();
-    }
-
-    // Reuses the same boat/closeddates availability logic the booking site
-    // already exposes publicly, instead of duplicating it here. Calling the
-    // controller methods directly (not via routing) returns plain arrays.
-    // Mirrors the site's own logic (private.jsx / shared.jsx):
-    //  - private: date is binary available/not (boat exclusivity) — capacity
-    //    against the order's already-assigned boat is checked separately
-    //  - shared: date must have available_seats >= members (shared.jsx:7286)
-    private function isDateAvailable(Order $order, string $date, int $members): bool
-    {
-        if (!$order->tours_id) {
-            return true;
+        try {
+            $order = OdooService::getFullOrder($odooId);
+        } catch (\Exception $e) {
+            Log::warning('CabinetController: Odoo fetch failed', ['odoo_id' => $odooId, 'error' => $e->getMessage()]);
+            return null;
         }
 
-        $order->loadMissing('tours');
-        $isPrivate = in_array((int) $order->tours?->classes_id, [8]);
-        $controller = app(FullController::class);
-        $req = new Request(['date' => $date]);
-
-        $resp = $isPrivate
-            ? $controller->getPrivateAvailability($req, $order->tours_id)
-            : $controller->getSharedAvailability($req, $order->tours_id);
-
-        $data = $resp instanceof \Illuminate\Http\JsonResponse ? $resp->getData(true) : $resp;
-
-        if ($isPrivate) {
-            // Keyed by date => 1/0
-            return !is_array($data) || !array_key_exists($date, $data) || (int) $data[$date] === 1;
+        if (($order['state'] ?? '') === 'cancel') {
+            return null;
         }
 
-        // List of {date, available_seats, ...}
-        $entry = collect($data)->firstWhere('date', $date);
-        return !$entry || (int) ($entry['available_seats'] ?? 0) >= $members;
+        $odooKey = $order['x_studio_unique_key'] ?? null;
+        if (!$odooKey || $odooKey !== $key) {
+            return null;
+        }
+
+        return $order;
     }
 
-    // ─── GET /api/new/cabinet/{odooId} ───────────────────────────────────────
+    // Detect private/shared from Odoo order lines → local Tours table.
+    // Returns [$isPrivate, $classesId, $toursId]
+    private function detectTourType(array $odooLines): array
+    {
+        $productIds = array_filter(array_map(function ($line) {
+            $pid = $line['product_id'] ?? null;
+            return is_array($pid) ? $pid[0] : $pid;
+        }, $odooLines));
 
-    public function show(Request $request, int $odooId)
+        if (!empty($productIds)) {
+            $tour = Tours::whereIn('odoo_id', array_values($productIds))->first();
+            if ($tour) {
+                $isPrivate = in_array((int) $tour->classes_id, [8]);
+                return [$isPrivate, $isPrivate ? 8 : 9, (int) $tour->id];
+            }
+        }
+
+        return [false, 9, null];
+    }
+
+    // ─── GET /api/new/cabinet/{odooId}/{key} ─────────────────────────────────
+
+    public function show(Request $request, int $odooId, string $key)
     {
         $this->cors();
 
-        $order = $this->findOrder($odooId);
-        if (!$order) {
+        $odooOrder = $this->fetchAndVerify($odooId, $key);
+        if (!$odooOrder) {
             return response()->json(['error' => 'Order not found'], 404);
         }
 
-        try {
-            $odooOrder = OdooService::getFullOrder((int) $order->odoo_id);
-        } catch (\Exception $e) {
-            Log::error('CabinetController::show — Odoo error: ' . $e->getMessage());
-            return response()->json(['error' => 'Failed to fetch order'], 502);
+        [$isPrivate, $classesId, $toursId] = $this->detectTourType($odooOrder['lines'] ?? []);
+
+        // Tour image via local Tours lookup by product odoo_id from order lines
+        $tourImage = null;
+        $productIds = array_filter(array_map(
+            fn($l) => is_array($l['product_id'] ?? null) ? $l['product_id'][0] : ($l['product_id'] ?? null),
+            $odooOrder['lines'] ?? []
+        ));
+        if (!empty($productIds)) {
+            $tour = Tours::whereIn('odoo_id', array_values($productIds))->first();
+            if ($tour) {
+                $imgs = $tour->images_with_thumbs ?? [];
+                if (!empty($imgs)) {
+                    $tourImage = $imgs[0]['thumb2'] ?? $imgs[0]['thumb1'] ?? $imgs[0]['original'] ?? null;
+                }
+            }
         }
 
-        $order->loadMissing(['tours', 'transfer', 'cover', 'route']);
-        $isPrivate = in_array((int) $order->tours?->classes_id, [8]);
-        $classesId = $isPrivate ? 8 : 9;
+        // Travel date: rental_start_date (UTC) → Bali date
+        $travelDate = null;
+        if (!empty($odooOrder['rental_start_date'])) {
+            $travelDate = Carbon::parse($odooOrder['rental_start_date'], 'UTC')
+                ->setTimezone('Asia/Makassar')
+                ->format('Y-m-d');
+        }
 
-        $transfers = Transfer::orderBy('id')->get()
+        $partnerName = is_array($odooOrder['partner_id'] ?? null)
+            ? ($odooOrder['partner_id'][1] ?? '')
+            : '';
+
+        // Options from local DB
+        // Map Odoo order lines: product_id → {qty, price}
+        $lineProducts = [];
+        foreach ($odooOrder['lines'] ?? [] as $line) {
+            $pid = $line['product_id'] ?? null;
+            if (is_array($pid)) $pid = (int) $pid[0];
+            // Skip qty=0 lines (soft-removed on confirmed orders)
+            if ($pid && (int) ($line['product_uom_qty'] ?? 0) > 0) {
+                $lineProducts[(int) $pid] = [
+                    'qty'   => (int) ($line['product_uom_qty'] ?? 1),
+                    'price' => (float) ($line['price_unit'] ?? 0),
+                ];
+            }
+        }
+        $lineProductIds = array_keys($lineProducts);
+
+        // Detect current transfer from order lines
+        $allTransferModels = Transfer::orderBy('id')->get();
+        $currentTransferId = null;
+        foreach ($allTransferModels as $t) {
+            if ($t->odoo_id && in_array((int) $t->odoo_id, $lineProductIds)) {
+                $currentTransferId = $t->id;
+                break;
+            }
+        }
+
+        // Detect current cover from order lines
+        $allCoverModels = Cover::orderBy('id')->get();
+        $currentCoverId = null;
+        foreach ($allCoverModels as $c) {
+            if ($c->odoo_id && in_array((int) $c->odoo_id, $lineProductIds)) {
+                $currentCoverId = $c->id;
+                break;
+            }
+        }
+
+        $transfers = $allTransferModels
             ->filter(fn($t) => !$t->classes_id || (int) $t->classes_id === $classesId)
             ->map(fn($t) => [
                 'id'        => $t->id,
@@ -92,7 +152,7 @@ class CabinetController extends Controller
                 'bus_price' => $t->bus_price ? (int) $t->bus_price : null,
             ])->values();
 
-        $covers = Cover::orderBy('id')->get()
+        $covers = $allCoverModels
             ->filter(fn($c) => !$c->classes_id || (int) $c->classes_id === $classesId)
             ->map(fn($c) => [
                 'id'       => $c->id,
@@ -101,72 +161,135 @@ class CabinetController extends Controller
                 'per_boat' => (bool) $c->per_boat,
             ])->values();
 
-        // Routes & extras are only selectable on private tours — shared tours
-        // have a fixed route+restaurant per tour (CLAUDE.md). Each route carries
-        // its own extras catalog so switching routes client-side needs no refetch.
-        $routes = [];
+        $routes        = [];
+        $currentRouteId = null;
+        $currentExtras  = [];
+
         if ($isPrivate) {
-            $routes = Route::with(['ecategories.extras' => function ($q) {
-                $q->whereNull('parent_id');
-            }])
+            $routeModels = Route::with([
+                    'photos',
+                    'ecategories'                  => fn($q) => $q->orderBy('sort_order'),
+                    'ecategories.extras'           => fn($q) => $q->whereNull('parent_id')->orderBy('sort_order'),
+                    'ecategories.extras.children'  => fn($q) => $q->orderBy('sort_order'),
+                ])
                 ->where('classes_id', $classesId)
                 ->orderBy('sort_order')
-                ->get()
-                ->map(fn($route) => [
-                    'id'     => $route->id,
-                    'title'  => $route->title,
-                    'start'  => $route->start,
-                    'end'    => $route->end,
-                    'extras' => $route->ecategories
-                        ->flatMap(fn($cat) => $cat->extras)
-                        ->unique('id')
-                        ->map(fn($e) => [
-                            'id'       => $e->id,
-                            'name'     => $e->name,
-                            'price'    => (int) $e->price,
-                            'qty_type' => $e->qty_type ?? 'manual',
-                        ])->values(),
-                ])
+                ->get();
+
+            // Build extras lookup by odoo_id to detect current extras from order lines
+            $extrasByOdooId = [];
+            foreach ($routeModels as $routeObj) {
+                foreach ($routeObj->ecategories as $cat) {
+                    foreach ($cat->extras as $extra) {
+                        if ($extra->odoo_id) {
+                            $extrasByOdooId[(int) $extra->odoo_id] = $extra;
+                        }
+                        foreach ($extra->children ?? [] as $child) {
+                            if ($child->odoo_id) {
+                                $extrasByOdooId[(int) $child->odoo_id] = $child;
+                            }
+                        }
+                    }
+                }
+            }
+            foreach ($lineProductIds as $pid) {
+                if (isset($extrasByOdooId[$pid])) {
+                    $extra = $extrasByOdooId[$pid];
+                    $currentExtras[] = [
+                        'id'    => $extra->id,
+                        'name'  => $extra->name,
+                        'price' => (int) $extra->price,
+                        'qty'   => $lineProducts[$pid]['qty'],
+                    ];
+                }
+            }
+
+            // Detect current route from x_studio_route_new
+            $routeNameOdoo = $odooOrder['x_studio_route_new'] ?? null;
+            if ($routeNameOdoo) {
+                $routeMatch = $routeModels->first(
+                    fn($r) => ($r->odoo_name ?? $r->title) === $routeNameOdoo
+                );
+                if ($routeMatch) $currentRouteId = $routeMatch->id;
+            }
+            if (!$currentRouteId && $routeModels->isNotEmpty()) {
+                $currentRouteId = $routeModels->first()->id;
+            }
+
+            $mapExtra = fn($e) => [
+                'id'       => $e->id,
+                'name'     => $e->name,
+                'price'    => (int) $e->price,
+                'qty_type' => $e->qty_type ?? 'manual',
+                'image'    => $e->images_with_thumbs[0]['thumb_small'] ?? null,
+                'children' => ($e->children ?? collect())->sortBy('sort_order')->map(fn($c) => [
+                    'id'       => $c->id,
+                    'name'     => $c->name,
+                    'price'    => (int) $c->price,
+                    'qty_type' => $c->qty_type ?? 'manual',
+                    'image'    => $c->images_with_thumbs[0]['thumb_small'] ?? null,
+                ])->values(),
+            ];
+
+            $routes = $routeModels->map(function ($route) use ($mapExtra) {
+                    $categories = $route->ecategories
+                        ->map(fn($cat) => [
+                            'id'     => $cat->id,
+                            'name'   => $cat->name,
+                            'extras' => $cat->extras->map($mapExtra)->values(),
+                        ])
+                        ->filter(fn($cat) => count($cat['extras']) > 0)
+                        ->values();
+                    $image = null;
+                    if ($route->photos->isNotEmpty()) {
+                        try { $image = $route->photos->first()->getThumb(900, 600, ['mode' => 'crop']); }
+                        catch (\Exception $e) { $image = $route->photos->first()->path ?? null; }
+                    }
+                    return [
+                        'id'          => $route->id,
+                        'title'       => $route->title,
+                        'start'       => $route->start,
+                        'end'         => $route->end,
+                        'description' => $route->description,
+                        'image'       => $image,
+                        'highlights'  => $route->highlights ?? [],
+                        'best_for'    => $route->best_for,
+                        'categories'  => $categories,
+                        'extras'      => $route->ecategories->flatMap(fn($c) => $c->extras)->unique('id')->map($mapExtra)->values(),
+                    ];
+                })
                 ->values();
         }
 
         return response()->json([
             'local' => [
-                'id'              => $order->id,
-                'external_id'     => $order->external_id,
-                'odoo_id'         => (int) $order->odoo_id,
-                'tours_id'        => $order->tours_id ? (int) $order->tours_id : null,
-                'tour_name'       => $order->tours?->name,
+                'odoo_id'         => $odooId,
                 'is_private'      => $isPrivate,
-                'travel_date'     => $order->travel_date,
-                'adults'          => (int) $order->adults,
-                'kids'            => (int) $order->kids,
-                'members'         => (int) $order->members,
-                'transfer_id'     => $order->transfer_id ? (int) $order->transfer_id : null,
-                'transfer_name'   => $order->transfer?->name,
-                'cover_id'        => $order->cover_id ? (int) $order->cover_id : null,
-                'cover_name'      => $order->cover?->name,
-                'route_id'        => $order->route_id ? (int) $order->route_id : null,
-                'route_name'      => $order->route?->title,
-                'extras'          => $order->extras ?: [],
-                'pickup_address'  => $order->pickup_address ?? '',
-                'dropoff_address' => $order->dropoff_address ?? '',
-                'name'            => $order->name,
-                'email'           => $order->email,
-                'whatsapp'        => $order->whatsapp,
+                'tour_image'      => $tourImage,
+                'travel_date'     => $travelDate,
+                'adults'          => (int) ($odooOrder['x_studio_adults']          ?? 0),
+                'kids'            => (int) ($odooOrder['x_studio_kids']            ?? 0),
+                'members'         => (int) ($odooOrder['x_studio_count_of_people'] ?? 0),
+                'pickup_address'  => $odooOrder['x_studio_pickup_address']   ?? '',
+                'dropoff_address' => $odooOrder['x_studio_drop_off_address'] ?? '',
+                'boat_name'       => $odooOrder['x_studio_boat_name'] ?? null,
+                'name'            => $partnerName,
+                'tours_id'        => $toursId,
+                'transfer_id'     => $currentTransferId,
+                'cover_id'        => $currentCoverId,
+                'route_id'        => $currentRouteId,
+                'extras'          => $currentExtras,
             ],
             'odoo' => [
-                'order_number'       => $odooOrder['name'] ?? '',
-                'state'              => $odooOrder['state'] ?? '',
-                'boat_name'          => $odooOrder['x_studio_boat_name'] ?? '',
-                'route'              => $odooOrder['x_studio_route_new'] ?? '',
-                'rental_start_date'  => $odooOrder['rental_start_date'] ?? null,
-                'rental_return_date' => $odooOrder['rental_return_date'] ?? null,
+                'order_number'       => $odooOrder['name']             ?? '',
+                'state'              => $odooOrder['state']            ?? '',
+                'boat_name'          => $odooOrder['x_studio_boat_name']  ?? '',
+                'route'              => $odooOrder['x_studio_route_new']  ?? '',
+                'rental_start_date'  => $odooOrder['rental_start_date']   ?? null,
+                'rental_return_date' => $odooOrder['rental_return_date']  ?? null,
                 'deposit_paid'       => (float) ($odooOrder['x_studio_deposit'] ?? 0),
-                'collect'            => (float) ($odooOrder['x_studio_collect'] ?? 0),
-                'partner_name'       => is_array($odooOrder['partner_id'] ?? null)
-                    ? ($odooOrder['partner_id'][1] ?? '')
-                    : '',
+                'collect'            => (float) ($odooOrder['x_studio_collect']  ?? 0),
+                'partner_name'       => $partnerName,
                 'lines'              => $odooOrder['lines'] ?? [],
             ],
             'options' => [
@@ -177,228 +300,292 @@ class CabinetController extends Controller
         ]);
     }
 
-    // ─── PATCH /api/new/cabinet/{odooId} ──────────────────────────────────────
-    // Single combined update: date, addresses, adults, kids, transfer_id,
-    // cover_id, route_id, extras → recalculate prices → recreate Odoo order.
-    // Date is included in the same recalculation pass because tour price can
-    // depend on the travel date (seasonal PricesByDates packages).
+    // ─── PATCH /api/new/cabinet/{odooId}/{key} ────────────────────────────────
+    // Updates Odoo order: header fields (date, guests, addresses) + order lines
+    // (transfer, cover, extras). No price recalculation for tour itself.
 
-    public function update(Request $request, int $odooId)
+    public function update(Request $request, int $odooId, string $key)
     {
         $this->cors();
 
-        $order = $this->findOrder($odooId);
-        if (!$order) {
-            return response()->json(['error' => 'Order not found'], 404);
+        $odooOrder = $this->fetchAndVerify($odooId, $key);
+        if (!$odooOrder) {
+            return response()->json(['success' => false, 'error' => 'Order not found'], 404);
         }
 
-        $order->loadMissing(['tours', 'boat.company', 'route', 'program', 'restaurant']);
+        $date           = $request->input('date');
+        $pickupAddress  = $request->input('pickup_address');
+        $dropoffAddress = $request->input('dropoff_address');
+        $adults         = $request->has('adults') ? (int) $request->input('adults') : null;
+        $kids           = $request->has('kids')   ? (int) $request->input('kids')   : null;
 
-        $date           = $request->has('date')           ? $request->input('date')           : $order->travel_date;
-        $pickupAddress  = $request->has('pickup_address')  ? $request->input('pickup_address')  : $order->pickup_address;
-        $dropoffAddress = $request->has('dropoff_address') ? $request->input('dropoff_address') : $order->dropoff_address;
-        $adults         = $request->has('adults')          ? (int) $request->input('adults')    : (int) $order->adults;
-        $kids           = $request->has('kids')            ? (int) $request->input('kids')      : (int) $order->kids;
-        $transferId     = $request->has('transfer_id')     ? $request->input('transfer_id')     : $order->transfer_id;
-        $coverId        = $request->has('cover_id')        ? $request->input('cover_id')        : $order->cover_id;
-        $routeId        = $request->has('route_id')        ? $request->input('route_id')        : $order->route_id;
-        $extras         = $request->has('extras')          ? $request->input('extras', [])      : ($order->extras ?: []);
+        $curAdults = (int) ($odooOrder['x_studio_adults'] ?? 0);
+        $curKids   = (int) ($odooOrder['x_studio_kids']   ?? 0);
+        $newAdults = $adults ?? $curAdults;
+        $newKids   = $kids   ?? $curKids;
+        $members   = $newAdults + $newKids;
 
-        $members   = $adults + $kids;
-        $isPrivate = in_array((int) $order->tours?->classes_id, [8]);
+        // ── Header fields ──────────────────────────────────────────────────────
+        $fields = [];
 
-        // Recompute qty for auto-qty extras server-side so the stored value
-        // always reflects the current guest count, regardless of what the
-        // client sent (per_person, per_car, fixed types are never user-editable).
-        if (!empty($extras)) {
-            $extraIds    = array_filter(array_column((array) $extras, 'id'));
-            $extraModels = Extras::whereIn('id', $extraIds)->get()->keyBy('id');
-            $normalized  = [];
-            foreach ((array) $extras as $item) {
-                $mdl = $extraModels->get($item['id'] ?? null);
-                if (!$mdl) continue;
-                $qtyType = $mdl->qty_type ?? 'manual';
-                $qty = match ($qtyType) {
-                    'per_person' => max(1, $members),
-                    'per_car'    => max(1, (int) ceil($members / 5)),
-                    'fixed'      => 1,
-                    default      => max(1, (int) ($item['qty'] ?? $item['quantity'] ?? 1)),
-                };
-                $normalized[] = [
-                    'id'    => (int) $mdl->id,
-                    'name'  => $item['name'] ?? $mdl->name,
-                    'price' => (int) ($item['price'] ?? $mdl->price ?? 0),
-                    'qty'   => $qty,
-                ];
+        if ($date) {
+            $fields['rental_start_date']  = Carbon::parse($date . ' 08:00:00', 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+            $fields['rental_return_date'] = Carbon::parse($date . ' 18:00:00', 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+        }
+
+        if ($adults !== null) $fields['x_studio_adults'] = $newAdults;
+        if ($kids   !== null) $fields['x_studio_kids']   = $newKids;
+        if ($adults !== null || $kids !== null) {
+            $fields['x_studio_count_of_people'] = $members;
+        }
+
+        if ($pickupAddress  !== null) $fields['x_studio_pickup_address']   = $pickupAddress;
+        if ($dropoffAddress !== null) $fields['x_studio_drop_off_address'] = $dropoffAddress;
+
+        // ── Parse current order lines → match to local models ─────────────────
+        $allTransfers  = Transfer::orderBy('id')->get();
+        $allCovers     = Cover::orderBy('id')->get();
+        $allExtrasById = Extras::whereNotNull('odoo_id')->get()->keyBy('id');
+
+        $existingTransferLine = null; // ['id', 'local_id', 'qty', 'price']
+        $existingCoverLine    = null;
+        // keyed by odoo product_id: ['id' => lineId, 'qty' => qty]
+        $existingExtrasLines  = [];
+
+        foreach ($odooOrder['lines'] ?? [] as $line) {
+            $pid = $line['product_id'] ?? null;
+            if (is_array($pid)) $pid = (int) $pid[0];
+            if (!$pid) continue;
+            $lineQty = (int) ($line['product_uom_qty'] ?? 0);
+
+            foreach ($allTransfers as $t) {
+                if ($t->odoo_id && (int) $t->odoo_id === $pid && $lineQty > 0) {
+                    $existingTransferLine = ['id' => $line['id'], 'local_id' => (int) $t->id, 'qty' => $lineQty, 'price' => (float) ($line['price_unit'] ?? 0)];
+                }
             }
-            $extras = $normalized;
-        }
-
-        if ($date && $date !== $order->travel_date && !$this->isDateAvailable($order, $date, $members)) {
-            return response()->json(['success' => false, 'error' => 'Selected date is not available for this many guests'], 422);
-        }
-
-        // Private tours keep the originally assigned boat — the cabinet doesn't
-        // let the guest change it — so growing the party just needs a capacity
-        // check, matching private.jsx's `totalGuests <= yacht.people`.
-        if ($isPrivate && $order->boat && $order->boat->capacity && $members > (int) $order->boat->capacity) {
-            return response()->json(['success' => false, 'error' => "This boat fits at most {$order->boat->capacity} guests"], 422);
-        }
-
-        $order->travel_date     = $date;
-        $order->pickup_address  = $pickupAddress;
-        $order->dropoff_address = $dropoffAddress;
-
-        // ── Route change (private only) — pulls in matching program/restaurant ──
-        if ($isPrivate && $routeId && (int) $routeId !== (int) $order->route_id) {
-            $newRoute = Route::find($routeId);
-            if ($newRoute) {
-                $order->route_id      = $newRoute->id;
-                $order->program_id    = $newRoute->program_id;
-                $order->restaurant_id = $newRoute->restaurant_id;
-                $order->setRelation('route', $newRoute);
-                $order->setRelation('restaurant', $newRoute->restaurant);
+            foreach ($allCovers as $c) {
+                if ($c->odoo_id && (int) $c->odoo_id === $pid && $lineQty > 0) {
+                    $existingCoverLine = ['id' => $line['id'], 'local_id' => (int) $c->id, 'qty' => $lineQty, 'price' => (float) ($line['price_unit'] ?? 0)];
+                }
+            }
+            foreach ($allExtrasById as $extra) {
+                if ($extra->odoo_id && (int) $extra->odoo_id === $pid) {
+                    // Store all extras lines (including qty=0) so we can update them
+                    $existingExtrasLines[$pid] = ['id' => $line['id'], 'qty' => $lineQty];
+                }
             }
         }
 
-        // ── Recalculate tour price ────────────────────────────────────────────
-        $tour = $order->tours;
-        $tour->loadMissing(['packages', 'pricesbydates.packages']);
-        $pricelist = $tour->packages?->pricelist ?? [];
-
-        if ($order->travel_date && $tour->pricesbydates->isNotEmpty()) {
-            $seasonal = $tour->pricesbydates->first(
-                fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
-            );
-            if ($seasonal?->packages?->pricelist) {
-                $pricelist = $seasonal->packages->pricelist;
+        // ── Cancel → draft before any changes ────────────────────────────────
+        $wasSale = ($odooOrder['state'] ?? '') === 'sale';
+        if ($wasSale) {
+            try {
+                OdooService::cancelOrder($odooId);
+                OdooService::draftOrder($odooId);
+            } catch (\Exception $e) {
+                Log::error('CabinetController::update cancel/draft — ' . $e->getMessage());
+                return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
             }
         }
 
-        $tierPrice = 0;
-        if (!empty($pricelist)) {
-            $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $tierPrice = (int) ($entry['price'] ?? 0);
-        }
-
-        $boatPrice = $isPrivate ? (int) ($tour->boat_price ?? 0) : 0;
-
-        // ── Transfer ──────────────────────────────────────────────────────────
-        // Total = unit price (bus_price tier if >5 pax) × cars — scales with
-        // passenger count since more passengers need more cars.
-        $transfer          = null;
-        $transferUnitPrice = 0;
-        $transferPrice     = 0;
-        $cars              = 0;
-        if ($transferId) {
-            $transfer = Transfer::find($transferId);
-            if ($transfer) {
-                $cars = in_array((int) $transfer->id, [1, 2]) ? (int) ceil($members / 5) : 0;
-                $transferUnitPrice = ($members > 5 && $transfer->bus_price)
-                    ? (int) $transfer->bus_price
-                    : (int) $transfer->price;
-                $transferPrice = $transferUnitPrice * max(1, $cars);
-            }
-        }
-
-        // ── Cover ─────────────────────────────────────────────────────────────
-        // Private tours are charged per boat (qty 1); shared tours per passenger
-        // (qty = members) — matches OdooService::addOrderLines' isShared switch.
-        $cover          = null;
-        $coverUnitPrice = 0;
-        $coverPrice     = 0;
-        if ($coverId) {
-            $cover = Cover::find($coverId);
-            if ($cover) {
-                $coverUnitPrice = (int) ($cover->price ?? 0);
-                $coverQty       = $isPrivate ? 1 : max(1, $members);
-                $coverPrice     = $coverUnitPrice * $coverQty;
-            }
-        }
-
-        // ── Extras total ──────────────────────────────────────────────────────
-        $extrasTotal = 0;
-        foreach ((array) $extras as $item) {
-            $extrasTotal += (int) ($item['price'] ?? 0) * max(1, (int) ($item['qty'] ?? $item['quantity'] ?? 1));
-        }
-
-        $fullPrice = $tierPrice + $boatPrice + $transferPrice + $coverPrice + $extrasTotal;
-
-        // ── Update local order ────────────────────────────────────────────────
-        $order->adults         = $adults;
-        $order->kids           = $kids;
-        $order->members        = $members;
-        $order->transfer_id    = $transferId ?: null;
-        $order->cover_id       = $coverId ?: null;
-        $order->extras         = $extras;
-        $order->cars           = $cars;
-        $order->tour_price     = $tierPrice;
-        $order->boat_price     = $boatPrice;
-        $order->transfer_price = $transferPrice;
-        $order->cover_price    = $coverPrice;
-        $order->extras_total   = $extrasTotal;
-        $order->total_price    = $fullPrice;
-        $order->full_price     = $fullPrice;
-        $order->saveQuietly();
-
-        // ── Recreate Odoo order ───────────────────────────────────────────────
         try {
-            $result         = OdooService::recreateLead($order, $order->status_id == 2);
-            $order->odoo_id = $result['order_id'];
-            $order->saveQuietly();
+            // ── Transfer line ──────────────────────────────────────────────────
+            $requestHasTransfer = $request->has('transfer_id');
+            $requestedTransferId = $requestHasTransfer
+                ? ($request->input('transfer_id') ? (int) $request->input('transfer_id') : null)
+                : null;
+
+            if ($requestHasTransfer) {
+                if ($requestedTransferId === null) {
+                    // No transfer — replace line with "No transfer" product (id=23, price=0)
+                    if ($existingTransferLine) {
+                        OdooService::writeOrderLine($existingTransferLine['id'], [
+                            'product_id'      => 23,
+                            'product_uom_qty' => 1,
+                            'price_unit'      => 0.0,
+                            'name'            => 'Transfer',
+                        ]);
+                    }
+                    $fields['x_studio_pickup_cars']   = 0;
+                    $fields['x_studio_drop_off_cars'] = 0;
+                    $fields['x_studio_car_type']      = false;
+                } else {
+                    $newTransfer = $allTransfers->firstWhere('id', $requestedTransferId);
+                    if ($newTransfer && $newTransfer->odoo_id) {
+                        $cars      = in_array((int) $newTransfer->id, [1, 2]) ? max(1, (int) ceil($members / 5)) : 1;
+                        $unitPrice = (float) $newTransfer->price;
+                        $fields['x_studio_pickup_cars']   = in_array((int) $newTransfer->id, [1, 2]) ? $cars : 0;
+                        $fields['x_studio_drop_off_cars'] = (int) $newTransfer->id === 2 ? $cars : 0;
+                        $fields['x_studio_car_type']      = $newTransfer->odoo_name ?: false;
+
+                        if ($existingTransferLine && $existingTransferLine['local_id'] === $requestedTransferId) {
+                            OdooService::writeOrderLine($existingTransferLine['id'], [
+                                'product_uom_qty' => $cars,
+                                'price_unit'      => $unitPrice,
+                            ]);
+                        } else {
+                            if ($existingTransferLine) {
+                                OdooService::writeOrderLine($existingTransferLine['id'], [
+                                    'product_id'      => (int) $newTransfer->odoo_id,
+                                    'product_uom_qty' => $cars,
+                                    'price_unit'      => $unitPrice,
+                                    'name'            => $newTransfer->name,
+                                ]);
+                            } else {
+                                OdooService::addOrderLine($odooId, (int) $newTransfer->odoo_id, $cars, $unitPrice, $newTransfer->name);
+                            }
+                        }
+                    }
+                }
+            } elseif ($adults !== null || $kids !== null) {
+                if ($existingTransferLine && in_array($existingTransferLine['local_id'], [1, 2])) {
+                    $cars = max(1, (int) ceil($members / 5));
+                    OdooService::writeOrderLine($existingTransferLine['id'], ['product_uom_qty' => $cars]);
+                    $fields['x_studio_pickup_cars'] = $cars;
+                }
+            }
+
+            // ── Cover line ─────────────────────────────────────────────────────
+            if ($request->has('cover_id')) {
+                $requestedCoverId = $request->input('cover_id') ? (int) $request->input('cover_id') : null;
+
+                if ($requestedCoverId === null) {
+                    if ($existingCoverLine) {
+                        OdooService::unlinkOrderLines([$existingCoverLine['id']]);
+                    }
+                } else {
+                    $newCover = $allCovers->firstWhere('id', $requestedCoverId);
+                    if ($newCover && $newCover->odoo_id) {
+                        $coverQty   = $newCover->per_boat ? 1 : max(1, $members);
+                        $coverPrice = (float) $newCover->price;
+
+                        if ($existingCoverLine && $existingCoverLine['local_id'] === $requestedCoverId) {
+                            if ($existingCoverLine['qty'] !== $coverQty) {
+                                OdooService::writeOrderLine($existingCoverLine['id'], ['product_uom_qty' => $coverQty]);
+                            }
+                        } elseif ($existingCoverLine) {
+                            OdooService::writeOrderLine($existingCoverLine['id'], [
+                                'product_id'      => (int) $newCover->odoo_id,
+                                'product_uom_qty' => $coverQty,
+                                'price_unit'      => $coverPrice,
+                                'name'            => $newCover->name,
+                            ]);
+                        } else {
+                            OdooService::addOrderLine($odooId, (int) $newCover->odoo_id, $coverQty, $coverPrice, $newCover->name);
+                        }
+                    }
+                }
+            } elseif (($adults !== null || $kids !== null) && $existingCoverLine) {
+                $covObj = $allCovers->firstWhere('id', $existingCoverLine['local_id']);
+                if ($covObj && !$covObj->per_boat) {
+                    OdooService::writeOrderLine($existingCoverLine['id'], ['product_uom_qty' => max(1, $members)]);
+                }
+            }
+
+            // ── Extras lines ───────────────────────────────────────────────────
+            if ($request->has('extras')) {
+                $requestedExtrasMap = [];
+                foreach ((array) $request->input('extras', []) as $item) {
+                    $localId = (int) ($item['id'] ?? 0);
+                    $extra   = $allExtrasById->get($localId);
+                    if (!$extra || !$extra->odoo_id) continue;
+                    $requestedExtrasMap[(int) $extra->odoo_id] = [
+                        'extra' => $extra,
+                        'item'  => $item,
+                        'qty'   => (int) ($item['qty'] ?? 1),
+                    ];
+                }
+
+                $toUnlink = [];
+                foreach ($existingExtrasLines as $productOdooId => $info) {
+                    if (!isset($requestedExtrasMap[$productOdooId])) {
+                        $toUnlink[] = $info['id'];
+                    }
+                }
+                if (!empty($toUnlink)) {
+                    OdooService::unlinkOrderLines($toUnlink);
+                }
+
+                $newExtrasVals = [];
+                foreach ($requestedExtrasMap as $productOdooId => $req) {
+                    if (isset($existingExtrasLines[$productOdooId])) {
+                        if ($existingExtrasLines[$productOdooId]['qty'] !== $req['qty']) {
+                            OdooService::writeOrderLine($existingExtrasLines[$productOdooId]['id'], [
+                                'product_uom_qty' => $req['qty'],
+                            ]);
+                        }
+                    } else {
+                        $newExtrasVals[] = [
+                            'product_id'      => $productOdooId,
+                            'product_uom_qty' => $req['qty'],
+                            'price_unit'      => (float) ($req['item']['price'] ?? $req['extra']->price ?? 0),
+                            'name'            => $req['item']['name'] ?? $req['extra']->name,
+                        ];
+                    }
+                }
+                if (!empty($newExtrasVals)) {
+                    OdooService::bulkAddOrderLines($odooId, $newExtrasVals);
+                }
+            }
+
+            // ── Header fields ──────────────────────────────────────────────────
+            if (!empty($fields)) {
+                OdooService::updateOrderHeaderFields($odooId, $fields);
+            }
         } catch (\Exception $e) {
             Log::error('CabinetController::update — ' . $e->getMessage());
+            if ($wasSale) {
+                try { OdooService::confirmOrder($odooId); } catch (\Exception $ignored) {}
+            }
             return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
         }
 
-        return response()->json([
-            'success'     => true,
-            'new_odoo_id' => (int) $order->odoo_id,
-            'prices'      => [
-                'tour_price'     => $tierPrice,
-                'boat_price'     => $boatPrice,
-                'transfer_price' => $transferPrice,
-                'cover_price'    => $coverPrice,
-                'extras_total'   => $extrasTotal,
-                'full_price'     => $fullPrice,
-            ],
-        ]);
+        // ── Re-confirm ────────────────────────────────────────────────────────
+        if ($wasSale) {
+            try {
+                OdooService::confirmOrder($odooId);
+            } catch (\Exception $e) {
+                Log::error('CabinetController::update confirm — ' . $e->getMessage());
+                return response()->json(['success' => false, 'error' => 'Changes saved but order could not be re-confirmed. Please check in Odoo.'], 500);
+            }
+        }
+
+        return response()->json(['success' => true]);
     }
 
-    // ─── POST /api/new/cabinet/{odooId}/pay ──────────────────────────────────
-    // Create payment link for remaining collect amount
+    // ─── POST /api/new/cabinet/{odooId}/{key}/pay ─────────────────────────────
 
-    public function createPayment(Request $request, int $odooId)
+    public function createPayment(Request $request, int $odooId, string $key)
     {
         $this->cors();
 
-        $order = $this->findOrder($odooId);
-        if (!$order) {
+        $odooOrder = $this->fetchAndVerify($odooId, $key);
+        if (!$odooOrder) {
             return response()->json(['error' => 'Order not found'], 404);
         }
 
-        try {
-            $collectAmount = OdooService::getOrderCollect((int) $order->odoo_id);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to get collect amount'], 502);
-        }
-
+        $collectAmount = (float) ($odooOrder['x_studio_collect'] ?? 0);
         if ($collectAmount <= 0) {
             return response()->json(['error' => 'No remaining amount to pay'], 400);
         }
 
-        $order->loadMissing('tours');
-        $description = $order->tours?->name ?? 'Bluuu Tour';
+        $partnerId = is_array($odooOrder['partner_id'] ?? null) ? $odooOrder['partner_id'][0] : null;
+        $email     = null;
+        if ($partnerId) {
+            try {
+                $partners = OdooService::readPartners([$partnerId]);
+                $email    = $partners[$partnerId]['email'] ?? null;
+            } catch (\Exception $e) {
+                Log::warning('CabinetController::createPayment — partner fetch failed', ['odoo_id' => $odooId]);
+            }
+        }
 
-        // Use 'odoo_{odoo_id}' prefix: VerifyController handles it via OdooService::registerPayment / clearCollect
-        $collectExtId = 'odoo_' . $order->odoo_id;
-        $cancelUrl    = url('/cabinet/' . $order->odoo_id);
-        $successUrl   = url('/cabinet/' . $order->odoo_id) . '?paid=1';
+        $description  = $odooOrder['x_studio_route_new'] ?? $odooOrder['x_studio_boat_name'] ?? 'Bluuu Tour';
+        $baseUrl      = url("/cabinet/{$odooId}/{$key}");
+        $collectExtId = 'odoo_' . $odooId;
 
-        // PayPal is disabled for the cabinet — Xendit only.
         $payUrl = XenditService::createPaymentLink(
-            $collectExtId, $collectAmount, $order->email, $successUrl, $cancelUrl, $description
+            $collectExtId, $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
         );
 
         return response()->json(['payment_url' => $payUrl]);
