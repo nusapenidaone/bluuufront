@@ -106,7 +106,7 @@ export function TransfersCompact({
   return (
     <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
       <div
-        className="flex items-center justify-between px-6 py-5 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+        className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-neutral-100/50 transition-colors"
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center gap-3">
@@ -114,7 +114,7 @@ export function TransfersCompact({
             <Car className="h-5 w-5" />
           </div>
           <div>
-            <div className="text-xl font-semibold text-secondary-900">Transfer</div>
+            <div className="text-base font-semibold text-secondary-900">Transfer</div>
             <div className="text-sm text-secondary-500">
               {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
             </div>
@@ -135,7 +135,7 @@ export function TransfersCompact({
           <div className="flex flex-col divide-y divide-neutral-100">
             {/* Option: No thanks */}
             <label className={cn(
-              "group flex items-center gap-4 px-6 py-3 sm:py-4 cursor-pointer transition-all",
+              "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
               !selectedTransferId ? "bg-primary-50/30" : "hover:bg-neutral-50"
             )}>
               <input
@@ -145,16 +145,16 @@ export function TransfersCompact({
                 checked={!selectedTransferId}
                 onChange={() => onSelectTransferId(null)}
               />
-              <div className="flex min-w-0 flex-1 items-center gap-4">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                  <MapPin className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                  <MapPin className={cn("h-4 w-4 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-secondary-900 sm:text-base">No, thanks. We'll meet you there.</div>
+                  <div className="text-sm font-bold text-secondary-900">No, thanks. We'll meet you there.</div>
                   <div className="mt-1 text-sm font-medium text-secondary-500">Self-arrival at the meeting point</div>
                 </div>
               </div>
-              <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                 <div className={cn(
                   "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                   !selectedTransferId
@@ -178,7 +178,7 @@ export function TransfersCompact({
 
               return (
                 <label key={transfer.id} className={cn(
-                  "group flex items-center gap-4 px-6 py-3 sm:py-4 cursor-pointer transition-all",
+                  "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
                   isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
                 )}>
                   <input
@@ -188,14 +188,14 @@ export function TransfersCompact({
                     checked={isSelected}
                     onChange={() => onSelectTransferId(transfer.id)}
                   />
-                  <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                      <Car className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                      <Car className={cn("h-4 w-4 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
+                      <div className="text-sm font-bold text-secondary-900">{finalName}</div>
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
+                        <span className="text-sm font-semibold text-secondary-900 tabular-nums">
                           {formatIDR(unitPrice)}
                         </span>
                         <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
@@ -221,7 +221,7 @@ export function TransfersCompact({
                       </div>
                     </div>
                   </div>
-                  <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                     <div className={cn(
                       "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                       isSelected
@@ -312,7 +312,7 @@ export function CoversCompact({
     <div className="flex flex-col divide-y divide-neutral-100">
       {/* Option: No coverage */}
       <label className={cn(
-        "group flex items-center gap-4 px-6 py-3 sm:py-4 cursor-pointer transition-all",
+        "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
         !selectedCoverId ? "bg-primary-50/30" : "hover:bg-neutral-50"
       )}>
         <input
@@ -322,16 +322,16 @@ export function CoversCompact({
           checked={!selectedCoverId}
           onChange={() => onSelectCoverId(null)}
         />
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-            <Shield className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedCoverId ? "text-primary-600" : "text-secondary-400")} />
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+            <Shield className={cn("h-4 w-4 transition-colors", !selectedCoverId ? "text-primary-600" : "text-secondary-400")} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold text-secondary-900 sm:text-base">No coverage</div>
+            <div className="text-sm font-bold text-secondary-900">No coverage</div>
             <div className="mt-1 text-sm font-medium text-secondary-500">I have my own insurance</div>
           </div>
         </div>
-        <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center">
           <div className={cn(
             "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
             !selectedCoverId
@@ -354,7 +354,7 @@ export function CoversCompact({
         const hasCoverDetails = Boolean(coverDetails.description || coverDetails.image);
         return (
           <label key={cover.id} className={cn(
-            "group flex items-center gap-4 px-6 py-3 sm:py-4 cursor-pointer transition-all",
+            "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
             isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
           )}>
             <input
@@ -364,14 +364,14 @@ export function CoversCompact({
               checked={isSelected}
               onChange={() => onSelectCoverId(cover.id)}
             />
-            <div className="flex min-w-0 flex-1 items-center gap-4">
-              <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                <ShieldCheck className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                <ShieldCheck className={cn("h-4 w-4 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-secondary-900 sm:text-base">{cover.name}</div>
+                <div className="text-sm font-bold text-secondary-900">{cover.name}</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
+                  <span className="text-sm font-semibold text-secondary-900 tabular-nums">
                     {formatPrice(price)}
                   </span>
                   <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">{priceLabel}</span>
@@ -396,7 +396,7 @@ export function CoversCompact({
                 )}
               </div>
             </div>
-            <div className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center">
               <div className={cn(
                 "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                 isSelected
@@ -415,9 +415,9 @@ export function CoversCompact({
   return (
     <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
       {showHeader && (
-        <div className="flex items-center justify-between px-6 py-5">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div>
-            <div className="text-xl font-semibold text-secondary-900">Insurance</div>
+            <div className="text-base font-semibold text-secondary-900">Insurance</div>
             <div className="text-sm text-secondary-500">
               {selectedCover ? selectedCover.name : "Optional protect your trip"}
             </div>

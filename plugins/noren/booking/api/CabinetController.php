@@ -9,6 +9,7 @@ use Log;
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
+use Noren\Booking\Models\Restaurant;
 use Noren\Booking\Models\Route;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Transfer;
@@ -343,12 +344,14 @@ class CabinetController extends Controller
         if ($dropoffAddress !== null) $fields['x_studio_drop_off_address'] = $dropoffAddress;
 
         // ── Parse current order lines → match to local models ─────────────────
-        $allTransfers  = Transfer::orderBy('id')->get();
-        $allCovers     = Cover::orderBy('id')->get();
-        $allExtrasById = Extras::whereNotNull('odoo_id')->get()->keyBy('id');
+        $allTransfers    = Transfer::orderBy('id')->get();
+        $allCovers       = Cover::orderBy('id')->get();
+        $allExtrasById   = Extras::whereNotNull('odoo_id')->get()->keyBy('id');
+        $allRestaurants  = Restaurant::whereNotNull('odoo_id')->get();
 
-        $existingTransferLine = null; // ['id', 'local_id', 'qty', 'price']
-        $existingCoverLine    = null;
+        $existingTransferLine    = null; // ['id', 'local_id', 'qty', 'price']
+        $existingCoverLine       = null;
+        $existingRestaurantLine  = null; // ['id', 'qty']
         // keyed by odoo product_id: ['id' => lineId, 'qty' => qty]
         $existingExtrasLines  = [];
 
@@ -366,6 +369,11 @@ class CabinetController extends Controller
             foreach ($allCovers as $c) {
                 if ($c->odoo_id && (int) $c->odoo_id === $pid && $lineQty > 0) {
                     $existingCoverLine = ['id' => $line['id'], 'local_id' => (int) $c->id, 'qty' => $lineQty, 'price' => (float) ($line['price_unit'] ?? 0)];
+                }
+            }
+            foreach ($allRestaurants as $r) {
+                if ($r->odoo_id && (int) $r->odoo_id === $pid) {
+                    $existingRestaurantLine = ['id' => $line['id'], 'qty' => $lineQty];
                 }
             }
             foreach ($allExtrasById as $extra) {
@@ -479,6 +487,13 @@ class CabinetController extends Controller
                 $covObj = $allCovers->firstWhere('id', $existingCoverLine['local_id']);
                 if ($covObj && !$covObj->per_boat) {
                     OdooService::writeOrderLine($existingCoverLine['id'], ['product_uom_qty' => max(1, $members)]);
+                }
+            }
+
+            // ── Restaurant qty (follows members count) ────────────────────────
+            if (($adults !== null || $kids !== null) && $existingRestaurantLine) {
+                if ($existingRestaurantLine['qty'] !== $members) {
+                    OdooService::writeOrderLine($existingRestaurantLine['id'], ['product_uom_qty' => max(1, $members)]);
                 }
             }
 

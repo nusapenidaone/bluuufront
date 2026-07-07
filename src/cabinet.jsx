@@ -569,7 +569,6 @@ function GuestsInline({ adults, kids, onAdultsChange, onKidsChange }) {
 // ─── Cabinet page ─────────────────────────────────────────────────────────────
 export default function Cabinet({ odooId, uniqueKey }) {
   const contacts = useSiteContacts();
-  const waLink = contacts?.whatsapp?.link || `https://wa.me/${WA.google}`;
   const params = new URLSearchParams(window.location.search);
   const justPaid  = params.get("paid")  === "1";
   const justSaved = params.get("saved") === "1";
@@ -870,6 +869,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
   const { local, odoo, options } = data;
   const collect = odoo.collect || 0;
+  const waNumber = contacts?.whatsapp?.number || WA.google;
+  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(`Hi Bluuu! I have a question about my booking ${odoo.order_number || odooId}.`)}`;
   const depositPaid = odoo.deposit_paid || 0;
 
   // Display summaries for each editable field
@@ -912,7 +913,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/10" />
 
-        <div className="relative px-6 pb-8 pt-16 sm:px-8 sm:pt-20">
+        <div className="relative px-6 pb-10 pt-28 sm:px-8 sm:pt-36">
           <div className="mb-1 flex items-center gap-2">
             <span className="rounded-full border border-white/20 bg-white/10 px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-sm">
               My Booking
@@ -953,31 +954,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className="text-sm font-bold text-emerald-700">Booking updated!</div>
             <div className="mt-0.5 text-xs text-emerald-600">Your changes have been saved.</div>
           </div>
-        </div>
-      )}
-
-      {/* ── Outstanding balance CTA ──────────────────────────────────────── */}
-      {collect > 0 && (
-        <div className="mb-5 overflow-hidden rounded-2xl bg-gradient-to-r from-primary-700 to-primary-500 p-6 text-white shadow-lg shadow-primary-600/20">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="text-[11px] font-bold uppercase tracking-wider opacity-70">Remaining balance</div>
-              <div className="mt-1 text-3xl font-extrabold tracking-tight">IDR {fmt(collect)}</div>
-              {depositPaid > 0 && (
-                <div className="mt-0.5 text-sm opacity-60">Deposit paid: IDR {fmt(depositPaid)}</div>
-              )}
-            </div>
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15">
-              <CreditCard className="h-6 w-6" />
-            </div>
-          </div>
-          <button
-            onClick={payCollect}
-            disabled={paying}
-            className="mt-5 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
-          >
-            {paying ? "Redirecting…" : "Pay now →"}
-          </button>
         </div>
       )}
 
@@ -1089,6 +1065,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
         {/* Extras (private only) */}
         {local.is_private && (
+          <div id="extras-section">
           <EditableRow icon={Sparkles} label="Extras" value={extrasSummary}
             isEditing={editingField === "extras"} onEdit={() => toggleEdit("extras")}>
             {(() => {
@@ -1101,7 +1078,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <>
                   <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                     {cats.length > 1 && (
-                      <div className="flex items-center gap-x-5 overflow-x-auto border-b border-neutral-200 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="relative">
+                      <div className="flex items-center gap-x-5 overflow-x-auto border-b border-neutral-200 px-4 pr-10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {cats.map((cat) => (
                           <button key={cat.id} type="button" onClick={() => setExtrasActiveCat(cat.id)}
                             className={cn(
@@ -1114,6 +1092,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
                             <span className="ml-1.5 text-xs font-normal opacity-60">{cat.extras.length}</span>
                           </button>
                         ))}
+                      </div>
+                      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent" />
                       </div>
                     )}
                     <div className="divide-y divide-neutral-100">
@@ -1161,27 +1141,50 @@ export default function Cabinet({ odooId, uniqueKey }) {
               );
             })()}
           </EditableRow>
+          </div>
         )}
 
         {/* Save footer — visible only when something changed */}
-        {hasChanges && (
+        {hasChanges && (() => {
+          const savedAddOns = (lastPrices?.transfer_price || 0) + (lastPrices?.cover_price || 0) + (lastPrices?.extras_total || 0);
+          const liveAddOns  = livePrices?.total || 0;
+          const delta       = liveAddOns - savedAddOns;
+          const newTotal    = (lastPrices?.tour_price || 0) + (lastPrices?.boat_price || 0) + liveAddOns;
+          const isUp        = delta > 0;
+          const isDown      = delta < 0;
+          return (
           <div className="border-t border-neutral-100 px-6 py-4">
-            {/* Live add-ons estimate */}
-            {livePrices && livePrices.total > 0 && (
-              <div className="mb-4 rounded-xl border border-primary-100 bg-primary-50 p-4">
-                <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-primary-400">Add-ons estimate</p>
-                {livePrices.transferPrice > 0 && (
-                  <div className="flex justify-between py-1 text-sm"><span className="text-primary-600">Transfer</span><span className="font-semibold text-primary-800">IDR {fmt(livePrices.transferPrice)}</span></div>
-                )}
-                {livePrices.coverPrice > 0 && (
-                  <div className="flex justify-between py-1 text-sm"><span className="text-primary-600">Insurance</span><span className="font-semibold text-primary-800">IDR {fmt(livePrices.coverPrice)}</span></div>
-                )}
-                {livePrices.extrasTotal > 0 && (
-                  <div className="flex justify-between py-1 text-sm"><span className="text-primary-600">Extras</span><span className="font-semibold text-primary-800">IDR {fmt(livePrices.extrasTotal)}</span></div>
-                )}
-                <div className="mt-1.5 flex justify-between border-t border-primary-100 pt-2 text-sm">
-                  <span className="font-bold text-primary-700">Total add-ons</span>
-                  <span className="font-extrabold text-primary-700">IDR {fmt(livePrices.total)}</span>
+            {/* Price delta */}
+            {lastPrices && delta !== 0 && (
+              <div className={cn(
+                "mb-4 rounded-xl p-4",
+                isUp ? "bg-amber-50 border border-amber-100" : "bg-emerald-50 border border-emerald-100"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={cn("text-[11px] font-bold uppercase tracking-wider", isUp ? "text-amber-500" : "text-emerald-500")}>
+                      Price change
+                    </p>
+                    <p className={cn("mt-0.5 text-2xl font-extrabold tracking-tight", isUp ? "text-amber-700" : "text-emerald-700")}>
+                      {isUp ? "+" : "−"} IDR {fmt(Math.abs(delta))}
+                    </p>
+                  </div>
+                  <div className={cn("rounded-xl px-3 py-2 text-right", isUp ? "bg-amber-100" : "bg-emerald-100")}>
+                    <p className={cn("text-[10px] font-semibold uppercase tracking-wide", isUp ? "text-amber-500" : "text-emerald-500")}>New total</p>
+                    <p className={cn("text-sm font-extrabold", isUp ? "text-amber-800" : "text-emerald-800")}>IDR {fmt(newTotal)}</p>
+                  </div>
+                </div>
+                {/* Breakdown */}
+                <div className="mt-3 space-y-1 border-t border-black/5 pt-3">
+                  {livePrices.transferPrice > 0 && (
+                    <div className="flex justify-between text-xs"><span className="text-secondary-500">Transfer</span><span className="font-semibold text-secondary-700">IDR {fmt(livePrices.transferPrice)}</span></div>
+                  )}
+                  {livePrices.coverPrice > 0 && (
+                    <div className="flex justify-between text-xs"><span className="text-secondary-500">Insurance</span><span className="font-semibold text-secondary-700">IDR {fmt(livePrices.coverPrice)}</span></div>
+                  )}
+                  {livePrices.extrasTotal > 0 && (
+                    <div className="flex justify-between text-xs"><span className="text-secondary-500">Extras</span><span className="font-semibold text-secondary-700">IDR {fmt(livePrices.extrasTotal)}</span></div>
+                  )}
                 </div>
               </div>
             )}
@@ -1200,34 +1203,147 @@ export default function Cabinet({ odooId, uniqueKey }) {
               <p className="mt-2 text-xs text-secondary-400">Please check availability before saving.</p>
             )}
           </div>
-        )}
+          );
+        })()}
       </div>
 
-      {/* ── Pricing ──────────────────────────────────────────────────────── */}
-      <SectionCard title="Pricing" icon={Wallet}>
-        {depositPaid > 0 && <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />}
-        {lastPrices && (
-          <>
-            <PriceRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
-            {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={`IDR ${fmt(lastPrices.boat_price)}`} />}
-            {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
-            {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
-            {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
-            <PriceRow label="Updated total" value={`IDR ${fmt(lastPrices.full_price)}`} bold />
-          </>
-        )}
+      {/* ── Extras upsell banner (private only, hidden when extras editor is open) */}
+      {local.is_private && editingField !== "extras" && (() => {
+        const upsellItems = [];
+        for (const cat of catalogCategories) {
+          for (const e of (cat.extras || [])) {
+            const children = e.children || [];
+            if (children.length > 0) {
+              for (const child of children) {
+                if (!editExtras[child.id]) upsellItems.push(child);
+              }
+            } else if (!editExtras[e.id]) {
+              upsellItems.push(e);
+            }
+          }
+        }
+        if (upsellItems.length === 0) return null;
+        const thumbs = upsellItems.filter((i) => i.image).slice(0, 4);
+        return (
+          <button
+            type="button"
+            onClick={() => {
+              toggleEdit("extras");
+              setTimeout(() => {
+                document.getElementById("extras-section")?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 50);
+            }}
+            className="mb-5 w-full overflow-hidden rounded-2xl text-left transition active:scale-[0.99]"
+          >
+            <div className="relative flex items-center gap-4 overflow-hidden rounded-2xl bg-gradient-to-r from-secondary-900 via-secondary-800 to-primary-900 px-5 py-5 shadow-lg">
+              {/* Background glow */}
+              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-500/20 blur-2xl" />
+              <div className="pointer-events-none absolute -bottom-6 left-10 h-24 w-24 rounded-full bg-primary-400/10 blur-xl" />
+
+              {/* Icon */}
+              <div className="relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+
+              {/* Text */}
+              <div className="relative min-w-0 flex-1">
+                <div className="text-[11px] font-bold uppercase tracking-widest text-white/50">Optional add-ons</div>
+                <div className="mt-0.5 text-base font-extrabold text-white">
+                  Enhance your experience
+                </div>
+                <div className="mt-1 flex items-center gap-2">
+                  {thumbs.length > 0 && (
+                    <div className="flex -space-x-2">
+                      {thumbs.map((item) => (
+                        <div key={item.id} className="h-5 w-5 overflow-hidden rounded-full border border-white/30 bg-white/10">
+                          <img src={item.image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <span className="text-xs font-semibold text-white/60">
+                    {upsellItems.length} item{upsellItems.length !== 1 ? "s" : ""} available
+                  </span>
+                </div>
+              </div>
+
+              {/* Arrow */}
+              <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
+                <ChevronDown className="h-4 w-4 rotate-[-90deg] text-white" />
+              </div>
+            </div>
+          </button>
+        );
+      })()}
+
+      {/* ── Pricing + Pay ────────────────────────────────────────────────── */}
+      <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+        {/* Breakdown */}
+        <div className="px-5 py-5">
+          <div className="mb-3 flex items-center gap-2">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+              <Wallet className="h-3.5 w-3.5" />
+            </div>
+            <span className="text-sm font-bold text-secondary-500 uppercase tracking-wide">Pricing</span>
+          </div>
+          {lastPrices ? (
+            <div className="space-y-1.5">
+              <PriceRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
+              {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={`IDR ${fmt(lastPrices.boat_price)}`} />}
+              {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
+              {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
+              {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
+              {depositPaid > 0 && <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />}
+              <div className="flex items-center justify-between border-t border-neutral-100 pt-2.5">
+                <span className="text-base font-bold text-secondary-900">Total</span>
+                <span className="text-base font-extrabold text-secondary-900">IDR {fmt(lastPrices.full_price)}</span>
+              </div>
+            </div>
+          ) : depositPaid > 0 && (
+            <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />
+          )}
+        </div>
+
+        {/* Payment footer */}
         {collect === 0 ? (
-          <div className="mt-3 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-3">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            <span className="text-sm font-bold text-emerald-700">Fully paid</span>
+          <div className="flex items-center gap-3 border-t border-emerald-100 bg-emerald-50 px-5 py-4">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+            <div>
+              <div className="text-sm font-bold text-emerald-700">Fully paid — you&apos;re all set!</div>
+              {depositPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(depositPaid)}</div>}
+            </div>
           </div>
         ) : (
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-red-50 px-4 py-3">
-            <span className="text-sm font-bold text-red-600">Remaining</span>
-            <span className="text-sm font-extrabold text-red-600">IDR {fmt(collect)}</span>
+          <div className="border-t border-neutral-100 bg-gradient-to-br from-primary-700 to-primary-500 px-5 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">Remaining balance</div>
+                <div className="mt-1 text-3xl font-extrabold tracking-tight text-white">IDR {fmt(collect)}</div>
+                {depositPaid > 0 && (
+                  <div className="mt-0.5 text-xs text-white/50">Deposit paid: IDR {fmt(depositPaid)}</div>
+                )}
+              </div>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                <CreditCard className="h-4 w-4 text-white" />
+              </div>
+            </div>
+            {hasChanges ? (
+              <div className="mt-4 flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3">
+                <Info className="h-4 w-4 shrink-0 text-white/70" />
+                <p className="text-sm font-semibold text-white/80">Save your changes above before paying.</p>
+              </div>
+            ) : (
+              <button
+                onClick={payCollect}
+                disabled={paying}
+                className="mt-4 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+              >
+                {paying ? "Redirecting…" : "Pay now →"}
+              </button>
+            )}
           </div>
         )}
-      </SectionCard>
+      </div>
 
       {/* ── Contact ──────────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-7">

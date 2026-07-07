@@ -437,6 +437,7 @@ class OdooService
                 'amount_total',
                 'x_studio_guide_1_1', 'x_studio_guide_2_1',
                 'x_studio_special_requests',
+                'x_studio_first_class_menu_selection',
                 'x_studio_customer_checked_in_and_cleared',
                 'x_studio_checked_in_by',
                 'x_studio_no_show_1',
