@@ -4413,9 +4413,9 @@ function StepTwo({
         document.body
       )}
 
-      {/* Standalone pick-day modal — renders even when mini-carousel is active */}
+      {/* Standalone pick-day modal — renders regardless of mini-carousel/grid view */}
       <AnimatePresence>
-        {inlineDatesFor && !showAllBoats && (() => {
+        {inlineDatesFor && (() => {
           const pdBoat = (boats || []).find(b => b.id === inlineDatesFor);
           if (!pdBoat) return null;
           const pdAvailability = availabilityByBoat?.[pdBoat.id];
