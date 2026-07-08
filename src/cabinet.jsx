@@ -1076,10 +1076,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 : catalogExtrasFlat;
               return (
                 <>
-                  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+                  <div className="rounded-xl border border-neutral-200 bg-white">
                     {cats.length > 1 && (
-                      <div className="relative">
-                      <div className="flex items-center gap-x-5 overflow-x-auto border-b border-neutral-200 px-4 pr-10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="relative overflow-hidden rounded-t-xl">
+                      <div className="flex items-center gap-x-5 overflow-x-auto border-b border-neutral-200 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                         {cats.map((cat) => (
                           <button key={cat.id} type="button" onClick={() => setExtrasActiveCat(cat.id)}
                             className={cn(
