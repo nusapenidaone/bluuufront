@@ -958,7 +958,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
       <div className="lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-8">
 
       {/* ── LEFT column ─────────────────────────────────────────────────── */}
-      <div>
+      <div className="min-w-0">
 
       {/* ── Payment success ──────────────────────────────────────────────── */}
       {justPaid && (
@@ -1264,7 +1264,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
       </div>{/* end LEFT column */}
 
       {/* ── RIGHT column (sticky on lg) ─────────────────────────────────── */}
-      <div className="lg:sticky lg:top-24 lg:mt-0 mt-5">
+      <div className="min-w-0 lg:sticky lg:top-24 lg:mt-0 mt-5">
 
       {/* ── Pricing + Pay ────────────────────────────────────────────────── */}
       <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
