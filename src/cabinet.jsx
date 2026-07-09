@@ -793,7 +793,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
     setSaved(false);
     setSaveError("");
     try {
-      const isPrivate = !!data?.local?.is_private;
       const payload = {
         date: editDate,
         pickup_address: editPickup,
@@ -818,14 +817,22 @@ export default function Cabinet({ odooId, uniqueKey }) {
         setLastPrices(json.prices || null);
         setSaved(true);
         await fetchOrder();
+        return true;
       } else {
         setSaveError(json.error || "Could not update the order");
+        return false;
       }
     } catch {
       setSaveError("Could not update the order");
+      return false;
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveAndPay = async () => {
+    const ok = await saveAll();
+    if (ok) await payCollect();
   };
 
   const payCollect = async () => {
@@ -1172,21 +1179,21 @@ export default function Cabinet({ odooId, uniqueKey }) {
         {/* Save footer — visible only when something changed */}
         {hasChanges && (() => {
           return (
-          <div className="border-t border-neutral-100 px-6 py-4">
-            <div className="flex items-center gap-3">
-              <Button onClick={saveAll} disabled={saving || saveBlocked}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
-              {saved && (
-                <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
-                  <CheckCircle2 className="h-4 w-4" />Updated!
-                </span>
-              )}
-              {saveError && <span className="text-sm font-semibold text-red-500">{saveError}</span>}
-            </div>
-            {saveBlocked && (
-              <p className="mt-2 text-xs text-secondary-400">Please check availability before saving.</p>
+          <div className="border-t border-neutral-100 px-6 py-3 flex items-center gap-3">
+            <button
+              onClick={saveAll}
+              disabled={saving || saveBlocked}
+              className="text-sm font-semibold text-secondary-400 transition hover:text-secondary-700 disabled:opacity-40"
+            >
+              {saving ? "Saving…" : "Save only"}
+            </button>
+            {saved && (
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
+                <CheckCircle2 className="h-4 w-4" />Saved!
+              </span>
             )}
+            {saveError && <span className="text-sm text-red-500">{saveError}</span>}
+            {saveBlocked && <span className="text-xs text-secondary-400">Check availability first.</span>}
           </div>
           );
         })()}
@@ -1342,10 +1349,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
               </div>
             </div>
             {hasChanges ? (
-              <div className="mt-4 flex items-center gap-2 rounded-xl bg-white/10 px-4 py-3">
-                <Info className="h-4 w-4 shrink-0 text-white/70" />
-                <p className="text-sm font-semibold text-white/80">Save your changes above before paying.</p>
-              </div>
+              <button
+                onClick={saveAndPay}
+                disabled={saving || paying || saveBlocked}
+                className="mt-4 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+              >
+                {saving ? "Saving…" : paying ? "Redirecting…" : "Save & Pay →"}
+              </button>
             ) : (
               <button
                 onClick={payCollect}
