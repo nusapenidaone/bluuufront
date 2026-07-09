@@ -843,7 +843,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
         links={SITE_NAV_LINKS}
         cta={{ label: "Check availability", href: "/private-tour-to-nusa-penida" }}
       />
-      <main className="container max-w-2xl flex-1 py-8 sm:py-12">{content}</main>
+      <main className="container max-w-5xl flex-1 py-8 sm:py-12">{content}</main>
       <Footer />
     </div>
   );
@@ -904,7 +904,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
         Back to home
       </a>
 
-      {/* ── Hero ────────────────────────────────────────────────────────── */}
+      {/* ── Hero (full width) ───────────────────────────────────────────── */}
       <div className="relative mb-6 overflow-hidden rounded-3xl shadow-xl">
         {local.tour_image ? (
           <img src={local.tour_image} alt={local.tour_name} className="absolute inset-0 h-full w-full object-cover" />
@@ -934,6 +934,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
           </div>
         </div>
       </div>
+
+      {/* ── Two-column grid (lg+) ───────────────────────────────────────── */}
+      <div className="lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-8">
+
+      {/* ── LEFT column ─────────────────────────────────────────────────── */}
+      <div>
 
       {/* ── Payment success ──────────────────────────────────────────────── */}
       {justPaid && (
@@ -1276,6 +1282,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
         );
       })()}
 
+      </div>{/* end LEFT column */}
+
+      {/* ── RIGHT column (sticky on lg) ─────────────────────────────────── */}
+      <div className="lg:sticky lg:top-24 lg:mt-0 mt-5">
+
       {/* ── Pricing + Pay ────────────────────────────────────────────────── */}
       <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
         {/* Breakdown */}
@@ -1367,6 +1378,9 @@ export default function Cabinet({ odooId, uniqueKey }) {
           </a>
         </div>
       </div>
+
+      </div>{/* end RIGHT column */}
+      </div>{/* end grid */}
     </>
   );
 }
