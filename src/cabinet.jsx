@@ -1290,30 +1290,31 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   IDR {fmt(lastPrices.full_price)}
                 </span>
               </div>
-              {hasChanges && priceDelta !== 0 && (
-                <div className={cn(
-                  "mt-2 flex items-center justify-between rounded-xl px-3 py-2.5",
-                  priceDelta > 0 ? "bg-amber-50" : "bg-emerald-50"
-                )}>
-                  <div>
-                    <div className={cn("text-[10px] font-bold uppercase tracking-wider", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
-                      Est. with changes
-                    </div>
-                    <div className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
-                      IDR {fmt(estNewTotal)}
-                    </div>
-                  </div>
-                  <div className={cn(
-                    "rounded-full px-2.5 py-1 text-xs font-extrabold",
-                    priceDelta > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
-                  )}>
-                    {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
-                  </div>
-                </div>
-              )}
             </div>
           ) : depositPaid > 0 && (
             <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />
+          )}
+          {/* Price delta — shown whenever hasChanges && priceDelta !== 0, regardless of lastPrices */}
+          {hasChanges && priceDelta !== 0 && (
+            <div className={cn(
+              "mt-3 flex items-center justify-between rounded-xl px-3 py-2.5",
+              priceDelta > 0 ? "bg-amber-50" : "bg-emerald-50"
+            )}>
+              <div>
+                <div className={cn("text-[10px] font-bold uppercase tracking-wider", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
+                  Est. with changes
+                </div>
+                <div className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
+                  IDR {fmt(estNewTotal)}
+                </div>
+              </div>
+              <div className={cn(
+                "rounded-full px-2.5 py-1 text-xs font-extrabold",
+                priceDelta > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+              )}>
+                {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
+              </div>
+            </div>
           )}
         </div>
 
