@@ -695,17 +695,23 @@ class OdooService
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_collected_by_xendit'],
+            'fields' => ['x_studio_collected_by_xendit', 'x_studio_deposit'],
             'limit'  => 1,
         ]);
 
         if (empty($result[0])) return;
 
-        $current = (float) ($result[0]['x_studio_collected_by_xendit'] ?? 0);
+        $currentCollected = (float) ($result[0]['x_studio_collected_by_xendit'] ?? 0);
+        $currentDeposit   = (float) ($result[0]['x_studio_deposit']             ?? 0);
 
+        // Update both: collected_by_xendit (for tracking) and deposit (so x_studio_collect
+        // recalculates to 0 without client needing to return to the success page)
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
-            'vals' => ['x_studio_collected_by_xendit' => $current + $amount],
+            'vals' => [
+                'x_studio_collected_by_xendit' => $currentCollected + $amount,
+                'x_studio_deposit'             => $currentDeposit   + $amount,
+            ],
         ]);
 
         static::addLogNote($odooOrderId,
