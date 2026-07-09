@@ -593,6 +593,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [lastPrices, setLastPrices] = useState(null);
+  const [initialAddOns, setInitialAddOns] = useState(null);
   const [paying, setPaying] = useState(false);
 
   // Active category tab in the extras panel
@@ -780,6 +781,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
     return { transferPrice, coverPrice, extrasTotal, total: transferPrice + coverPrice + extrasTotal };
   }, [data, editAdults, editKids, editTransfer, editCover, editExtras]);
 
+  // Capture the initial add-ons total once after data first loads
+  useEffect(() => {
+    if (data && livePrices !== null && initialAddOns === null) {
+      setInitialAddOns(livePrices.total);
+    }
+  }, [data, livePrices, initialAddOns]);
+
   const saveAll = async () => {
     setSaving(true);
     setSaved(false);
@@ -896,10 +904,16 @@ export default function Cabinet({ odooId, uniqueKey }) {
     editDropoff       !== (local.dropoff_address || "") ||
     extrasCount       !== (local.extras || []).length;
 
-  const savedAddOns = (lastPrices?.transfer_price || 0) + (lastPrices?.cover_price || 0) + (lastPrices?.extras_total || 0);
+  const savedAddOns = lastPrices
+    ? (lastPrices.transfer_price || 0) + (lastPrices.cover_price || 0) + (lastPrices.extras_total || 0)
+    : (initialAddOns ?? 0);
   const liveAddOns  = livePrices?.total || 0;
   const priceDelta  = hasChanges ? liveAddOns - savedAddOns : 0;
-  const estNewTotal = (lastPrices?.tour_price || 0) + (lastPrices?.boat_price || 0) + liveAddOns;
+  // estNewTotal: swap add-ons portion of Odoo total (collect + deposit = amount_total)
+  const odooTotal   = (collect || 0) + (depositPaid || 0);
+  const estNewTotal = lastPrices
+    ? (lastPrices.tour_price || 0) + (lastPrices.boat_price || 0) + liveAddOns
+    : odooTotal - savedAddOns + liveAddOns;
 
   return renderShell(
     <>
