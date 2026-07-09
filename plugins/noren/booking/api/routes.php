@@ -98,9 +98,11 @@ Route::options('api/new/cabinet/{any}', function () {
         ->header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS')
         ->header('Access-Control-Allow-Headers', '*');
 })->where('any', '.*');
-Route::get  ('api/new/cabinet/{odooId}/{key}',     [CabinetController::class, 'show'])->where('odooId', '[0-9]+')->where('key', '.+');
-Route::patch('api/new/cabinet/{odooId}/{key}',     [CabinetController::class, 'update'])->where('odooId', '[0-9]+')->where('key', '.+');
-Route::post ('api/new/cabinet/{odooId}/{key}/pay', [CabinetController::class, 'createPayment'])->where('odooId', '[0-9]+')->where('key', '.+');
+Route::get   ('api/new/cabinet/{odooId}/{key}/upgrade', [CabinetController::class, 'checkUpgrade'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
+Route::patch ('api/new/cabinet/{odooId}/{key}/upgrade', [CabinetController::class, 'upgrade'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
+Route::post  ('api/new/cabinet/{odooId}/{key}/pay',     [CabinetController::class, 'createPayment'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
+Route::get   ('api/new/cabinet/{odooId}/{key}',         [CabinetController::class, 'show'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
+Route::patch ('api/new/cabinet/{odooId}/{key}',         [CabinetController::class, 'update'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 
 // Check-in
 Route::options('api/new/checkin/{any}', function () {

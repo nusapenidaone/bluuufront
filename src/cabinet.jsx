@@ -10,6 +10,7 @@ import { apiUrl } from "./api/base";
 import { cn } from "./lib/utils";
 import {
   ChevronLeft,
+  ChevronRight,
   CalendarDays,
   Users,
   Minus,
@@ -30,6 +31,7 @@ import {
   Check,
   AlertCircle,
   ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
@@ -501,7 +503,7 @@ function RouteCard({ route, isSelected, onSelect }) {
 const fieldLabel = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-secondary-400";
 
 // ─── EditableRow: read-only row with inline editor on "Edit" ─────────────────
-function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled, children }) {
+function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled, disabled, children }) {
   return (
     <div className="border-b border-neutral-100 last:border-0">
       <div className="flex items-center gap-3 px-4 py-3.5">
@@ -512,7 +514,7 @@ function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled
           <div className="text-xs text-secondary-400">{label}</div>
           <div className="mt-0.5 text-sm font-semibold leading-snug text-secondary-900">{value || "—"}</div>
         </div>
-        {!isEditing && (
+        {!isEditing && !disabled && (
           <button
             type="button"
             onClick={onEdit}
@@ -595,9 +597,16 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [lastPrices, setLastPrices] = useState(null);
   const [initialAddOns, setInitialAddOns] = useState(null);
   const [paying, setPaying] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeError, setUpgradeError] = useState(null);
+  const [upgradeChecked, setUpgradeChecked] = useState(false);
+  const [upgradeChecking, setUpgradeChecking] = useState(false);
+  const [upgradeCheckData, setUpgradeCheckData] = useState(null);
+  const [upgradeCheckError, setUpgradeCheckError] = useState(null);
 
   // Active category tab in the extras panel
   const [extrasActiveCat, setExtrasActiveCat] = useState(null);
+  const extrasCatsScrollRef = useRef(null);
   // Which field is expanded for editing (null = all collapsed)
   const [editingField, setEditingField] = useState(null);
 
@@ -656,10 +665,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
   useEffect(() => { fetchOrder(); }, [fetchOrder]);
 
-  // Reset availability check whenever date or guest count changes
+  // Reset availability checks whenever date or guest count changes
   useEffect(() => {
     setAvailChecked(false);
     setAvailResult(null);
+    setUpgradeChecked(false);
+    setUpgradeCheckData(null);
+    setUpgradeCheckError(null);
   }, [editDate, editAdults, editKids]);
 
   const checkAvailability = async () => {
@@ -788,6 +800,44 @@ export default function Cabinet({ odooId, uniqueKey }) {
     }
   }, [data, livePrices, initialAddOns]);
 
+  const checkUpgradeLive = async () => {
+    setUpgradeChecking(true);
+    setUpgradeCheckError(null);
+    setUpgradeCheckData(null);
+    try {
+      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/upgrade`));
+      const json = await res.json();
+      setUpgradeCheckData(json);
+      setUpgradeChecked(true);
+    } catch {
+      setUpgradeCheckError("Could not check availability");
+    } finally {
+      setUpgradeChecking(false);
+    }
+  };
+
+  const doUpgrade = async (toursId) => {
+    setUpgrading(true);
+    setUpgradeError(null);
+    try {
+      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/upgrade`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tours_id: toursId }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        await fetchOrder();
+      } else {
+        setUpgradeError(json.error || "Upgrade failed");
+      }
+    } catch (e) {
+      setUpgradeError("Network error");
+    } finally {
+      setUpgrading(false);
+    }
+  };
+
   const saveAll = async () => {
     setSaving(true);
     setSaved(false);
@@ -888,6 +938,16 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(`Hi Bluuu! I have a question about my booking ${odoo.order_number || odooId}.`)}`;
   const depositPaid = odoo.deposit_paid || 0;
 
+  // Time-based edit restrictions
+  const hoursUntilTour = (() => {
+    const start = odoo.rental_start_date;
+    if (!start) return null;
+    const tourMs = new Date(start + "Z").getTime(); // UTC string → ms
+    return (tourMs - Date.now()) / 3_600_000;
+  })();
+  const dateEditLocked  = hoursUntilTour !== null && hoursUntilTour <= 24;
+  const allEditLocked   = hoursUntilTour !== null && hoursUntilTour <= 12;
+
   // Display summaries for each editable field
   const transferOpt = (options.transfers || []).find((t) => Number(t.id) === Number(editTransfer));
   const coverOpt    = (options.covers || []).find((c) => Number(c.id) === Number(editCover));
@@ -898,7 +958,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
     ? [(transferOpt?.name || "Transfer"), editPickup && `from ${editPickup}`].filter(Boolean).join(" • ")
     : "No transfer";
   const coverSummary = editCover ? (coverOpt?.name || "Insurance") : "None";
-  const extrasSummary = extrasCount > 0 ? `${extrasCount} item${extrasCount !== 1 ? "s" : ""} selected` : "None";
+  const extrasNames = Object.values(editExtras).filter(Boolean).map((e) => e.name);
+  const extrasSummary = extrasNames.length > 0
+    ? (extrasNames.length <= 2 ? extrasNames.join(", ") : `${extrasNames.slice(0, 2).join(", ")} +${extrasNames.length - 2} more`)
+    : "None";
   const routeSummary = selectedRoute?.title || local.route_name || "—";
 
   const hasChanges =
@@ -946,13 +1009,15 @@ export default function Cabinet({ odooId, uniqueKey }) {
             </span>
             <span className="font-mono text-xs text-white/40">{odoo.order_number}</span>
           </div>
-          <h1 className="mt-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl">{local.tour_name}</h1>
+          <h1 className="mt-2 text-2xl font-extrabold leading-tight text-white sm:text-3xl">
+            {local.tour_name}
+            {(local.boat_name || odoo.boat_name) && (
+              <span className="font-light"> &ldquo;{local.boat_name || odoo.boat_name}&rdquo;</span>
+            )}
+          </h1>
 
           <div className="mt-4 flex flex-wrap gap-2">
             <HeroChip icon={CalendarDays}>{fmtDate(local.travel_date)}</HeroChip>
-            {(local.boat_name || odoo.boat_name) && (
-              <HeroChip icon={Anchor}>{local.boat_name || odoo.boat_name}</HeroChip>
-            )}
             <HeroChip icon={Users}>{local.members} {local.members === 1 ? "guest" : "guests"}</HeroChip>
             {(local.route_name || odoo.route) && (
               <HeroChip icon={Navigation2}>{local.route_name || odoo.route}</HeroChip>
@@ -992,15 +1057,24 @@ export default function Cabinet({ odooId, uniqueKey }) {
       {/* ── Your Booking ────────────────────────────────────────────────── */}
       <div className="mb-5 rounded-2xl border border-neutral-200 bg-white shadow-sm">
         {/* Header */}
-        <div className="border-b border-neutral-100 px-6 py-4">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-secondary-900">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 text-primary-600">
-              <Map className="h-3.5 w-3.5" />
-            </span>
-            Your Booking
-          </h2>
-          <p className="mt-0.5 text-xs text-secondary-400">Tap "Edit" to change a field. All changes save together.</p>
+        <div className="flex items-center gap-2 border-b border-neutral-100 px-6 py-4">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+            <Map className="h-3.5 w-3.5" />
+          </span>
+          <span className="text-sm font-bold text-secondary-900">Booking Details</span>
         </div>
+
+        {/* Lock notice */}
+        {allEditLocked && (
+          <div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
+            Changes are closed less than 12 hours before the tour. Please contact us if you need help.
+          </div>
+        )}
+        {!allEditLocked && dateEditLocked && (
+          <div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
+            Date changes are closed less than 24 hours before the tour.
+          </div>
+        )}
 
         {/* Date + Guests — single combined block */}
         <EditableRow
@@ -1008,6 +1082,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
           label="Travel date & Guests"
           value={`${fmtDate(editDate)} · ${guestSummary}`}
           isEditing={editingField === "schedule"}
+          disabled={dateEditLocked}
           onEdit={() => toggleEdit("schedule")}
           doneDisabled={dateOrGuestsChanged && (!availChecked || availResult === false)}
         >
@@ -1050,24 +1125,33 @@ export default function Cabinet({ odooId, uniqueKey }) {
           </div>
         </EditableRow>
 
-        {/* Boat (read-only — not changeable in cabinet) */}
-        {(local.boat_name || odoo.boat_name) && (
+        {/* Tour + Route + Boat — combined read-only row */}
+        {(local.tour_name || local.route_name || odoo.route || local.boat_name || odoo.boat_name) && (
           <div className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-secondary-500">
-              <Anchor className="h-3.5 w-3.5" />
+              <Map className="h-3.5 w-3.5" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs text-secondary-400">Boat</div>
-              <div className="mt-0.5 text-sm font-semibold text-secondary-900">{local.boat_name || odoo.boat_name}</div>
+              <div className="text-sm font-semibold text-secondary-900">
+                {local.tour_name}
+                {(local.boat_name || odoo.boat_name) && (
+                  <span className="font-normal text-secondary-500"> &ldquo;{local.boat_name || odoo.boat_name}&rdquo;</span>
+                )}
+              </div>
+              {(local.route_name || odoo.route) && (
+                <div className="mt-0.5 flex items-center gap-1 text-xs text-secondary-400">
+                  <Navigation2 className="h-3 w-3" />{local.route_name || odoo.route}
+                </div>
+              )}
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-secondary-300">Fixed</span>
           </div>
         )}
 
 
         {/* Transfer */}
         <EditableRow icon={Car} label="Transfer" value={transferSummary}
-          isEditing={editingField === "transfer"} onEdit={() => toggleEdit("transfer")}>
+          isEditing={editingField === "transfer"} onEdit={() => toggleEdit("transfer")}
+          disabled={allEditLocked}>
           <TransfersCompact
             transfers={options.transfers || []}
             selectedTransferId={editTransfer}
@@ -1083,7 +1167,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
         {/* Insurance */}
         <EditableRow icon={ShieldCheck} label="Insurance" value={coverSummary}
-          isEditing={editingField === "cover"} onEdit={() => toggleEdit("cover")}>
+          isEditing={editingField === "cover"} onEdit={() => toggleEdit("cover")}
+          disabled={allEditLocked}>
           <CoversCompact
             covers={options.covers || []}
             selectedCoverId={editCover}
@@ -1099,7 +1184,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
         {local.is_private && (
           <div id="extras-section">
           <EditableRow icon={Sparkles} label="Extras" value={extrasSummary}
-            isEditing={editingField === "extras"} onEdit={() => toggleEdit("extras")}>
+            isEditing={editingField === "extras"} onEdit={() => toggleEdit("extras")}
+            disabled={allEditLocked}>
             {(() => {
               const cats = catalogCategories.length > 0 ? catalogCategories : [];
               const activeCatId = extrasActiveCat ?? cats[0]?.id ?? null;
@@ -1110,25 +1196,38 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <>
                   <div className="rounded-xl border border-neutral-200 bg-white">
                     {cats.length > 1 && (
-                      <div className="relative overflow-hidden rounded-t-xl">
-                      <div className="flex items-center gap-x-5 overflow-x-auto border-b border-neutral-200 px-4 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {cats.map((cat) => (
-                          <button key={cat.id} type="button" onClick={() => setExtrasActiveCat(cat.id)}
-                            className={cn(
-                              "-mb-px shrink-0 whitespace-nowrap border-b-2 py-3 text-sm font-semibold transition",
-                              activeCatId === cat.id
-                                ? "border-primary-600 text-primary-600"
-                                : "border-transparent text-secondary-500 hover:text-secondary-700"
-                            )}>
-                            {cat.name}
-                            <span className="ml-1.5 text-xs font-normal opacity-60">{cat.extras.length}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="pointer-events-none absolute right-0 top-0 h-full w-10 bg-gradient-to-l from-white to-transparent" />
+                      <div className="relative rounded-t-xl">
+                        <button
+                          type="button"
+                          onClick={() => extrasCatsScrollRef.current?.scrollBy({ left: -150, behavior: "smooth" })}
+                          className="pointer-events-auto absolute left-0 top-0 z-10 flex h-full w-8 items-center justify-center bg-gradient-to-r from-white to-transparent"
+                        >
+                          <ChevronLeft className="h-4 w-4 text-secondary-400" />
+                        </button>
+                        <div ref={extrasCatsScrollRef} className="flex items-center gap-x-5 overflow-x-auto border-b border-neutral-200 px-8 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                          {cats.map((cat) => (
+                            <button key={cat.id} type="button" onClick={() => setExtrasActiveCat(cat.id)}
+                              className={cn(
+                                "-mb-px shrink-0 whitespace-nowrap border-b-2 py-3 text-sm font-semibold transition",
+                                activeCatId === cat.id
+                                  ? "border-primary-600 text-primary-600"
+                                  : "border-transparent text-secondary-500 hover:text-secondary-700"
+                              )}>
+                              {cat.name}
+                              <span className="ml-1.5 text-xs font-normal opacity-60">{cat.extras.length}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => extrasCatsScrollRef.current?.scrollBy({ left: 150, behavior: "smooth" })}
+                          className="pointer-events-auto absolute right-0 top-0 z-10 flex h-full w-8 items-center justify-center bg-gradient-to-l from-white to-transparent"
+                        >
+                          <ChevronRight className="h-4 w-4 text-secondary-400" />
+                        </button>
                       </div>
                     )}
-                    <div className="divide-y divide-neutral-100">
+                    <div className="divide-y divide-neutral-100 max-h-[420px] overflow-y-auto">
                       {activeItems.map((item) => (
                         <ExtraRow key={item.id} item={item} members={editMembers}
                           isSelected={!!editExtras[item.id]} qty={editExtras[item.id]?.qty || 0}
@@ -1176,27 +1275,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
           </div>
         )}
 
-        {/* Save footer — visible only when something changed */}
-        {hasChanges && (() => {
-          return (
-          <div className="border-t border-neutral-100 px-6 py-3 flex items-center gap-3">
-            <button
-              onClick={saveAll}
-              disabled={saving || saveBlocked}
-              className="text-sm font-semibold text-secondary-400 transition hover:text-secondary-700 disabled:opacity-40"
-            >
-              {saving ? "Saving…" : "Save only"}
-            </button>
-            {saved && (
-              <span className="flex items-center gap-1.5 text-sm font-semibold text-emerald-600">
-                <CheckCircle2 className="h-4 w-4" />Saved!
-              </span>
-            )}
-            {saveError && <span className="text-sm text-red-500">{saveError}</span>}
-            {saveBlocked && <span className="text-xs text-secondary-400">Check availability first.</span>}
+        {saveBlocked && (
+          <div className="border-t border-neutral-100 px-6 py-3">
+            <span className="text-xs text-secondary-400">Check availability before saving.</span>
           </div>
-          );
-        })()}
+        )}
+
       </div>
 
       {/* ── Extras upsell banner (private only, hidden when extras editor is open) */}
@@ -1265,6 +1349,68 @@ export default function Cabinet({ odooId, uniqueKey }) {
               </div>
             </div>
           </button>
+        );
+      })()}
+
+      {/* ── Upgrade banner (shared only) ─────────────────────────────────── */}
+      {!local.is_private && options.upgrade_tour && !allEditLocked && (() => {
+        const up = options.upgrade_tour;
+        const tierLabels = { "Premium Shared": "Premium", "First Class Shared": "First Class" };
+        const tierLabel  = tierLabels[up.odoo_type] || up.name;
+        const cd = upgradeCheckData;
+        return (
+          <div className="mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
+            <div className="px-5 py-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-amber-900">Upgrade to {tierLabel}</div>
+                  <div className="mt-0.5 text-xs text-amber-700">
+                    {!upgradeChecked
+                      ? "More comfort, better experience"
+                      : cd?.available
+                        ? `${(cd.available_seats > 10 ? "10+" : cd.available_seats)} seats available on your date`
+                        : "Not available on your date"}
+                  </div>
+                  {upgradeChecked && cd?.available && cd.boat_name && (
+                    <div className="mt-0.5 text-xs text-amber-700">
+                      Boat: <span className="font-semibold">&ldquo;{cd.boat_name}&rdquo;</span>
+                    </div>
+                  )}
+                  {upgradeChecked && cd?.available && cd.price_diff > 0 && (
+                    <div className="mt-1 text-xs font-semibold text-amber-800">
+                      +IDR {fmt(cd.price_diff)} per booking
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {upgradeCheckError && <p className="mt-2 text-xs text-red-500">{upgradeCheckError}</p>}
+              {upgradeError      && <p className="mt-2 text-xs text-red-500">{upgradeError}</p>}
+
+              {!upgradeChecked ? (
+                <button
+                  type="button"
+                  onClick={checkUpgradeLive}
+                  disabled={upgradeChecking}
+                  className="mt-3 w-full rounded-full border border-amber-400 bg-white py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {upgradeChecking ? "Checking…" : "Check availability →"}
+                </button>
+              ) : cd?.available ? (
+                <button
+                  type="button"
+                  onClick={() => doUpgrade(cd.upgrade_tour_id)}
+                  disabled={upgrading}
+                  className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {upgrading ? "Upgrading…" : `Upgrade to ${tierLabel} →`}
+                </button>
+              ) : null}
+            </div>
+          </div>
         );
       })()}
 
@@ -1348,26 +1494,58 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <CreditCard className="h-4 w-4 text-white" />
               </div>
             </div>
-            {hasChanges ? (
-              <button
-                onClick={saveAndPay}
-                disabled={saving || paying || saveBlocked}
-                className="mt-4 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
-              >
-                {saving ? "Saving…" : paying ? "Redirecting…" : "Save & Pay →"}
-              </button>
+            {hasChanges && !allEditLocked ? (
+              <>
+                <button
+                  onClick={saveAll}
+                  disabled={saving || saveBlocked}
+                  className="mt-4 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {saving ? "Saving…" : "Save changes →"}
+                </button>
+                {saveError && <p className="mt-2 text-center text-xs text-white/70">{saveError}</p>}
+              </>
             ) : (
-              <button
-                onClick={payCollect}
-                disabled={paying}
-                className="mt-4 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
-              >
-                {paying ? "Redirecting…" : "Pay now →"}
-              </button>
+              <>
+                {saved && (
+                  <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-white/70">
+                    <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
+                  </div>
+                )}
+                <button
+                  onClick={payCollect}
+                  disabled={paying}
+                  className="btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {paying ? "Redirecting…" : `Pay IDR ${fmt(collect)} →`}
+                </button>
+              </>
             )}
           </div>
         )}
       </div>
+
+      {/* ── Check-in link (upcoming tours only) ─────────────────────────── */}
+      {(hoursUntilTour === null || hoursUntilTour > 0) && (
+        <div className="mb-5 overflow-hidden rounded-2xl shadow-sm" style={{background: "linear-gradient(135deg, #0f4c75 0%, #1b6ca8 60%, #0d7377 100%)"}}>
+          <div className="flex items-center gap-2 border-b border-white/10 px-5 py-4">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white">
+              <ClipboardList className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-sm font-bold text-white">Online Check-in</span>
+          </div>
+          <div className="px-5 py-4">
+            <p className="text-xs text-white/60">Fill in passenger details before your tour to speed up the boarding process.</p>
+            <a
+              href={`/checkin/${odooId}`}
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-sm font-bold text-[#0f4c75] transition hover:bg-white/90 active:scale-[0.98]"
+            >
+              <ClipboardList className="h-4 w-4" />
+              Start Check-in →
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* ── Contact ──────────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-7">

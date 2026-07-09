@@ -411,12 +411,6 @@ class FullController extends Controller
             ->get();
 
         // ── Build per-boat closeddates index ───────────────────────────
-        // boatIndex[boat_id] = ['capacity' => int, 'dates' => [date => ['blocked' => bool, 'qtty' => int]]]
-        // Mirrors ToursController::calculateTourAvailability per-boat logic:
-        //   - boat.closed + any record → blocked
-        //   - type null/empty/2/3/4 → blocked
-        //   - type 1 → reduce by qtty
-        //   - no records → full capacity available
         $boatIndex = [];
         foreach ($tours as $tour) {
             foreach ($tour->boat as $boat) {
@@ -452,11 +446,9 @@ class FullController extends Controller
                         $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
                     } elseif ((int) $type === 1) {
                         if ($cd->tour_type && $cd->tour_type !== $tour->odoo_type) {
-                            // Another shared tour is using this boat — fully blocked
                             $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
                             $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
                         } else {
-                            // Same tour or legacy null → count seats
                             $boatIndex[$boat->id]['dates'][$dateStr]['qtty'] += (int) ($cd->qtty ?? 0);
                             $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
                         }
@@ -465,8 +457,7 @@ class FullController extends Controller
             }
         }
 
-        // ── Helper: availability for one date — picks the best boat ──────
-        // Returns available_seats and boat_id of the boat with most free seats.
+        // ── Helper: availability for one date ──────────────────────────
         $calcDate = function (array $boats, string $date) use ($boatIndex): array {
             $totalAvailable = 0;
             $totalCapacity  = 0;
@@ -474,7 +465,7 @@ class FullController extends Controller
             $firstBoatId    = null;
 
             foreach ($boats as $boat) {
-                $boatId   = $boat->id;
+                $boatId = $boat->id;
                 if ($firstBoatId === null) {
                     $firstBoatId = $boatId;
                 }
@@ -508,17 +499,14 @@ class FullController extends Controller
         };
 
         // ── Build response ─────────────────────────────────────────────
-        $result = [];
+        $result   = [];
         $datesSet = array_flip($dates);
 
         foreach ($tours as $tour) {
-            $boats = $tour->boat->all();
-            // ID лодок тура с closed=true — их не-крон записи блокируют весь тур
+            $boats          = $tour->boat->all();
             $blockerBoatIds = $tour->boat->filter(fn($b) => !empty($b->closed))->pluck('id')->toArray();
 
-            // Requested date range
             foreach ($dates as $date) {
-                // Если у closed=true лодки тура есть не-крон запись на эту дату — тур закрыт
                 $isBlocked = false;
                 foreach ($blockerBoatIds as $bId) {
                     if (!empty($boatIndex[$bId]['dates'][$date]['real_record'])) {
@@ -530,11 +518,10 @@ class FullController extends Controller
                     $result[] = ['tour_id' => $tour->id, 'date' => $date, 'available_seats' => 0, 'available' => 0, 'boat_id' => null];
                     continue;
                 }
-                $avail = $calcDate($boats, $date);
+                $avail    = $calcDate($boats, $date);
                 $result[] = array_merge(['tour_id' => $tour->id, 'date' => $date], $avail);
             }
 
-            // Extra blocked/booked dates outside the range (only when no explicit range)
             if (!$explicitRange) {
                 $extraDates = [];
                 foreach ($tour->boat as $boat) {
@@ -546,7 +533,6 @@ class FullController extends Controller
                 }
                 foreach (array_keys($extraDates) as $dateStr) {
                     $avail = $calcDate($boats, $dateStr);
-                    // Skip fully open dates outside the range
                     if ($avail['booked'] === 0 && $avail['available_seats'] === $avail['capacity']) {
                         continue;
                     }

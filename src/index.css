@@ -528,6 +528,26 @@ img[data-image-loaded="true"] {
     animation: num-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ─── Pay Now button shine sweep ─── */
+@keyframes btn-shine {
+  0%   { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(250%)  skewX(-15deg); }
+}
+.btn-pay-now {
+    position: relative;
+    overflow: hidden;
+}
+.btn-pay-now::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+    width: 40%;
+    animation: btn-shine 2.2s ease-in-out infinite;
+    animation-delay: 1s;
+    pointer-events: none;
+}
+
 /* ─── Button animations ──────────────────────────────────── */
 .btn-primary,
 .btn-outline {
