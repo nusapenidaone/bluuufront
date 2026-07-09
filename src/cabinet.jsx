@@ -896,6 +896,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
     editDropoff       !== (local.dropoff_address || "") ||
     extrasCount       !== (local.extras || []).length;
 
+  const savedAddOns = (lastPrices?.transfer_price || 0) + (lastPrices?.cover_price || 0) + (lastPrices?.extras_total || 0);
+  const liveAddOns  = livePrices?.total || 0;
+  const priceDelta  = hasChanges ? liveAddOns - savedAddOns : 0;
+  const estNewTotal = (lastPrices?.tour_price || 0) + (lastPrices?.boat_price || 0) + liveAddOns;
+
   return renderShell(
     <>
       {/* ── Back ────────────────────────────────────────────────────────── */}
@@ -1152,48 +1157,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
         {/* Save footer — visible only when something changed */}
         {hasChanges && (() => {
-          const savedAddOns = (lastPrices?.transfer_price || 0) + (lastPrices?.cover_price || 0) + (lastPrices?.extras_total || 0);
-          const liveAddOns  = livePrices?.total || 0;
-          const delta       = liveAddOns - savedAddOns;
-          const newTotal    = (lastPrices?.tour_price || 0) + (lastPrices?.boat_price || 0) + liveAddOns;
-          const isUp        = delta > 0;
-          const isDown      = delta < 0;
           return (
           <div className="border-t border-neutral-100 px-6 py-4">
-            {/* Price delta */}
-            {lastPrices && delta !== 0 && (
-              <div className={cn(
-                "mb-4 rounded-xl p-4",
-                isUp ? "bg-amber-50 border border-amber-100" : "bg-emerald-50 border border-emerald-100"
-              )}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={cn("text-[11px] font-bold uppercase tracking-wider", isUp ? "text-amber-500" : "text-emerald-500")}>
-                      Price change
-                    </p>
-                    <p className={cn("mt-0.5 text-2xl font-extrabold tracking-tight", isUp ? "text-amber-700" : "text-emerald-700")}>
-                      {isUp ? "+" : "−"} IDR {fmt(Math.abs(delta))}
-                    </p>
-                  </div>
-                  <div className={cn("rounded-xl px-3 py-2 text-right", isUp ? "bg-amber-100" : "bg-emerald-100")}>
-                    <p className={cn("text-[10px] font-semibold uppercase tracking-wide", isUp ? "text-amber-500" : "text-emerald-500")}>New total</p>
-                    <p className={cn("text-sm font-extrabold", isUp ? "text-amber-800" : "text-emerald-800")}>IDR {fmt(newTotal)}</p>
-                  </div>
-                </div>
-                {/* Breakdown */}
-                <div className="mt-3 space-y-1 border-t border-black/5 pt-3">
-                  {livePrices.transferPrice > 0 && (
-                    <div className="flex justify-between text-xs"><span className="text-secondary-500">Transfer</span><span className="font-semibold text-secondary-700">IDR {fmt(livePrices.transferPrice)}</span></div>
-                  )}
-                  {livePrices.coverPrice > 0 && (
-                    <div className="flex justify-between text-xs"><span className="text-secondary-500">Insurance</span><span className="font-semibold text-secondary-700">IDR {fmt(livePrices.coverPrice)}</span></div>
-                  )}
-                  {livePrices.extrasTotal > 0 && (
-                    <div className="flex justify-between text-xs"><span className="text-secondary-500">Extras</span><span className="font-semibold text-secondary-700">IDR {fmt(livePrices.extrasTotal)}</span></div>
-                  )}
-                </div>
-              </div>
-            )}
             <div className="flex items-center gap-3">
               <Button onClick={saveAll} disabled={saving || saveBlocked}>
                 {saving ? "Saving…" : "Save changes"}
@@ -1307,8 +1272,31 @@ export default function Cabinet({ odooId, uniqueKey }) {
               {depositPaid > 0 && <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />}
               <div className="flex items-center justify-between border-t border-neutral-100 pt-2.5">
                 <span className="text-base font-bold text-secondary-900">Total</span>
-                <span className="text-base font-extrabold text-secondary-900">IDR {fmt(lastPrices.full_price)}</span>
+                <span className={cn("text-base font-extrabold", hasChanges && priceDelta !== 0 ? "text-secondary-400 line-through" : "text-secondary-900")}>
+                  IDR {fmt(lastPrices.full_price)}
+                </span>
               </div>
+              {hasChanges && priceDelta !== 0 && (
+                <div className={cn(
+                  "mt-2 flex items-center justify-between rounded-xl px-3 py-2.5",
+                  priceDelta > 0 ? "bg-amber-50" : "bg-emerald-50"
+                )}>
+                  <div>
+                    <div className={cn("text-[10px] font-bold uppercase tracking-wider", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
+                      Est. with changes
+                    </div>
+                    <div className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
+                      IDR {fmt(estNewTotal)}
+                    </div>
+                  </div>
+                  <div className={cn(
+                    "rounded-full px-2.5 py-1 text-xs font-extrabold",
+                    priceDelta > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                  )}>
+                    {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : depositPaid > 0 && (
             <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />
