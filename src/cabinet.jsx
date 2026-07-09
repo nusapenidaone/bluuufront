@@ -1359,7 +1359,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
       {/* ── Contact ──────────────────────────────────────────────────────── */}
       <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-7">
         <p className="mb-4 text-sm font-semibold text-secondary-700">Need help with your booking?</p>
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
           <a
             href={waLink}
             target="_blank"
