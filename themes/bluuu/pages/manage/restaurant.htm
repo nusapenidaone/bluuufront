@@ -85,6 +85,10 @@ function BoatCard({ boatName, orders, isManagement }) {
         .map(o => ({ client: partnerName(o), text: strVal(o.x_studio_special_requests), lunch: strVal(o.x_studio_lunch) }))
         .filter(r => r.text);
 
+    const dietaryRequirements = orders
+        .map(o => ({ client: partnerName(o), text: strVal(o.x_studio_dietary_requirements) }))
+        .filter(r => r.text);
+
     const menuSelections = orders
         .map(o => ({ client: partnerName(o), text: strVal(o.x_studio_first_class_menu_selection) }))
         .filter(r => r.text);
@@ -137,6 +141,19 @@ function BoatCard({ boatName, orders, isManagement }) {
                                     {isManagement && r.lunch && (
                                         <span className="block text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-0.5">{r.lunch}</span>
                                     )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {dietaryRequirements.length > 0 && (
+                    <div>
+                        <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest block mb-1">Dietary Requirements</span>
+                        <div className="space-y-1.5">
+                            {dietaryRequirements.map((r, i) => (
+                                <div key={i} className="bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 text-sm text-slate-700">
+                                    {orders.length > 1 && <span className="font-semibold text-slate-600">{r.client}: </span>}
+                                    <span className="whitespace-pre-line">{r.text}</span>
                                 </div>
                             ))}
                         </div>

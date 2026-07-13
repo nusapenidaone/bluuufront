@@ -24,13 +24,17 @@ class CabinetController extends Controller
         header('Access-Control-Allow-Headers: *');
     }
 
-    // Fetch Odoo order (no key verification — cabinet is public by odoo_id).
-    private function fetchOdooOrder(int $odooId): ?array
+    // Fetch Odoo order and verify key matches client_order_ref (= external_id set at order creation).
+    private function fetchOdooOrder(int $odooId, string $key): ?array
     {
         try {
             $order = OdooService::getFullOrder($odooId);
         } catch (\Exception $e) {
             Log::warning('CabinetController: Odoo fetch failed', ['odoo_id' => $odooId, 'error' => $e->getMessage()]);
+            return null;
+        }
+
+        if (($order['client_order_ref'] ?? '') !== $key) {
             return null;
         }
 
@@ -67,7 +71,7 @@ class CabinetController extends Controller
     {
         $this->cors();
 
-        $odooOrder = $this->fetchOdooOrder($odooId);
+        $odooOrder = $this->fetchOdooOrder($odooId, $key);
         if (!$odooOrder) {
             return response()->json(['error' => 'Order not found'], 404);
         }
@@ -317,7 +321,7 @@ class CabinetController extends Controller
     {
         $this->cors();
 
-        $odooOrder = $this->fetchOdooOrder($odooId);
+        $odooOrder = $this->fetchOdooOrder($odooId, $key);
         if (!$odooOrder) {
             return response()->json(['success' => false, 'error' => 'Order not found'], 404);
         }
@@ -582,7 +586,7 @@ class CabinetController extends Controller
     {
         $this->cors();
 
-        $odooOrder = $this->fetchOdooOrder($odooId);
+        $odooOrder = $this->fetchOdooOrder($odooId, $key);
         if (!$odooOrder) {
             return response()->json(['error' => 'Order not found'], 404);
         }
@@ -620,7 +624,7 @@ class CabinetController extends Controller
     {
         $this->cors();
 
-        $odooOrder = $this->fetchOdooOrder($odooId);
+        $odooOrder = $this->fetchOdooOrder($odooId, $key);
         if (!$odooOrder) {
             return response()->json(['error' => 'Order not found'], 404);
         }
@@ -777,7 +781,7 @@ class CabinetController extends Controller
     {
         $this->cors();
 
-        $odooOrder = $this->fetchOdooOrder($odooId);
+        $odooOrder = $this->fetchOdooOrder($odooId, $key);
         if (!$odooOrder) {
             return response()->json(['success' => false, 'error' => 'Order not found'], 404);
         }
