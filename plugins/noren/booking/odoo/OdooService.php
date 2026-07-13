@@ -588,7 +588,7 @@ class OdooService
             // record exists and opens fine directly by URL in the Odoo UI.
             'context' => ['active_test' => false],
             'fields' => [
-                'id', 'name', 'state', 'partner_id', 'client_order_ref',
+                'id', 'name', 'state', 'partner_id',
                 'rental_start_date',
                 'x_studio_source',
                 'x_studio_boat_name',
@@ -988,6 +988,7 @@ class OdooService
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
             'client_order_ref'          => $lead['external_id'],
+            'x_studio_unique_key'       => $lead['external_id'],
         ];
 
         if (!empty($lead['company_odoo_id'])) {

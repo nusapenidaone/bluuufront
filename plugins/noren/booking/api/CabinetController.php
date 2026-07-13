@@ -34,7 +34,8 @@ class CabinetController extends Controller
             return null;
         }
 
-        if (($order['client_order_ref'] ?? '') !== $key) {
+        $uniqueKey = $order['x_studio_unique_key'] ?? '';
+        if (!$uniqueKey || $uniqueKey !== $key) {
             return null;
         }
 
