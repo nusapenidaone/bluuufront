@@ -125,7 +125,7 @@ function SectionCard({ title, icon: Icon, hint, children, className }) {
 }
 
 // ─── Stepper ─────────────────────────────────────────────────────────────────
-function StepperRow({ value, onChange, min = 0 }) {
+function StepperRow({ value, onChange, min = 0, max = Infinity }) {
   return (
     <div className="inline-flex h-9 items-center rounded-full border border-neutral-200 bg-white">
       <button
@@ -140,7 +140,8 @@ function StepperRow({ value, onChange, min = 0 }) {
       <button
         type="button"
         onClick={() => onChange(value + 1)}
-        className="flex h-9 w-9 items-center justify-center rounded-r-full text-secondary-500 transition hover:bg-neutral-50"
+        disabled={value >= max}
+        className="flex h-9 w-9 items-center justify-center rounded-r-full text-secondary-500 transition hover:bg-neutral-50 disabled:opacity-30"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>
@@ -511,7 +512,7 @@ function RouteCard({ route, isSelected, onSelect }) {
 const fieldLabel = "mb-1.5 block text-xs font-semibold uppercase tracking-wide text-secondary-400";
 
 // ─── EditableRow: read-only row with inline editor on "Edit" ─────────────────
-function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled, disabled, children }) {
+function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled, disabled, noPadding, children }) {
   return (
     <div className="border-b border-neutral-100 last:border-0">
       <div className="flex items-center gap-3 px-4 py-3.5">
@@ -533,7 +534,7 @@ function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled
         )}
       </div>
       {isEditing && (
-        <div className="border-t border-neutral-50 px-4 pb-5 pt-4">
+        <div className={cn("border-t border-neutral-50 pb-5 pt-3", !noPadding && "px-4")}>
           {children}
         </div>
       )}
@@ -542,28 +543,31 @@ function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled
 }
 
 // ─── GuestsInline: inline stepper (no popup) ─────────────────────────────────
-function GuestsInline({ adults, kids, onAdultsChange, onKidsChange }) {
+function GuestsInline({ adults, kids, onAdultsChange, onKidsChange, capacity }) {
+  const maxAdults = capacity ? Math.max(1, capacity - kids) : Infinity;
+  const maxKids   = capacity ? Math.max(0, capacity - adults) : Infinity;
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-sm font-semibold text-secondary-900">Adults</div>
-          <div className="text-xs text-secondary-400">Ages 12+</div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-sm font-semibold text-secondary-900">Adults</span>
+          <span className="text-xs text-secondary-400">12+</span>
         </div>
-        <StepperRow value={adults} onChange={(v) => onAdultsChange(Math.max(1, v))} min={1} />
+        <StepperRow value={adults} onChange={(v) => onAdultsChange(Math.max(1, v))} min={1} max={maxAdults} />
       </div>
-      <div className="h-px bg-neutral-100" />
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <div className="text-sm font-semibold text-secondary-900">Kids</div>
-          <div className="text-xs text-secondary-400">Ages 3–11</div>
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-sm font-semibold text-secondary-900">Kids</span>
+          <span className="text-xs text-secondary-400">3–11</span>
         </div>
-        <StepperRow value={kids} onChange={(v) => onKidsChange(Math.max(0, v))} min={0} />
+        <StepperRow value={kids} onChange={(v) => onKidsChange(Math.max(0, v))} min={0} max={maxKids} />
       </div>
-      <div className="flex items-start gap-2 rounded-xl bg-neutral-50 px-3 py-2.5">
-        <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-secondary-400" />
-        <p className="text-xs leading-relaxed text-secondary-400">Toddlers under 3 go free.</p>
-      </div>
+      {capacity && (
+        <p className="text-xs text-secondary-300">Max {capacity} guests · Toddlers under 3 go free</p>
+      )}
+      {!capacity && (
+        <p className="text-xs text-secondary-300">Toddlers under 3 go free</p>
+      )}
     </div>
   );
 }
@@ -665,14 +669,22 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
   useEffect(() => { fetchOrder(); }, [fetchOrder]);
 
-  // Reset availability checks whenever date or guest count changes
+  // Reset + auto-check availability (debounced) whenever date or guest count changes
   useEffect(() => {
     setAvailChecked(false);
     setAvailResult(null);
     setUpgradeChecked(false);
     setUpgradeCheckData(null);
     setUpgradeCheckError(null);
-  }, [editDate, editAdults, editKids]);
+    if (!data || !editDate || editAdults + editKids <= 0) return;
+    const origDate    = data.local?.travel_date || "";
+    const origAdults  = data.local?.adults || 0;
+    const origKids    = data.local?.kids   || 0;
+    if (editDate === origDate && editAdults === origAdults && editKids === origKids) return;
+    const t = setTimeout(checkAvailability, 700);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editDate, editAdults, editKids, data]);
 
   const checkAvailability = async () => {
     const toursId  = data?.local?.tours_id;
@@ -756,6 +768,27 @@ export default function Cabinet({ odooId, uniqueKey }) {
   };
 
   const editMembers = editAdults + editKids;
+
+  const resetChanges = () => {
+    if (!data) return;
+    const { local } = data;
+    setEditDate(local.travel_date || "");
+    setEditPickup(local.pickup_address || "");
+    setEditDropoff(local.dropoff_address || "");
+    setEditAdults(local.adults || 0);
+    setEditKids(local.kids || 0);
+    setEditTransfer(local.transfer_id ? Number(local.transfer_id) : null);
+    setEditCover(local.cover_id ? Number(local.cover_id) : null);
+    setEditRoute(local.route_id ? String(local.route_id) : "");
+    const extrasMap = {};
+    for (const item of (local.extras || [])) {
+      if (!item?.id) continue;
+      extrasMap[item.id] = { id: item.id, name: item.name, price: Number(item.price) || 0, qty: Number(item.qty ?? 1), qty_type: "manual", image: null };
+    }
+    setEditExtras(extrasMap);
+    setEditingField(null);
+    setSaveError("");
+  };
 
   const originalDate = data?.local?.travel_date || "";
   const originalMembers = (data?.local?.adults || 0) + (data?.local?.kids || 0);
@@ -1092,40 +1125,32 @@ export default function Cabinet({ odooId, uniqueKey }) {
           onEdit={() => toggleEdit("schedule")}
           doneDisabled={dateOrGuestsChanged && (!availChecked || availResult === false)}
         >
-          <div className="space-y-5">
-            <div>
-              <div className={fieldLabel}>Travel date</div>
-              <DateField
-                value={editDate} onChange={setEditDate}
-                open={openPanel === "date"}
-                onToggle={() => setOpenPanel((p) => (p === "date" ? null : "date"))}
-                onClose={() => setOpenPanel(null)}
-              />
-            </div>
-            <div>
-              <div className={fieldLabel}>Guests</div>
-              <GuestsInline adults={editAdults} kids={editKids} onAdultsChange={setEditAdults} onKidsChange={setEditKids} />
-            </div>
-            {/* Availability check — inside the block, appears when date or guests changed */}
+          <div className="space-y-4">
+            <DateField
+              value={editDate} onChange={setEditDate}
+              open={openPanel === "date"}
+              onToggle={() => setOpenPanel((p) => (p === "date" ? null : "date"))}
+              onClose={() => setOpenPanel(null)}
+            />
+            <GuestsInline adults={editAdults} kids={editKids} onAdultsChange={setEditAdults} onKidsChange={setEditKids} capacity={local.boat_capacity || null} />
             {dateOrGuestsChanged && (
-              <div>
-                {!availChecked ? (
-                  <button type="button" onClick={checkAvailability}
-                    disabled={!editDate || editMembers <= 0 || availChecking}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-secondary-700 disabled:opacity-50">
-                    {availChecking
-                      ? <><div className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />Checking…</>
-                      : <><CalendarDays className="h-3 w-3" />Check availability</>}
-                  </button>
-                ) : availResult ? (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
-                    <CheckCircle2 className="h-3.5 w-3.5" />Available — you&apos;re good to go!
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500">
-                    <AlertCircle className="h-3.5 w-3.5" />Not available for {editMembers} guests on this date
-                  </span>
-                )}
+              <div className="flex items-center gap-1.5">
+                {availChecking ? (
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-secondary-300 border-t-secondary-700" />
+                    <span className="text-xs text-secondary-400">Checking availability…</span>
+                  </>
+                ) : availChecked ? (
+                  availResult ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+                      <CheckCircle2 className="h-3.5 w-3.5" />Available — you&apos;re good to go!
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                      <AlertCircle className="h-3.5 w-3.5" />Not available for {editMembers} guests on this date
+                    </span>
+                  )
+                ) : null}
               </div>
             )}
           </div>
@@ -1167,7 +1192,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
             dropoffAddress={editDropoff}
             setDropoffAddress={setEditDropoff}
             totalGuests={editMembers}
-            defaultExpanded
+            showHeader={false}
           />
         </EditableRow>
 
@@ -1200,7 +1225,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 : catalogExtrasFlat;
               return (
                 <>
-                  <div className="rounded-xl border border-neutral-200 bg-white">
+                  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                     {cats.length > 1 && (
                       <div className="relative rounded-t-xl">
                         <button
@@ -1484,13 +1509,23 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className="mb-3 flex items-center gap-2 text-white/80">
               <span className="text-xs font-bold uppercase tracking-widest">Unsaved changes</span>
             </div>
-            <button
-              onClick={saveAll}
-              disabled={saving || saveBlocked}
-              className="btn-pay-now w-full rounded-full bg-white py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save changes →"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={resetChanges}
+                disabled={saving}
+                className="flex-1 rounded-full border border-white/30 py-3 text-sm font-semibold text-white transition hover:bg-white/10 active:scale-[0.98] disabled:opacity-40"
+              >
+                Reset
+              </button>
+              <button
+                onClick={saveAll}
+                disabled={saving || saveBlocked}
+                className="btn-pay-now flex-[2] rounded-full bg-white py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+              >
+                {saving ? "Saving…" : "Save changes →"}
+              </button>
+            </div>
             {saveBlocked && <p className="mt-2 text-center text-xs text-white/70">Check availability first</p>}
             {saveError  && <p className="mt-2 text-center text-xs text-white/70">{saveError}</p>}
           </div>
@@ -1539,8 +1574,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
         )}
       </div>
 
-      {/* ── Check-in link (upcoming tours only) ─────────────────────────── */}
-      {(hoursUntilTour === null || hoursUntilTour > 0) && (
+      {/* ── Check-in link (upcoming tours, not yet checked in, no unsaved changes) ── */}
+      {!odoo.online_checked_in && !hasChanges && (hoursUntilTour === null || hoursUntilTour > 0) && (
         <div className="mb-5 overflow-hidden rounded-2xl shadow-sm" style={{background: "linear-gradient(135deg, #0f4c75 0%, #1b6ca8 60%, #0d7377 100%)"}}>
           <div className="flex items-center gap-2 border-b border-white/10 px-5 py-4">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white">
@@ -1561,31 +1596,24 @@ export default function Cabinet({ odooId, uniqueKey }) {
         </div>
       )}
 
-      {/* ── Contact ──────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-neutral-200 bg-white p-6 sm:p-7">
-        <p className="mb-4 text-sm font-semibold text-secondary-700">Need help with your booking?</p>
-        <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-          <a
-            href={waLink}
-            target="_blank"
-            rel="noreferrer"
-            className="flex flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] py-3 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Chat on WhatsApp
-          </a>
-          <a
-            href={`mailto:${EMAIL}`}
-            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 py-3 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-100 active:scale-[0.98]"
-          >
-            <Mail className="h-4 w-4" />
-            Send email
-          </a>
-        </div>
-      </div>
-
       </div>{/* end RIGHT column */}
       </div>{/* end grid */}
+
+      {/* ── Booking-specific sticky WhatsApp (overrides global generic button) ─ */}
+      <style>{`
+        .wa-sticky-btn { display: none !important; }
+        .wa-cabinet-btn { position:fixed;bottom:20px;right:20px;z-index:9000;display:flex;align-items:center;gap:8px;background:#25D366;color:#fff;border-radius:999px;padding:10px 18px 10px 14px;box-shadow:0 4px 18px #25d36673;text-decoration:none;font-size:14px;font-weight:600;line-height:1; }
+        .wa-cabinet-btn:hover { filter: brightness(1.07); }
+        @media (max-width:639px) { .wa-cabinet-btn { padding:12px; } .wa-cabinet-label { display:none; } }
+      `}</style>
+      <a href={waLink} target="_blank" rel="noreferrer" aria-label="Chat on WhatsApp" className="wa-cabinet-btn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+        </svg>
+        <span className="wa-cabinet-label">
+          {odoo.order_number ? `Help · ${odoo.order_number}` : "Chat with us"}
+        </span>
+      </a>
     </>
   );
 }

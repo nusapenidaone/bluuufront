@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
 use Noren\Booking\Models\Restaurant;
@@ -95,6 +96,14 @@ class CabinetController extends Controller
                     $tourImage = $imgs[0]['thumb2'] ?? $imgs[0]['thumb1'] ?? $imgs[0]['original'] ?? null;
                 }
             }
+        }
+
+        // Boat capacity for guest stepper max
+        $boatCapacity = null;
+        $boatNameOdoo = $odooOrder['x_studio_boat_name'] ?? null;
+        if ($boatNameOdoo) {
+            $boatModel = Boat::where('amo_name', $boatNameOdoo)->orWhere('name', $boatNameOdoo)->first();
+            if ($boatModel) $boatCapacity = (int) $boatModel->capacity ?: null;
         }
 
         // Travel date: rental_start_date (UTC) → Bali date
@@ -276,6 +285,7 @@ class CabinetController extends Controller
                 'pickup_address'  => $odooOrder['x_studio_pickup_address']   ?? '',
                 'dropoff_address' => $odooOrder['x_studio_drop_off_address'] ?? '',
                 'boat_name'       => $odooOrder['x_studio_boat_name'] ?? null,
+                'boat_capacity'   => $boatCapacity,
                 'name'            => $partnerName,
                 'tours_id'        => $toursId,
                 'transfer_id'     => $currentTransferId,

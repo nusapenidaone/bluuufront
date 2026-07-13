@@ -97,41 +97,45 @@ export function TransfersCompact({
   setDropoffAddress,
   totalGuests,
   defaultExpanded = false,
+  showHeader = true,
+  framed = true,
 }) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isExpanded, setIsExpanded] = useState(showHeader ? defaultExpanded : true);
   const [activeTransferDetails, setActiveTransferDetails] = useState(null);
   const selectedTransfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
   const selectedTransferDescription = getOptionDescription(selectedTransfer);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
-      <div
-        className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-neutral-100/50 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-secondary-600">
-            <Car className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-base font-semibold text-secondary-900">Transfer</div>
-            <div className="text-sm text-secondary-500">
-              {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
+    <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
+      {showHeader && (
+        <div
+          className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-secondary-600">
+              <Car className="h-5 w-5" />
             </div>
-            {selectedTransferDescription && (
-              <div className="mt-0.5 text-xs leading-relaxed text-secondary-400">
-                {selectedTransferDescription}
+            <div>
+              <div className="text-base font-semibold text-secondary-900">Transfer</div>
+              <div className="text-sm text-secondary-500">
+                {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
               </div>
-            )}
+              {selectedTransferDescription && (
+                <div className="mt-0.5 text-xs leading-relaxed text-secondary-400">
+                  {selectedTransferDescription}
+                </div>
+              )}
+            </div>
           </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-secondary-400">
+            {isExpanded ? "Hide" : "Show"}
+          </span>
         </div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-secondary-400">
-          {isExpanded ? "Hide" : "Show"}
-        </span>
-      </div>
+      )}
 
-      {isExpanded && (
-        <div className="border-t border-neutral-200">
+      {(showHeader ? isExpanded : true) && (
+        <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
           <div className="flex flex-col divide-y divide-neutral-100">
             {/* Option: No thanks */}
             <label className={cn(
@@ -238,8 +242,8 @@ export function TransfersCompact({
 
           {/* Address Input Section */}
           {selectedTransferId && (
-            <div className="mt-4 p-4 rounded-xl border border-neutral-200 bg-neutral-50 shadow-sm">
-              <div className="mb-3 text-sm font-bold text-secondary-900">Transfer Details</div>
+            <div className="px-4 pt-3 pb-4 border-t border-neutral-100">
+              <div className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary-400">Transfer Details</div>
               {(() => {
                 const transfer = transfers.find(t => String(t.id) === String(selectedTransferId));
                 const isShuttle = transfer?.name.toLowerCase().includes("shuttle") || transfer?.name.toLowerCase().includes("free");
@@ -247,7 +251,7 @@ export function TransfersCompact({
                 if (isShuttle) return null;
                 return (
                   <div className="flex flex-col gap-3">
-                    <div className={cn("grid gap-3", needsDropoff ? "sm:grid-cols-2" : "grid-cols-1")}>
+                    <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1">
                         <label className="block text-xs font-black uppercase tracking-wider text-secondary-500">Pickup Address</label>
                         <input
