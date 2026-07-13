@@ -12,6 +12,8 @@ class CalendarController extends Controller
 {
     public function getData(Request $request)
     {
+        if ($this->isUnauthorized($request)) return $this->cors(response()->json(['error' => 'Unauthorized'], 401));
+
         $start = $request->get('start', Carbon::today()->format('Y-m-d'));
         $end   = $request->get('end', Carbon::today()->addMonth()->format('Y-m-d'));
 

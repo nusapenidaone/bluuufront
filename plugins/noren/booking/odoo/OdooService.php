@@ -470,12 +470,6 @@ class OdooService
         return is_int($result) ? $result : 0;
     }
 
-    // Used by BriefingController for daily restaurant emails
-    public static function getTodayOrders(string $startUtc, string $endUtc): array
-    {
-        return static::getLeadsForDate($startUtc, $endUtc);
-    }
-
     // ─── Read res.partner contacts by IDs ────────────────────────────────────
 
     public static function readPartners(array $ids): array

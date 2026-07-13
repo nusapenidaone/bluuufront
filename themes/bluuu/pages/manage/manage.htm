@@ -340,7 +340,7 @@ function CalendarView({ tabs, activeTab, setActiveTab, onLogout }) {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${startDate}&end=${endDate}`);
+            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${startDate}&end=${endDate}`, { headers: calendarHeaders() });
             const json = await res.json();
             setData(json);
         } catch (e) { console.error(e); }
@@ -1624,7 +1624,7 @@ function BoatAvailabilityPanel({ date, onClose }) {
         if (!date) return;
         setLoading(true);
         try {
-            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${date}&end=${date}`);
+            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${date}&end=${date}`, { headers: calHeaders() });
             const json = await res.json();
             setData(json);
         } catch (e) { console.error(e); }
