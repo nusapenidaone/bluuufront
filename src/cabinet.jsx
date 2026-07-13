@@ -1429,6 +1429,23 @@ export default function Cabinet({ odooId, uniqueKey }) {
         );
       })()}
 
+      {/* ── Save button (bottom of left column, shown when anything changed) ── */}
+      {hasChanges && !allEditLocked && (
+        <div className="sticky bottom-4 z-20 mt-4">
+          <button
+            onClick={saveAll}
+            disabled={saving || saveBlocked}
+            className="w-full rounded-full bg-primary-600 py-3.5 text-sm font-bold text-white shadow-lg transition hover:bg-primary-700 active:scale-[0.98] disabled:opacity-60"
+          >
+            {saving ? "Saving…" : "Save changes →"}
+          </button>
+          {saveBlocked && (
+            <p className="mt-2 text-center text-xs text-secondary-400">Check availability before saving</p>
+          )}
+          {saveError && <p className="mt-2 text-center text-xs text-red-500">{saveError}</p>}
+        </div>
+      )}
+
       </div>{/* end LEFT column */}
 
       {/* ── RIGHT column (sticky on lg) ─────────────────────────────────── */}
@@ -1496,18 +1513,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 {depositPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(depositPaid)}</div>}
               </div>
             </div>
-            {hasChanges && !allEditLocked && (
-              <div className="border-t border-neutral-100 px-5 py-4">
-                <button
-                  onClick={saveAll}
-                  disabled={saving || saveBlocked}
-                  className="w-full rounded-full bg-primary-600 py-3 text-sm font-bold text-white transition hover:bg-primary-700 active:scale-[0.98] disabled:opacity-60"
-                >
-                  {saving ? "Saving…" : "Save changes →"}
-                </button>
-                {saveError && <p className="mt-2 text-center text-xs text-secondary-500">{saveError}</p>}
-              </div>
-            )}
             {saved && !hasChanges && (
               <div className="flex items-center justify-center gap-1.5 border-t border-neutral-100 px-5 py-3 text-xs font-semibold text-emerald-600">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
@@ -1528,33 +1533,21 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <CreditCard className="h-4 w-4 text-white" />
               </div>
             </div>
-            {hasChanges && !allEditLocked ? (
-              <>
-                <button
-                  onClick={saveAll}
-                  disabled={saving || saveBlocked}
-                  className="mt-4 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
-                >
-                  {saving ? "Saving…" : "Save changes →"}
-                </button>
-                {saveError && <p className="mt-2 text-center text-xs text-white/70">{saveError}</p>}
-              </>
-            ) : (
-              <>
-                {saved && (
-                  <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-white/70">
-                    <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
-                  </div>
-                )}
-                <button
-                  onClick={payCollect}
-                  disabled={paying}
-                  className="btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
-                >
-                  {paying ? "Redirecting…" : `Pay IDR ${fmt(collect)} →`}
-                </button>
-              </>
+            {saved && !hasChanges && (
+              <div className="mt-3 flex items-center justify-center gap-1.5 text-xs font-semibold text-white/70">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
+              </div>
             )}
+            <button
+              onClick={payCollect}
+              disabled={paying || hasChanges}
+              className={cn(
+                "btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98]",
+                hasChanges ? "opacity-40 cursor-not-allowed" : ""
+              )}
+            >
+              {paying ? "Redirecting…" : hasChanges ? "Save changes first" : `Pay IDR ${fmt(collect)} →`}
+            </button>
           </div>
         )}
       </div>
