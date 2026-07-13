@@ -276,7 +276,7 @@ function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggl
 }
 
 // ─── Extra row (list item matching the site's renderExtraRow style) ──────────
-function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty }) {
+function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty, locked }) {
   const isAuto = item.qty_type && item.qty_type !== "manual";
   const autoQty = isAuto ? computeAutoQty(item.qty_type, members) : null;
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
@@ -313,7 +313,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
 
         {/* Controls */}
         <div className="shrink-0">
-          {hasChildren ? (
+          {locked ? (
+            qty > 0 || isSelected
+              ? <span className="inline-flex h-9 items-center rounded-full border border-neutral-200 bg-neutral-50 px-3 text-sm text-secondary-400">×{isAuto ? autoQty : qty}</span>
+              : <span className="inline-flex h-9 items-center rounded-full border border-neutral-100 bg-neutral-50 px-4 text-sm text-secondary-300">Add</span>
+          ) : hasChildren ? (
             <button type="button" onClick={() => setExpanded((v) => !v)}
               className={cn(
                 "inline-flex h-9 items-center justify-center gap-1.5 rounded-full border px-4 text-sm font-bold transition",
@@ -386,7 +390,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                   </div>
                 </div>
                 <div className="shrink-0">
-                  {childIsAuto ? (
+                  {locked ? (
+                    childQty > 0
+                      ? <span className="inline-flex h-8 items-center rounded-full border border-neutral-200 bg-neutral-50 px-3 text-sm text-secondary-400">×{childIsAuto ? childAutoQty : childQty}</span>
+                      : <span className="inline-flex h-8 items-center rounded-full border border-neutral-100 bg-neutral-50 px-3 text-sm text-secondary-300">Add</span>
+                  ) : childIsAuto ? (
                     childQty > 0 ? (
                       <div className="inline-flex h-8 items-center rounded-full border border-neutral-200 bg-white px-2 shadow-sm">
                         <button type="button" onClick={() => onChildQty(child, 0)}
@@ -1235,6 +1243,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                           onChangeQty={(v) => setExtraQty(item, v)}
                           editExtras={editExtras}
                           onChildQty={(child, v) => setExtraQty(child, v)}
+                          locked={allEditLocked}
                         />
                       ))}
                       {activeItems.length === 0 && <p className="px-4 py-6 text-center text-sm text-secondary-400">No extras in this category.</p>}
