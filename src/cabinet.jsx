@@ -522,27 +522,19 @@ function EditableRow({ icon: Icon, label, value, isEditing, onEdit, doneDisabled
           <div className="text-xs text-secondary-400">{label}</div>
           <div className="mt-0.5 text-sm font-semibold leading-snug text-secondary-900">{value || "—"}</div>
         </div>
-        {!isEditing && !disabled && (
+        {!disabled && (
           <button
             type="button"
             onClick={onEdit}
             className="shrink-0 rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-bold text-secondary-600 transition hover:border-secondary-400 hover:text-secondary-900"
           >
-            Edit
+            {isEditing ? "Close" : "Edit"}
           </button>
         )}
       </div>
       {isEditing && (
         <div className="border-t border-neutral-50 px-4 pb-5 pt-4">
           {children}
-          <button
-            type="button"
-            onClick={onEdit}
-            disabled={doneDisabled}
-            className="mt-4 rounded-full bg-secondary-900 px-5 py-2 text-xs font-bold text-white transition hover:bg-secondary-700 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            Done
-          </button>
         </div>
       )}
     </div>
