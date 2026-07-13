@@ -972,6 +972,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
     : "None";
   const routeSummary = selectedRoute?.title || local.route_name || "—";
 
+  const extrasChanged = (() => {
+    const cur = Object.entries(editExtras).sort(([a],[b]) => Number(a)-Number(b)).map(([id,e]) => ({ id: Number(id), qty: e.qty }));
+    const orig = [...(local.extras || [])].sort((a,b) => a.id-b.id).map(e => ({ id: e.id, qty: e.qty }));
+    return JSON.stringify(cur) !== JSON.stringify(orig);
+  })();
+
   const hasChanges =
     editDate          !== (local.travel_date || "") ||
     editAdults        !== (local.adults || 0) ||
@@ -980,7 +986,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     editCover         !== (local.cover_id ? Number(local.cover_id) : null) ||
     editPickup        !== (local.pickup_address || "") ||
     editDropoff       !== (local.dropoff_address || "") ||
-    extrasCount       !== (local.extras || []).length;
+    extrasChanged;
 
   const savedAddOns = lastPrices
     ? (lastPrices.transfer_price || 0) + (lastPrices.cover_price || 0) + (lastPrices.extras_total || 0)
@@ -1482,13 +1488,32 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
         {/* Payment footer */}
         {collect === 0 ? (
-          <div className="flex items-center gap-3 border-t border-emerald-100 bg-emerald-50 px-5 py-4">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
-            <div>
-              <div className="text-sm font-bold text-emerald-700">Fully paid — you&apos;re all set!</div>
-              {depositPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(depositPaid)}</div>}
+          <>
+            <div className="flex items-center gap-3 border-t border-emerald-100 bg-emerald-50 px-5 py-4">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+              <div>
+                <div className="text-sm font-bold text-emerald-700">Fully paid — you&apos;re all set!</div>
+                {depositPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(depositPaid)}</div>}
+              </div>
             </div>
-          </div>
+            {hasChanges && !allEditLocked && (
+              <div className="border-t border-neutral-100 px-5 py-4">
+                <button
+                  onClick={saveAll}
+                  disabled={saving || saveBlocked}
+                  className="w-full rounded-full bg-primary-600 py-3 text-sm font-bold text-white transition hover:bg-primary-700 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {saving ? "Saving…" : "Save changes →"}
+                </button>
+                {saveError && <p className="mt-2 text-center text-xs text-secondary-500">{saveError}</p>}
+              </div>
+            )}
+            {saved && !hasChanges && (
+              <div className="flex items-center justify-center gap-1.5 border-t border-neutral-100 px-5 py-3 text-xs font-semibold text-emerald-600">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
+              </div>
+            )}
+          </>
         ) : (
           <div className="border-t border-neutral-100 bg-gradient-to-br from-primary-700 to-primary-500 px-5 py-4">
             <div className="flex items-center justify-between">
