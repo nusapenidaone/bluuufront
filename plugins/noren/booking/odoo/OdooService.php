@@ -988,7 +988,6 @@ class OdooService
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
             'client_order_ref'          => $lead['external_id'],
-            'x_studio_unique_key'       => $lead['external_id'],
         ];
 
         if (!empty($lead['company_odoo_id'])) {
