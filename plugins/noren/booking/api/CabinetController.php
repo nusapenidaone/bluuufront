@@ -88,7 +88,7 @@ class CabinetController extends Controller
         ));
         $tourName = null;
         if (!empty($productIds)) {
-            $tour = Tours::whereIn('odoo_id', array_values($productIds))->first();
+            $tour = Tours::with(['included', 'includes'])->whereIn('odoo_id', array_values($productIds))->first();
             if ($tour) {
                 $tourName = $tour->name;
                 $imgs = $tour->images_with_thumbs ?? [];
@@ -267,9 +267,30 @@ class CabinetController extends Controller
                         'best_for'    => $route->best_for,
                         'categories'  => $categories,
                         'extras'      => $route->ecategories->flatMap(fn($c) => $c->extras)->unique('id')->map($mapExtra)->values(),
+                        'schedule'    => [
+                            'before_lunch' => $route->schedule_before_lunch ?? [],
+                            'after_lunch'  => $route->schedule_after_lunch  ?? [],
+                        ],
                     ];
                 })
                 ->values();
+        }
+
+        // Shared tour: look up the current route's schedule by Odoo route name
+        $sharedRouteSchedule = null;
+        if (!$isPrivate) {
+            $routeNameOdoo = $odooOrder['x_studio_route_new'] ?? null;
+            if ($routeNameOdoo) {
+                $sharedRoute = Route::where('odoo_name', $routeNameOdoo)
+                    ->orWhere('title', $routeNameOdoo)
+                    ->first();
+                if ($sharedRoute) {
+                    $sharedRouteSchedule = [
+                        'before_lunch' => $sharedRoute->schedule_before_lunch ?? [],
+                        'after_lunch'  => $sharedRoute->schedule_after_lunch  ?? [],
+                    ];
+                }
+            }
         }
 
         return response()->json([
@@ -320,6 +341,16 @@ class CabinetController extends Controller
                     $travelDate,
                     (int) ($odooOrder['x_studio_count_of_people'] ?? 0)
                 ),
+                'route_schedule' => $isPrivate ? null : $sharedRouteSchedule,
+                'tour_included'  => isset($tour) ? $tour->included->map(fn($i) => [
+                    'name'        => $i->name,
+                    'description' => $i->description ?? null,
+                    'icon_svg'    => $i->icon_svg    ?? null,
+                ])->values() : [],
+                'tour_includes'  => isset($tour) ? $tour->includes->map(fn($i) => [
+                    'name'     => $i->name,
+                    'icon_svg' => $i->icon_svg ?? null,
+                ])->values() : [],
             ],
         ]);
     }

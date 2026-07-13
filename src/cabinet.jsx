@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
+import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
 
 function fmt(n) {
   return Number(n).toLocaleString("en-US");
@@ -608,6 +609,9 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [upgradeCheckData, setUpgradeCheckData] = useState(null);
   const [upgradeCheckError, setUpgradeCheckError] = useState(null);
 
+  // Tour details tab (Itinerary / What's included)
+  const [detailTab, setDetailTab] = useState("itinerary");
+
   // Active category tab in the extras panel
   const [extrasActiveCat, setExtrasActiveCat] = useState(null);
   const extrasCatsScrollRef = useRef(null);
@@ -967,6 +971,18 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
   const { local, odoo, options } = data;
   const collect = odoo.collect || 0;
+
+  // Route schedule: for private use currently-selected route's schedule; for shared use options.route_schedule
+  const currentScheduleData = local.is_private
+    ? ((options.routes || []).find((r) => String(r.id) === String(editRoute))?.schedule || null)
+    : (options.route_schedule || null);
+  const scheduleItems = [
+    ...(currentScheduleData?.before_lunch || []),
+    ...(currentScheduleData?.after_lunch  || []),
+  ];
+  const tourIncluded = options.tour_included || [];
+  const tourIncludes = options.tour_includes || [];
+  const hasScheduleSection = scheduleItems.length > 0 || tourIncluded.length > 0 || tourIncludes.length > 0;
   const waNumber = contacts?.whatsapp?.number || WA.google;
   const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(`Hi Bluuu! I have a question about my booking ${odoo.order_number || odooId}.`)}`;
   const depositPaid = odoo.deposit_paid || 0;
@@ -1314,6 +1330,89 @@ export default function Cabinet({ odooId, uniqueKey }) {
         )}
 
       </div>
+
+      {/* ── Tour Schedule + Included ─────────────────────────────────────────── */}
+      {hasScheduleSection && (
+        <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+          {/* Tab bar */}
+          <div className="flex border-b border-neutral-100 px-2">
+            {scheduleItems.length > 0 && (
+              <button type="button" onClick={() => setDetailTab("itinerary")}
+                className={cn(
+                  "px-4 py-3.5 text-sm font-semibold transition border-b-2 -mb-px",
+                  detailTab === "itinerary"
+                    ? "border-primary-600 text-primary-600"
+                    : "border-transparent text-secondary-400 hover:text-secondary-700"
+                )}>
+                Itinerary
+              </button>
+            )}
+            {(tourIncluded.length > 0 || tourIncludes.length > 0) && (
+              <button type="button" onClick={() => setDetailTab("included")}
+                className={cn(
+                  "px-4 py-3.5 text-sm font-semibold transition border-b-2 -mb-px",
+                  detailTab === "included"
+                    ? "border-primary-600 text-primary-600"
+                    : "border-transparent text-secondary-400 hover:text-secondary-700"
+                )}>
+                What&apos;s included
+              </button>
+            )}
+          </div>
+
+          {/* Itinerary tab */}
+          {detailTab === "itinerary" && scheduleItems.length > 0 && (
+            <div className="px-5 py-2">
+              <div className="divide-y divide-neutral-100 border-t border-neutral-100">
+                {scheduleItems.map((item, i) => (
+                  <ScheduleItemCompact key={i} item={item} />
+                ))}
+              </div>
+            </div>
+          )}
+          {detailTab === "itinerary" && scheduleItems.length === 0 && (
+            <p className="px-5 py-6 text-sm text-secondary-400 text-center">No itinerary available.</p>
+          )}
+
+          {/* What's included tab */}
+          {detailTab === "included" && (
+            <div className="px-5 py-5 space-y-4">
+              {tourIncluded.length > 0 && (
+                <div className={cn(
+                  "grid gap-3",
+                  tourIncluded.length <= 2 ? "grid-cols-2" :
+                  tourIncluded.length === 3 ? "grid-cols-3" :
+                  "grid-cols-2 sm:grid-cols-4"
+                )}>
+                  {tourIncluded.map((item) => (
+                    <div key={item.name} className="flex flex-col items-center text-center rounded-2xl border border-primary-200/50 bg-primary-50/50 px-3 py-4">
+                      {item.icon_svg && (
+                        <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-primary-500/10 text-primary-600">
+                          <span className="h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                        </div>
+                      )}
+                      <div className="text-sm font-semibold text-secondary-900">{item.name}</div>
+                      {item.description && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{item.description}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {tourIncludes.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {tourIncludes.map((item) => (
+                    <span key={item.name} className="inline-flex items-center gap-1.5 rounded-full border border-primary-200/50 bg-primary-50/50 px-3 py-1.5 text-sm font-medium text-secondary-700">
+                      {item.icon_svg && (
+                        <span className="h-4 w-4 shrink-0 text-primary-600 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                      )}
+                      {item.name}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Extras upsell banner (private only, hidden when extras editor is open) */}
       {local.is_private && editingField !== "extras" && (() => {
