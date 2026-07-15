@@ -763,3 +763,6 @@ v1.0.254:
 v1.0.255:
     - 'Updated table noren_booking_restaurant: add menu_sections'
     - builder_table_update_noren_booking_restaurant_9.php
+v1.0.256:
+    - 'Updated table noren_booking_order: add donation_amount'
+    - builder_table_update_noren_booking_order_30.php

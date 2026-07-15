@@ -47,6 +47,12 @@ export default function DatePickerBody({
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }, [todayISOProp]);
 
+  const tomorrowISO = useMemo(() => {
+    const d = new Date(`${todayISO}T00:00:00`);
+    d.setDate(d.getDate() + 1);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  }, [todayISO]);
+
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
     const s = new Date(rangeStart);
@@ -106,7 +112,7 @@ export default function DatePickerBody({
             key={days}
             type="button"
             onClick={() => {
-              const base = rangeStart || todayISO;
+              const base = rangeStart || tomorrowISO;
               const startDate = new Date(`${base}T00:00:00`);
               const endDate = new Date(startDate);
               endDate.setDate(endDate.getDate() + days - 1);

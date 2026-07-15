@@ -293,8 +293,8 @@ currency_id           — [11, "IDR"]
 | `x_studio_adults` | integer | — | ✓ | Кол-во взрослых |
 | `x_studio_kids` | integer | — | ✓ | Кол-во детей |
 | `x_studio_count_of_people` | integer | — | ✓ | Итого людей (members = adults + kids) |
-| `x_studio_deposit` | monetary | — | ✓ | Депозит (получено онлайн) |
-| `x_studio_collect` | monetary | **readonly** | ✓ (read only) | Остаток к оплате. **Нельзя записать напрямую** — вычисляется Odoo как `amount_total - x_studio_deposit` |
+| `x_studio_deposit` | monetary | — | ✓ | Депозит. Записывается **только** при первой оплате с сайта (первое бронирование) |
+| `x_studio_collect` | monetary | **readonly** | ✓ (read only) | Остаток к оплате. **Нельзя записать напрямую** — вычисляется Odoo как `amount_total - x_studio_deposit - x_studio_collected_by_xendit - x_studio_collected_by_cash - x_studio_collected_by_edcbank` |
 | `x_studio_payment_source` | selection | — | ✓ | Метод оплаты (`order->method->name`) |
 | `x_studio_pickup_address` | char | — | ✓ | Адрес pickup |
 | `x_studio_drop_off_address` | char | — | ✓ | Адрес dropoff |
@@ -310,7 +310,7 @@ currency_id           — [11, "IDR"]
 | `x_studio_source` | selection | — | — | Источник (заполняется вручную в Odoo) |
 | `x_studio_collected_by_cash` | monetary | — | — | Собрано наличными (заполняется менеджером) |
 | `x_studio_collected_by_edcbank` | monetary | — | — | Собрано через EDC/банк |
-| `x_studio_collected_by_xendit` | monetary | — | — | Собрано через Xendit (онлайн) |
+| `x_studio_collected_by_xendit` | monetary | — | ✓ | Собрано через Xendit (онлайн). Записывается при оплате collect по веблинку / веб чек-ину / личному кабинету (`OdooService::registerPayment`) |
 | `x_studio_customer_checked_in_and_cleared` | boolean | — | — | Клиент прошёл check-in |
 | `x_studio_free_shuttle_bus` | boolean | — | — | Устарело, не используется |
 | `x_studio_boat` | selection | — | — | Устарело |

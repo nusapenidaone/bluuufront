@@ -54,13 +54,16 @@ export default function HomeNavbar({ links }) {
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
+    nav.style.transition = 'transform 0.28s ease, background-color 0.3s, box-shadow 0.3s, backdrop-filter 0.3s';
     const getY = () =>
       document.body.scrollTop ||
       document.documentElement.scrollTop ||
       window.scrollY ||
       0;
+    let lastY = getY();
     const handleScroll = () => {
-      if (getY() > 60) {
+      const y = getY();
+      if (y > 60) {
         nav.style.background = 'rgba(7,15,31,0.97)';
         nav.style.backdropFilter = 'blur(20px)';
         nav.style.webkitBackdropFilter = 'blur(20px)';
@@ -73,6 +76,15 @@ export default function HomeNavbar({ links }) {
         nav.style.boxShadow = '';
         nav.classList.remove('scrolled');
       }
+
+      if (menuOpen || y < 80) {
+        nav.style.transform = 'translateY(0)';
+      } else if (y > lastY + 5) {
+        nav.style.transform = 'translateY(-110%)';
+      } else if (y < lastY - 5) {
+        nav.style.transform = 'translateY(0)';
+      }
+      lastY = y;
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     document.addEventListener('scroll', handleScroll, { passive: true });
@@ -83,7 +95,7 @@ export default function HomeNavbar({ links }) {
       document.removeEventListener('scroll', handleScroll);
       document.body.removeEventListener('scroll', handleScroll);
     };
-  }, []);
+  }, [menuOpen]);
 
   // Body scroll lock while menu open
   useEffect(() => {

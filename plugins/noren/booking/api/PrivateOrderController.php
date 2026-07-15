@@ -135,6 +135,11 @@ class PrivateOrderController extends Controller
             $order->deposite_summ = $order->full_price * $order->deposite / 100;
         }
 
+        // ── Donation (charity add-on) ──────────────────────────────────
+        // Collected together with the deposit/full payment, but tracked separately
+        // from deposite_summ so it never inflates the Odoo x_studio_deposit field.
+        $order->donation_amount = $data['donationAmount'] ?? 0;
+
         // ── Extras ────────────────────────────────────────────────────
         $order->extras = $data['selectedExtras'] ?? [];
 
@@ -197,11 +202,15 @@ class PrivateOrderController extends Controller
                 . '&num_items=' . ($order->adults + $order->kids)
                 . '&content_ids=' . $order->tours_id;
 
+            // Charge includes the donation on top of the deposit/full payment,
+            // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
+            $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
+
             if ($order->method_id == 1) {
-                $successUrl = $successBase . '&amount=' . $order->deposite_summ . '&currency=IDR';
+                $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
                 $url = XenditService::createPaymentLink(
                     $order->external_id,
-                    $order->deposite_summ,
+                    $chargeAmount,
                     $order->email,
                     $successUrl,
                     url('/error'),
@@ -209,7 +218,7 @@ class PrivateOrderController extends Controller
                 );
             } else {
                 $usd_rate = Rates::find(2)->rate;
-                $usd_summ = $usd_rate * $order->deposite_summ;
+                $usd_summ = $usd_rate * $chargeAmount;
                 $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
                 $url = PayPalService::createPaymentLink(
                     $order->external_id,

@@ -279,6 +279,7 @@ class OdooService
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_special_requests' => $lead['special_requests'],
             'x_studio_deposit'          => max($odooDeposit, $localDeposit),
+            'x_studio_donation_to_orphanage' => $lead['donation_amount'],
             'x_studio_pickup_cars'      => in_array($transferId, [1, 2]) ? (int) $lead['cars'] : 0,
             'x_studio_drop_off_cars'    => $transferId === 2 ? (int) $lead['cars'] : 0,
         ];
@@ -690,22 +691,21 @@ class OdooService
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_collected_by_xendit', 'x_studio_deposit'],
+            'fields' => ['x_studio_collected_by_xendit'],
             'limit'  => 1,
         ]);
 
         if (empty($result[0])) return;
 
         $currentCollected = (float) ($result[0]['x_studio_collected_by_xendit'] ?? 0);
-        $currentDeposit   = (float) ($result[0]['x_studio_deposit']             ?? 0);
 
-        // Update both: collected_by_xendit (for tracking) and deposit (so x_studio_collect
-        // recalculates to 0 without client needing to return to the success page)
+        // x_studio_collect is a readonly field in Odoo computed from amount_total minus
+        // all x_studio_collected_by_* fields, so updating collected_by_xendit alone is
+        // enough to make it recalculate.
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
             'vals' => [
                 'x_studio_collected_by_xendit' => $currentCollected + $amount,
-                'x_studio_deposit'             => $currentDeposit   + $amount,
             ],
         ]);
 
@@ -818,6 +818,7 @@ class OdooService
             'route_end'        => optional($order->route)->end   ?? '18:00:00',
             'restaurant_name'  => optional($order->restaurant)->odoo_name ?? '',
             'deposite_summ'    => (float)($order->deposite_summ ?? 0),
+            'donation_amount'  => (float)($order->donation_amount ?? 0),
             'total_price'      => (float)($order->total_price   ?? 0),
             'name'             => $order->name,
             'email'            => $order->email,
@@ -975,6 +976,7 @@ class OdooService
             'rental_return_date' => $rentalEnd,
 
             'x_studio_deposit'          => $lead['deposite_summ'],
+            'x_studio_donation_to_orphanage' => $lead['donation_amount'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_special_requests' => $lead['special_requests'],

@@ -113,6 +113,15 @@ function WhatsAppButton() {
         .wa-sticky-btn { padding: 12px; }
         .wa-sticky-label { display: none; }
       }
+      @media (max-width: 639px) {
+        body.wa-hidden .wa-sticky-btn,
+        body[style*="overflow: hidden"] .wa-sticky-btn,
+        body[style*="overflow:hidden"] .wa-sticky-btn {
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.15s ease;
+        }
+      }
     `}</style>
     </>
   );

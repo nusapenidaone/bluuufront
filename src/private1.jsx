@@ -99,16 +99,24 @@ function SkeletonCard() {
 
 function SkeletonBoatCard() {
   return (
-    <div className="animate-pulse rounded-2xl sm:rounded-3xl border border-neutral-100 bg-white overflow-hidden">
-      <div className="aspect-video bg-neutral-100" />
-      <div className="p-4 space-y-3">
-        <div className="h-5 w-2/5 rounded-lg bg-neutral-100" />
-        <div className="h-4 w-3/5 rounded-lg bg-neutral-100" />
-        <div className="flex gap-2">
-          <div className="h-5 w-16 rounded-2xl bg-neutral-100" />
-          <div className="h-5 w-20 rounded-2xl bg-neutral-100" />
+    <div className="relative rounded-2xl sm:rounded-3xl border border-neutral-200 bg-white overflow-hidden">
+      <div className="relative aspect-[3/2] shrink-0 overflow-hidden bg-neutral-200">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+          animate={{ x: ["-100%", "100%"] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "linear", repeatDelay: 0.3 }}
+        />
+      </div>
+      <div className="p-4 sm:p-5 sm:pt-4 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-2/5 rounded-lg bg-neutral-200 animate-pulse" />
+          <div className="h-4 w-14 rounded-full bg-neutral-200 animate-pulse" />
         </div>
-        <div className="h-10 w-full rounded-2xl bg-neutral-100" />
+        <div className="h-3.5 w-3/5 rounded-lg bg-neutral-200 animate-pulse" />
+        <div className="flex items-center justify-between pt-2">
+          <div className="h-4 w-12 rounded-lg bg-neutral-200 animate-pulse" />
+          <div className="h-6 w-20 rounded-lg bg-neutral-200 animate-pulse" />
+        </div>
       </div>
     </div>
   );
@@ -2192,12 +2200,22 @@ function scrollToBookingBar() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 }
-function BoatMiniCarousel({ boats, selectedBoatId, hasDateCriteria, onSelect, onFocusDate, formatPrice, groupSize = 1 }) {
+function BoatMiniCarousel({
+  boats, selectedBoatId, hasDateCriteria, onSelect, onFocusDate, formatPrice, groupSize = 1,
+  dateMode, hasRange, rangeDates = [], availabilityByBoat, privateTours, selectedFlexDate, onConfirmDate,
+}) {
   const trackRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [detailBoat, setDetailBoat] = useState(null);
   const [activeDot, setActiveDot] = useState(0);
+  const [pickingDate, setPickingDate] = useState(false);
+  const [draftDate, setDraftDate] = useState("");
+
+  useEffect(() => {
+    setPickingDate(false);
+    setDraftDate("");
+  }, [detailBoat]);
 
   const updateScrollState = useCallback(() => {
     const el = trackRef.current;
@@ -2392,6 +2410,13 @@ function BoatMiniCarousel({ boats, selectedBoatId, hasDateCriteria, onSelect, on
             const boatTypeLabel = [bf.boat_type || null, boat.lengthMeters ? `${boat.lengthMeters}M` : null].filter(Boolean).join(" · ").toUpperCase();
             const boatDescriptionText = sanitizeDisplayText(boat.description, { stripTrailingOne: true });
             const isBoatSelected = selectedBoatId === boat.id;
+            const canPickDayInline = dateMode === "flex" && hasRange && !boat.isPartner;
+            const boatAvailableDates = availabilityByBoat?.[boat.id]?.availableDates ?? [];
+            const draftPrice = draftDate ? calculateBoatPrice(boat.tourId, draftDate, groupSize, privateTours) : null;
+            const startPickingDate = () => {
+              setDraftDate(isBoatSelected ? (selectedFlexDate || "") : "");
+              setPickingDate(true);
+            };
             return (
               <motion.div
                 key="boat-detail-modal"
@@ -2443,45 +2468,135 @@ function BoatMiniCarousel({ boats, selectedBoatId, hasDateCriteria, onSelect, on
 
                   {/* Scrollable content */}
                   <div className="flex-1 overflow-y-auto p-5 pt-4">
-                    {boatTypeLabel && (
-                      <div className="mb-2 text-xs leading-tight font-normal uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
-                    )}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="text-xl font-bold text-secondary-900 leading-tight line-clamp-1">
-                        {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
-                      </div>
-                      {boat.isPartner && (
-                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600 border border-amber-200">By request</span>
-                      )}
-                    </div>
-                    {boatDescriptionText && <p className="mt-1.5 text-sm leading-relaxed text-secondary-500">{boatDescriptionText}</p>}
-                    {boat.fleetSize >= 1 && (
-                      <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-secondary-500">
-                        <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                        {boat.fleetSize} identical {boat.fleetSize === 1 ? "boat" : "boats"} — we assign the best available for your date
-                      </div>
-                    )}
-                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                        <div className="flex items-center gap-2.5 text-sm font-bold text-secondary-700"><Users className="h-4 w-4 shrink-0 text-primary-500" />Up to {boat.people}</div>
-                        {boatFeatures.map(({ label, present, Icon }) => (
-                          <div key={label} className={cn("flex items-center gap-2.5 text-sm", present ? "font-bold text-secondary-700" : "text-secondary-300")}>
-                            <Icon className={cn("h-4 w-4 shrink-0", present ? "text-primary-500" : "text-neutral-300")} />{label}
+                    {pickingDate ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <div className="text-lg font-bold tracking-tight text-secondary-900">Pick a day</div>
+                            <div className="text-xs font-bold uppercase tracking-wider text-secondary-400">Optional step</div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    {bf.best_for && (
-                      <div className="mt-2.5">
-                        <div className="flex min-h-[2.25rem] items-center rounded-xl border border-primary-100 bg-primary-50 px-4 py-1">
-                          <p className="text-xs font-semibold text-primary-700">Best for: {bf.best_for}</p>
+                          <button
+                            type="button"
+                            onClick={() => setPickingDate(false)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-secondary-500 transition hover:bg-white hover:text-secondary-900"
+                            aria-label="Back to details"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
                         </div>
-                      </div>
+                        <div className="mt-4">
+                          {rangeDates.length ? (
+                            <div className="grid grid-cols-5 gap-2 pr-1">
+                              {rangeDates.map((date) => {
+                                const isAvailable = boatAvailableDates.includes(date);
+                                const isPicked = draftDate === date;
+                                const parsed = new Date(`${date}T00:00:00`);
+                                const monthLabel = parsed.toLocaleString("en-US", { month: "short" });
+                                const dayLabel = Number.isNaN(parsed.getTime()) ? "" : String(parsed.getDate());
+                                return (
+                                  <button
+                                    key={date}
+                                    type="button"
+                                    onClick={() => { if (isAvailable) setDraftDate(date); }}
+                                    className={cn(
+                                      "flex min-h-58 flex-col items-center justify-center rounded-2xl border px-2 py-1 transition-all duration-200",
+                                      isPicked
+                                        ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-102"
+                                        : isAvailable
+                                          ? "border-neutral-200 bg-white text-secondary-600 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
+                                          : "border-neutral-200 bg-neutral-50 text-secondary-500 opacity-40 cursor-not-allowed"
+                                    )}
+                                    disabled={!isAvailable}
+                                  >
+                                    <span className={cn("text-xs leading-tight font-semibold uppercase tracking-wide", isPicked ? "text-primary-600" : isAvailable ? "text-secondary-400" : "text-secondary-300")}>
+                                      {monthLabel}
+                                    </span>
+                                    <span className={cn("mt-0.5 text-xl font-extrabold leading-none", isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400")}>
+                                      {dayLabel}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="flex h-32 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 p-4 text-center">
+                              <Calendar className="mb-2 h-6 w-6 text-secondary-300" />
+                              <div className="text-sm font-semibold text-secondary-500">Select a date range first</div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {boatTypeLabel && (
+                          <div className="mb-2 text-xs leading-tight font-normal uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
+                        )}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="text-xl font-bold text-secondary-900 leading-tight line-clamp-1">
+                            {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
+                          </div>
+                          {boat.isPartner && (
+                            <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600 border border-amber-200">By request</span>
+                          )}
+                        </div>
+                        {boatDescriptionText && <p className="mt-1.5 text-sm leading-relaxed text-secondary-500">{boatDescriptionText}</p>}
+                        {boat.fleetSize >= 1 && (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-secondary-500">
+                            <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                            {boat.fleetSize} identical {boat.fleetSize === 1 ? "boat" : "boats"} — we assign the best available for your date
+                          </div>
+                        )}
+                        <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                            <div className="flex items-center gap-2.5 text-sm font-bold text-secondary-700"><Users className="h-4 w-4 shrink-0 text-primary-500" />Up to {boat.people}</div>
+                            {boatFeatures.map(({ label, present, Icon }) => (
+                              <div key={label} className={cn("flex items-center gap-2.5 text-sm", present ? "font-bold text-secondary-700" : "text-secondary-300")}>
+                                <Icon className={cn("h-4 w-4 shrink-0", present ? "text-primary-500" : "text-neutral-300")} />{label}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {bf.best_for && (
+                          <div className="mt-2.5">
+                            <div className="flex min-h-[2.25rem] items-center rounded-xl border border-primary-100 bg-primary-50 px-4 py-1">
+                              <p className="text-xs font-semibold text-primary-700">Best for: {bf.best_for}</p>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
                   {/* Sticky footer — price + button */}
                   <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-3">
+                    {pickingDate ? (
+                      <div className="flex flex-col gap-3">
+                        {draftDate ? (
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-semibold text-secondary-500">
+                              {new Date(`${draftDate}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                            </span>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-lg font-black text-secondary-900 tracking-tight">{formatPrice(draftPrice ?? boat.priceValue)}</span>
+                              <span className="text-2xs font-bold uppercase tracking-widest text-secondary-300">/ boat</span>
+                            </div>
+                          </div>
+                        ) : null}
+                        <button
+                          type="button"
+                          className={cn(
+                            "inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-bold transition-all duration-200",
+                            draftDate
+                              ? "bg-primary-600 text-white shadow-card hover:scale-101 hover:bg-primary-600-strong active:scale-98"
+                              : "bg-neutral-100 text-secondary-300 cursor-not-allowed"
+                          )}
+                          onClick={() => { onConfirmDate?.(boat, draftDate); setDetailBoat(null); }}
+                          disabled={!draftDate}
+                        >
+                          Confirm date
+                        </button>
+                      </div>
+                    ) : (
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-baseline gap-x-1 flex-wrap">
                         <span className="text-sm font-medium text-secondary-400">from</span>
@@ -2489,7 +2604,10 @@ function BoatMiniCarousel({ boats, selectedBoatId, hasDateCriteria, onSelect, on
                         <span className="text-xs sm:text-sm font-medium text-secondary-400">/ boat</span>
                       </div>
                       {hasDateCriteria && isBoatSelected ? (
-                        <button type="button" onClick={() => { setDetailBoat(null); setTimeout(() => onFocusDate?.(), 100); }}
+                        <button type="button" onClick={() => {
+                            if (canPickDayInline) { startPickingDate(); return; }
+                            setDetailBoat(null); setTimeout(() => onFocusDate?.(), 100);
+                          }}
                           className="shrink-0 h-11 px-6 rounded-full border border-[#2563eb]/50 bg-[#2563eb]/20 text-sm font-semibold text-[#60a5fa] transition hover:bg-[#2563eb]/30 flex items-center gap-1.5">
                           <Calendar className="h-4 w-4" />Change date
                         </button>
@@ -2499,7 +2617,10 @@ function BoatMiniCarousel({ boats, selectedBoatId, hasDateCriteria, onSelect, on
                           {(boat._overCapacity || groupSize > boat.people) ? <><Users className="h-4 w-4" />Change parameters</> : <><Calendar className="h-4 w-4" />Change date</>}
                         </button>
                       ) : hasDateCriteria ? (
-                        <button type="button" onClick={() => { onSelect(boat); setDetailBoat(null); }}
+                        <button type="button" onClick={() => {
+                            if (canPickDayInline) { startPickingDate(); return; }
+                            onSelect(boat); setDetailBoat(null);
+                          }}
                           className="shrink-0 h-11 px-6 rounded-full bg-[#2563eb] text-sm font-bold text-white transition hover:bg-[#1d4ed8]">
                           Select
                         </button>
@@ -2516,6 +2637,7 @@ function BoatMiniCarousel({ boats, selectedBoatId, hasDateCriteria, onSelect, on
                         </button>
                       )}
                     </div>
+                    )}
                   </div>
                 </motion.div>
               </motion.div>
@@ -2588,6 +2710,11 @@ function StickyBookingBar(props) {
     window.addEventListener("expand-sticky-bar", handler);
     return () => window.removeEventListener("expand-sticky-bar", handler);
   }, []);
+  useEffect(() => {
+    const handler = () => setIsExpanded(false);
+    window.addEventListener("collapse-sticky-bar", handler);
+    return () => window.removeEventListener("collapse-sticky-bar", handler);
+  }, []);
   return (
     <AnimatePresence>
       {isVisible && isExpanded && (
@@ -2648,6 +2775,8 @@ function StepOne({
   totalGuests,
   canContinue,
   onContinue,
+  onConfirmSearch,
+  hasPendingChanges,
   globalAvailabilityMap,
   filterDate,
   onMonthChange,
@@ -2668,11 +2797,36 @@ function StepOne({
   const contacts = useSiteContacts();
 
   const [openPanel, setOpenPanel] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const sheetMotion = isMobile
+    ? {
+        initial: { y: "100%" },
+        animate: { y: 0 },
+        exit: { y: "100%" },
+        transition: { duration: 0.32, ease: [0.32, 0.72, 0, 1] },
+      }
+    : {
+        initial: { opacity: 0, y: -4, scale: 0.98 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        exit: { opacity: 0, y: -4, scale: 0.98 },
+        transition: { duration: 0.15, ease: "easeOut" },
+      };
   useEffect(() => {
     if (!openPanel || typeof document === "undefined") return;
     const orig = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("wa-hidden");
+    // Only lock background scroll for the mobile full-screen sheet — desktop's small
+    // dropdown should never disable the page scrollbar.
+    if (isMobile) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("wa-hidden");
+    }
     if (openPanel === "dates" && !omitId) {
       document.body.style.overflow = orig;
       setTimeout(() => {
@@ -2687,7 +2841,7 @@ function StepOne({
       }, 50);
     }
     return () => { document.body.style.overflow = orig; document.body.classList.remove("wa-hidden"); };
-  }, [openPanel]);
+  }, [openPanel, isMobile, omitId]);
   const barRef = useRef(null);
   const panelRef = useRef(null);
   const hoveringRef = useRef(false);
@@ -2757,6 +2911,20 @@ function StepOne({
     <div id={omitId ? undefined : embedded ? undefined : "step-1"} className={omitId ? "w-full" : embedded ? "w-full mt-8 mb-2" : "sticky top-[52px] z-[60] py-3 bg-neutral-100/95 backdrop-blur-md"}>
       <div className={omitId ? "mx-auto max-w-3xl" : embedded ? "mx-auto max-w-3xl" : "mx-auto sm:max-w-3xl px-2 sm:px-6"}>
         <div id="step1-bar" ref={barRef} className="relative flex items-center rounded-full border border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+          <AnimatePresence>
+            {openPanel && (
+              <motion.div
+                key="mobile-sheet-backdrop"
+                className="sm:hidden fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setOpenPanel(null)}
+                aria-hidden="true"
+              />
+            )}
+          </AnimatePresence>
           <div id="step1-dates-pill" className="relative flex-1 min-w-0">
             <button
               type="button"
@@ -2777,15 +2945,12 @@ function StepOne({
               {openPanel === "dates" && (
                 <motion.div
                   ref={panelRef}
-                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="absolute left-0 top-full z-50 mt-2 w-max max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:bg-black/30 max-sm:backdrop-blur-sm max-sm:z-[10001]"
+                  {...sheetMotion}
+                  className="absolute left-0 top-full z-50 mt-2 w-max max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:pointer-events-none max-sm:z-[10001]"
                   onMouseEnter={() => { hoveringRef.current = true; }}
                   onMouseLeave={() => { hoveringRef.current = false; }}
                 >
-                  <div className="step1-date-dropdown rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full max-sm:max-h-[92dvh] max-sm:overflow-y-auto max-sm:p-4">
+                  <div className="step1-date-dropdown pointer-events-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full max-sm:max-h-[92dvh] max-sm:overflow-y-auto max-sm:p-4">
                     <div className="sm:hidden flex items-center justify-between mb-3">
                       <span className="text-base font-semibold text-secondary-900">Select dates</span>
                       <button type="button" onClick={() => setOpenPanel(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-secondary-500">
@@ -2826,10 +2991,6 @@ function StepOne({
                         rangeEnd={rangeEnd}
                         onRangeStartChange={onRangeStartChange}
                         onRangeEndChange={onRangeEndChange}
-                        onDateComplete={() => {
-                          clearTimeout(autoCloseTimerRef.current);
-                          autoCloseTimerRef.current = setTimeout(() => setOpenPanel("guests"), 350);
-                        }}
                         filterDate={filterDate}
                         onMonthChange={onMonthChange}
                         globalAvailabilityMap={globalAvailabilityMap}
@@ -2871,15 +3032,12 @@ function StepOne({
             <AnimatePresence>
               {openPanel === "guests" && (
                 <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="absolute left-0 top-full z-50 mt-2 w-max max-w-xs max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:max-w-none max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:bg-black/30 max-sm:backdrop-blur-sm max-sm:z-[10001]"
+                  {...sheetMotion}
+                  className="absolute left-0 top-full z-50 mt-2 w-max max-w-xs max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:max-w-none max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:pointer-events-none max-sm:z-[10001]"
                   onMouseEnter={() => { hoveringRef.current = true; }}
                   onMouseLeave={() => { hoveringRef.current = false; }}
                 >
-                  <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 text-left max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full">
+                  <div className="pointer-events-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 text-left max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full">
                     <div className="sm:hidden flex items-center justify-between mb-3">
                       <span className="text-base font-semibold text-secondary-900">Guests</span>
                       <button type="button" onClick={() => setOpenPanel(null)} className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-100 text-secondary-500">
@@ -2963,8 +3121,9 @@ function StepOne({
           <div className="pr-2 sm:pr-3.5 shrink-0">
             <button
               type="button"
-              onClick={() => { setOpenPanel(null); onContinue(); }}
+              onClick={() => { onConfirmSearch?.(); setOpenPanel(null); onContinue(); }}
               disabled={!canContinue}
+              style={hasPendingChanges ? { animation: "search-btn-pulse 1.6s ease-out infinite" } : undefined}
               className={cn(
                 "flex items-center justify-center rounded-full transition-all",
                 "h-10 w-10 sm:h-auto sm:w-auto sm:gap-2 sm:px-6 sm:py-3 text-sm font-semibold",
@@ -2973,13 +3132,20 @@ function StepOne({
                   : "bg-neutral-100 text-neutral-300 cursor-not-allowed"
               )}
             >
-              <span className="hidden sm:inline">Continue</span>
+              <span className="hidden sm:inline">Search</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
     </div>
+    <style>{`
+      @keyframes search-btn-pulse {
+        0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
+        60%  { box-shadow: 0 0 0 10px rgba(37,99,235,0.12); }
+        100% { box-shadow: 0 0 0 16px rgba(37,99,235,0); }
+      }
+    `}</style>
     </>
   );
 }
@@ -2999,35 +3165,38 @@ const TOUR_SAFETY_ITEMS = [
   { icon: AlertTriangle, label: "Port Authority", helper: "Final go/no-go decisions are made on the morning of the tour based on Port Authority guidance and captain safety checks." },
 ];
 function TourTabContent({ activeTab, includedSections, cancellationSummaryCards, weatherGuaranteeCards }) {
-  const row = "flex items-center gap-4 border-b border-neutral-100 py-3 sm:py-4 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0";
-  const iconBlue = "flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600";
-  const grid = "grid grid-cols-1 sm:grid-cols-2 gap-x-6";
-  if (activeTab === "included") return (
-    <div className={grid}>
-      {includedSections.flatMap((s) => s.items).map((item) => {
-        const Icon = item.icon;
-        return (
-          <div key={item.label} className={row}>
-            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
-            <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-secondary-900">{item.label}</div>
-              {item.helper ? <div className="text-xs leading-normal text-secondary-500">{item.helper}</div> : null}
+  const row = "flex items-start gap-3 py-3";
+  const iconBlue = "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-50 text-primary-600";
+  const gridFor = (count) => cn("grid gap-x-6", count === 4 ? "grid-cols-1 sm:grid-cols-2" : count <= 3 ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-3");
+  if (activeTab === "included") {
+    const items = includedSections.flatMap((s) => s.items);
+    return (
+      <div className={gridFor(items.length)}>
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div key={item.label} className={row}>
+              <div className={iconBlue}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-semibold text-white/90">{item.label}</div>
+                {item.helper ? <div className="text-xs leading-normal text-white/40">{item.helper}</div> : null}
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+          );
+        })}
+      </div>
+    );
+  }
   if (activeTab === "pickup") return (
-    <div className={grid}>
+    <div className={gridFor(TOUR_PICKUP_ITEMS.length)}>
       {TOUR_PICKUP_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
           <div key={item.label} className={row}>
-            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+            <div className={iconBlue}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div>
             <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-secondary-900">{item.label}</div>
-              <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
+              <div className="text-base font-semibold text-white/90">{item.label}</div>
+              <div className="text-xs leading-normal text-white/40">{item.helper}</div>
             </div>
           </div>
         );
@@ -3035,15 +3204,15 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
     </div>
   );
   if (activeTab === "safety") return (
-    <div className={grid}>
+    <div className={gridFor(TOUR_SAFETY_ITEMS.length)}>
       {TOUR_SAFETY_ITEMS.map((item) => {
         const Icon = item.icon;
         return (
           <div key={item.label} className={row}>
-            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+            <div className={iconBlue}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div>
             <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-secondary-900">{item.label}</div>
-              <div className="text-xs leading-normal text-secondary-500">{item.helper}</div>
+              <div className="text-base font-semibold text-white/90">{item.label}</div>
+              <div className="text-xs leading-normal text-white/40">{item.helper}</div>
             </div>
           </div>
         );
@@ -3051,17 +3220,17 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
     </div>
   );
   if (activeTab === "cancellation") return (
-    <div className={grid}>
+    <div className={gridFor(cancellationSummaryCards.length)}>
       {cancellationSummaryCards.map((card) => {
         const Icon = card.icon;
         return (
           <div key={card.title} className={row}>
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-neutral-100">
-              <Icon className={cn("h-6 w-6 text-primary-600", card.iconClassName)} />
+            <div className={cn(iconBlue, card.accentClassName)}>
+              <Icon className={cn("h-4 w-4 sm:h-5 sm:w-5", card.iconClassName)} />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-secondary-900">{card.title}</div>
-              <div className="text-xs leading-normal text-secondary-500">{card.text}</div>
+              <div className="text-base font-semibold text-white/90">{card.title}</div>
+              <div className="text-xs leading-normal text-white/40">{card.text}</div>
             </div>
           </div>
         );
@@ -3069,40 +3238,51 @@ function TourTabContent({ activeTab, includedSections, cancellationSummaryCards,
     </div>
   );
   if (activeTab === "faq") return (
-    <div className={grid}>
+    <div className={gridFor(bookingMiniFAQData.length)}>
       {bookingMiniFAQData.map((it) => {
         const Icon = ICON_MAP[it.icon];
         return (
           <div key={it.q} className={row}>
-            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
+            <div className={iconBlue}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div>
             <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-secondary-900">{it.q}</div>
-              <div className="text-xs leading-normal text-secondary-500">{it.a}</div>
+              <div className="text-base font-semibold text-white/90">{it.q}</div>
+              <div className="text-xs leading-normal text-white/40">{it.a}</div>
             </div>
           </div>
         );
       })}
     </div>
   );
-  if (activeTab === "weather") return (
-    <div className={grid}>
-      {[...weatherGuaranteeCards, { icon: AlertTriangle, title: "Port Authority", text: "Final go/no-go decision is based on Port Authority guidance and captain safety checks on the tour morning." }].map((card) => {
-        const Icon = card.icon;
-        return (
-          <div key={card.title} className={row}>
-            <div className={iconBlue}><Icon className="h-5 w-5 sm:h-6 sm:w-6" /></div>
-            <div className="min-w-0 flex-1">
-              <div className="text-base font-semibold text-secondary-900">{card.title}</div>
-              <div className="text-xs leading-normal text-secondary-500">{card.text}</div>
+  if (activeTab === "weather") {
+    const weatherItems = [...weatherGuaranteeCards, { icon: AlertTriangle, title: "Port Authority", text: "Final go/no-go decision is based on Port Authority guidance and captain safety checks on the tour morning." }];
+    return (
+      <div className={gridFor(weatherItems.length)}>
+        {weatherItems.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div key={card.title} className={row}>
+              <div className={iconBlue}><Icon className="h-4 w-4 sm:h-5 sm:w-5" /></div>
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-semibold text-white/90">{card.title}</div>
+                <div className="text-xs leading-normal text-white/40">{card.text}</div>
+              </div>
             </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+          );
+        })}
+      </div>
+    );
+  }
   return null;
 }
-function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
+const TOUR_INFO_TAB_TITLES = {
+  included: "What's included",
+  pickup: "Pickup",
+  safety: "Safety",
+  cancellation: "Cancellation",
+  weather: "Weather Guarantee",
+  faq: "FAQ",
+};
+function TourInfoModal({ activeTab = "included", onClose }) {
   const { cancellationSummaryCards, weatherGuaranteeCards } = transformTourCards(tourInfo, ICON_MAP);
   const includedSections = tourInfo.includedSections.map(section => ({
     ...section,
@@ -3111,22 +3291,11 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
       icon: ICON_MAP[item.icon]
     }))
   }));
-  const [internalTab, setInternalTab] = useState(activeTab);
-  useEffect(() => {
-    setInternalTab(activeTab);
-  }, [activeTab]);
-  const handleTabChange = (id) => {
-    setInternalTab(id);
-    onTabChange?.(id);
-  };
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-white p-0 md:h-80vh">
-      <div className="sticky top-0 z-20 flex shrink-0 items-start justify-between gap-4 bg-neutral-50/60 px-6 py-5">
-        <div>
-          <div className="text-base sm:text-xl font-semibold text-secondary-900">Tour info</div>
-          <div className="mt-1 truncate text-sm text-secondary-500">
-            Whats included, pickup, and safety all in one place.
-          </div>
+    <div className="flex max-h-[85vh] w-full flex-col bg-white p-0">
+      <div className="flex shrink-0 items-center justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
+        <div className="text-base sm:text-xl font-semibold text-secondary-900">
+          {TOUR_INFO_TAB_TITLES[activeTab] || "Tour info"}
         </div>
         <button
           type="button"
@@ -3137,36 +3306,15 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
           <X className="w-5 h-5 text-secondary-600" />
         </button>
       </div>
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="border-b border-neutral-200 px-6">
-          <div className="hide-scrollbar flex flex-nowrap items-center gap-x-5 gap-y-2 overflow-x-auto py-3 text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
-            {INFO_DRAWER_TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  "inline-flex shrink-0 items-center whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
-                  internalTab === tab.id
-                    ? "border-primary-600 text-primary-600 hover:text-primary-700"
-                    : "text-secondary-500 hover:text-secondary-700"
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-6 text-sm text-secondary-600">
-          <TourTabContent
-            activeTab={internalTab}
-            includedSections={includedSections}
-            cancellationSummaryCards={cancellationSummaryCards}
-            weatherGuaranteeCards={weatherGuaranteeCards}
-          />
-        </div>
+      <div className="tour-modal-light flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 text-sm text-secondary-600">
+        <TourTabContent
+          activeTab={activeTab}
+          includedSections={includedSections}
+          cancellationSummaryCards={cancellationSummaryCards}
+          weatherGuaranteeCards={weatherGuaranteeCards}
+        />
       </div>
-    </div >
+    </div>
   );
 }
 function TourInfoInline() {
@@ -3302,6 +3450,7 @@ function StepTwo({
   onSelectBoatId,
   availabilityByBoat,
   hasDateCriteria,
+  isAvailabilityLoading = false,
   dateSelectionPreference,
   onDateSelectionPreference,
   selectedFlexDate,
@@ -3332,8 +3481,14 @@ function StepTwo({
   const [visibleBoatsCount, setVisibleBoatsCount] = useState(6);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [gridDetailBoat, setGridDetailBoat] = useState(null);
+  const [gridPickingDate, setGridPickingDate] = useState(false);
+  const [gridDraftDate, setGridDraftDate] = useState("");
   const [draftFlexDate, setDraftFlexDate] = useState("");
   const [confirmModalData, setConfirmModalData] = useState(null);
+  useEffect(() => {
+    setGridPickingDate(false);
+    setGridDraftDate("");
+  }, [gridDetailBoat]);
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
     const start = new Date(rangeStart);
@@ -3383,6 +3538,20 @@ function StepTwo({
       }
     },
     [inlineDatesFor, closePickDayMode, onDateSelectionPreference, onSelectFlexDate, onSelectBoatId, boats, groupSize, privateTours]
+  );
+  const confirmPickDayForBoat = useCallback(
+    (boat, date) => {
+      if (!date || !boat) return;
+      const price = calculateBoatPrice(boat.tourId, date, groupSize, privateTours);
+      onSelectFlexDate(date);
+      onDateSelectionPreference("pickNow");
+      if (boat.isPartner) {
+        setPartnerBoat({ ...boat, priceValue: price ?? boat.priceValue });
+      } else {
+        onSelectBoatId(boat.id);
+      }
+    },
+    [onDateSelectionPreference, onSelectFlexDate, onSelectBoatId, groupSize, privateTours]
   );
   useEffect(() => {
     setSort("recommended");
@@ -4050,7 +4219,21 @@ function StepTwo({
 
           {/* Mini carousel — animated transition */}
           <AnimatePresence mode="wait">
-            {!showAllBoats && sorted.length === 0 && hasDateCriteria ? (
+            {isAvailabilityLoading && hasDateCriteria ? (
+              <motion.div
+                key="availability-skeleton"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <SkeletonBoatCard key={`boat-skel-${i}`} />
+                  ))}
+                </div>
+              </motion.div>
+            ) : !showAllBoats && sorted.length === 0 && hasDateCriteria ? (
               <motion.div
                 key="empty-placeholder"
                 initial={{ opacity: 0, y: -20 }}
@@ -4096,6 +4279,13 @@ function StepTwo({
                   }}
                   onFocusDate={focusStepOne}
                   formatPrice={formatIDR}
+                  dateMode={dateMode}
+                  hasRange={hasRange}
+                  rangeDates={rangeDates}
+                  availabilityByBoat={availabilityByBoat}
+                  privateTours={privateTours}
+                  selectedFlexDate={selectedFlexDate}
+                  onConfirmDate={confirmPickDayForBoat}
                 />
                 {sorted.length > 0 && (
                   <div className="mb-6 mt-2 flex justify-center sm:mt-6">
@@ -4267,6 +4457,13 @@ function StepTwo({
             const isSoldOutBoat = boat._soldOut || (dateMode === "exact" && exactDate && !availabilityByBoat?.[boat.id]?.available);
             const isOverCap = boat._overCapacity || groupSize > boat.people;
             const isDisabledBoat = isSoldOutBoat || isOverCap;
+            const gridCanPickDayInline = dateMode === "flex" && hasRange && !boat.isPartner;
+            const gridBoatAvailableDates = availabilityByBoat?.[boat.id]?.availableDates ?? [];
+            const gridDraftPrice = gridDraftDate ? calculateBoatPrice(boat.tourId, gridDraftDate, groupSize, privateTours) : null;
+            const startGridPickingDate = () => {
+              setGridDraftDate(isBoatSelected ? (selectedFlexDate || "") : "");
+              setGridPickingDate(true);
+            };
             return (
               <motion.div
                 key="grid-boat-detail-modal"
@@ -4318,45 +4515,135 @@ function StepTwo({
 
                   {/* Scrollable content */}
                   <div className="flex-1 overflow-y-auto p-5 pt-4">
-                    {boatTypeLabel && (
-                      <div className="mb-2 text-xs leading-tight font-normal uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
-                    )}
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="text-xl font-bold text-secondary-900 leading-tight line-clamp-1">
-                        {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
-                      </div>
-                      {boat.isPartner && (
-                        <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600 border border-amber-200">By request</span>
-                      )}
-                    </div>
-                    {boatDescriptionText && <p className="mt-1.5 text-sm leading-relaxed text-secondary-500">{boatDescriptionText}</p>}
-                    {boat.fleetSize >= 1 && (
-                      <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-secondary-500">
-                        <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
-                        {boat.fleetSize} identical {boat.fleetSize === 1 ? "boat" : "boats"} — we assign the best available for your date
-                      </div>
-                    )}
-                    <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                        <div className="flex items-center gap-2.5 text-sm font-bold text-secondary-700"><Users className="h-4 w-4 shrink-0 text-primary-500" />Up to {boat.people}</div>
-                        {boatFeatures.map(({ label, present, Icon }) => (
-                          <div key={label} className={cn("flex items-center gap-2.5 text-sm", present ? "font-bold text-secondary-700" : "text-secondary-300")}>
-                            <Icon className={cn("h-4 w-4 shrink-0", present ? "text-primary-500" : "text-neutral-300")} />{label}
+                    {gridPickingDate ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <div className="text-lg font-bold tracking-tight text-secondary-900">Pick a day</div>
+                            <div className="text-xs font-bold uppercase tracking-wider text-secondary-400">Optional step</div>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                    {bf.best_for && (
-                      <div className="mt-2.5">
-                        <div className="flex min-h-[2.25rem] items-center rounded-xl border border-primary-100 bg-primary-50 px-4 py-1">
-                          <p className="text-xs font-semibold text-primary-700">Best for: {bf.best_for}</p>
+                          <button
+                            type="button"
+                            onClick={() => setGridPickingDate(false)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50 text-secondary-500 transition hover:bg-white hover:text-secondary-900"
+                            aria-label="Back to details"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
                         </div>
-                      </div>
+                        <div className="mt-4">
+                          {rangeDates.length ? (
+                            <div className="grid grid-cols-5 gap-2 pr-1">
+                              {rangeDates.map((date) => {
+                                const isAvailable = gridBoatAvailableDates.includes(date);
+                                const isPicked = gridDraftDate === date;
+                                const parsed = new Date(`${date}T00:00:00`);
+                                const monthLabel = parsed.toLocaleString("en-US", { month: "short" });
+                                const dayLabel = Number.isNaN(parsed.getTime()) ? "" : String(parsed.getDate());
+                                return (
+                                  <button
+                                    key={date}
+                                    type="button"
+                                    onClick={() => { if (isAvailable) setGridDraftDate(date); }}
+                                    className={cn(
+                                      "flex min-h-58 flex-col items-center justify-center rounded-2xl border px-2 py-1 transition-all duration-200",
+                                      isPicked
+                                        ? "border-primary-600 bg-primary-50 text-primary-700 shadow-sm scale-102"
+                                        : isAvailable
+                                          ? "border-neutral-200 bg-white text-secondary-600 hover:border-primary-200 hover:bg-neutral-100 hover:text-primary-700"
+                                          : "border-neutral-200 bg-neutral-50 text-secondary-500 opacity-40 cursor-not-allowed"
+                                    )}
+                                    disabled={!isAvailable}
+                                  >
+                                    <span className={cn("text-xs leading-tight font-semibold uppercase tracking-wide", isPicked ? "text-primary-600" : isAvailable ? "text-secondary-400" : "text-secondary-300")}>
+                                      {monthLabel}
+                                    </span>
+                                    <span className={cn("mt-0.5 text-xl font-extrabold leading-none", isPicked ? "text-primary-700" : isAvailable ? "text-secondary-900" : "text-secondary-400")}>
+                                      {dayLabel}
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="flex h-32 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-200 p-4 text-center">
+                              <Calendar className="mb-2 h-6 w-6 text-secondary-300" />
+                              <div className="text-sm font-semibold text-secondary-500">Select a date range first</div>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {boatTypeLabel && (
+                          <div className="mb-2 text-xs leading-tight font-normal uppercase tracking-widest text-primary-500">{boatTypeLabel}</div>
+                        )}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="text-xl font-bold text-secondary-900 leading-tight line-clamp-1">
+                            {boat.id === "angels" ? "Two boats (14+ guests)" : boat.name}
+                          </div>
+                          {boat.isPartner && (
+                            <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600 border border-amber-200">By request</span>
+                          )}
+                        </div>
+                        {boatDescriptionText && <p className="mt-1.5 text-sm leading-relaxed text-secondary-500">{boatDescriptionText}</p>}
+                        {boat.fleetSize >= 1 && (
+                          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-secondary-500">
+                            <Ship className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                            {boat.fleetSize} identical {boat.fleetSize === 1 ? "boat" : "boats"} — we assign the best available for your date
+                          </div>
+                        )}
+                        <div className="mt-3 rounded-2xl border border-neutral-200 bg-neutral-50 px-4 py-3">
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                            <div className="flex items-center gap-2.5 text-sm font-bold text-secondary-700"><Users className="h-4 w-4 shrink-0 text-primary-500" />Up to {boat.people}</div>
+                            {boatFeatures.map(({ label, present, Icon }) => (
+                              <div key={label} className={cn("flex items-center gap-2.5 text-sm", present ? "font-bold text-secondary-700" : "text-secondary-300")}>
+                                <Icon className={cn("h-4 w-4 shrink-0", present ? "text-primary-500" : "text-neutral-300")} />{label}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {bf.best_for && (
+                          <div className="mt-2.5">
+                            <div className="flex min-h-[2.25rem] items-center rounded-xl border border-primary-100 bg-primary-50 px-4 py-1">
+                              <p className="text-xs font-semibold text-primary-700">Best for: {bf.best_for}</p>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
                   {/* Sticky footer */}
                   <div className="shrink-0 border-t border-neutral-100 bg-white px-5 py-3">
+                    {gridPickingDate ? (
+                      <div className="flex flex-col gap-3">
+                        {gridDraftDate ? (
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-semibold text-secondary-500">
+                              {new Date(`${gridDraftDate}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                            </span>
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-lg font-black text-secondary-900 tracking-tight">{formatIDR(gridDraftPrice ?? boat.priceValue)}</span>
+                              <span className="text-2xs font-bold uppercase tracking-widest text-secondary-300">/ boat</span>
+                            </div>
+                          </div>
+                        ) : null}
+                        <button
+                          type="button"
+                          className={cn(
+                            "inline-flex h-11 w-full items-center justify-center rounded-full text-sm font-bold transition-all duration-200",
+                            gridDraftDate
+                              ? "bg-primary-600 text-white shadow-card hover:scale-101 hover:bg-primary-600-strong active:scale-98"
+                              : "bg-neutral-100 text-secondary-300 cursor-not-allowed"
+                          )}
+                          onClick={() => { confirmPickDayForBoat(boat, gridDraftDate); setGridDetailBoat(null); }}
+                          disabled={!gridDraftDate}
+                        >
+                          Confirm date
+                        </button>
+                      </div>
+                    ) : (
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-baseline gap-x-1">
                         <span className="text-sm font-medium text-secondary-400">from</span>
@@ -4364,7 +4651,10 @@ function StepTwo({
                         <span className="text-sm font-medium text-secondary-400">/ boat</span>
                       </div>
                       {hasDateCriteria && isBoatSelected ? (
-                        <button type="button" onClick={() => { setGridDetailBoat(null); focusStepOne(); }}
+                        <button type="button" onClick={() => {
+                            if (gridCanPickDayInline) { startGridPickingDate(); return; }
+                            setGridDetailBoat(null); focusStepOne();
+                          }}
                           className="shrink-0 h-11 px-6 rounded-full border border-[#2563eb]/50 bg-[#2563eb]/20 text-sm font-semibold text-[#60a5fa] transition hover:bg-[#2563eb]/30 flex items-center gap-1.5">
                           <Calendar className="h-4 w-4" />Change date
                         </button>
@@ -4375,15 +4665,11 @@ function StepTwo({
                         </button>
                       ) : hasDateCriteria ? (
                         <button type="button" onClick={() => {
+                            if (gridCanPickDayInline) { startGridPickingDate(); return; }
                             const boatId = boat.id;
                             setGridDetailBoat(null);
                             if (boat.isPartner) {
                               setTimeout(() => setPartnerBoat(boat), 430);
-                            } else if (dateMode === "flex" && hasRange) {
-                              if (boatId !== selectedBoatId) {
-                                onSelectFlexDate?.("");
-                              }
-                              setTimeout(() => openPickDayMode(boatId), 430);
                             } else {
                               setTimeout(() => onSelectBoatId(boatId), 430);
                             }
@@ -4404,6 +4690,7 @@ function StepTwo({
                         </button>
                       )}
                     </div>
+                    )}
                   </div>
                 </motion.div>
               </motion.div>
@@ -5314,7 +5601,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 ref={carouselRef}
                 className={cn(
                   "no-scrollbar flex overflow-x-auto pb-4 scroll-smooth [-webkit-overflow-scrolling:touch] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-                  !showAllStyles ? "snap-x snap-proximity -mx-4 sm:mx-0 sm:gap-4 sm:pb-4" : "sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3 flex flex-col overflow-visible gap-4"
+                  !showAllStyles ? "snap-x snap-mandatory -mx-4 sm:mx-0 sm:gap-4 sm:pb-4" : "sm:grid sm:gap-4 sm:overflow-visible sm:pb-0 sm:grid-cols-2 lg:grid-cols-3 flex flex-col overflow-visible gap-4"
                 )}
               >
               {styles.map((style) => {
@@ -7320,6 +7607,7 @@ function StepFive({
   const [isReserving, setIsReserving] = useState(false);
   const handleReserve = () => {
     if (!isReserveEnabled || isReserving) return;
+    window.dispatchEvent(new CustomEvent("collapse-sticky-bar"));
     setIsReserving(true);
     onReserve?.();
     setTimeout(() => setIsReserving(false), 1000);
@@ -7415,6 +7703,13 @@ function StepFive({
                             ) : (
                               <div className="text-sm text-secondary-500">No extras selected.</div>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => onOpenManageExtras?.()}
+                              className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
+                            >
+                              <Plus className="h-4 w-4" /> Add Extras
+                            </button>
                           </div>
                         </motion.div>
                       )}
@@ -7426,7 +7721,7 @@ function StepFive({
             </div>
 
             {/* Transfer — separate card */}
-            <button type="button" onClick={() => setIsTransferOpen(true)}
+            <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent("collapse-sticky-bar")); setIsTransferOpen(true); }}
               className={cn("flex w-full items-center gap-3.5 border bg-white p-4 text-left transition-all", CARD.radius, selectedTransferId !== null ? `border-primary-200 ${CARD.shadow}` : "border-neutral-200")}>
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600">
                 <Car className="h-5 w-5" strokeWidth={1.5} />
@@ -7442,7 +7737,7 @@ function StepFive({
             </button>
 
             {/* Insurance — separate card */}
-            <button type="button" onClick={() => setIsInsuranceOpen(true)}
+            <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent("collapse-sticky-bar")); setIsInsuranceOpen(true); }}
               className={cn("flex w-full items-center gap-3.5 border bg-white p-4 text-left transition-all", CARD.radius, selectedCoverId !== null ? `border-primary-200 ${CARD.shadow}` : "border-neutral-200")}>
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600">
                 <ShieldCheck className="h-5 w-5" strokeWidth={1.5} />
@@ -10165,13 +10460,13 @@ export default function Premium_Private_With_Vibe() {
   const covers = allCovers || [];
   // State Declarations
   const [selectedBoatId, setSelectedBoatId] = useState(null);
-  const [dateMode, setDateMode] = useState(() => {
-    const p = new URLSearchParams(window.location.search);
-    return p.get("date") ? "exact" : "flex";
-  });
+  const [dateMode, setDateMode] = useState("exact");
   const [exactDate, setExactDate] = useState(() => {
     const p = new URLSearchParams(window.location.search);
-    return p.get("date") || "";
+    if (p.get("date")) return p.get("date");
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   });
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
@@ -10186,6 +10481,33 @@ export default function Premium_Private_With_Vibe() {
     const n = parseInt(p.get("kids") || "0", 10);
     return isNaN(n) || n < 0 ? 0 : n;
   });
+  // Confirmed search criteria — only updated when the user presses "Search",
+  // so the boat list doesn't refetch/reorder on every date/guest edit.
+  const [searchDateMode, setSearchDateMode] = useState(dateMode);
+  const [searchExactDate, setSearchExactDate] = useState(exactDate);
+  const [searchRangeStart, setSearchRangeStart] = useState(rangeStart);
+  const [searchRangeEnd, setSearchRangeEnd] = useState(rangeEnd);
+  const [searchAdults, setSearchAdults] = useState(adults);
+  const [searchKids, setSearchKids] = useState(kids);
+  const searchTotalGuests = searchAdults + searchKids;
+  const searchHasDateCriteria = searchDateMode === "exact"
+    ? !!searchExactDate
+    : !!(searchRangeStart && searchRangeEnd);
+  const commitSearch = useCallback(() => {
+    setSearchDateMode(dateMode);
+    setSearchExactDate(exactDate);
+    setSearchRangeStart(rangeStart);
+    setSearchRangeEnd(rangeEnd);
+    setSearchAdults(adults);
+    setSearchKids(kids);
+  }, [dateMode, exactDate, rangeStart, rangeEnd, adults, kids]);
+  const hasPendingSearchChanges =
+    dateMode !== searchDateMode ||
+    exactDate !== searchExactDate ||
+    rangeStart !== searchRangeStart ||
+    rangeEnd !== searchRangeEnd ||
+    adults !== searchAdults ||
+    kids !== searchKids;
   const [dateSelectionPreference, setDateSelectionPreference] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return p.get("date") ? "pickNow" : "pickLater";
@@ -10210,11 +10532,12 @@ export default function Premium_Private_With_Vibe() {
   });
   const [selectedCoverId, setSelectedCoverId] = useState(null);
   const [availabilityMap, setAvailabilityMap] = useState({});
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
   const [calendarAvailMap, setCalendarAvailMap] = useState({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     const dateParam = p.get("date");
-    const d = dateParam ? new Date(dateParam + "T00:00:00") : new Date();
+    const d = dateParam ? new Date(dateParam + "T00:00:00") : new Date(Date.now() + 24 * 60 * 60 * 1000);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [tourDetails, setTourDetails] = useState(null);
@@ -10234,6 +10557,7 @@ export default function Premium_Private_With_Vibe() {
   const [specialRequests, setSpecialRequests] = useState("");
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedLiability, setAgreedLiability] = useState(false);
+  const [supportChildren, setSupportChildren] = useState(false);
   const { fetchTourDetail } = useTours();
 
   useEffect(() => {
@@ -10340,20 +10664,22 @@ export default function Premium_Private_With_Vibe() {
       urlCoverAppliedRef.current = true;
     }
   }, [covers]);
-  // Fetch availability from backend when user selects a date or date range
+  // Fetch availability from backend when user confirms a date or date range via Search
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
-    const hasExact = dateMode === "exact" && exactDate;
-    const hasRange = dateMode !== "exact" && rangeStart && rangeEnd;
+    const hasExact = searchDateMode === "exact" && searchExactDate;
+    const hasRange = searchDateMode !== "exact" && searchRangeStart && searchRangeEnd;
     if (!hasExact && !hasRange) {
       setAvailabilityMap({});
+      setIsAvailabilityLoading(false);
       return;
     }
+    setIsAvailabilityLoading(true);
     const fetchAvailability = async () => {
       const results = {};
       const queryParams = hasExact
-        ? `?date=${exactDate}`
-        : `?start=${rangeStart}&end=${rangeEnd}`;
+        ? `?date=${searchExactDate}`
+        : `?start=${searchRangeStart}&end=${searchRangeEnd}`;
       try {
         await Promise.all(
           yachtOptions.map(async (yacht) => {
@@ -10374,10 +10700,12 @@ export default function Premium_Private_With_Vibe() {
         setAvailabilityMap(results);
       } catch (err) {
         console.error("Global fetch availability error:", err);
+      } finally {
+        setIsAvailabilityLoading(false);
       }
     };
     fetchAvailability();
-  }, [yachtOptions, dateMode, exactDate, rangeStart, rangeEnd]);
+  }, [yachtOptions, searchDateMode, searchExactDate, searchRangeStart, searchRangeEnd]);
 
   // Preload availability for calendar month when boat is selected or month changes
   useEffect(() => {
@@ -10640,16 +10968,16 @@ export default function Premium_Private_With_Vibe() {
   const canProceedFromStepOne = hasDateCriteria && totalGuests > 0;
   const boatAvailability = useMemo(() => {
     return yachtOptions.reduce((acc, yacht) => {
-      const capacityOk = totalGuests <= yacht.people;
+      const capacityOk = searchTotalGuests <= yacht.people;
       let availableDates = [];
       // available = date availability only (not capacity)
       let dateAvailable = true;
-      if (dateMode === "exact") {
-        if (exactDate) {
-          dateAvailable = isDateAvailable(yacht.id, exactDate);
+      if (searchDateMode === "exact") {
+        if (searchExactDate) {
+          dateAvailable = isDateAvailable(yacht.id, searchExactDate);
         }
-      } else if (rangeStart && rangeEnd) {
-        availableDates = getAvailableDates(yacht.id, rangeStart, rangeEnd);
+      } else if (searchRangeStart && searchRangeEnd) {
+        availableDates = getAvailableDates(yacht.id, searchRangeStart, searchRangeEnd);
         dateAvailable = availableDates.length > 0;
       }
       acc[yacht.id] = {
@@ -10660,10 +10988,11 @@ export default function Premium_Private_With_Vibe() {
       };
       return acc;
     }, {});
-  }, [dateMode, exactDate, rangeStart, rangeEnd, totalGuests, yachtOptions, isDateAvailable, getAvailableDates]);
+  }, [searchDateMode, searchExactDate, searchRangeStart, searchRangeEnd, searchTotalGuests, yachtOptions, isDateAvailable, getAvailableDates]);
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
+  const donationAmount = Math.round(totalPrice * 0.01);
   const handleOpenCheckout = () => {
     const analyticsItem = buildTourAnalyticsItem({
       itemId: selectedYacht?.tourId ?? selectedYacht?.id,
@@ -10711,6 +11040,7 @@ export default function Premium_Private_With_Vibe() {
       analyticsCurrency: "IDR",
       analyticsTotal: String(totalPrice),
       ...(isBirthday ? { is_birthday: "1" } : {}),
+      ...(supportChildren ? { donationAmount: String(donationAmount) } : {}),
     });
     if (selectedExtrasSummary.length) {
       params.set("extras", JSON.stringify(selectedExtrasSummary.map(i => ({
@@ -10726,10 +11056,10 @@ export default function Premium_Private_With_Vibe() {
     window.location.href = `/payment?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
   };
   const availableYachts = useMemo(() => {
-    const baseList = yachtOptions.filter((yacht) => totalGuests <= yacht.people);
-    if (!hasDateCriteria) return baseList;
+    const baseList = yachtOptions.filter((yacht) => searchTotalGuests <= yacht.people);
+    if (!searchHasDateCriteria) return baseList;
     return baseList.filter((yacht) => boatAvailability[yacht.id]?.available);
-  }, [boatAvailability, hasDateCriteria, totalGuests]);
+  }, [boatAvailability, searchHasDateCriteria, searchTotalGuests]);
   const [tourInfoTab, setTourInfoTab] = useState("included");
   const [tourInfoContext, setTourInfoContext] = useState(null);
   const [isTourInfoOpen, setIsTourInfoOpen] = useState(false);
@@ -10791,7 +11121,7 @@ export default function Premium_Private_With_Vibe() {
     });
   };
   useEffect(() => {
-    if (!hasDateCriteria) {
+    if (!searchHasDateCriteria) {
       if (selectedBoatId) setSelectedBoatId(null);
       return;
     }
@@ -10802,7 +11132,7 @@ export default function Premium_Private_With_Vibe() {
     if (selectedBoatId && !availableYachts.some((yacht) => yacht.id === selectedBoatId)) {
       setSelectedBoatId(null);
     }
-  }, [availableYachts, selectedBoatId, hasDateCriteria]);
+  }, [availableYachts, selectedBoatId, searchHasDateCriteria]);
   useEffect(() => {
     if (dateMode === "exact") {
       setRangeStart("");
@@ -10962,18 +11292,20 @@ export default function Premium_Private_With_Vibe() {
                 window.scrollTo({ top: titleBottom - (isMobileView ? navHeight : 0), behavior: "smooth" });
               }
             }}
+            onConfirmSearch={commitSearch}
+            hasPendingChanges={hasPendingSearchChanges}
             globalAvailabilityMap={globalAvailabilityMap}
           />
         </Hero>
         <div className="relative">
             <StepTwo
-              dateMode={dateMode}
-              exactDate={exactDate}
-              rangeStart={rangeStart}
-              rangeEnd={rangeEnd}
-              groupSize={totalGuests}
-              adults={adults}
-              kids={kids}
+              dateMode={searchDateMode}
+              exactDate={searchExactDate}
+              rangeStart={searchRangeStart}
+              rangeEnd={searchRangeEnd}
+              groupSize={searchTotalGuests}
+              adults={searchAdults}
+              kids={searchKids}
               selectedBoatId={selectedBoatId}
               onSelectBoatId={(id) => {
                 setSelectedBoatId(id);
@@ -10981,13 +11313,14 @@ export default function Premium_Private_With_Vibe() {
                 setTimeout(() => {
                   const target = document.getElementById("step-2");
                   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-                  if (!hasDateCriteria) {
+                  if (!searchHasDateCriteria) {
                     window.dispatchEvent(new CustomEvent("expand-sticky-bar"));
                   }
                 }, 500);
               }}
               availabilityByBoat={boatAvailability}
-              hasDateCriteria={hasDateCriteria}
+              hasDateCriteria={searchHasDateCriteria}
+              isAvailabilityLoading={isAvailabilityLoading}
               dateSelectionPreference={dateSelectionPreference}
               onDateSelectionPreference={setDateSelectionPreference}
               selectedFlexDate={selectedFlexDate}
@@ -11137,13 +11470,12 @@ export default function Premium_Private_With_Vibe() {
         <Modal
           isOpen={isTourInfoOpen}
           onClose={() => setIsTourInfoOpen(false)}
-          maxWidth="max-w-4xl"
+          maxWidth="max-w-xl"
           bodyClassName="p-0"
           showClose={false}
         >
           <TourInfoModal
             activeTab={tourInfoTab}
-            onTabChange={setTourInfoTab}
             onClose={() => setIsTourInfoOpen(false)}
           />
         </Modal>
@@ -11226,7 +11558,13 @@ export default function Premium_Private_With_Vibe() {
                 setCalendarMonth(`${y}-${m}`);
               }}
               selectedBoatId={selectedBoatId}
-              onOpenManageExtras={() => setIsManageExtrasOpen(true)}
+              onOpenManageExtras={() => {
+                setShowExtrasSection(true);
+                setTimeout(() => {
+                  const target = document.getElementById("step-6");
+                  if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 100);
+              }}
               onChangeExtraQty={handleExtraQtyChange}
               onReserve={handleOpenCheckout}
               transfers={transfers}
@@ -11271,6 +11609,9 @@ export default function Premium_Private_With_Vibe() {
                     onSetAgreedTerms={setAgreedTerms}
                     agreedLiability={agreedLiability}
                     onSetAgreedLiability={setAgreedLiability}
+                    donationAmount={donationAmount}
+                    supportChildren={supportChildren}
+                    onSetSupportChildren={setSupportChildren}
                     onFinalize={handleApplyCheckout}
                     onCancel={() => {
                       setIsCheckoutOpen(false);
@@ -11301,6 +11642,8 @@ export default function Premium_Private_With_Vibe() {
         guestFeeTotal={guestFeeTotal}
         totalGuests={totalGuests}
         canContinue={canProceedFromStepOne}
+        onConfirmSearch={commitSearch}
+        hasPendingChanges={hasPendingSearchChanges}
         onContinue={() => {
           const reviewEl = document.getElementById("step-review");
           if (reviewEl && reviewEl.getBoundingClientRect().top < window.innerHeight) {
@@ -11343,6 +11686,9 @@ function StepCheckout({
   onSetAgreedTerms,
   agreedLiability,
   onSetAgreedLiability,
+  donationAmount = 0,
+  supportChildren = false,
+  onSetSupportChildren,
   onFinalize,
   onCancel,
 }) {
@@ -11465,7 +11811,7 @@ function StepCheckout({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                       <span className="font-bold text-secondary-900">Pay in full</span>
-                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice)}</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice + (supportChildren ? donationAmount : 0))}</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
                       Secure your boat immediately with a single seamless payment.
@@ -11497,13 +11843,40 @@ function StepCheckout({
                         <span className="font-bold text-secondary-900">Pay 50% deposit</span>
                         <span className="rounded-full border border-primary-200 bg-primary-50/50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-primary-600">Flexible</span>
                       </div>
-                      <span className="font-bold text-secondary-900">{formatIDR(partPrice)}</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(partPrice + (supportChildren ? donationAmount : 0))}</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      Pay {formatIDR(partPrice)} now, and the rest ({formatIDR(totalPrice - partPrice)}) on the day.
+                      Pay {formatIDR(partPrice + (supportChildren ? donationAmount : 0))} now, and the rest ({formatIDR(totalPrice - partPrice)}) on the day.
                     </div>
                   </div>
                 </button>
+
+                <label
+                  htmlFor="checkout-support-children"
+                  className={cn(
+                    "flex w-full cursor-pointer items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
+                    supportChildren
+                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
+                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+                  )}
+                >
+                  <input
+                    id="checkout-support-children"
+                    type="checkbox"
+                    checked={supportChildren}
+                    onChange={(e) => onSetSupportChildren?.(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 accent-primary-600 focus:ring-primary-600"
+                  />
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                      <span className="font-bold text-secondary-900">Support children in need</span>
+                      <span className="font-bold text-secondary-900">+{formatIDR(donationAmount)}</span>
+                    </div>
+                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                      By checking this box, 1% of your booking will be donated to help orphaned children. Every contribution, no matter how small, makes a real difference.
+                    </div>
+                  </div>
+                </label>
               </div>
             )}
 

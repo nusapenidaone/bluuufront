@@ -214,6 +214,31 @@ function SkeletonCard() {
   );
 }
 
+function SkeletonBoatCard({ className }) {
+  return (
+    <div className={cn("relative rounded-2xl sm:rounded-3xl border border-neutral-200 bg-white overflow-hidden", className)}>
+      <div className="relative aspect-[3/2] shrink-0 overflow-hidden bg-neutral-200">
+        <motion.div
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent"
+          animate={{ x: ["-100%", "100%"] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "linear", repeatDelay: 0.3 }}
+        />
+      </div>
+      <div className="p-4 sm:p-5 sm:pt-4 space-y-2.5">
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-2/5 rounded-lg bg-neutral-200 animate-pulse" />
+          <div className="h-4 w-14 rounded-full bg-neutral-200 animate-pulse" />
+        </div>
+        <div className="h-3.5 w-3/5 rounded-lg bg-neutral-200 animate-pulse" />
+        <div className="flex items-center justify-between pt-2">
+          <div className="h-4 w-12 rounded-lg bg-neutral-200 animate-pulse" />
+          <div className="h-6 w-20 rounded-lg bg-neutral-200 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Global formatters to bridge legacy utility functions with React Context
 const CurrencyBridge = () => {
   const { formatPrice } = useCurrency();
@@ -2018,6 +2043,8 @@ function StepOne({
   totalGuests,
   canContinue,
   onContinue,
+  onConfirmSearch,
+  hasPendingChanges,
   globalAvailabilityMap,
   filterDate,
   onMonthChange,
@@ -2038,11 +2065,36 @@ function StepOne({
   const contacts = useSiteContacts();
 
   const [openPanel, setOpenPanel] = useState(null); // "dates" | "guests" | null
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 639px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const sheetMotion = isMobile
+    ? {
+        initial: { y: "100%" },
+        animate: { y: 0 },
+        exit: { y: "100%" },
+        transition: { duration: 0.32, ease: [0.32, 0.72, 0, 1] },
+      }
+    : {
+        initial: { opacity: 0, y: -4, scale: 0.98 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        exit: { opacity: 0, y: -4, scale: 0.98 },
+        transition: { duration: 0.15, ease: "easeOut" },
+      };
   useEffect(() => {
     if (!openPanel || typeof document === "undefined") return;
     const orig = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("wa-hidden");
+    // Only lock background scroll for the mobile full-screen sheet — desktop's small
+    // dropdown should never disable the page scrollbar.
+    if (isMobile) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("wa-hidden");
+    }
     // Scroll the dropdown panel into center of viewport when dates panel opens (skip if omitId = sticky bar)
     if (openPanel === "dates" && !omitId) {
       document.body.style.overflow = orig;
@@ -2058,7 +2110,7 @@ function StepOne({
       }, 50);
     }
     return () => { document.body.style.overflow = orig; document.body.classList.remove("wa-hidden"); };
-  }, [openPanel]);
+  }, [openPanel, isMobile, omitId]);
   const barRef = useRef(null);
   const panelRef = useRef(null);
   const hoveringRef = useRef(false);
@@ -2137,6 +2189,20 @@ function StepOne({
       <div className={omitId ? "mx-auto max-w-3xl" : "mx-auto sm:max-w-3xl px-2 sm:px-6"}>
         {/* Search Bar */}
         <div id="step1-bar" ref={barRef} className="relative flex items-center rounded-full border border-neutral-200 bg-white shadow-sm transition-shadow hover:shadow-md">
+          <AnimatePresence>
+            {openPanel && (
+              <motion.div
+                key="mobile-sheet-backdrop"
+                className="sm:hidden fixed inset-0 z-[10000] bg-black/30 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={() => setOpenPanel(null)}
+                aria-hidden="true"
+              />
+            )}
+          </AnimatePresence>
           {/* Dates pill */}
           <div id="step1-dates-pill" className="relative flex-1 min-w-0">
             <button
@@ -2158,15 +2224,12 @@ function StepOne({
               {openPanel === "dates" && (
                 <motion.div
                   ref={panelRef}
-                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="absolute left-0 top-full z-50 mt-2 w-max max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:bg-black/30 max-sm:backdrop-blur-sm max-sm:z-[10001]"
+                  {...sheetMotion}
+                  className="absolute left-0 top-full z-50 mt-2 w-max max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:pointer-events-none max-sm:z-[10001]"
                   onMouseEnter={() => { hoveringRef.current = true; }}
                   onMouseLeave={() => { hoveringRef.current = false; }}
                 >
-                  <div className="step1-date-dropdown rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full max-sm:max-h-[92dvh] max-sm:overflow-y-auto max-sm:p-4">
+                  <div className="step1-date-dropdown pointer-events-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full max-sm:max-h-[92dvh] max-sm:overflow-y-auto max-sm:p-4">
                     {/* Mobile close button */}
                     <div className="sm:hidden flex items-center justify-between mb-3">
                       <span className="text-base font-semibold text-secondary-900">Select dates</span>
@@ -2211,10 +2274,6 @@ function StepOne({
                         rangeEnd={rangeEnd}
                         onRangeStartChange={onRangeStartChange}
                         onRangeEndChange={onRangeEndChange}
-                        onDateComplete={() => {
-                          clearTimeout(autoCloseTimerRef.current);
-                          autoCloseTimerRef.current = setTimeout(() => setOpenPanel("guests"), 350);
-                        }}
                         filterDate={filterDate}
                         onMonthChange={onMonthChange}
                         globalAvailabilityMap={globalAvailabilityMap}
@@ -2258,15 +2317,12 @@ function StepOne({
             <AnimatePresence>
               {openPanel === "guests" && (
                 <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                  className="absolute left-0 top-full z-50 mt-2 w-max max-w-xs max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:max-w-none max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:bg-black/30 max-sm:backdrop-blur-sm max-sm:z-[10001]"
+                  {...sheetMotion}
+                  className="absolute left-0 top-full z-50 mt-2 w-max max-w-xs max-sm:fixed max-sm:inset-0 max-sm:mt-0 max-sm:w-full max-sm:max-w-none max-sm:h-full max-sm:flex max-sm:items-end max-sm:justify-center max-sm:pointer-events-none max-sm:z-[10001]"
                   onMouseEnter={() => { hoveringRef.current = true; }}
                   onMouseLeave={() => { hoveringRef.current = false; }}
                 >
-                  <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 text-left max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full">
+                  <div className="pointer-events-auto rounded-2xl border border-neutral-200 bg-white p-5 shadow-xl shadow-black/8 text-left max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:w-full">
                     {/* Mobile close button */}
                     <div className="sm:hidden flex items-center justify-between mb-3">
                       <span className="text-base font-semibold text-secondary-900">Guests</span>
@@ -2379,8 +2435,9 @@ function StepOne({
           <div className="pr-2 sm:pr-3.5 shrink-0">
             <button
               type="button"
-              onClick={() => { setOpenPanel(null); onContinue(); }}
+              onClick={() => { onConfirmSearch?.(); setOpenPanel(null); onContinue(); }}
               disabled={!canContinue}
+              style={hasPendingChanges ? { animation: "search-btn-pulse 1.6s ease-out infinite" } : undefined}
               className={cn(
                 "flex items-center justify-center rounded-full transition-all",
                 "h-10 w-10 sm:h-auto sm:w-auto sm:gap-2 sm:px-6 sm:py-3 text-sm font-semibold",
@@ -2389,13 +2446,20 @@ function StepOne({
                   : "bg-neutral-100 text-neutral-300 cursor-not-allowed"
               )}
             >
-              <span className="hidden sm:inline">Continue</span>
+              <span className="hidden sm:inline">Search</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
         </div>
       </div>
     </div>
+    <style>{`
+      @keyframes search-btn-pulse {
+        0%   { box-shadow: 0 0 0 0 rgba(37,99,235,0.5); }
+        60%  { box-shadow: 0 0 0 10px rgba(37,99,235,0.12); }
+        100% { box-shadow: 0 0 0 16px rgba(37,99,235,0); }
+      }
+    `}</style>
     </>
   );
 }
@@ -2460,6 +2524,11 @@ function StickyBookingBar(props) {
     };
     window.addEventListener("expand-sticky-bar", handler);
     return () => window.removeEventListener("expand-sticky-bar", handler);
+  }, []);
+  useEffect(() => {
+    const handler = () => setIsExpanded(false);
+    window.addEventListener("collapse-sticky-bar", handler);
+    return () => window.removeEventListener("collapse-sticky-bar", handler);
   }, []);
 
   const rangeDays = useMemo(() => {
@@ -2806,7 +2875,15 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
   }
   return null;
 }
-function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
+const TOUR_INFO_TAB_TITLES = {
+  included: "What's included",
+  pickup: "Pickup",
+  safety: "Safety",
+  cancellation: "Cancellation",
+  weather: "Weather Guarantee",
+  faq: "FAQ",
+};
+function TourInfoModal({ activeTab = "included", onClose }) {
   const [includedRestaurantPopup, setIncludedRestaurantPopup] = useState(null);
   const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({
     ...card,
@@ -2826,23 +2903,12 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
       icon: ICON_MAP[item.icon]
     }))
   }));
-  const [internalTab, setInternalTab] = useState(activeTab);
-  useEffect(() => {
-    setInternalTab(activeTab);
-  }, [activeTab]);
-  const handleTabChange = (id) => {
-    setInternalTab(id);
-    onTabChange?.(id);
-  };
   return (
     <>
-      <div className="flex h-full w-full flex-col bg-white p-0 md:h-80vh">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
-          <div>
-            <div className="text-base font-semibold text-secondary-900">Tour info</div>
-            <div className="mt-0.5 text-sm text-secondary-500">
-              Whats included, pickup, and safety all in one place.
-            </div>
+      <div className="flex max-h-[85vh] w-full flex-col bg-white p-0">
+        <div className="flex shrink-0 items-center justify-between gap-4 border-b border-neutral-100 bg-neutral-50/60 px-6 py-5">
+          <div className="text-base font-semibold text-secondary-900">
+            {TOUR_INFO_TAB_TITLES[activeTab] || "Tour info"}
           </div>
           <button
             type="button"
@@ -2853,35 +2919,14 @@ function TourInfoModal({ activeTab = "included", onTabChange, onClose }) {
             <X className="w-5 h-5 text-secondary-600" />
           </button>
         </div>
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div className="border-b border-neutral-200 px-6">
-            <div className="hide-scrollbar flex flex-nowrap items-center gap-x-5 overflow-x-auto py-3 text-sm text-secondary-500 sm:flex-wrap sm:overflow-visible">
-              {INFO_DRAWER_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={cn(
-                    "inline-flex shrink-0 items-center whitespace-nowrap border-b-2 border-transparent py-1 text-sm font-semibold transition duration-200 ease-out -mb-px",
-                    internalTab === tab.id
-                      ? "border-primary-600 text-primary-600 hover:text-primary-700"
-                      : "text-secondary-500 hover:text-secondary-700"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 text-sm text-secondary-600">
-            <TourTabContent
-              activeTab={internalTab}
-              includedSections={includedSections}
-              cancellationSummaryCards={cancellationSummaryCards}
-              weatherGuaranteeCards={weatherGuaranteeCards}
-              onRestaurantClick={setIncludedRestaurantPopup}
-            />
-          </div>
+        <div className="tour-modal-light flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 text-sm text-secondary-600">
+          <TourTabContent
+            activeTab={activeTab}
+            includedSections={includedSections}
+            cancellationSummaryCards={cancellationSummaryCards}
+            weatherGuaranteeCards={weatherGuaranteeCards}
+            onRestaurantClick={setIncludedRestaurantPopup}
+          />
         </div>
       </div>
       <RestaurantModal
@@ -3073,6 +3118,7 @@ function StepTwo({
   onSelectBoatId,
   availabilityByBoat,
   hasDateCriteria,
+  isAvailabilityLoading = false,
   dateSelectionPreference,
   onDateSelectionPreference,
   selectedFlexDate,
@@ -3992,6 +4038,14 @@ function StepTwo({
             </p>
           </div>
 
+          {isAvailabilityLoading && hasDateCriteria ? (
+            <div className="flex overflow-x-auto gap-3 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:gap-4 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }, (_, i) => (
+                <SkeletonBoatCard key={`boat-skel-${i}`} className="w-[86vw] shrink-0 sm:w-auto" />
+              ))}
+            </div>
+          ) : (
+          <>
           {(() => {
             if (!hasDateCriteria) return null;
             const soldOutCount = sorted.filter(b => availabilityByBoat?.[b.id]?.available === false).length;
@@ -4133,6 +4187,8 @@ function StepTwo({
             </div>
           )}
           {/* Feature checklists now inside individual cards */}
+          </>
+          )}
         </PremiumContainer>
       </PremiumSection>
       <Modal
@@ -6503,7 +6559,6 @@ function StepFive({
   onPendingTransferModalConsumed,
 }) {
   const [activeEditor, setActiveEditor] = useState(null);
-  const [activeDrawer, setActiveDrawer] = useState(null);
   const contacts = useSiteContacts();
   const totalGuests = (adults || 0) + (kids || 0);
   const isDateSelected = dateLabel && dateLabel !== "Date not selected";
@@ -6633,10 +6688,10 @@ function StepFive({
   };
   const handleReserve = () => {
     if (!isReserveEnabled) return;
+    window.dispatchEvent(new CustomEvent("collapse-sticky-bar"));
     onReserve?.();
   };
   return (
-    <>
     <PremiumSection
       id="step-review"
       backgroundClassName={SECTION_BACKGROUNDS.mist}
@@ -6827,7 +6882,7 @@ function StepFive({
             {/* Add-ons: Transfer & Insurance — Variant C style */}
             <div className="mt-4 space-y-3">
               {/* Transfer — compact summary row */}
-              <button type="button" onClick={() => setExpandedRow("transfer-modal")}
+              <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent("collapse-sticky-bar")); setExpandedRow("transfer-modal"); }}
                 style={!transferConfirmed ? { animation: "addon-pulse 2s ease-out infinite" } : undefined}
                 className={cn("flex w-full items-center gap-3.5 rounded-3xl border bg-white p-4 text-left transition-all", selectedTransferId ? "border-primary-200" : "border-neutral-200", transferConfirmed && "shadow-[0_2px_16px_rgba(0,0,0,0.07)]")}>
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600">
@@ -6846,7 +6901,7 @@ function StepFive({
               </button>
 
               {/* Insurance — compact summary row */}
-              <button type="button" onClick={() => setExpandedRow("insurance-modal")}
+              <button type="button" onClick={() => { window.dispatchEvent(new CustomEvent("collapse-sticky-bar")); setExpandedRow("insurance-modal"); }}
                 style={!coverConfirmed ? { animation: "addon-pulse 2s ease-out infinite 0.5s" } : undefined}
                 className={cn("flex w-full items-center gap-3.5 rounded-3xl border bg-white p-4 text-left transition-all", selectedCoverId ? "border-emerald-200" : "border-neutral-200", coverConfirmed && "shadow-[0_2px_16px_rgba(0,0,0,0.07)]")}>
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-primary-600">
@@ -7194,10 +7249,10 @@ function StepFive({
                 <p className="text-sm text-secondary-600"><b className="text-secondary-900">Not sure about the date?</b><br />Reserve now and change it up to 24h before the tour.</p>
               </div>
               <div className="flex items-center justify-between text-sm">
-                <button type="button" onClick={() => setActiveDrawer("cancellation")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
+                <button type="button" onClick={() => onOpenTourInfo?.("cancellation", "review")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
                   <Shield className="h-3.5 w-3.5" /> Cancellation 24 hours
                 </button>
-                <button type="button" onClick={() => setActiveDrawer("weather")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
+                <button type="button" onClick={() => onOpenTourInfo?.("weather", "review")} className="inline-flex items-center gap-1 text-primary-600 underline underline-offset-2 hover:text-primary-700 transition-colors">
                   <CloudRain className="h-3.5 w-3.5" /> Weather Guarantee
                 </button>
               </div>
@@ -7207,20 +7262,6 @@ function StepFive({
         </div>
       </PremiumContainer>
     </PremiumSection>
-    <Modal open={!!activeDrawer} onClose={() => setActiveDrawer(null)} maxWidth="max-w-xl" showClose={true} hideDragHandle
-      title={activeDrawer === "cancellation" ? "Cancellation" : "Weather Guarantee"}
-      bodyClassName="px-5 pt-0 pb-6 sm:px-6">
-      <div className="tour-modal-light">
-        <TourTabContent
-          activeTab={activeDrawer}
-          tierIndex={1}
-          includedSections={tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }))}
-          cancellationSummaryCards={(tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }))}
-          weatherGuaranteeCards={(tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }))}
-        />
-      </div>
-    </Modal>
-    </>
   );
 }
 function HeroDetails({
@@ -8948,13 +8989,13 @@ export default function Shared_tour_01() {
   const covers = allCovers || [];
   // State Declarations
   const [selectedBoatId, setSelectedBoatId] = useState(null);
-  const [dateMode, setDateMode] = useState(() => {
-    const p = new URLSearchParams(window.location.search);
-    return p.get("date") ? "exact" : "flex";
-  });
+  const [dateMode, setDateMode] = useState("exact");
   const [exactDate, setExactDate] = useState(() => {
     const p = new URLSearchParams(window.location.search);
-    return p.get("date") || "";
+    if (p.get("date")) return p.get("date");
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   });
   const [rangeStart, setRangeStart] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
@@ -8968,6 +9009,33 @@ export default function Shared_tour_01() {
     const n = parseInt(p.get("kids") || "0", 10);
     return isNaN(n) || n < 0 ? 0 : n;
   });
+  // Confirmed search criteria — only updated when the user presses "Search",
+  // so the boat list doesn't refetch/reorder on every date/guest edit.
+  const [searchDateMode, setSearchDateMode] = useState(dateMode);
+  const [searchExactDate, setSearchExactDate] = useState(exactDate);
+  const [searchRangeStart, setSearchRangeStart] = useState(rangeStart);
+  const [searchRangeEnd, setSearchRangeEnd] = useState(rangeEnd);
+  const [searchAdults, setSearchAdults] = useState(adults);
+  const [searchKids, setSearchKids] = useState(kids);
+  const searchTotalGuests = searchAdults + searchKids;
+  const searchHasDateCriteria = searchDateMode === "exact"
+    ? !!searchExactDate
+    : !!(searchRangeStart && searchRangeEnd);
+  const commitSearch = useCallback(() => {
+    setSearchDateMode(dateMode);
+    setSearchExactDate(exactDate);
+    setSearchRangeStart(rangeStart);
+    setSearchRangeEnd(rangeEnd);
+    setSearchAdults(adults);
+    setSearchKids(kids);
+  }, [dateMode, exactDate, rangeStart, rangeEnd, adults, kids]);
+  const hasPendingSearchChanges =
+    dateMode !== searchDateMode ||
+    exactDate !== searchExactDate ||
+    rangeStart !== searchRangeStart ||
+    rangeEnd !== searchRangeEnd ||
+    adults !== searchAdults ||
+    kids !== searchKids;
   const [dateSelectionPreference, setDateSelectionPreference] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     return p.get("date") ? "pickNow" : "pickLater";
@@ -8994,11 +9062,12 @@ export default function Shared_tour_01() {
   const [transferConfirmed, setTransferConfirmed] = useState(false);
   const [coverConfirmed, setCoverConfirmed] = useState(false);
   const [availabilityMap, setAvailabilityMap] = useState({});
+  const [isAvailabilityLoading, setIsAvailabilityLoading] = useState(false);
   const [calendarAvailMap, setCalendarAvailMap] = useState({});
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const p = new URLSearchParams(window.location.search);
     const dateParam = p.get("date");
-    const d = dateParam ? new Date(dateParam + "T00:00:00") : new Date();
+    const d = dateParam ? new Date(dateParam + "T00:00:00") : new Date(Date.now() + 24 * 60 * 60 * 1000);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   });
   const [tourDetails, setTourDetails] = useState(null);
@@ -9020,6 +9089,7 @@ export default function Shared_tour_01() {
   const [specialRequests, setSpecialRequests] = useState("");
   const [agreedTerms, setAgreedTerms] = useState(false);
   const [agreedLiability, setAgreedLiability] = useState(false);
+  const [supportChildren, setSupportChildren] = useState(false);
   const { fetchTourDetail } = useTours();
 
   useEffect(() => {
@@ -9133,19 +9203,21 @@ export default function Shared_tour_01() {
       urlCoverAppliedRef.current = true;
     }
   }, [covers]);
-  // Fetch availability from backend when user selects a date or date range
+  // Fetch availability from backend when user confirms a date or date range via Search
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
-    const hasExact = dateMode === "exact" && exactDate;
-    const hasRange = dateMode !== "exact" && rangeStart && rangeEnd;
+    const hasExact = searchDateMode === "exact" && searchExactDate;
+    const hasRange = searchDateMode !== "exact" && searchRangeStart && searchRangeEnd;
     if (!hasExact && !hasRange) {
       setAvailabilityMap({});
+      setIsAvailabilityLoading(false);
       return;
     }
+    setIsAvailabilityLoading(true);
     const fetchAvailability = async () => {
       const queryParams = hasExact
-        ? `?date=${exactDate}`
-        : `?start=${rangeStart}&end=${rangeEnd}`;
+        ? `?date=${searchExactDate}`
+        : `?start=${searchRangeStart}&end=${searchRangeEnd}`;
       const results = {};
       try {
         await Promise.all(
@@ -9186,10 +9258,12 @@ export default function Shared_tour_01() {
         setAvailabilityMap(results);
       } catch (err) {
         console.error("Failed to fetch shared pricing/availability:", err);
+      } finally {
+        setIsAvailabilityLoading(false);
       }
     };
     fetchAvailability();
-  }, [yachtOptions, dateMode, exactDate, rangeStart, rangeEnd]);
+  }, [yachtOptions, searchDateMode, searchExactDate, searchRangeStart, searchRangeEnd]);
 
   // Preload availability for the calendar month when boat is selected or month changes
   useEffect(() => {
@@ -9550,18 +9624,18 @@ export default function Shared_tour_01() {
   const canProceedFromStepOne = hasDateCriteria && totalGuests > 0;
   const boatAvailability = useMemo(() => {
     return yachtOptions.reduce((acc, yacht) => {
-      const capacityOk = totalGuests <= yacht.people;
+      const capacityOk = searchTotalGuests <= yacht.people;
       let availableDates = [];
       let available = capacityOk;
       let availableSeats = null;
-      if (dateMode === "exact") {
-        if (exactDate) {
-          const entry = availabilityMap[yacht.id]?.[exactDate];
+      if (searchDateMode === "exact") {
+        if (searchExactDate) {
+          const entry = availabilityMap[yacht.id]?.[searchExactDate];
           availableSeats = entry?.available_seats ?? null;
-          available = capacityOk && isDateAvailable(yacht.id, exactDate, totalGuests);
+          available = capacityOk && isDateAvailable(yacht.id, searchExactDate, searchTotalGuests);
         }
-      } else if (rangeStart && rangeEnd) {
-        availableDates = getAvailableDates(yacht.id, rangeStart, rangeEnd, totalGuests);
+      } else if (searchRangeStart && searchRangeEnd) {
+        availableDates = getAvailableDates(yacht.id, searchRangeStart, searchRangeEnd, searchTotalGuests);
         available = capacityOk && availableDates.length > 0;
         if (availableDates.length > 0) {
           const entry = availabilityMap[yacht.id]?.[availableDates[0]];
@@ -9588,10 +9662,11 @@ export default function Shared_tour_01() {
       };
       return acc;
     }, {});
-  }, [dateMode, exactDate, rangeStart, rangeEnd, totalGuests, yachtOptions, isDateAvailable, getAvailableDates, availabilityMap]);
+  }, [searchDateMode, searchExactDate, searchRangeStart, searchRangeEnd, searchTotalGuests, yachtOptions, isDateAvailable, getAvailableDates, availabilityMap]);
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
   const partPrice = Math.round(totalPrice * 0.5);
+  const donationAmount = Math.round(totalPrice * 0.01);
   const handleOpenCheckout = () => {
     const analyticsItem = buildTourAnalyticsItem({
       itemId: selectedYacht?.tourId ?? selectedYacht?.id,
@@ -9647,6 +9722,7 @@ export default function Shared_tour_01() {
       ...(_availBoatId ? { availBoatId: String(_availBoatId) } : {}),
       analyticsCurrency: "IDR",
       analyticsTotal: String(totalPrice),
+      ...(supportChildren ? { donationAmount: String(donationAmount) } : {}),
     });
     if (selectedExtrasSummary.length) {
       params.set("extras", JSON.stringify(selectedExtrasSummary.map(i => ({
@@ -9898,6 +9974,8 @@ export default function Shared_tour_01() {
               const target = document.getElementById("step-2");
               if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
+            onConfirmSearch={commitSearch}
+            hasPendingChanges={hasPendingSearchChanges}
             onMonthChange={handleGlobalMonthChange}
           />
         </Hero>
@@ -9948,6 +10026,8 @@ export default function Shared_tour_01() {
             const target = document.getElementById("step-2");
             if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
+          onConfirmSearch={commitSearch}
+          hasPendingChanges={hasPendingSearchChanges}
           onMonthChange={handleGlobalMonthChange}
         />
         <div className="relative pt-6 sm:pt-8">
@@ -9965,16 +10045,16 @@ export default function Shared_tour_01() {
               </PremiumSection>
             ) : (
               <StepTwo
-                dateMode={dateMode}
-                exactDate={exactDate}
-                rangeStart={rangeStart}
-                rangeEnd={rangeEnd}
-                groupSize={totalGuests}
-                adults={adults}
-                kids={kids}
+                dateMode={searchDateMode}
+                exactDate={searchExactDate}
+                rangeStart={searchRangeStart}
+                rangeEnd={searchRangeEnd}
+                groupSize={searchTotalGuests}
+                adults={searchAdults}
+                kids={searchKids}
                 selectedBoatId={selectedBoatId}
                 onSelectBoatId={(id) => {
-                  if (!hasDateCriteria) return;
+                  if (!searchHasDateCriteria) return;
                   setSelectedBoatId(id);
                   setTimeout(() => {
                     const target = document.getElementById("tour-details-section");
@@ -9982,7 +10062,8 @@ export default function Shared_tour_01() {
                   }, 50);
                 }}
                 availabilityByBoat={boatAvailability}
-                hasDateCriteria={hasDateCriteria}
+                hasDateCriteria={searchHasDateCriteria}
+                isAvailabilityLoading={isAvailabilityLoading}
                 dateSelectionPreference={dateSelectionPreference}
                 onDateSelectionPreference={setDateSelectionPreference}
                 selectedFlexDate={selectedFlexDate}
@@ -9995,7 +10076,7 @@ export default function Shared_tour_01() {
                 }}
                 onOpenTourInfo={openTourInfo}
                 onOpenDateModal={openSelectionModal}
-                onExactDateChange={setExactDate}
+                onExactDateChange={(d) => { setExactDate(d); setSearchExactDate(d); }}
                 boats={yachtOptions}
                 privateTours={sharedTours}
                 selectedStyleTitle={selectedStyleTitle}
@@ -10065,13 +10146,12 @@ export default function Shared_tour_01() {
         <Modal
           isOpen={isTourInfoOpen}
           onClose={() => setIsTourInfoOpen(false)}
-          maxWidth="max-w-2xl"
+          maxWidth="max-w-xl"
           bodyClassName="p-0"
           showClose={false}
         >
           <TourInfoModal
             activeTab={tourInfoTab}
-            onTabChange={setTourInfoTab}
             onClose={() => setIsTourInfoOpen(false)}
           />
         </Modal>
@@ -10093,8 +10173,8 @@ export default function Shared_tour_01() {
                     const selectedTotal = sortedByPrice.length;
                     const selectedTierIndex = selectedTotal === 3 ? selectedRank : selectedTotal === 2 ? (selectedRank === 0 ? 0 : 2) : -1;
                     const boatAvail = boatAvailability?.[selectedBoatId];
-                    const boatSoldOut = hasDateCriteria && boatAvail?.available === false;
-                    const boatTooSmall = selectedYacht && totalGuests > selectedYacht.people;
+                    const boatSoldOut = searchHasDateCriteria && boatAvail?.available === false;
+                    const boatTooSmall = selectedYacht && searchTotalGuests > selectedYacht.people;
                     const boatUnavailable = boatSoldOut || boatTooSmall;
                     return (
                       <TourDetailsCard
@@ -10231,6 +10311,9 @@ export default function Shared_tour_01() {
                     onSetAgreedTerms={setAgreedTerms}
                     agreedLiability={agreedLiability}
                     onSetAgreedLiability={setAgreedLiability}
+                    donationAmount={donationAmount}
+                    supportChildren={supportChildren}
+                    onSetSupportChildren={setSupportChildren}
                     selectedTransferId={selectedTransferId}
                     pickupAddress={pickupAddress}
                     onSetPickupAddress={setPickupAddress}
@@ -10284,6 +10367,9 @@ function StepCheckout({
   onSetAgreedTerms,
   agreedLiability,
   onSetAgreedLiability,
+  donationAmount = 0,
+  supportChildren = false,
+  onSetSupportChildren,
   selectedTransferId,
   pickupAddress,
   onSetPickupAddress,
@@ -10419,7 +10505,7 @@ function StepCheckout({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                       <span className="font-bold text-secondary-900">Pay in full</span>
-                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice)}</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice + (supportChildren ? donationAmount : 0))}</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
                       Secure your boat immediately with a single seamless payment.
@@ -10451,13 +10537,40 @@ function StepCheckout({
                         <span className="font-bold text-secondary-900">Pay 50% deposit</span>
                         <span className="rounded-full border border-primary-200 bg-primary-50/50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-primary-600">Flexible</span>
                       </div>
-                      <span className="font-bold text-secondary-900">{formatIDR(partPrice)}</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(partPrice + (supportChildren ? donationAmount : 0))}</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      Pay {formatIDR(partPrice)} now, and the rest ({formatIDR(totalPrice - partPrice)}) on the day.
+                      Pay {formatIDR(partPrice + (supportChildren ? donationAmount : 0))} now, and the rest ({formatIDR(totalPrice - partPrice)}) on the day.
                     </div>
                   </div>
                 </button>
+
+                <label
+                  htmlFor="checkout-support-children"
+                  className={cn(
+                    "flex w-full cursor-pointer items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
+                    supportChildren
+                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
+                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+                  )}
+                >
+                  <input
+                    id="checkout-support-children"
+                    type="checkbox"
+                    checked={supportChildren}
+                    onChange={(e) => onSetSupportChildren?.(e.target.checked)}
+                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 accent-primary-600 focus:ring-primary-600"
+                  />
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                      <span className="font-bold text-secondary-900">Support children in need</span>
+                      <span className="font-bold text-secondary-900">+{formatIDR(donationAmount)}</span>
+                    </div>
+                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                      By checking this box, 1% of your booking will be donated to help orphaned children. Every contribution, no matter how small, makes a real difference.
+                    </div>
+                  </div>
+                </label>
               </div>
             )}
 

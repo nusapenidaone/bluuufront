@@ -4,6 +4,20 @@ import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-mo
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
+// Tailwind needs each full class string to appear literally somewhere for JIT to generate it,
+// so maxWidth is mapped to its sm:-prefixed form here rather than concatenated at runtime.
+const SM_MAX_WIDTH = {
+  "max-w-md": "sm:max-w-md",
+  "max-w-lg": "sm:max-w-lg",
+  "max-w-xl": "sm:max-w-xl",
+  "max-w-2xl": "sm:max-w-2xl",
+  "max-w-3xl": "sm:max-w-3xl",
+  "max-w-4xl": "sm:max-w-4xl",
+  "max-w-5xl": "sm:max-w-5xl",
+  "max-w-screen-sm": "sm:max-w-screen-sm",
+  "max-w-[720px]": "sm:max-w-[720px]",
+};
+
 const Modal = ({
   isOpen,
   open,
@@ -70,7 +84,7 @@ const Modal = ({
               dark ? "bg-[#111d35] border border-white/10" : "bg-white",
               "rounded-t-3xl rounded-b-none max-h-[92dvh]",
               "sm:rounded-3xl sm:max-h-[calc(100dvh-48px)]",
-              maxWidth,
+              SM_MAX_WIDTH[maxWidth] || maxWidth,
               className
             )}
             style={{ y: dragY }}
