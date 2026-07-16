@@ -98,6 +98,7 @@ import {
   ExternalLink,
   Fish,
   Globe,
+  Heart,
   Info,
   Instagram,
   LifeBuoy,
@@ -10545,32 +10546,37 @@ function StepCheckout({
                   </div>
                 </button>
 
-                <label
-                  htmlFor="checkout-support-children"
-                  className={cn(
-                    "flex w-full cursor-pointer items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
-                    supportChildren
-                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
-                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
-                  )}
-                >
-                  <input
-                    id="checkout-support-children"
-                    type="checkbox"
-                    checked={supportChildren}
-                    onChange={(e) => onSetSupportChildren?.(e.target.checked)}
-                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-neutral-300 accent-primary-600 focus:ring-primary-600"
-                  />
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                      <span className="font-bold text-secondary-900">Support children in need</span>
-                      <span className="font-bold text-secondary-900">+{formatIDR(donationAmount)}</span>
+                <div className="mt-1 border-t border-dashed border-neutral-200 pt-3.5">
+                  <label
+                    htmlFor="checkout-support-children"
+                    className={cn(
+                      "flex w-full cursor-pointer items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
+                      supportChildren
+                        ? "border-rose-300 bg-rose-50/70 ring-1 ring-rose-300/40"
+                        : "border-rose-100 bg-rose-50/30 hover:border-rose-200 hover:bg-rose-50/50"
+                    )}
+                  >
+                    <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors", supportChildren ? "bg-rose-500 text-white" : "bg-rose-100 text-rose-500")}>
+                      <Heart className="h-4 w-4" fill={supportChildren ? "currentColor" : "none"} />
                     </div>
-                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      By checking this box, 1% of your booking will be donated to help orphaned children. Every contribution, no matter how small, makes a real difference.
+                    <div className="flex-1">
+                      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                        <span className="font-bold text-secondary-900">Support children in need</span>
+                        <span className="font-bold text-rose-600">+{formatIDR(donationAmount)}</span>
+                      </div>
+                      <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                        By checking this box, 1% of your booking will be donated to help orphaned children. Every contribution, no matter how small, makes a real difference.
+                      </div>
                     </div>
-                  </div>
-                </label>
+                    <input
+                      id="checkout-support-children"
+                      type="checkbox"
+                      checked={supportChildren}
+                      onChange={(e) => onSetSupportChildren?.(e.target.checked)}
+                      className="mt-0.5 h-5 w-5 shrink-0 rounded border-rose-300 accent-rose-500 focus:ring-rose-500"
+                    />
+                  </label>
+                </div>
               </div>
             )}
 
