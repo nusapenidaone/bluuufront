@@ -132,6 +132,7 @@ import {
   CloudRain,
   Coffee,
   ExternalLink,
+  Filter,
   Fish,
   Globe,
   Info,
@@ -2547,6 +2548,7 @@ function StepTwo({
   const [showSoldOut, setShowSoldOut] = useState(false);
   const [sort, setSort] = useState("recommended");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [partnerBoat, setPartnerBoat] = useState(null);
   const carouselRef = useRef(null);
@@ -3172,156 +3174,103 @@ function StepTwo({
           </div>
 
           {/* Filter + sort bar */}
-          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center">
-            {/* Row 1 (mobile) / left part (desktop): toggle + categories + mobile sort */}
-            {/* Wrapper keeps sort button outside overflow-x-auto so dropdown isn't clipped */}
-            <div className="flex flex-1 items-center gap-2 sm:contents">
-              <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto pb-0.5">
-                {/* All + category filter pills */}
+          <div className="mb-6 flex items-center gap-2">
+            {/* Filter dropdown (All boats + categories) */}
+            {allCategories.length > 0 && (
+              <div className="relative shrink-0">
                 <button
                   type="button"
-                  onClick={() => { setSelectedCategory(null); setFitsOnly(false); }}
+                  onClick={() => { setShowFilterMenu(v => !v); setShowSortMenu(false); }}
                   className={cn(
-                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
-                    !selectedCategory
-                      ? "border-secondary-900 bg-secondary-900 text-white shadow-sm"
-                      : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                  )}
-                >
-                  All boats
-                </button>
-
-                {allCategories.length > 0 && (
-                  <>
-                    {allCategories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                        className={cn(
-                          "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
-                          selectedCategory === cat.id
-                            ? "border-secondary-900 bg-secondary-900 text-white shadow-sm"
-                            : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                        )}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </>
-                )}
-              </div>
-
-              {/* Sort — mobile only, outside overflow-x-auto so dropdown isn't clipped */}
-              <div className="relative shrink-0 sm:hidden">
-                <button
-                  type="button"
-                  onClick={() => setShowSortMenu(v => !v)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all select-none",
-                    sort !== "recommended"
+                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all select-none",
+                    selectedCategory
                       ? "border-secondary-900 bg-secondary-900 text-white"
                       : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
                   )}
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {sort === "price" ? "By price" : sort === "comfort" ? "Largest" : sort === "soonest" ? "Soonest" : "Sort"}
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", showSortMenu && "rotate-180")} />
+                  <Filter className="h-3.5 w-3.5" />
+                  {selectedCategory ? (allCategories.find((c) => c.id === selectedCategory)?.name || "Filter") : "All boats"}
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", showFilterMenu && "rotate-180")} />
                 </button>
-                {showSortMenu && (
+                {showFilterMenu && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-                      {[
-                        { value: "recommended", label: "Recommended" },
-                        { value: "price", label: "Lowest price" },
-                        { value: "comfort", label: "Largest boat" },
-                        { value: "soonest", label: "Soonest available" },
-                      ].map((opt) => (
+                    <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)} />
+                    <div className="absolute left-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedCategory(null); setFitsOnly(false); setShowFilterMenu(false); }}
+                        className={cn(
+                          "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
+                          !selectedCategory ? "font-semibold text-primary-600" : "text-secondary-700"
+                        )}
+                      >
+                        {!selectedCategory && <Check className="h-3.5 w-3.5 text-primary-500" />}
+                        <span className={selectedCategory ? "pl-5" : ""}>All boats</span>
+                      </button>
+                      {allCategories.map((cat) => (
                         <button
-                          key={opt.value}
+                          key={cat.id}
                           type="button"
-                          onClick={() => { setSort(opt.value); setShowSortMenu(false); }}
+                          onClick={() => { setSelectedCategory(cat.id); setShowFilterMenu(false); }}
                           className={cn(
                             "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
-                            sort === opt.value ? "font-semibold text-primary-600" : "text-secondary-700"
+                            selectedCategory === cat.id ? "font-semibold text-primary-600" : "text-secondary-700"
                           )}
                         >
-                          {sort === opt.value && <Check className="h-3.5 w-3.5 text-primary-500" />}
-                          <span className={sort !== opt.value ? "pl-5" : ""}>{opt.label}</span>
+                          {selectedCategory === cat.id && <Check className="h-3.5 w-3.5 text-primary-500" />}
+                          <span className={selectedCategory !== cat.id ? "pl-5" : ""}>{cat.name}</span>
                         </button>
                       ))}
                     </div>
                   </>
                 )}
-              </div>
-            </div>
-
-            {/* Row 2 (mobile) / right part (desktop): categories (mobile) + Sort (desktop) */}
-            {allCategories.length > 0 && (
-              <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-0.5 sm:hidden">
-                {allCategories.map((cat) => (
-                  <button
-                    key={`m-${cat.id}`}
-                    type="button"
-                    onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                    className={cn(
-                      "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
-                      selectedCategory === cat.id
-                        ? "border-secondary-900 bg-secondary-900 text-white shadow-sm"
-                        : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                    )}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
               </div>
             )}
 
-            {/* Sort dropdown — desktop only, outside overflow container so dropdown isn't clipped */}
-            <div className="relative hidden shrink-0 sm:block">
-                <button
-                  type="button"
-                  onClick={() => setShowSortMenu(v => !v)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all select-none",
-                    sort !== "recommended"
-                      ? "border-secondary-900 bg-secondary-900 text-white"
-                      : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                  )}
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {sort === "price" ? "By price" : sort === "comfort" ? "Largest" : sort === "soonest" ? "Soonest" : "Sort"}
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", showSortMenu && "rotate-180")} />
-                </button>
-                {showSortMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-                      {[
-                        { value: "recommended", label: "Recommended" },
-                        { value: "price", label: "Lowest price" },
-                        { value: "comfort", label: "Largest boat" },
-                        { value: "soonest", label: "Soonest available" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => { setSort(opt.value); setShowSortMenu(false); }}
-                          className={cn(
-                            "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
-                            sort === opt.value ? "font-semibold text-primary-600" : "text-secondary-700"
-                          )}
-                        >
-                          {sort === opt.value && <Check className="h-3.5 w-3.5 text-primary-500" />}
-                          <span className={sort !== opt.value ? "pl-5" : ""}>{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
+            {/* Sort dropdown */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => { setShowSortMenu(v => !v); setShowFilterMenu(false); }}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all select-none",
+                  sort !== "recommended"
+                    ? "border-secondary-900 bg-secondary-900 text-white"
+                    : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
                 )}
-              </div>
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                {sort === "price" ? "By price" : sort === "comfort" ? "Largest" : sort === "soonest" ? "Soonest" : "Sort"}
+                <ChevronDown className={cn("h-3 w-3 transition-transform", showSortMenu && "rotate-180")} />
+              </button>
+              {showSortMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
+                  <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+                    {[
+                      { value: "recommended", label: "Recommended" },
+                      { value: "price", label: "Lowest price" },
+                      { value: "comfort", label: "Largest boat" },
+                      { value: "soonest", label: "Soonest available" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => { setSort(opt.value); setShowSortMenu(false); }}
+                        className={cn(
+                          "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
+                          sort === opt.value ? "font-semibold text-primary-600" : "text-secondary-700"
+                        )}
+                      >
+                        {sort === opt.value && <Check className="h-3.5 w-3.5 text-primary-500" />}
+                        <span className={sort !== opt.value ? "pl-5" : ""}>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+          </div>
 
           <div
             ref={carouselRef}

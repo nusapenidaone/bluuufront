@@ -79,6 +79,14 @@ export const getLunchDisplayData = (item, restaurant = null, fallbackRestaurant 
   };
 };
 
+// Schedule item titles are free-text CMS fields — capitalization is entered
+// by hand and sometimes inconsistent ("snorkeling" next to "Departure").
+// Force sentence case on display so the itinerary always reads consistently.
+export const capitalizeFirst = (value = "") => {
+  if (typeof value !== "string" || !value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+};
+
 export const resolveScheduleIcon = (title = "") => {
   const t = String(title).toLowerCase();
   if (t.includes("meet") || t.includes("pick")) return MapPin;

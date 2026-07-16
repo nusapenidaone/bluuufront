@@ -1,12 +1,12 @@
 import { Sparkles } from "lucide-react";
-import { getLunchDisplayData, sanitizeDisplayText, resolveScheduleIcon, resolveIconByName } from "../../utils/tourScheduleUtils";
+import { getLunchDisplayData, sanitizeDisplayText, resolveScheduleIcon, resolveIconByName, capitalizeFirst } from "../../utils/tourScheduleUtils";
 
 export default function ScheduleItemCompact({ item, onRestaurantClick, restaurant }) {
   const Icon = (item.icon_name && resolveIconByName(item.icon_name)) || resolveScheduleIcon(item.title);
   const detailsText = sanitizeDisplayText(item.details, { stripTrailingOne: true });
   const isLunch = /lunch/i.test(item.title);
   const lunchDisplay = isLunch ? getLunchDisplayData(item) : null;
-  const displayTitle = lunchDisplay?.title || item.title;
+  const displayTitle = capitalizeFirst(lunchDisplay?.title || item.title);
   const descriptionText = isLunch ? lunchDisplay?.description : detailsText;
   const tier = item.highlight === "premium" || item.highlight === "first-class"
     ? item.highlight

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, X, Check, Coins } from "lucide-react";
 import { useCurrency } from "../CurrencyContext";
+import { getGoogTransLang, setGoogTransLang } from "../lib/googtrans";
 
 const LANGUAGES = [
-    { code: "hy",    name: "Հայերեն",        region: "Հայաստան" },
     { code: "en",    name: "English",          region: "United States" },
     { code: "en-GB", name: "English",          region: "United Kingdom" },
     { code: "ru",    name: "Русский",          region: "Россия" },
@@ -32,6 +32,7 @@ const LANGUAGES = [
     { code: "cs",    name: "Čeština",          region: "Česká republika" },
     { code: "uk",    name: "Українська",       region: "Україна" },
     { code: "he",    name: "עברית",            region: "ישראל" },
+    { code: "hy",    name: "Հայերեն",        region: "Հայաստան" },
 ];
 
 const RECOMMENDED = ["en", "ru", "id"];
@@ -46,16 +47,8 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
         const handleOpenSettings = () => setIsOpen(true);
         window.addEventListener("open-settings", handleOpenSettings);
 
-        const getCookie = (name) => {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(";").shift();
-        };
-        const googTrans = getCookie("googtrans");
-        if (googTrans) {
-            const lang = googTrans.split("/").pop();
-            if (lang) setCurrentLang(lang);
-        }
+        const lang = getGoogTransLang();
+        if (lang) setCurrentLang(lang);
 
         const hideBanner = () => {
             const banner = document.querySelector(".goog-te-banner-frame");
@@ -82,9 +75,7 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
 
     const changeLanguage = (langCode) => {
         const code = langCode.split("-")[0];
-        const cookieValue = code === "en" ? "" : `/en/${code}`;
-        document.cookie = `googtrans=${cookieValue}; path=/`;
-        document.cookie = `googtrans=${cookieValue}; path=/; domain=.${window.location.hostname}`;
+        setGoogTransLang(code);
         setCurrentLang(langCode);
         setIsOpen(false);
         window.location.reload();

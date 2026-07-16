@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, Coins, Check, ArrowRight } from "lucide-react";
 import { useCurrency } from "../CurrencyContext";
+import { getGoogTransLang, setGoogTransLang } from "../lib/googtrans";
 
 const LANGUAGES = [
     { code: "en", name: "English", flag: "🇺🇸" },
@@ -31,22 +32,12 @@ const WelcomeModal = () => {
             setVisible(true);
         }
         // Read current google translate lang
-        const getCookie = (name) => {
-            const value = `; ${document.cookie}`;
-            const parts = value.split(`; ${name}=`);
-            if (parts.length === 2) return parts.pop().split(";").shift();
-        };
-        const googTrans = getCookie("googtrans");
-        if (googTrans) {
-            const l = googTrans.split("/").pop();
-            if (l) setLang(l);
-        }
+        const l = getGoogTransLang();
+        if (l) setLang(l);
     }, []);
 
     const applyLanguage = (code) => {
-        const cookieValue = code === "en" ? "" : `/en/${code}`;
-        document.cookie = `googtrans=${cookieValue}; path=/`;
-        document.cookie = `googtrans=${cookieValue}; path=/; domain=.${window.location.hostname}`;
+        setGoogTransLang(code);
         setLang(code);
         if (code !== "en") setPendingReload(true);
     };

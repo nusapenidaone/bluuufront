@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Check, Shield, CloudRain, Car, HelpCircle, Ship, Compass, Calendar, Clock, Users, Sun, Moon, X } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { resolveScheduleIcon, resolveIconByName, sanitizeDisplayText, getLunchDisplayData } from "../../utils/tourScheduleUtils";
+import { resolveScheduleIcon, resolveIconByName, sanitizeDisplayText, getLunchDisplayData, capitalizeFirst } from "../../utils/tourScheduleUtils";
 import Modal from "../common/Modal";
 import PhotoCarousel from "../common/PhotoCarousel";
 import { Fancybox } from "@fancyapps/ui";
@@ -272,7 +272,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
   const lunchDisplay = isLunch ? getLunchDisplayData(selected) : null;
   const isKelingkingItem = selected ? /kelingking|land\s*tour/i.test(selected.title) : false;
   const rawTitle = selected ? (lunchDisplay?.title || selected.title) : "";
-  const displayTitle = isKelingkingItem && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : rawTitle;
+  const displayTitle = isKelingkingItem && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : capitalizeFirst(rawTitle);
   const detailsText = selected ? sanitizeDisplayText(isLunch ? lunchDisplay?.description : selected.details, { stripTrailingOne: true }) : "";
   const displayTime = selected?.time ? selected.time.replace(/\./g, ":") : "";
 
@@ -315,7 +315,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     ? <span className="h-4 w-4 [&>svg]:h-full [&>svg]:w-full [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
                     : <Icon className="h-4 w-4" strokeWidth={1.5} />}
                 </div>
-                <span className={cn("text-xs font-medium text-center leading-tight max-w-[100px]", isActive ? textMain : textSub)}>{/kelingking|land\s*tour/i.test(item.title) && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : item.title}</span>
+                <span className={cn("text-xs font-medium text-center leading-tight max-w-[100px]", isActive ? textMain : textSub)}>{/kelingking|land\s*tour/i.test(item.title) && extrasCatalog != null ? "More Snorkeling or Kelingking Cliff Tour" : capitalizeFirst(item.title)}</span>
                 {tier && <span className={cn("inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider leading-none", tier === "premium" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-400/30" : "bg-emerald-500/20 text-emerald-300 border border-emerald-400/30")}><Sparkles className="h-2 w-2" />{tier === "premium" ? "Premium" : "First Class"}</span>}
               </button>
             );
@@ -341,7 +341,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     : itemTier === "first-class" ? "text-[#d4a44a]"
                     : "text-primary-500"
                   )}>{item.time ? item.time.replace(/\./g, ":") : ""}</span>
-                  <span className={cn("text-[15px] font-semibold flex-1", isActive ? textMain : textSub)}>{lunchData?.title || item.title}</span>
+                  <span className={cn("text-[15px] font-semibold flex-1", isActive ? textMain : textSub)}>{capitalizeFirst(lunchData?.title || item.title)}</span>
                   <ChevronDown className={cn("h-4 w-4 shrink-0 mt-[3px] transition-transform", textFaint, isActive && "rotate-180")} />
                 </div>
               </button>
@@ -955,7 +955,7 @@ export default function TourDetailsCard({
             {hasNav && onNext ? <button type="button" onClick={onNext} className="inline-flex items-center gap-1.5 text-sm font-bold text-primary-500 hover:text-primary-400 transition-colors">{nextLabel}<ChevronRight className="h-4 w-4" /></button> : <span />}
           </div>
           {/* Mobile reserve — full width, no icon */}
-          <div className="sm:hidden pb-8 flex justify-center">
+          <div className="sm:hidden pt-6 pb-16 flex justify-center">
             {isUnavailable ? (
               onChangeParams && (
                 <button type="button" onClick={onChangeParams}
