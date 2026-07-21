@@ -41,6 +41,6 @@ https://bluuu.tours/new/private?date=2026-07-01&adults=2&kids=1&tour=1&route=5
 
 - Если `date` передан — страница открывается в режиме **конкретной даты** (не «гибкая дата»), календарь позиционируется на нужном месяце.
 - Если `date` не передан — стандартное состояние («выбрать позже»).
-- `tour` соответствует `id` из `/api/chatbot/boats/private` или `/api/chatbot/boats/shared`.
-- `route` соответствует `id` из массива `routes` в `/api/chatbot/boats/private`.
+- `tour` соответствует `id` из `/api/v2/chatbot/boats/private` или `/api/v2/chatbot/boats/shared`.
+- `route` соответствует `id` из массива `routes` в `/api/v2/chatbot/boats/private`.
 - Для private: если передан `tour` без `route` — лодка предвыбрана, маршрут не выбран.

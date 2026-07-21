@@ -2416,7 +2416,7 @@ function StepOne({
                         </div>
                       </div>
                       {/* Mobile Continue button */}
-                      <button type="button" onClick={() => setOpenPanel(null)}
+                      <button type="button" onClick={() => { onConfirmSearch?.(); setOpenPanel(null); onContinue(); }}
                         disabled={adults < 1}
                         className={cn("sm:hidden mt-3 w-full h-11 rounded-full text-sm font-semibold transition",
                           adults >= 1

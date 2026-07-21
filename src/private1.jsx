@@ -2401,10 +2401,16 @@ function BoatMiniCarousel({
         </div>
       )}
 
-      {/* Detail popup — custom portal */}
-      {createPortal(
-        <AnimatePresence>
-          {detailBoat && (() => {
+      {/* Detail popup */}
+      <Modal
+        isOpen={!!detailBoat}
+        onClose={() => setDetailBoat(null)}
+        maxWidth="max-w-xl"
+        bodyClassName="p-0 overflow-hidden flex-1 min-h-0 flex flex-col"
+        showClose={false}
+        hideDragHandle
+      >
+        {detailBoat && (() => {
             const boat = detailBoat;
             const bf = boat.boatFeatures || {};
             const boatFeatures = getBoatFeatures(boat.boatFeatures);
@@ -2419,21 +2425,7 @@ function BoatMiniCarousel({
               setPickingDate(true);
             };
             return (
-              <motion.div
-                key="boat-detail-modal"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[10000] flex flex-col justify-end sm:flex-row sm:items-center sm:justify-center sm:px-4 sm:py-6"
-              >
-                <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setDetailBoat(null)} />
-                <motion.div
-                  initial={{ opacity: 0, y: 60 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 60 }}
-                  transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
-                  className="relative flex w-full max-h-[92dvh] flex-col overflow-hidden bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-xl sm:max-h-[calc(100dvh-48px)] shadow-2xl"
-                >
+              <>
                   {/* Photo — sticky top */}
                   <div className="relative w-full shrink-0 overflow-hidden">
                     <PhotoCarousel
@@ -2468,7 +2460,7 @@ function BoatMiniCarousel({
                   </div>
 
                   {/* Scrollable content */}
-                  <div className="flex-1 overflow-y-auto p-5 pt-4">
+                  <div className="min-h-0 flex-1 overflow-y-auto p-5 pt-4">
                     {pickingDate ? (
                       <>
                         <div className="flex items-center justify-between">
@@ -2640,13 +2632,10 @@ function BoatMiniCarousel({
                     </div>
                     )}
                   </div>
-                </motion.div>
-              </motion.div>
+              </>
             );
           })()}
-        </AnimatePresence>,
-        document.body
-      )}
+      </Modal>
     </>
   );
 }
@@ -3103,7 +3092,7 @@ function StepOne({
                           </p>
                         </div>
                       </div>
-                      <button type="button" onClick={() => setOpenPanel(null)}
+                      <button type="button" onClick={() => { onConfirmSearch?.(); setOpenPanel(null); onContinue(); }}
                         disabled={adults < 1}
                         className={cn("sm:hidden mt-3 w-full h-11 rounded-full text-sm font-semibold transition",
                           adults >= 1
@@ -3689,6 +3678,13 @@ function StepTwo({
       : dateMode === "flex" && rangeStart && rangeEnd
         ? `Flexible dates: ${formatRangeShort(rangeStart, rangeEnd)}  ${groupSize} guests`
         : "";
+  const dateSummaryCompact = !hasDateCriteria
+    ? ""
+    : dateMode === "exact" && exactDate
+      ? `${formatShortDate(exactDate)} · ${groupSize} guest${groupSize !== 1 ? "s" : ""}`
+      : dateMode === "flex" && rangeStart && rangeEnd
+        ? `${formatRangeShort(rangeStart, rangeEnd)} · ${groupSize} guest${groupSize !== 1 ? "s" : ""}`
+        : "";
   const openBoat = (boat) => {
     const now = Date.now();
     if (now - boatSelectGuardRef.current < 250) return;
@@ -4125,11 +4121,23 @@ function StepTwo({
             ];
             return (
             <div className="mb-4 sm:mb-6 space-y-2">
-              <h3 className="sm:hidden text-xl font-semibold text-secondary-900 text-left">Choose your boat</h3>
+              <div className="sm:hidden flex items-center justify-between gap-2">
+                <h3 className="text-xl font-semibold text-secondary-900 text-left">Choose your boat</h3>
+                {dateSummaryCompact && (
+                  <span className="shrink-0 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-secondary-600">
+                    {dateSummaryCompact}
+                  </span>
+                )}
+              </div>
               {/* Mobile: single scrollable row with sort + categories */}
               <div className="-mx-6 sm:mx-0">
                 <div className="flex items-center gap-2 sm:gap-4 sm:flex-wrap">
-                  <h3 className="hidden sm:block shrink-0 text-3xl font-bold tracking-tight text-secondary-900">Choose your boat</h3>
+                  <div className="hidden sm:flex sm:shrink-0 sm:flex-col sm:gap-1">
+                    <h3 className="text-3xl font-bold tracking-tight text-secondary-900">Choose your boat</h3>
+                    {dateSummaryCompact && (
+                      <span className="text-left text-sm font-semibold text-secondary-500">{dateSummaryCompact}</span>
+                    )}
+                  </div>
                   <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap">
                     <div className="shrink-0 w-2 min-w-[16px] sm:hidden" aria-hidden="true" />
                     {/* Sort button — compact on mobile, before categories */}
@@ -4243,7 +4251,9 @@ function StepTwo({
                 transition={{ duration: 0.3, ease: "easeOut" }}
               >
                 <div className="flex flex-col items-center justify-center px-6 py-0 sm:py-12 text-center">
-                  <img src={new URL("./assets/no-boats.svg", import.meta.url).href} alt="" className="mb-1.5 sm:mb-3 h-20 sm:h-36 w-auto object-contain" />
+                  <div className="mb-1.5 sm:mb-3 flex h-16 w-16 sm:h-24 sm:w-24 items-center justify-center rounded-full bg-neutral-100">
+                    <Ship className="h-7 w-7 sm:h-10 sm:w-10 text-secondary-300" strokeWidth={1.5} />
+                  </div>
                   <h4 className="text-base sm:text-lg font-bold text-secondary-900">No boats available</h4>
                   <p className="mt-1 sm:mt-1.5 max-w-[200px] sm:max-w-sm text-xs sm:text-sm text-secondary-500">
                     No boats for this date and group size. Try adjusting your search.
@@ -4446,9 +4456,15 @@ function StepTwo({
       </PremiumSection>
 
       {/* Grid detail modal — same as carousel detail popup */}
-      {createPortal(
-        <AnimatePresence>
-          {gridDetailBoat && (() => {
+      <Modal
+        isOpen={!!gridDetailBoat}
+        onClose={() => setGridDetailBoat(null)}
+        maxWidth="max-w-xl"
+        bodyClassName="p-0 overflow-hidden flex-1 min-h-0 flex flex-col"
+        showClose={false}
+        hideDragHandle
+      >
+        {gridDetailBoat && (() => {
             const boat = gridDetailBoat;
             const bf = boat.boatFeatures || {};
             const boatFeatures = getBoatFeatures(boat.boatFeatures);
@@ -4466,21 +4482,7 @@ function StepTwo({
               setGridPickingDate(true);
             };
             return (
-              <motion.div
-                key="grid-boat-detail-modal"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[10000] flex flex-col justify-end sm:flex-row sm:items-center sm:justify-center sm:px-4 sm:py-6"
-              >
-                <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setGridDetailBoat(null)} />
-                <motion.div
-                  initial={{ opacity: 0, y: 60 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 60 }}
-                  transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
-                  className="relative flex w-full max-h-[92dvh] flex-col overflow-hidden bg-white rounded-t-3xl sm:rounded-3xl sm:max-w-xl sm:max-h-[calc(100dvh-48px)] shadow-2xl"
-                >
+              <>
                   {/* Photo */}
                   <div className="relative w-full shrink-0 overflow-hidden">
                     <PhotoCarousel
@@ -4515,7 +4517,7 @@ function StepTwo({
                   </div>
 
                   {/* Scrollable content */}
-                  <div className="flex-1 overflow-y-auto p-5 pt-4">
+                  <div className="min-h-0 flex-1 overflow-y-auto p-5 pt-4">
                     {gridPickingDate ? (
                       <>
                         <div className="flex items-center justify-between">
@@ -4693,13 +4695,10 @@ function StepTwo({
                     </div>
                     )}
                   </div>
-                </motion.div>
-              </motion.div>
+              </>
             );
           })()}
-        </AnimatePresence>,
-        document.body
-      )}
+      </Modal>
 
       {/* Standalone pick-day modal — renders regardless of mini-carousel/grid view */}
       <AnimatePresence>

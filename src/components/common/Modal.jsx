@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
 import { X } from "lucide-react";
@@ -34,18 +34,65 @@ const Modal = ({
   dark = false,
   hideDragHandle = false,
   footer,
+  backdropClassName,
 }) => {
   const isModalOpen = isOpen ?? open;
   const modalSubtitle = subTitle ?? subtitle;
   const dragY = useMotionValue(0);
   const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
 
+  // On some pages the content behind the modal changes shape the instant it
+  // opens (e.g. private.jsx/shared.jsx swap the boat grid for a "tour details"
+  // section on selection), shrinking scrollHeight below the current scroll
+  // offset in the very same commit that opens this modal. By the time the
+  // lock effect below runs, the browser has already clamped scrollY to fit —
+  // reading window.scrollY there would capture the clamped value, not the
+  // real pre-open position. So track the last known scroll offset here,
+  // continuously, only while the modal is closed — that way it always holds
+  // whatever the page's true position was right before this open.
+  const lastScrollYRef = useRef(0);
   useEffect(() => {
+    if (isModalOpen || typeof window === "undefined") return undefined;
+    const onScroll = () => { lastScrollYRef.current = window.scrollY; };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [isModalOpen]);
+
+  useLayoutEffect(() => {
     if (!isModalOpen || typeof document === "undefined") return undefined;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Plain overflow:hidden lock on <html> — NOT position:fixed+top on <body>.
+    // That trick was tried to dodge a Google Translate banner-watcher interval
+    // that fought a naive lock (see UnifiedSwitcher.jsx, now guarded separately),
+    // but it introduced a worse bug: Chrome's backdrop-filter fails to sample
+    // body content once body is position:fixed with a large negative top offset,
+    // rendering the backdrop as a blank gradient instead of the blurred page.
+    // document.documentElement (confirmed via document.scrollingElement) is the
+    // element that actually scrolls on this page, so locking it in place with
+    // overflow:hidden freezes the page exactly where it is — nothing moves.
+    const html = document.documentElement;
+    const body = document.body;
+    // Remember the pre-open offset and put it back on close, so that if the
+    // content collapse above clamps scrollY while the modal is open, it
+    // doesn't stick once the modal closes and the content is restored.
+    const scrollY = lastScrollYRef.current;
+    // The vertical scrollbar disappears the instant scroll gets locked, which
+    // widens the viewport by its track width and visibly shifts/jumps
+    // everything behind the backdrop. Pad it back out so nothing moves.
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
+    const original = {
+      overflow: html.style.overflow,
+      paddingRight: body.style.paddingRight,
+    };
+    html.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      const currentPaddingRight = parseFloat(getComputedStyle(body).paddingRight) || 0;
+      body.style.paddingRight = `${currentPaddingRight + scrollbarWidth}px`;
+    }
     return () => {
-      document.body.style.overflow = originalOverflow;
+      html.style.overflow = original.overflow;
+      body.style.paddingRight = original.paddingRight;
+      if (window.scrollY !== scrollY) window.scrollTo(0, scrollY);
     };
   }, [isModalOpen]);
 
@@ -74,7 +121,7 @@ const Modal = ({
           transition={{ duration: 0.2 }}
         >
           <motion.div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            className={cn("absolute inset-0", backdropClassName || "bg-black/15 backdrop-blur-[2px]")}
             style={{ opacity: backdropOpacity }}
             onClick={closeOnBackdrop ? onClose : undefined}
           />
@@ -146,7 +193,7 @@ const Modal = ({
             ) : null}
             <div
               className={cn(
-                "overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200",
+                "min-h-0 flex-1 overflow-y-auto modal-scrollbar",
                 bodyClassName || "p-6"
               )}
             >

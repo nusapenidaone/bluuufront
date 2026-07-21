@@ -2281,6 +2281,13 @@ function StepTwo({
   const [showAllBoats, setShowAllBoats] = useState(false);
   const [draftFlexDate, setDraftFlexDate] = useState("");
   const [confirmModalData, setConfirmModalData] = useState(null);
+  // Where to land after the confirm modal closes. Selecting a boat collapses the
+  // boat grid into the tour-details section, so while the modal is open the page
+  // behind is already clamped near the bottom. Restoring to the pre-open scroll
+  // offset (Choose your option) and then scrolling back down produced a visible
+  // "jump up then scroll down". Instead each close action names its target here
+  // and the Modal scrolls straight there on close — no restore, no double motion.
+  const confirmCloseTargetRef = useRef(null);
   const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
@@ -3053,6 +3060,8 @@ function StepTwo({
         showClose={false}
         closeOnBackdrop={true}
         bodyClassName="p-0"
+        backdropClassName="bg-black/40 backdrop-blur-sm"
+        scrollRestoreRef={confirmCloseTargetRef}
       >
         {confirmModalData ? (
           <div className="relative flex flex-col">
@@ -3103,10 +3112,8 @@ function StepTwo({
                 type="button"
                 className="flex-1 h-11 rounded-full border border-neutral-200 bg-white text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50"
                 onClick={() => {
+                  confirmCloseTargetRef.current = "step-2";
                   setConfirmModalData(null);
-                  setTimeout(() => {
-                    document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 80);
                 }}
               >
                 Another option
@@ -3114,10 +3121,8 @@ function StepTwo({
               <Button
                 className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-101 active:scale-98"
                 onClick={() => {
+                  confirmCloseTargetRef.current = "tour-details-section";
                   setConfirmModalData(null);
-                  setTimeout(() => {
-                    document.getElementById("tour-details-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 80);
                 }}
               >
                 Tour details <ArrowRight className="h-4 w-4" />

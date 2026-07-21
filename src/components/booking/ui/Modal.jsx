@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
 import { X } from "lucide-react";
@@ -19,6 +19,8 @@ export default function Modal({
     closeOnBackdrop = true,
     hideDragHandle = false,
     footer,
+    backdropClassName,
+    scrollRestoreRef,
 }) {
     const isModalOpen = isOpen ?? open;
     const modalSubtitle = subTitle ?? subtitle;
@@ -26,14 +28,46 @@ export default function Modal({
     const dragY = useMotionValue(0);
     const backdropOpacity = useTransform(dragY, [0, 300], [1, 0]);
 
+    // On some pages (e.g. shared.jsx swapping the boat grid for a "tour details"
+    // section on selection) the content behind the modal shrinks the instant it
+    // opens, in the same commit — scrollHeight drops below the current scroll
+    // offset and the browser clamps scrollY to fit. Track the last known scroll
+    // offset continuously, only while the modal is closed, so the lock effect
+    // below always has the real pre-open position to restore on close, not
+    // whatever the clamp already snapped it to.
+    const lastScrollYRef = useRef(0);
     useEffect(() => {
+        if (isModalOpen || typeof window === "undefined") return undefined;
+        const onScroll = () => { lastScrollYRef.current = window.scrollY; };
+        onScroll();
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, [isModalOpen]);
+
+    useLayoutEffect(() => {
         if (!isModalOpen || typeof document === "undefined") return undefined;
-        const originalOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
+        const html = document.documentElement;
+        const scrollY = lastScrollYRef.current;
+        const originalOverflow = html.style.overflow;
+        html.style.overflow = "hidden";
         document.body.classList.add("overlay-open");
         return () => {
-            document.body.style.overflow = originalOverflow;
+            html.style.overflow = originalOverflow;
             document.body.classList.remove("overlay-open");
+            // If the closer named a target element (via scrollRestoreRef), scroll
+            // straight there instead of restoring the pre-open offset — this avoids
+            // the "jump to the old position then scroll to the new one" flicker when
+            // a close button wants to land somewhere other than where it opened.
+            const targetId = scrollRestoreRef?.current;
+            if (targetId) {
+                scrollRestoreRef.current = null;
+                const el = document.getElementById(targetId);
+                if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    return;
+                }
+            }
+            if (window.scrollY !== scrollY) window.scrollTo(0, scrollY);
         };
     }, [isModalOpen]);
 
@@ -62,7 +96,7 @@ export default function Modal({
                     transition={{ duration: 0.2 }}
                 >
                     <motion.div
-                        className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+                        className={cn("absolute inset-0", backdropClassName || "bg-black/40 backdrop-blur-sm")}
                         style={{ opacity: backdropOpacity }}
                         onClick={closeOnBackdrop ? onClose : undefined}
                     />
@@ -133,7 +167,7 @@ export default function Modal({
                         ) : null}
                         <div
                             className={cn(
-                                "overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200",
+                                "overflow-y-auto modal-scrollbar",
                                 bodyClassName || "p-6"
                             )}
                         >

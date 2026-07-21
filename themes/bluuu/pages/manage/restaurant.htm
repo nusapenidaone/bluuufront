@@ -93,6 +93,10 @@ function BoatCard({ boatName, orders, isManagement }) {
         .map(o => ({ client: partnerName(o), text: strVal(o.x_studio_first_class_menu_selection) }))
         .filter(r => r.text);
 
+    const noShows = orders
+        .filter(o => o.x_studio_no_show_1 === true)
+        .map(o => partnerName(o));
+
     return (
         <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm flex flex-col">
             <div className="px-4 pt-3 pb-2 border-b border-slate-100 flex items-center justify-between gap-2">
@@ -122,6 +126,16 @@ function BoatCard({ boatName, orders, isManagement }) {
                     <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest w-28 shrink-0">Total pax</span>
                     <span className="text-2xl font-bold text-emerald-600">{totalPax}</span>
                 </div>
+                {noShows.length > 0 && (
+                    <div className="flex items-start gap-2">
+                        <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest w-28 shrink-0 pt-0.5">No Show</span>
+                        <div className="flex flex-wrap gap-1.5">
+                            {noShows.map((n, i) => (
+                                <span key={i} className="text-xs font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">{n}</span>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 {allPassengers && (
                     <div>
                         <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest block mb-1">Passengers</span>

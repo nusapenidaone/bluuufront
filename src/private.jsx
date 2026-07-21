@@ -3405,6 +3405,7 @@ function StepTwo({
         showClose={false}
         closeOnBackdrop={true}
         bodyClassName="p-0"
+        backdropClassName="bg-black/40 backdrop-blur-sm"
       >
         {confirmModalData ? (
           <div className="relative flex flex-col">
@@ -3460,7 +3461,12 @@ function StepTwo({
               <button
                 type="button"
                 className="flex-1 h-11 rounded-full border border-neutral-200 bg-neutral-50 text-sm font-semibold text-secondary-500 transition hover:bg-white hover:text-secondary-700"
-                onClick={() => setConfirmModalData(null)}
+                onClick={() => {
+                  setConfirmModalData(null);
+                  setTimeout(() => {
+                    document.getElementById("step-3")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 80);
+                }}
               >
                 Another boat
               </button>

@@ -57,6 +57,10 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
                 banner.style.visibility = "hidden";
                 banner.style.height = "0";
             }
+            // Skip while a modal has body locked via position:fixed — its `top` is a
+            // negative scroll offset, not Google Translate's banner push, and
+            // stomping it here yanks the whole page back to scroll position 0.
+            if (document.body.style.position === "fixed") return;
             document.body.style.top = "0";
         };
         const interval = setInterval(hideBanner, 500);

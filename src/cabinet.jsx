@@ -613,6 +613,18 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [detailTab, setDetailTab] = useState("itinerary");
   const [showTourDetails, setShowTourDetails] = useState(false);
 
+  // Tick every second (used for the final-hours hh:mm:ss countdown; also keeps lock states live)
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 1_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const [showRouteContactModal, setShowRouteContactModal] = useState(false);
+  const [showSharedEditModal, setShowSharedEditModal] = useState(false);
+  const [showUpgradeContactModal, setShowUpgradeContactModal] = useState(false);
+  const [upgradeContactTier, setUpgradeContactTier] = useState("");
+
   // Active category tab in the extras panel
   const [extrasActiveCat, setExtrasActiveCat] = useState(null);
   const extrasCatsScrollRef = useRef(null);
@@ -985,7 +997,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const tourIncludes = options.tour_includes || [];
   const hasScheduleSection = scheduleItems.length > 0 || tourIncluded.length > 0 || tourIncludes.length > 0;
   const waNumber = contacts?.whatsapp?.number || WA.google;
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(`Hi Bluuu! I have a question about my booking ${odoo.order_number || odooId}.`)}`;
+  const waMsg = encodeURIComponent(`Hii Bluuu Tours! I want to ask about one of your tours ${odoo.order_number || odooId}`);
+  const waLink = `https://wa.me/${waNumber}?text=${waMsg}`;
   const depositPaid = odoo.deposit_paid || 0;
 
   // Time-based edit restrictions
@@ -995,8 +1008,26 @@ export default function Cabinet({ odooId, uniqueKey }) {
     const tourMs = new Date(start + "Z").getTime(); // UTC string → ms
     return (tourMs - Date.now()) / 3_600_000;
   })();
-  const dateEditLocked  = hoursUntilTour !== null && hoursUntilTour <= 24;
-  const allEditLocked   = hoursUntilTour !== null && hoursUntilTour <= 12;
+  // All editing locks 24 h before the tour; check-in opens at the same moment
+  const editLocked     = hoursUntilTour !== null && hoursUntilTour <= 24;
+  const dateEditLocked = editLocked;
+  const allEditLocked  = editLocked;
+
+  // Countdown to check-in opening (= 24 h before rental_start_date)
+  const checkinOpenMs = odoo.rental_start_date
+    ? new Date(odoo.rental_start_date + "Z").getTime() - 24 * 3_600_000
+    : null;
+  const checkinCountdown = (() => {
+    if (!checkinOpenMs) return null;
+    const ms = checkinOpenMs - Date.now();
+    if (ms <= 0) return null;
+    const totalSecs = Math.ceil(ms / 1_000);
+    const d = Math.floor(totalSecs / 86400);
+    const h = Math.floor((totalSecs % 86400) / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    return { d, h, m, s };
+  })();
 
   // Display summaries for each editable field
   const transferOpt = (options.transfers || []).find((t) => Number(t.id) === Number(editTransfer));
@@ -1082,6 +1113,72 @@ export default function Cabinet({ odooId, uniqueKey }) {
         </div>
       </div>
 
+      {/* ── Check-in card ────────────────────────────────────────────────── */}
+      {!odoo.online_checked_in && !hasChanges && (hoursUntilTour === null || hoursUntilTour > 0) && (
+        <div className="relative mb-6 overflow-hidden rounded-2xl shadow-lg"
+          style={{background: "linear-gradient(135deg, #0b2d4e 0%, #1565c0 55%, #00796b 100%)"}}>
+          {/* Decorative glows */}
+          <div className="pointer-events-none absolute -left-8 -top-8 h-48 w-48 rounded-full bg-sky-400/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-6 -right-6 h-40 w-40 rounded-full bg-teal-400/10 blur-2xl" />
+
+          {checkinCountdown ? (
+            /* Countdown: icon+text left, days/timer right */
+            <div className="relative flex items-center gap-4 px-6 py-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
+                <ClipboardList className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-bold text-white">Online Check-in</div>
+                <div className="mt-0.5 text-xs text-white/50">Opens 24 hours before your tour</div>
+              </div>
+              {checkinCountdown.d > 0 ? (
+                /* Many days left */
+                <div className="shrink-0 text-right">
+                  <div className="text-4xl font-extrabold tabular-nums text-white leading-none">{checkinCountdown.d}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-widest text-white/40 mt-1">days</div>
+                </div>
+              ) : (
+                /* Final 24 h — live hh:mm:ss tiles */
+                <div className="flex shrink-0 items-center gap-1.5">
+                  {[
+                    { v: checkinCountdown.h, l: "hh" },
+                    { v: checkinCountdown.m, l: "mm" },
+                    { v: checkinCountdown.s, l: "ss" },
+                  ].map(({ v, l }, i) => (
+                    <div key={l} className="flex items-center gap-1.5">
+                      {i > 0 && <span className="mb-4 text-base font-light text-white/30">:</span>}
+                      <div className="flex flex-col items-center">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 backdrop-blur-sm">
+                          <span className="text-lg font-extrabold tabular-nums text-white">{String(v).padStart(2, "0")}</span>
+                        </div>
+                        <span className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-white/35">{l}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Check-in open: icon + description + CTA */
+            <div className="relative flex items-center gap-4 px-6 py-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
+                <ClipboardList className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-base font-bold text-white">Online Check-in</div>
+                <div className="mt-0.5 text-xs text-white/50">Fill in passenger details to speed up boarding</div>
+              </div>
+              <a
+                href={`/checkin/${odooId}`}
+                className="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#0b2d4e] shadow-md transition hover:bg-white/90 active:scale-[0.98]"
+              >
+                Start →
+              </a>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Two-column grid (lg+) ───────────────────────────────────────── */}
       <div className="lg:grid lg:grid-cols-[1fr_340px] lg:items-start lg:gap-8">
 
@@ -1118,120 +1215,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <Map className="h-3.5 w-3.5" />
           </span>
           <span className="text-sm font-bold text-secondary-900">Booking Details</span>
-          {hasScheduleSection && (
-            <button
-              type="button"
-              onClick={() => setShowTourDetails((v) => !v)}
-              title={showTourDetails ? "Hide itinerary" : "Itinerary & Included"}
-              className={cn(
-                "ml-auto flex h-7 w-7 items-center justify-center rounded-full border text-sm font-bold transition",
-                showTourDetails
-                  ? "border-primary-300 bg-primary-50 text-primary-600"
-                  : "border-neutral-200 bg-white text-secondary-400 hover:border-primary-300 hover:text-primary-600"
-              )}
-            >
-              {showTourDetails ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-            </button>
-          )}
         </div>
-
-        {/* ── Tour details (Itinerary / What's included) — inline inside card ── */}
-        <AnimatePresence>
-          {hasScheduleSection && showTourDetails && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              className="overflow-hidden border-b border-neutral-100"
-            >
-              {/* Tab bar */}
-              <div className="flex border-b border-neutral-100 px-4">
-                {scheduleItems.length > 0 && (
-                  <button type="button" onClick={() => setDetailTab("itinerary")}
-                    className={cn(
-                      "px-3 py-3 text-sm font-semibold transition border-b-2 -mb-px",
-                      detailTab === "itinerary"
-                        ? "border-primary-600 text-primary-600"
-                        : "border-transparent text-secondary-400 hover:text-secondary-700"
-                    )}>
-                    Itinerary
-                  </button>
-                )}
-                {(tourIncluded.length > 0 || tourIncludes.length > 0) && (
-                  <button type="button" onClick={() => setDetailTab("included")}
-                    className={cn(
-                      "px-3 py-3 text-sm font-semibold transition border-b-2 -mb-px",
-                      detailTab === "included"
-                        ? "border-primary-600 text-primary-600"
-                        : "border-transparent text-secondary-400 hover:text-secondary-700"
-                    )}>
-                    What&apos;s included
-                  </button>
-                )}
-              </div>
-
-              {/* Itinerary */}
-              {detailTab === "itinerary" && scheduleItems.length > 0 && (
-                <div className="px-4 py-2">
-                  <div className="divide-y divide-neutral-100">
-                    {scheduleItems.map((item, i) => (
-                      <ScheduleItemCompact key={i} item={item} />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* What's included */}
-              {detailTab === "included" && (
-                <div className="px-4 py-4 space-y-4">
-                  {tourIncluded.length > 0 && (
-                    <div className={cn(
-                      "grid gap-3",
-                      tourIncluded.length <= 2 ? "grid-cols-2" :
-                      tourIncluded.length === 3 ? "grid-cols-3" :
-                      "grid-cols-2 sm:grid-cols-4"
-                    )}>
-                      {tourIncluded.map((item) => (
-                        <div key={item.name} className="flex flex-col items-center text-center rounded-2xl border border-primary-200/50 bg-primary-50/50 px-3 py-4">
-                          {item.icon_svg && (
-                            <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-primary-500/10 text-primary-600">
-                              <span className="h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
-                            </div>
-                          )}
-                          <div className="text-sm font-semibold text-secondary-900">{item.name}</div>
-                          {item.description && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{item.description}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {tourIncludes.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {tourIncludes.map((item) => (
-                        <span key={item.name} className="inline-flex items-center gap-1.5 rounded-full border border-primary-200/50 bg-primary-50/50 px-3 py-1.5 text-sm font-medium text-secondary-700">
-                          {item.icon_svg && (
-                            <span className="h-4 w-4 shrink-0 text-primary-600 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
-                          )}
-                          {item.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Lock notice */}
         {allEditLocked && (
           <div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Changes are closed less than 12 hours before the tour. Please contact us if you need help.
-          </div>
-        )}
-        {!allEditLocked && dateEditLocked && (
-          <div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Date changes are closed less than 24 hours before the tour.
+            Changes are closed 24 hours before the tour. Please contact us if you need help.
           </div>
         )}
 
@@ -1276,8 +1265,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
           </div>
         </EditableRow>
 
-        {/* Tour + Route + Boat — combined read-only row */}
-        {(local.tour_name || local.route_name || odoo.route || local.boat_name || odoo.boat_name) && (
+        {/* Tour + Boat — read-only row */}
+        {(local.tour_name || local.boat_name || odoo.boat_name) && (
           <div className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-secondary-500">
               <Map className="h-3.5 w-3.5" />
@@ -1289,13 +1278,72 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   <span className="font-normal text-secondary-500"> &ldquo;{local.boat_name || odoo.boat_name}&rdquo;</span>
                 )}
               </div>
-              {(local.route_name || odoo.route) && (
-                <div className="mt-0.5 flex items-center gap-1 text-xs text-secondary-400">
-                  <Navigation2 className="h-3 w-3" />{local.route_name || odoo.route}
-                </div>
-              )}
             </div>
           </div>
+        )}
+
+        {/* Route — shown for all tour types; Edit only for private */}
+        {(local.route_name || odoo.route) && (
+          <>
+            <div className={cn(
+              "flex items-center gap-3 px-4 py-3.5",
+              !showTourDetails ? "border-b border-neutral-100" : "border-b border-transparent"
+            )}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-neutral-100 text-secondary-500">
+                <Navigation2 className="h-3.5 w-3.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-secondary-400">Route</div>
+                <div className="text-sm font-semibold text-secondary-900">{local.route_name || odoo.route}</div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {scheduleItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowTourDetails((v) => !v)}
+                    className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full border transition",
+                      showTourDetails
+                        ? "border-primary-300 bg-primary-50 text-primary-600"
+                        : "border-neutral-200 bg-white text-secondary-400 hover:border-primary-300 hover:text-primary-600"
+                    )}
+                  >
+                    {showTourDetails ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                  </button>
+                )}
+                {local.is_private && !allEditLocked && (
+                  <button
+                    type="button"
+                    onClick={() => setShowRouteContactModal(true)}
+                    className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-xs font-semibold text-secondary-500 transition hover:border-primary-300 hover:text-primary-600"
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Schedule panel — expands below the route row */}
+            <AnimatePresence>
+              {showTourDetails && scheduleItems.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="overflow-hidden border-b border-neutral-100"
+                >
+                  <div className="px-4 py-2">
+                    <div className="divide-y divide-neutral-100">
+                      {scheduleItems.map((item, i) => (
+                        <ScheduleItemCompact key={i} item={item} />
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
         )}
 
 
@@ -1504,6 +1552,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
         );
       })()}
 
+
       {/* ── Upgrade banner (shared only) ─────────────────────────────────── */}
       {!local.is_private && options.upgrade_tour && !allEditLocked && (() => {
         const up = options.upgrade_tour;
@@ -1531,17 +1580,18 @@ export default function Cabinet({ odooId, uniqueKey }) {
                       Boat: <span className="font-semibold">&ldquo;{cd.boat_name}&rdquo;</span>
                     </div>
                   )}
-                  {upgradeChecked && cd?.available && cd.price_diff > 0 && (
-                    <div className="mt-1 text-xs font-semibold text-amber-800">
-                      +IDR {fmt(cd.price_diff)} per booking
-                    </div>
-                  )}
                 </div>
               </div>
 
-              {upgradeCheckError && <p className="mt-2 text-xs text-red-500">{upgradeCheckError}</p>}
-              {upgradeError      && <p className="mt-2 text-xs text-red-500">{upgradeError}</p>}
+              {/* Price difference badge */}
+              {upgradeChecked && cd?.available && cd.price_diff > 0 && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3">
+                  <div className="flex-1 text-xs text-amber-700">Extra to pay for upgrade</div>
+                  <div className="text-base font-extrabold text-amber-900">+IDR {fmt(cd.price_diff)}</div>
+                </div>
+              )}
 
+              {upgradeCheckError && <p className="mt-2 text-xs text-red-500">{upgradeCheckError}</p>}
               {!upgradeChecked ? (
                 <button
                   type="button"
@@ -1554,17 +1604,64 @@ export default function Cabinet({ odooId, uniqueKey }) {
               ) : cd?.available ? (
                 <button
                   type="button"
-                  onClick={() => doUpgrade(cd.upgrade_tour_id)}
-                  disabled={upgrading}
-                  className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98] disabled:opacity-60"
+                  onClick={() => { setUpgradeContactTier(tierLabel); setShowUpgradeContactModal(true); }}
+                  className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
                 >
-                  {upgrading ? "Upgrading…" : `Upgrade to ${tierLabel} →`}
+                  {cd.price_diff > 0
+                    ? `Upgrade · +IDR ${fmt(cd.price_diff)} →`
+                    : `Upgrade to ${tierLabel} →`}
                 </button>
               ) : null}
             </div>
           </div>
         );
       })()}
+
+      {/* ── What's included ─────────────────────────────────────────────── */}
+      {(tourIncluded.length > 0 || tourIncludes.length > 0) && (
+        <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
+          <div className="flex items-center gap-2 border-b border-neutral-100 px-5 py-4">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 text-primary-600">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-sm font-bold text-secondary-900">What&apos;s included</span>
+          </div>
+          <div className="space-y-4 px-5 py-5">
+            {tourIncluded.length > 0 && (
+              <div className={cn(
+                "grid gap-3",
+                tourIncluded.length <= 2 ? "grid-cols-2" :
+                tourIncluded.length === 3 ? "grid-cols-3" :
+                "grid-cols-2 sm:grid-cols-4"
+              )}>
+                {tourIncluded.map((item) => (
+                  <div key={item.name} className="flex flex-col items-center rounded-2xl border border-primary-200/50 bg-primary-50/50 px-3 py-4 text-center">
+                    {item.icon_svg && (
+                      <div className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-full bg-primary-500/10 text-primary-600">
+                        <span className="h-5 w-5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                      </div>
+                    )}
+                    <div className="text-sm font-semibold text-secondary-900">{item.name}</div>
+                    {item.description && <div className="mt-0.5 text-xs leading-normal text-secondary-500">{item.description}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {tourIncludes.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {tourIncludes.map((item) => (
+                  <span key={item.name} className="inline-flex items-center gap-1.5 rounded-full border border-primary-200/50 bg-primary-50/50 px-3 py-1.5 text-sm font-medium text-secondary-700">
+                    {item.icon_svg && (
+                      <span className="h-4 w-4 shrink-0 text-primary-600 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:stroke-current" dangerouslySetInnerHTML={{ __html: item.icon_svg }} />
+                    )}
+                    {item.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       </div>{/* end LEFT column */}
 
@@ -1639,11 +1736,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 Reset
               </button>
               <button
-                onClick={saveAll}
+                onClick={local.is_private ? saveAll : () => setShowSharedEditModal(true)}
                 disabled={saving || saveBlocked}
                 className="btn-pay-now flex-[2] rounded-full bg-white py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
               >
-                {saving ? "Saving…" : "Save changes →"}
+                {saving ? "Saving…" : local.is_private ? "Save changes →" : "Request update →"}
               </button>
             </div>
             {saveBlocked && <p className="mt-2 text-center text-xs text-white/70">Check availability first</p>}
@@ -1694,30 +1791,186 @@ export default function Cabinet({ odooId, uniqueKey }) {
         )}
       </div>
 
-      {/* ── Check-in link (upcoming tours, not yet checked in, no unsaved changes) ── */}
-      {!odoo.online_checked_in && !hasChanges && (hoursUntilTour === null || hoursUntilTour > 0) && (
-        <div className="mb-5 overflow-hidden rounded-2xl shadow-sm" style={{background: "linear-gradient(135deg, #0f4c75 0%, #1b6ca8 60%, #0d7377 100%)"}}>
-          <div className="flex items-center gap-2 border-b border-white/10 px-5 py-4">
-            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-white">
-              <ClipboardList className="h-3.5 w-3.5" />
-            </span>
-            <span className="text-sm font-bold text-white">Online Check-in</span>
-          </div>
-          <div className="px-5 py-4">
-            <p className="text-xs text-white/60">Fill in passenger details before your tour to speed up the boarding process.</p>
-            <a
-              href={`/checkin/${odooId}`}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-sm font-bold text-[#0f4c75] transition hover:bg-white/90 active:scale-[0.98]"
-            >
-              <ClipboardList className="h-4 w-4" />
-              Start Check-in →
-            </a>
-          </div>
-        </div>
-      )}
-
       </div>{/* end RIGHT column */}
       </div>{/* end grid */}
+
+      {/* ── Shared tour edit: contact-support modal ─────────────────────────── */}
+      <AnimatePresence>
+        {showSharedEditModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowSharedEditModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="fixed inset-x-4 bottom-0 z-[101] mx-auto max-w-sm overflow-hidden rounded-t-3xl bg-white pb-safe-bottom sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+            >
+              <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+                <span className="text-sm font-bold text-secondary-900">Update Booking</span>
+                <button type="button" onClick={() => setShowSharedEditModal(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-secondary-500 hover:bg-neutral-200">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-6 py-5">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+                  <MessageCircle className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-bold text-secondary-900">Changes require our team</h3>
+                <p className="mt-1.5 text-sm text-secondary-500">
+                  Shared tour bookings are updated by our team. Send us your changes and we&apos;ll confirm them as soon as possible.
+                </p>
+                {/* Summary of changes */}
+                <div className="mt-4 rounded-xl bg-neutral-50 px-4 py-3 text-xs text-secondary-500 space-y-1">
+                  <div className="font-semibold text-secondary-700 mb-1">Your requested changes:</div>
+                  {editDate !== (local.travel_date || "") && (
+                    <div>📅 Date: {fmtDate(local.travel_date)} → <span className="font-semibold text-secondary-900">{fmtDate(editDate)}</span></div>
+                  )}
+                  {(editAdults !== (local.adults || 0) || editKids !== (local.kids || 0)) && (
+                    <div>👥 Guests: {local.adults}a{local.kids > 0 ? ` ${local.kids}k` : ""} → <span className="font-semibold text-secondary-900">{editAdults}a{editKids > 0 ? ` ${editKids}k` : ""}</span></div>
+                  )}
+                </div>
+                <div className="mt-5 space-y-3">
+                  <a
+                    href={waLink}
+                    target="_blank" rel="noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                    </svg>
+                    WhatsApp us
+                  </a>
+                  <a
+                    href={`mailto:info@bluuu.tours?subject=Booking update ${odoo.order_number || odooId}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email us
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Upgrade: contact-support modal ───────────────────────────────────── */}
+      <AnimatePresence>
+        {showUpgradeContactModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowUpgradeContactModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="fixed inset-x-4 bottom-0 z-[101] mx-auto max-w-sm overflow-hidden rounded-t-3xl bg-white pb-safe-bottom sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+            >
+              <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+                <span className="text-sm font-bold text-secondary-900">Upgrade to {upgradeContactTier}</span>
+                <button type="button" onClick={() => setShowUpgradeContactModal(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-secondary-500 hover:bg-neutral-200">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-6 py-5">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
+                  <Sparkles className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-bold text-secondary-900">Want to upgrade your booking?</h3>
+                <p className="mt-1.5 text-sm text-secondary-500">
+                  Upgrades are processed by our team. Contact us and we&apos;ll take care of it for you right away.
+                </p>
+                <div className="mt-5 space-y-3">
+                  <a
+                    href={waLink}
+                    target="_blank" rel="noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                    </svg>
+                    WhatsApp us
+                  </a>
+                  <a
+                    href={`mailto:info@bluuu.tours?subject=Upgrade request ${odoo.order_number || odooId} to ${upgradeContactTier}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email us
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Route change: contact-support modal ─────────────────────────────── */}
+      <AnimatePresence>
+        {showRouteContactModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowRouteContactModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 40, scale: 0.97 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="fixed inset-x-4 bottom-0 z-[101] mx-auto max-w-sm overflow-hidden rounded-t-3xl bg-white pb-safe-bottom sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
+            >
+              <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+                <span className="text-sm font-bold text-secondary-900">Change Route</span>
+                <button type="button" onClick={() => setShowRouteContactModal(false)}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-secondary-500 hover:bg-neutral-200">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-6 py-5">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-50 text-primary-600">
+                  <Navigation2 className="h-6 w-6" />
+                </div>
+                <h3 className="text-base font-bold text-secondary-900">Want to change your route?</h3>
+                <p className="mt-1.5 text-sm text-secondary-500">
+                  Route changes require us to update your itinerary. Please contact our team — we&apos;ll take care of it for you.
+                </p>
+                <div className="mt-5 space-y-3">
+                  <a
+                    href={waLink}
+                    target="_blank" rel="noreferrer"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                    </svg>
+                    WhatsApp us
+                  </a>
+                  <a
+                    href={`mailto:info@bluuu.tours?subject=Route change for ${odoo.order_number || odooId}`}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email us
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Booking-specific sticky WhatsApp (overrides global generic button) ─ */}
       <style>{`

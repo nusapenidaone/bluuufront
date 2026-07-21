@@ -6,7 +6,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
-use Mail;
 use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Models\Rates;
@@ -94,25 +93,6 @@ class CheckinController extends Controller
         } catch (\Exception $e) {
             Log::error('CheckinController::save — ' . $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
-        }
-
-        $email = (string) $request->input('email', '');
-        if ($email) {
-            try {
-                $order = OdooService::getFullOrder($odoo_id);
-                $fmt   = $this->formatOrder($order);
-                $vars  = [
-                    'odoo_id' => $odoo_id,
-                    'name'    => $fmt['name'],
-                    'date'    => $fmt['travel_date'],
-                    'time'    => $fmt['meeting_time'],
-                ];
-                Mail::send('registration', $vars, function ($message) use ($email) {
-                    $message->to($email);
-                });
-            } catch (\Exception $e) {
-                Log::error('CheckinController::save — email send failed: ' . $e->getMessage());
-            }
         }
 
         return response()->json(['success' => true]);
