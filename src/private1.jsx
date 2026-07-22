@@ -10664,6 +10664,20 @@ export default function Premium_Private_With_Vibe() {
       urlCoverAppliedRef.current = true;
     }
   }, [covers]);
+  // Keep URL in sync with selections so reload / browser back / sharing restores
+  // state (mirrors private.jsx). private1 boats are keyed by String(tour.id), so
+  // selectedBoatId is already the tourId string the `tour` reader expects.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (exactDate) p.set("date", exactDate); else p.delete("date");
+    p.set("adults", String(adults));
+    p.set("kids", String(kids));
+    if (selectedBoatId) p.set("tour", String(selectedBoatId)); else p.delete("tour");
+    if (selectedStyleId) p.set("route", String(selectedStyleId)); else p.delete("route");
+    if (selectedTransferId) p.set("transfer", String(selectedTransferId)); else p.delete("transfer");
+    if (selectedCoverId) p.set("cover", String(selectedCoverId)); else p.delete("cover");
+    history.replaceState(null, "", `?${p.toString()}`);
+  }, [exactDate, adults, kids, selectedBoatId, selectedStyleId, selectedTransferId, selectedCoverId]);
   // Fetch availability from backend when user confirms a date or date range via Search
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
@@ -10769,8 +10783,11 @@ export default function Premium_Private_With_Vibe() {
     };
     loadTourDetail();
   }, [selectedBoatId, selectedYacht, privateTours, fetchTourDetail]);
-  // Explicitly reset selected boat on mount as per user request
+  // Explicitly reset selected boat on mount as per user request — but NOT when a
+  // ?tour= param is present, otherwise this clobbers the boat the URL just
+  // pre-selected (this effect runs after the tour-read effect on mount).
   useEffect(() => {
+    if (urlTourIdRef.current) return;
     setSelectedBoatId(null);
   }, []);
   const totalGuests = adults + kids;

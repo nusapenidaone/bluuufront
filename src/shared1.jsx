@@ -9204,6 +9204,24 @@ export default function Shared_tour_01() {
       urlCoverAppliedRef.current = true;
     }
   }, [covers]);
+  // Keep URL in sync with selections so reload / browser back / sharing restores state
+  // (mirrors shared.jsx). The `tour` param round-trips against yachtOptions.tourId,
+  // so write the selected boat's tourId (shared boats are keyed by slug, not id).
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    if (exactDate) p.set("date", exactDate); else p.delete("date");
+    p.set("adults", String(adults));
+    p.set("kids", String(kids));
+    if (selectedBoatId) {
+      const t = yachtOptions.find((y) => y.id === selectedBoatId)?.tourId;
+      if (t != null) p.set("tour", String(t));
+    } else {
+      p.delete("tour");
+    }
+    if (selectedTransferId) p.set("transfer", String(selectedTransferId)); else p.delete("transfer");
+    if (selectedCoverId) p.set("cover", String(selectedCoverId)); else p.delete("cover");
+    history.replaceState(null, "", `?${p.toString()}`);
+  }, [exactDate, adults, kids, selectedBoatId, selectedTransferId, selectedCoverId, yachtOptions]);
   // Fetch availability from backend when user confirms a date or date range via Search
   useEffect(() => {
     if (!yachtOptions.some((y) => y.tourId)) return;
@@ -9405,8 +9423,11 @@ export default function Shared_tour_01() {
     return () => { isMounted = false; };
   }, [selectedYacht]);
 
-  // Explicitly reset selected boat on mount as per user request
+  // Explicitly reset selected boat on mount as per user request — but NOT when a
+  // ?tour= param is present, otherwise this clobbers the boat the URL just
+  // pre-selected (this effect runs after the tour-read effect on mount).
   useEffect(() => {
+    if (urlTourIdRef.current) return;
     setSelectedBoatId(null);
   }, []);
   const totalGuests = adults + kids;

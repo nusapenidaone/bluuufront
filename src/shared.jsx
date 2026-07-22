@@ -7357,8 +7357,11 @@ export default function Shared_tour_01() {
     return () => { isMounted = false; };
   }, [selectedYacht]);
 
-  // Explicitly reset selected boat on mount as per user request
+  // Explicitly reset selected boat on mount as per user request — but NOT when a
+  // ?tour= param is present, otherwise this clobbers the boat the URL just
+  // pre-selected (this effect runs after the tour-read effect on mount).
   useEffect(() => {
+    if (urlTourIdRef.current) return;
     setSelectedBoatId(null);
   }, []);
   const totalGuests = adults + kids;
