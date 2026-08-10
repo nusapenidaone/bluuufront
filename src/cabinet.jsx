@@ -278,9 +278,11 @@ function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggl
 }
 
 // ─── Extra row (list item matching the site's renderExtraRow style) ──────────
-function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty, locked }) {
+function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty, locked, savedQty, savedExtrasMap }) {
   const isAuto = item.qty_type && item.qty_type !== "manual";
   const autoQty = isAuto ? computeAutoQty(item.qty_type, members) : null;
+  const isSaved = (savedQty || 0) > 0; // this item was on the order when loaded
+  const minusDisabled = isAuto ? isSaved : qty <= (savedQty || 0);
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
   const [expanded, setExpanded] = useState(false);
 
@@ -333,8 +335,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
           ) : isAuto ? (
             isSelected ? (
               <div className="inline-flex h-9 items-center rounded-full border border-neutral-200 bg-white px-2 shadow-sm">
-                <button type="button" onClick={onToggle}
-                  className="grid h-7 w-7 place-items-center rounded-full text-secondary-700 transition hover:text-primary-600">
+                <button type="button" onClick={onToggle} disabled={minusDisabled}
+                  className={cn("grid h-7 w-7 place-items-center rounded-full transition", minusDisabled ? "cursor-not-allowed text-secondary-200" : "text-secondary-700 hover:text-primary-600")}>
                   <Minus className="h-3.5 w-3.5" />
                 </button>
                 <span className="min-w-[1.75rem] text-center text-sm font-bold tabular-nums">×{autoQty}</span>
@@ -348,8 +350,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
             )
           ) : qty > 0 ? (
             <div className="inline-flex h-9 items-center rounded-full border border-neutral-200 bg-white px-2 shadow-sm">
-              <button type="button" onClick={() => onChangeQty(qty - 1)}
-                className="grid h-7 w-7 place-items-center rounded-full text-secondary-700 transition hover:text-primary-600">
+              <button type="button" onClick={() => onChangeQty(qty - 1)} disabled={minusDisabled}
+                className={cn("grid h-7 w-7 place-items-center rounded-full transition", minusDisabled ? "cursor-not-allowed text-secondary-200" : "text-secondary-700 hover:text-primary-600")}>
                 <Minus className="h-3.5 w-3.5" />
               </button>
               <span className="min-w-[1.75rem] text-center text-sm font-bold tabular-nums">{qty}</span>
@@ -374,6 +376,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
             const childQty = editExtras?.[child.id]?.qty || 0;
             const childIsAuto = child.qty_type && child.qty_type !== "manual";
             const childAutoQty = childIsAuto ? computeAutoQty(child.qty_type, members) : null;
+            const childSavedQty = savedExtrasMap?.[child.id] || 0;
+            const childMinusDisabled = childIsAuto ? childSavedQty > 0 : childQty <= childSavedQty;
             return (
               <div key={child.id} className={cn(
                 "flex items-center gap-3 py-2.5 pl-8 pr-4 transition",
@@ -399,8 +403,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                   ) : childIsAuto ? (
                     childQty > 0 ? (
                       <div className="inline-flex h-8 items-center rounded-full border border-neutral-200 bg-white px-2 shadow-sm">
-                        <button type="button" onClick={() => onChildQty(child, 0)}
-                          className="grid h-6 w-6 place-items-center rounded-full text-secondary-700 transition hover:text-primary-600">
+                        <button type="button" onClick={() => onChildQty(child, 0)} disabled={childMinusDisabled}
+                          className={cn("grid h-6 w-6 place-items-center rounded-full transition", childMinusDisabled ? "cursor-not-allowed text-secondary-200" : "text-secondary-700 hover:text-primary-600")}>
                           <Minus className="h-3 w-3" />
                         </button>
                         <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums">×{childAutoQty}</span>
@@ -414,8 +418,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                     )
                   ) : childQty > 0 ? (
                     <div className="inline-flex h-8 items-center rounded-full border border-neutral-200 bg-white px-2 shadow-sm">
-                      <button type="button" onClick={() => onChildQty(child, childQty - 1)}
-                        className="grid h-6 w-6 place-items-center rounded-full text-secondary-700 transition hover:text-primary-600">
+                      <button type="button" onClick={() => onChildQty(child, childQty - 1)} disabled={childMinusDisabled}
+                        className={cn("grid h-6 w-6 place-items-center rounded-full transition", childMinusDisabled ? "cursor-not-allowed text-secondary-200" : "text-secondary-700 hover:text-primary-600")}>
                         <Minus className="h-3 w-3" />
                       </button>
                       <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums">{childQty}</span>
@@ -596,8 +600,15 @@ export default function Cabinet({ odooId, uniqueKey }) {
   // editExtras: id → { id, name, price, qty, qty_type }
   const [editExtras, setEditExtras] = useState({});
 
+  // Saved (initial) values — used to enforce add-only restrictions
+  const [savedTransferId, setSavedTransferId] = useState(null);
+  const [savedCoverId, setSavedCoverId] = useState(null);
+  const [savedExtrasMap, setSavedExtrasMap] = useState({}); // id → min qty
+  const [managerPopup, setManagerPopup] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveToast, setSaveToast] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [lastPrices, setLastPrices] = useState(null);
   const [initialAddOns, setInitialAddOns] = useState(null);
@@ -648,8 +659,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
       setEditDropoff(json.local.dropoff_address || "");
       setEditAdults(json.local.adults || 0);
       setEditKids(json.local.kids || 0);
-      setEditTransfer(json.local.transfer_id ? Number(json.local.transfer_id) : null);
-      setEditCover(json.local.cover_id ? Number(json.local.cover_id) : null);
+      const initTransfer = json.local.transfer_id ? Number(json.local.transfer_id) : null;
+      const initCover    = json.local.cover_id    ? Number(json.local.cover_id)    : null;
+      setEditTransfer(initTransfer);
+      setEditCover(initCover);
+      setSavedTransferId(initTransfer);
+      setSavedCoverId(initCover);
       const firstRouteId = (json.options?.routes || [])[0]?.id;
       setEditRoute(json.local.route_id
         ? String(json.local.route_id)
@@ -677,6 +692,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
         };
       }
       setEditExtras(extrasMap);
+      // Build the minimum-qty map from the initial saved extras
+      const savedMap = {};
+      for (const item of (json.local.extras || [])) {
+        if (item?.id) savedMap[item.id] = Number(item.qty ?? item.quantity ?? 1);
+      }
+      setSavedExtrasMap(savedMap);
     } catch {
       setError("Failed to load order");
     } finally {
@@ -761,18 +782,23 @@ export default function Cabinet({ odooId, uniqueKey }) {
   );
 
   const setExtraQty = (item, qty) => {
+    // Never let qty drop below the saved minimum
+    const minQty = savedExtrasMap[item.id] || 0;
+    const safeQty = Math.max(minQty, qty);
     setEditExtras((prev) => {
       const next = { ...prev };
-      if (qty <= 0) {
+      if (safeQty <= 0) {
         delete next[item.id];
       } else {
-        next[item.id] = { id: item.id, name: item.name, price: item.price, qty, qty_type: item.qty_type || "manual", image: item.image || null };
+        next[item.id] = { id: item.id, name: item.name, price: item.price, qty: safeQty, qty_type: item.qty_type || "manual", image: item.image || null };
       }
       return next;
     });
   };
 
   const toggleAutoExtra = (item) => {
+    // Saved extras can't be removed, only newly added ones can be toggled off
+    if (savedExtrasMap[item.id]) return;
     setEditExtras((prev) => {
       const next = { ...prev };
       if (next[item.id]) {
@@ -782,6 +808,24 @@ export default function Cabinet({ odooId, uniqueKey }) {
       }
       return next;
     });
+  };
+
+  // Transfer/cover change — intercept downgrade/removal and show manager popup instead
+  const handleTransferChange = (v) => {
+    const newId = v ? Number(v) : null;
+    if (savedTransferId !== null) {
+      if (newId === null) { setManagerPopup(true); return; }
+      const savedT = (data?.options?.transfers || []).find((t) => Number(t.id) === savedTransferId);
+      const newT   = (data?.options?.transfers || []).find((t) => Number(t.id) === newId);
+      if (savedT && newT && Number(newT.price) < Number(savedT.price)) { setManagerPopup(true); return; }
+    }
+    setEditTransfer(newId);
+  };
+
+  const handleCoverChange = (v) => {
+    const newId = v ? Number(v) : null;
+    if (savedCoverId !== null && newId === null) { setManagerPopup(true); return; }
+    setEditCover(newId);
   };
 
   const editMembers = editAdults + editKids;
@@ -916,6 +960,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
       if (json.success) {
         setLastPrices(json.prices || null);
         setSaved(true);
+        setSaveToast(true);
+        setTimeout(() => setSaveToast(false), 3500);
         await fetchOrder();
         return true;
       } else {
@@ -1008,9 +1054,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
     const tourMs = new Date(start + "Z").getTime(); // UTC string → ms
     return (tourMs - Date.now()) / 3_600_000;
   })();
+  // Source-based restriction: date & guest count only editable for Bluuu.tours bookings
+  const sourceIsOurs   = local.source_id === 1;
   // All editing locks 24 h before the tour; check-in opens at the same moment
   const editLocked     = hoursUntilTour !== null && hoursUntilTour <= 24;
-  const dateEditLocked = editLocked;
+  const dateEditLocked = editLocked || !sourceIsOurs;
   const allEditLocked  = editLocked;
 
   // Countdown to check-in opening (= 24 h before rental_start_date)
@@ -1065,15 +1113,92 @@ export default function Cabinet({ odooId, uniqueKey }) {
     ? (lastPrices.transfer_price || 0) + (lastPrices.cover_price || 0) + (lastPrices.extras_total || 0)
     : (initialAddOns ?? 0);
   const liveAddOns  = livePrices?.total || 0;
-  const priceDelta  = hasChanges ? liveAddOns - savedAddOns : 0;
-  // estNewTotal: swap add-ons portion of Odoo total (collect + deposit = amount_total)
+  const addonsDelta = hasChanges ? liveAddOns - savedAddOns : 0;
+
+  // Tour price delta from guest count change using server pricelist
+  const pricelist = options.price_list || [];
+  const plLookup  = (members) => {
+    const e = pricelist.find((r) => Number(r.members_count) === Number(members));
+    return e ? Number(e.price) : null;
+  };
+  const baseTourPrice = plLookup(local.members);
+  const liveTourPrice = plLookup(editAdults + editKids);
+  const tourPriceDelta = hasChanges && baseTourPrice !== null && liveTourPrice !== null
+    ? liveTourPrice - baseTourPrice
+    : 0;
+
+  const priceDelta  = addonsDelta + tourPriceDelta;
+
+  // estNewTotal: swap add-ons + tour portion
   const odooTotal   = (collect || 0) + (depositPaid || 0);
   const estNewTotal = lastPrices
-    ? (lastPrices.tour_price || 0) + (lastPrices.boat_price || 0) + liveAddOns
-    : odooTotal - savedAddOns + liveAddOns;
+    ? (lastPrices.tour_price || 0) + (lastPrices.boat_price || 0) + liveAddOns + tourPriceDelta
+    : odooTotal - savedAddOns + liveAddOns + tourPriceDelta;
 
   return renderShell(
     <>
+      {/* ── Save toast ───────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {saveToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.25 }}
+            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
+          >
+            <div className="flex items-center gap-2.5 rounded-2xl bg-emerald-600 px-5 py-3 shadow-xl">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-white" />
+              <span className="text-sm font-semibold text-white">Changes saved successfully</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Manager contact popup (downgrade/remove blocked) ─────────────── */}
+      <AnimatePresence>
+        {managerPopup && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm px-4 pb-6 sm:pb-0"
+            onClick={() => setManagerPopup(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }}
+              transition={{ type: "spring", stiffness: 340, damping: 30 }}
+              className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100">
+                  <AlertCircle className="h-7 w-7 text-amber-500" />
+                </div>
+                <h3 className="text-lg font-bold text-secondary-900">Contact our manager</h3>
+                <p className="mt-2 text-sm text-secondary-500 leading-relaxed">
+                  To remove or downgrade a service, please contact our manager directly — they&apos;ll help with refunds and adjustments.
+                </p>
+                <div className="mt-6 flex w-full flex-col gap-3">
+                  <a href={waLink} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3.5 text-sm font-bold text-white hover:bg-emerald-600 transition">
+                    <MessageCircle className="h-4 w-4" />
+                    WhatsApp
+                  </a>
+                  <a href="mailto:info@bluuu.tours"
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-neutral-100 px-5 py-3.5 text-sm font-bold text-secondary-700 hover:bg-neutral-200 transition">
+                    <Mail className="h-4 w-4" />
+                    Email us
+                  </a>
+                </div>
+                <button onClick={() => setManagerPopup(false)}
+                  className="mt-4 text-sm text-secondary-400 hover:text-secondary-600 transition">
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Back ────────────────────────────────────────────────────────── */}
       <a href="/" className="mb-5 inline-flex items-center gap-1.5 text-sm text-secondary-400 transition hover:text-primary-600">
         <ChevronLeft className="h-4 w-4" />
@@ -1217,10 +1342,17 @@ export default function Cabinet({ odooId, uniqueKey }) {
           <span className="text-sm font-bold text-secondary-900">Booking Details</span>
         </div>
 
-        {/* Lock notice */}
+        {/* Lock notice — time-based */}
         {allEditLocked && (
           <div className="mx-4 mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs text-amber-800">
             Changes are closed 24 hours before the tour. Please contact us if you need help.
+          </div>
+        )}
+
+        {/* Lock notice — source-based (date & guests only) */}
+        {!sourceIsOurs && !allEditLocked && (
+          <div className="mx-4 mt-3 rounded-xl bg-neutral-50 border border-neutral-200 px-4 py-3 text-xs text-secondary-500">
+            Date and guest count changes are managed by our team for this booking. Contact us if you need adjustments.
           </div>
         )}
 
@@ -1354,7 +1486,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
           <TransfersCompact
             transfers={options.transfers || []}
             selectedTransferId={editTransfer}
-            onSelectTransferId={(v) => setEditTransfer(v ? Number(v) : null)}
+            onSelectTransferId={handleTransferChange}
             pickupAddress={editPickup}
             setPickupAddress={setEditPickup}
             dropoffAddress={editDropoff}
@@ -1371,7 +1503,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
           <CoversCompact
             covers={options.covers || []}
             selectedCoverId={editCover}
-            onSelectCoverId={(v) => setEditCover(v ? Number(v) : null)}
+            onSelectCoverId={handleCoverChange}
             priceLabel={local.is_private ? "per group" : "per person"}
             formatPrice={(v) => `IDR ${fmt(Number(v))}`}
             showHeader={false}
@@ -1435,6 +1567,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
                           editExtras={editExtras}
                           onChildQty={(child, v) => setExtraQty(child, v)}
                           locked={allEditLocked}
+                          savedQty={savedExtrasMap[item.id] || 0}
+                          savedExtrasMap={savedExtrasMap}
                         />
                       ))}
                       {activeItems.length === 0 && <p className="px-4 py-6 text-center text-sm text-secondary-400">No extras in this category.</p>}
@@ -1554,7 +1688,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
 
       {/* ── Upgrade banner (shared only) ─────────────────────────────────── */}
-      {!local.is_private && options.upgrade_tour && !allEditLocked && (() => {
+      {!local.is_private && options.upgrade_tour && !allEditLocked && sourceIsOurs && (() => {
         const up = options.upgrade_tour;
         const tierLabels = { "Premium Shared": "Premium", "First Class Shared": "First Class" };
         const tierLabel  = tierLabels[up.odoo_type] || up.name;
@@ -1678,43 +1812,63 @@ export default function Cabinet({ odooId, uniqueKey }) {
             </div>
             <span className="text-sm font-bold text-secondary-500 uppercase tracking-wide">Pricing</span>
           </div>
-          {lastPrices ? (
-            <div className="space-y-1.5">
-              <PriceRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
-              {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={`IDR ${fmt(lastPrices.boat_price)}`} />}
-              {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
-              {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
-              {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
-              {depositPaid > 0 && <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />}
-              <div className="flex items-center justify-between border-t border-neutral-100 pt-2.5">
-                <span className="text-base font-bold text-secondary-900">Total</span>
-                <span className={cn("text-base font-extrabold", hasChanges && priceDelta !== 0 ? "text-secondary-400 line-through" : "text-secondary-900")}>
-                  IDR {fmt(lastPrices.full_price)}
-                </span>
-              </div>
+          <div className="space-y-1.5">
+            {/* Detailed breakdown when available (after save in session) */}
+            {lastPrices ? (
+              <>
+                <PriceRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
+                {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={`IDR ${fmt(lastPrices.boat_price)}`} />}
+                {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
+                {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
+                {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
+              </>
+            ) : null}
+
+            {/* Always show totals */}
+            <div className={cn("flex items-center justify-between", lastPrices ? "border-t border-neutral-100 pt-2.5" : "")}>
+              <span className="text-sm font-bold text-secondary-900">Total</span>
+              <span className={cn("text-sm font-extrabold", hasChanges && priceDelta !== 0 ? "text-secondary-300 line-through" : "text-secondary-900")}>
+                IDR {fmt(lastPrices ? lastPrices.full_price : odooTotal)}
+              </span>
             </div>
-          ) : depositPaid > 0 && (
-            <PriceRow label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />
-          )}
-          {/* Price delta — shown whenever hasChanges && priceDelta !== 0, regardless of lastPrices */}
+            {depositPaid > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-secondary-400">Deposit paid</span>
+                <span className="text-sm font-semibold text-emerald-600">− IDR {fmt(depositPaid)}</span>
+              </div>
+            )}
+            {collect > 0 && (
+              <div className="flex items-center justify-between rounded-xl bg-primary-50 px-3 py-2.5">
+                <span className="text-sm font-semibold text-primary-700">Remaining balance</span>
+                <span className="text-sm font-extrabold text-primary-700">IDR {fmt(collect)}</span>
+              </div>
+            )}
+            {collect === 0 && depositPaid > 0 && (
+              <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5">
+                <span className="text-sm font-semibold text-emerald-700">Fully paid</span>
+                <span className="text-sm font-extrabold text-emerald-600">✓</span>
+              </div>
+            )}
+          </div>
+
+          {/* Price delta — shown when unsaved changes affect price */}
           {hasChanges && priceDelta !== 0 && (
             <div className={cn(
-              "mt-3 flex items-center justify-between rounded-xl px-3 py-2.5",
-              priceDelta > 0 ? "bg-amber-50" : "bg-emerald-50"
+              "mt-3 rounded-xl border px-4 py-3",
+              priceDelta > 0 ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"
             )}>
-              <div>
-                <div className={cn("text-[10px] font-bold uppercase tracking-wider", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
-                  Est. with changes
-                </div>
-                <div className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
-                  IDR {fmt(estNewTotal)}
-                </div>
+              <div className="flex items-center justify-between">
+                <span className={cn("text-xs font-semibold", priceDelta > 0 ? "text-amber-600" : "text-emerald-600")}>
+                  {priceDelta > 0 ? "Extra to pay" : "Price decrease"}
+                </span>
+                <span className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
+                  {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
+                </span>
               </div>
-              <div className={cn(
-                "rounded-full px-2.5 py-1 text-xs font-extrabold",
-                priceDelta > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
-              )}>
-                {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
+              <div className={cn("mt-1 text-[11px]", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
+                {priceDelta > 0
+                  ? `New total: IDR ${fmt(estNewTotal)}`
+                  : "Refund will be processed through Odoo"}
               </div>
             </div>
           )}
@@ -1726,6 +1880,28 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className="mb-3 flex items-center gap-2 text-white/80">
               <span className="text-xs font-bold uppercase tracking-widest">Unsaved changes</span>
             </div>
+
+            {/* Price delta hint */}
+            {priceDelta !== 0 && (
+              <div className={cn(
+                "mb-3 rounded-xl px-4 py-3",
+                priceDelta > 0 ? "bg-white/15" : "bg-white/10"
+              )}>
+                {priceDelta > 0 ? (
+                  <>
+                    <div className="text-xs font-semibold text-white/70">Additional payment required</div>
+                    <div className="mt-0.5 text-base font-extrabold text-white">+IDR {fmt(priceDelta)}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xs font-semibold text-white/70">Price difference</div>
+                    <div className="mt-0.5 text-base font-extrabold text-white">−IDR {fmt(Math.abs(priceDelta))}</div>
+                    <div className="mt-1 text-[11px] text-white/60">Refund will be processed through Odoo</div>
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
                 type="button"
@@ -1736,11 +1912,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 Reset
               </button>
               <button
-                onClick={local.is_private ? saveAll : () => setShowSharedEditModal(true)}
+                onClick={saveAll}
                 disabled={saving || saveBlocked}
                 className="btn-pay-now flex-[2] rounded-full bg-white py-3 text-sm font-bold text-amber-700 shadow-sm transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
               >
-                {saving ? "Saving…" : local.is_private ? "Save changes →" : "Request update →"}
+                {saving ? "Saving…" : "Save changes →"}
               </button>
             </div>
             {saveBlocked && <p className="mt-2 text-center text-xs text-white/70">Check availability first</p>}

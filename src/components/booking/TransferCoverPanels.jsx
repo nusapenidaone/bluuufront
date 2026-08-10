@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { Car, MapPin, Shield, ShieldCheck, Check, Info } from "lucide-react";
+import { Car, MapPin, Shield, ShieldCheck, Check, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
-import InfoDetailModal from "./InfoDetailModal";
 import { formatIDR } from "./utils";
 
 // --------------- Helpers ---------------
@@ -101,7 +100,7 @@ export function TransfersCompact({
   framed = true,
 }) {
   const [isExpanded, setIsExpanded] = useState(showHeader ? defaultExpanded : true);
-  const [activeTransferDetails, setActiveTransferDetails] = useState(null);
+  const [expandedTransferDetailsId, setExpandedTransferDetailsId] = useState(null);
   const selectedTransfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
   const selectedTransferDescription = getOptionDescription(selectedTransfer);
 
@@ -215,14 +214,20 @@ export function TransfersCompact({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActiveTransferDetails({ title: finalName, description: transfer.description || transfer.short_description || transferDescription, image: transfer.image || null });
+                              setExpandedTransferDetailsId(prev => prev === transfer.id ? null : transfer.id);
                             }}
                             className="text-secondary-400 hover:text-primary-600 transition-colors"
                           >
-                            <Info className="h-4 w-4" />
+                            {String(expandedTransferDetailsId) === String(transfer.id) ? <ChevronUp className="h-4 w-4" /> : <Info className="h-4 w-4" />}
                           </button>
                         )}
                       </div>
+                      {String(expandedTransferDetailsId) === String(transfer.id) && (
+                        <div
+                          className="mt-2 text-xs leading-relaxed text-secondary-600 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-0.5"
+                          dangerouslySetInnerHTML={{ __html: transfer.description || transfer.short_description || transferDescription }}
+                        />
+                      )}
                     </div>
                   </div>
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center">
@@ -291,10 +296,6 @@ export function TransfersCompact({
           )}
         </div>
       )}
-      <InfoDetailModal
-        data={activeTransferDetails ? { ...activeTransferDetails, subtitle: "Pickup and route information" } : null}
-        onClose={() => setActiveTransferDetails(null)}
-      />
     </div>
   );
 }
@@ -311,7 +312,7 @@ export function CoversCompact({
   framed = true,
 }) {
   const selectedCover = covers?.find(c => String(c.id) === String(selectedCoverId));
-  const [activeCoverDetails, setActiveCoverDetails] = useState(null);
+  const [expandedCoverDetailsId, setExpandedCoverDetailsId] = useState(null);
   const optionsContent = (
     <div className="flex flex-col divide-y divide-neutral-100">
       {/* Option: No coverage */}
@@ -386,17 +387,20 @@ export function CoversCompact({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setActiveCoverDetails({
-                        title: cover.name,
-                        description: cover.description || cover.short_description || coverDetails.description,
-                        image: coverDetails.image,
-                      });
+                      setExpandedCoverDetailsId(prev => prev === cover.id ? null : cover.id);
                     }}
                     className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
                   >
                     <Info className="h-3.5 w-3.5" />
-                    <span>See full description</span>
+                    <span>{String(expandedCoverDetailsId) === String(cover.id) ? "Hide description" : "See full description"}</span>
+                    {String(expandedCoverDetailsId) === String(cover.id) ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   </button>
+                )}
+                {hasCoverDetails && String(expandedCoverDetailsId) === String(cover.id) && (
+                  <div
+                    className="mt-2 text-xs leading-relaxed text-secondary-600 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-0.5"
+                    dangerouslySetInnerHTML={{ __html: cover.description || cover.short_description || coverDetails.description }}
+                  />
                 )}
               </div>
             </div>
@@ -432,10 +436,6 @@ export function CoversCompact({
       <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
         {optionsContent}
       </div>
-      <InfoDetailModal
-        data={activeCoverDetails ? { ...activeCoverDetails, subtitle: "Coverage information" } : null}
-        onClose={() => setActiveCoverDetails(null)}
-      />
     </div>
   );
 }

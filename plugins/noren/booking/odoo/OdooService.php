@@ -397,7 +397,7 @@ class OdooService
 
         $lines = static::post('/json/2/sale.order.line/search_read', [
             'domain' => [['order_id', 'in', array_values($orderIds)]],
-            'fields' => ['id', 'order_id', 'name', 'product_uom_qty', 'price_unit'],
+            'fields' => ['id', 'order_id', 'name', 'product_id', 'product_uom_qty', 'price_unit'],
             'limit'  => count($orderIds) * 20,
         ]) ?: [];
 
@@ -443,10 +443,13 @@ class OdooService
                 'x_studio_customer_checked_in_and_cleared',
                 'x_studio_checked_in_by',
                 'x_studio_no_show_1',
+                'x_studio_number_of_pax_checked_in',
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
                 'x_studio_group_lanyard_color',
                 'x_studio_boat_status',
+                'x_studio_penida_land_tour_pickup_time',
+                'x_studio_penida_pickup_point_land_tour',
             ],
             'order' => 'rental_start_date asc',
         ];
@@ -604,10 +607,14 @@ class OdooService
                 'x_studio_customer_checked_in_and_cleared',
                 'x_studio_checked_in_by',
                 'x_studio_no_show_1',
+                'x_studio_number_of_pax_checked_in',
                 'x_studio_collected_by_cash',
                 'x_studio_collected_by_edcbank',
                 'x_studio_group_lanyard_color',
+                'x_studio_penida_land_tour_pickup_time',
+                'x_studio_penida_pickup_point_land_tour',
                 'x_studio_unique_key',
+                'client_order_ref',
                 'order_line',
             ],
             'limit'  => 1,
@@ -1162,7 +1169,7 @@ class OdooService
 
     // ─── HTTP helper ──────────────────────────────────────────────────────────
 
-    public static function post(string $endpoint, array $body, int $maxRetries = 3)
+    public static function post(string $endpoint, array $body, int $maxRetries = 6)
     {
         $attempt = 0;
         $delay   = 2; // seconds
@@ -1200,13 +1207,17 @@ class OdooService
             if ($response->status() === 429 && $attempt < $maxRetries) {
                 $attempt++;
                 Log::warning('OdooService rate limited, retrying', [
-                    'endpoint' => $endpoint,
-                    'attempt'  => $attempt,
-                    'delay'    => $delay,
-                    'response' => $response->body(),
+                    'endpoint'    => $endpoint,
+                    'attempt'     => $attempt,
+                    'maxRetries'  => $maxRetries,
+                    'delay'       => $delay,
+                    'retryAfter'  => $response->header('Retry-After'),
+                    'request'     => $body,
+                    'status'      => $response->status(),
+                    'response'    => $response->body(),
                 ]);
                 sleep($delay);
-                $delay *= 2;
+                $delay = min($delay * 2, 30);
                 continue;
             }
 

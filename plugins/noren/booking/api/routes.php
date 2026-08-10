@@ -3,6 +3,7 @@
 use Noren\Booking\Api\AccountController;
 use Noren\Booking\Api\CabinetController;
 use Noren\Booking\Api\CheckinController;
+use Noren\Booking\Api\EtaController;
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\MarketingController;
 use Noren\Booking\Api\PrivateOrderController;
@@ -114,4 +115,7 @@ Route::options('api/new/checkin/{any}', function () {
 Route::get ('api/new/checkin/{odoo_id}',      [CheckinController::class, 'show']);
 Route::post('api/new/checkin/{odoo_id}/save', [CheckinController::class, 'save']);
 Route::post('api/new/checkin/{odoo_id}/pay',  [CheckinController::class, 'pay']);
+
+// ETA (время в пути до пункта назначения) — вызывается из Odoo automation
+Route::get('api/new/eta', [EtaController::class, 'estimate']);
 

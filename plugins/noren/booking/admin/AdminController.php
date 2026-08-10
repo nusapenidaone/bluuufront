@@ -350,10 +350,13 @@ class AdminController extends Controller
             'x_studio_customer_checked_in_and_cleared',
             'x_studio_checked_in_by',
             'x_studio_no_show_1',
+            'x_studio_number_of_pax_checked_in',
             'x_studio_collected_by_cash',
             'x_studio_collected_by_edcbank',
             'x_studio_group_lanyard_color',
             'x_studio_boat_status',
+            'x_studio_penida_land_tour_pickup_time',
+            'x_studio_penida_pickup_point_land_tour',
         ];
 
         $fields = $request->only($allowed);

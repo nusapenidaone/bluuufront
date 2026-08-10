@@ -140,9 +140,28 @@ X-Api-Key: bluuu-chatbot-2026
     "odoo_id": 65,
     "name": "Amarta Penida",
     "menu": "<div>...</div>"
-  }
+  },
+  "itinerary": [
+    { "time": "08:00", "title": "Meeting point" },
+    { "time": "08:30", "title": "Departure" },
+    { "time": "09:00", "title": "Snorkeling" },
+    { "time": "12:00", "title": "Lunch" },
+    { "time": "13:30", "title": "Land tour to Kelingking Cliff" },
+    { "time": "17:00", "title": "Cruise back to Bali" }
+  ],
+  "inclusions": [
+    "Swim with mantas",
+    "4 snorkeling spots"
+  ],
+  "notes": "Diving license required"
 }
 ```
+
+| Поле | Тип | Описание |
+|------|-----|----------|
+| `itinerary` | array | Таймлайн дня — слияние `schedule_before_lunch` + `schedule_after_lunch` маршрута (те же данные, что в попапе маршрута на сайте). Каждый шаг — `{ time, title }`. Разделители "или" между альтернативными активностями в таймлайн не попадают |
+| `inclusions` | array | Список фишек/хайлайтов маршрута (`route.highlights[].label`) — то, что показывается чипами на карточке/попапе маршрута |
+| `notes` | string\|null | Доп. примечание к маршруту (например "Diving license required"), `null` если не заполнено |
 
 ### extras[]
 
@@ -290,6 +309,19 @@ X-Api-Key: bluuu-chatbot-2026
     "name": "Amarta Penida",
     "menu": "<div>...</div>"
   },
+  "itinerary": [
+    { "time": "08:00", "title": "Meeting point" },
+    { "time": "08:30", "title": "Departure" },
+    { "time": "09:00", "title": "Snorkeling" },
+    { "time": "12:00", "title": "Lunch" },
+    { "time": "13:30", "title": "Land tour to Kelingking Cliff" },
+    { "time": "17:00", "title": "Cruise back to Bali" }
+  ],
+  "inclusions": [
+    "Snorkeling at 4 top spots",
+    "Lunch at cliff restaurant"
+  ],
+  "notes": null,
   "boats": [
     { "id": 15, "odoo_id": 71,  "name": "Riki J",        "company": { "id": 18, "odoo_id": 26, "name": "PT Riki J Boat Charters" } },
     { "id": 17, "odoo_id": 90,  "name": "Standard Boat",  "company": { "id": 10, "odoo_id": 17, "name": "Weda Dharma" } },
@@ -303,6 +335,8 @@ X-Api-Key: bluuu-chatbot-2026
   "images": [...]
 }
 ```
+
+`itinerary`, `inclusions`, `notes` — те же поля и та же логика, что в `routes[]` приватного эндпоинта (см. таблицу выше), только источник — маршрут, привязанный к этому shared-туру (`tour.route`). Для shared-туров маршрут один и не выбирается клиентом, поэтому эти поля лежат прямо в `boats[]`, а не в отдельном списке `routes[]`.
 
 **Логика прайса:** `pricing.type = per_guest`. Из `pricelist` берётся запись с `members_count == guests`. Если дата в `seasonal_prices` — берётся тот прайслист. `total = tier_price` (без boat_price).
 

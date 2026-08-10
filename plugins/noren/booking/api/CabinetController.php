@@ -47,24 +47,26 @@ class CabinetController extends Controller
         return $order;
     }
 
-    // Detect private/shared from Odoo order lines → local Tours table.
-    // Returns [$isPrivate, $classesId, $toursId]
-    private function detectTourType(array $odooLines): array
+    // Detect private/shared and local toursId from Odoo order lines → local Tours.types_id.
+    // Returns [$isPrivate, $classesId, $toursId] or null if tour not found in local DB.
+    private function detectTourType(array $odooOrder): ?array
     {
+        $lines      = $odooOrder['lines'] ?? [];
         $productIds = array_filter(array_map(function ($line) {
             $pid = $line['product_id'] ?? null;
-            return is_array($pid) ? $pid[0] : $pid;
-        }, $odooLines));
+            return is_array($pid) ? (int) $pid[0] : ($pid ? (int) $pid : null);
+        }, $lines));
 
         if (!empty($productIds)) {
             $tour = Tours::whereIn('odoo_id', array_values($productIds))->first();
-            if ($tour) {
-                $isPrivate = in_array((int) $tour->classes_id, [8]);
-                return [$isPrivate, $isPrivate ? 8 : 9, (int) $tour->id];
+            if ($tour && $tour->types_id) {
+                $isPrivate = (int) $tour->types_id === 2;
+                $classesId = $isPrivate ? 8 : 9;
+                return [$isPrivate, $classesId, (int) $tour->id];
             }
         }
 
-        return [false, 9, null];
+        return null;
     }
 
     // ─── GET /api/new/cabinet/{odooId}/{key} ─────────────────────────────────
@@ -78,7 +80,11 @@ class CabinetController extends Controller
             return response()->json(['error' => 'Order not found'], 404);
         }
 
-        [$isPrivate, $classesId, $toursId] = $this->detectTourType($odooOrder['lines'] ?? []);
+        $tourType = $this->detectTourType($odooOrder);
+        if ($tourType === null) {
+            return response()->json(['error' => 'Tour not found'], 404);
+        }
+        [$isPrivate, $classesId, $toursId] = $tourType;
 
         // Tour image via local Tours lookup by product odoo_id from order lines
         $tourImage = null;
@@ -88,7 +94,8 @@ class CabinetController extends Controller
         ));
         $tourName = null;
         if (!empty($productIds)) {
-            $tour = Tours::with(['included', 'includes'])->whereIn('odoo_id', array_values($productIds))->first();
+            $tour = Tours::with(['included', 'includes', 'packages', 'pricesbydates.packages'])
+                ->whereIn('odoo_id', array_values($productIds))->first();
             if ($tour) {
                 $tourName = $tour->name;
                 $imgs = $tour->images_with_thumbs ?? [];
@@ -154,8 +161,10 @@ class CabinetController extends Controller
             }
         }
 
+        $toursTypeId = isset($tour) ? (int) $tour->types_id : null;
+
         $transfers = $allTransferModels
-            ->filter(fn($t) => !$t->classes_id || (int) $t->classes_id === $classesId)
+            ->filter(fn($t) => !$t->types_id || (int) $t->types_id === $toursTypeId)
             ->map(fn($t) => [
                 'id'        => $t->id,
                 'name'      => $t->name,
@@ -164,7 +173,7 @@ class CabinetController extends Controller
             ])->values();
 
         $covers = $allCoverModels
-            ->filter(fn($c) => !$c->classes_id || (int) $c->classes_id === $classesId)
+            ->filter(fn($c) => !$c->types_id || (int) $c->types_id === $toursTypeId)
             ->map(fn($c) => [
                 'id'       => $c->id,
                 'name'     => $c->name,
@@ -203,6 +212,7 @@ class CabinetController extends Controller
                     }
                 }
             }
+            // Detect current extras from Odoo order lines matched against site catalog
             foreach ($lineProductIds as $pid) {
                 if (isset($extrasByOdooId[$pid])) {
                     $extra = $extrasByOdooId[$pid];
@@ -317,10 +327,12 @@ class CabinetController extends Controller
                     : ($odooOrder['x_studio_route_new'] ?? null),
                 'extras'          => $currentExtras,
                 'tour_odoo_type'  => isset($tour) ? ($tour->odoo_type ?? null) : null,
+                'source_id'       => isset($tour) ? (int) $tour->source_id : null,
             ],
             'odoo' => [
                 'order_number'       => $odooOrder['name']             ?? '',
                 'state'              => $odooOrder['state']            ?? '',
+                'source'             => $odooOrder['x_studio_source']  ?? null,
                 'boat_name'          => $odooOrder['x_studio_boat_name']  ?? '',
                 'route'              => $odooOrder['x_studio_route_new']  ?? '',
                 'rental_start_date'  => $odooOrder['rental_start_date']   ?? null,
@@ -335,6 +347,7 @@ class CabinetController extends Controller
                 'transfers'     => $transfers,
                 'covers'        => $covers,
                 'routes'        => $routes,
+                'price_list'    => $this->buildPricelist($tour ?? null, $travelDate),
                 'upgrade_tour'  => $this->buildUpgradeTour(
                     isset($tour) ? $tour : null,
                     $isPrivate,
@@ -380,6 +393,9 @@ class CabinetController extends Controller
         $newKids   = $kids   ?? $curKids;
         $members   = $newAdults + $newKids;
 
+        $dateChanged    = $date !== null;
+        $membersChanged = $adults !== null || $kids !== null;
+
         // ── Header fields ──────────────────────────────────────────────────────
         $fields = [];
 
@@ -404,6 +420,7 @@ class CabinetController extends Controller
         $allRestaurants  = Restaurant::whereNotNull('odoo_id')->get();
 
         $existingTransferLine    = null; // ['id', 'local_id', 'qty', 'price']
+        $existingNoTransferLineId = null; // line ID of the "No Transfer" placeholder (product_id=23)
         $existingCoverLine       = null;
         $existingRestaurantLine  = null; // ['id', 'qty']
         // keyed by odoo product_id: ['id' => lineId, 'qty' => qty]
@@ -415,6 +432,9 @@ class CabinetController extends Controller
             if (!$pid) continue;
             $lineQty = (int) ($line['product_uom_qty'] ?? 0);
 
+            if ($pid === 23) {
+                $existingNoTransferLineId = $line['id'];
+            }
             foreach ($allTransfers as $t) {
                 if ($t->odoo_id && (int) $t->odoo_id === $pid && $lineQty > 0) {
                     $existingTransferLine = ['id' => $line['id'], 'local_id' => (int) $t->id, 'qty' => $lineQty, 'price' => (float) ($line['price_unit'] ?? 0)];
@@ -494,6 +514,9 @@ class CabinetController extends Controller
                                     'name'            => $newTransfer->name,
                                 ]);
                             } else {
+                                if ($existingNoTransferLineId) {
+                                    OdooService::unlinkOrderLines([$existingNoTransferLineId]);
+                                }
                                 OdooService::addOrderLine($odooId, (int) $newTransfer->odoo_id, $cars, $unitPrice, $newTransfer->name);
                             }
                         }
@@ -551,6 +574,75 @@ class CabinetController extends Controller
                 }
             }
 
+            // ── Tour line price recalculation (date or members changed) ───────
+            if ($dateChanged || $membersChanged) {
+                $allTourOdooIds = Tours::whereNotNull('odoo_id')
+                    ->pluck('odoo_id')->map(fn($v) => (int) $v)->toArray();
+                $tourLineId     = null;
+                $tourLineOdooId = null;
+                foreach ($odooOrder['lines'] ?? [] as $line) {
+                    $lpid = $line['product_id'] ?? null;
+                    if (is_array($lpid)) $lpid = (int) $lpid[0];
+                    if ($lpid && in_array($lpid, $allTourOdooIds) && (int) ($line['product_uom_qty'] ?? 0) > 0) {
+                        $tourLineId     = $line['id'];
+                        $tourLineOdooId = $lpid;
+                        break;
+                    }
+                }
+
+                if ($tourLineId && $tourLineOdooId) {
+                    $localTour = Tours::with(['packages', 'pricesbydates.packages'])
+                        ->where('odoo_id', $tourLineOdooId)->first();
+
+                    if ($localTour) {
+                        $newTravelDate = $date ?? (
+                            !empty($odooOrder['rental_start_date'])
+                                ? Carbon::parse($odooOrder['rental_start_date'], 'UTC')
+                                    ->setTimezone('Asia/Makassar')->format('Y-m-d')
+                                : null
+                        );
+
+                        $pricelist = $localTour->packages?->pricelist ?? [];
+                        if ($newTravelDate && $localTour->pricesbydates->isNotEmpty()) {
+                            $seasonal = $localTour->pricesbydates->first(
+                                fn($p) => $newTravelDate >= $p->date_start && $newTravelDate <= $p->date_end
+                            );
+                            if ($seasonal?->packages?->pricelist) {
+                                $pricelist = $seasonal->packages->pricelist;
+                            }
+                        }
+
+                        $tourPrice = null;
+                        if (!empty($pricelist)) {
+                            $entry = collect($pricelist)->sortByDesc('members_count')
+                                ->first(fn($e) => $members >= (int) ($e['members_count'] ?? 0));
+                            if (!$entry) {
+                                $entry = collect($pricelist)->sortBy('members_count')->first();
+                            }
+                            $tourPrice = isset($entry) ? (int) ($entry['price'] ?? 0) : null;
+                        }
+
+                        if ($tourPrice !== null) {
+                            if ((int) $localTour->types_id === 2) {
+                                // private: qty=1, price = tour_price + boat_price
+                                $boatPrice = (int) ($localTour->boat_price ?? 0);
+                                OdooService::writeOrderLine($tourLineId, [
+                                    'product_uom_qty' => 1,
+                                    'price_unit'      => (float) ($tourPrice + $boatPrice),
+                                ]);
+                            } else {
+                                // shared: qty=members, price per person
+                                $pricePerPerson = $members > 0 ? $tourPrice / $members : 0;
+                                OdooService::writeOrderLine($tourLineId, [
+                                    'product_uom_qty' => max(1, $members),
+                                    'price_unit'      => round((float) $pricePerPerson, 2),
+                                ]);
+                            }
+                        }
+                    }
+                }
+            }
+
             // ── Extras lines ───────────────────────────────────────────────────
             if ($request->has('extras')) {
                 $requestedExtrasMap = [];
@@ -594,6 +686,25 @@ class CabinetController extends Controller
                 }
                 if (!empty($newExtrasVals)) {
                     OdooService::bulkAddOrderLines($odooId, $newExtrasVals);
+                }
+            }
+
+            // ── Auto-extras qty recalculation (per_car / per_person / fixed) ──
+            if ($membersChanged) {
+                $autoCars = max(1, (int) ceil($members / 5));
+                foreach ($existingExtrasLines as $productOdooId => $info) {
+                    if ($info['qty'] <= 0) continue;
+                    $extra = $allExtrasById->first(fn($e) => (int) ($e->odoo_id ?? 0) === $productOdooId);
+                    if (!$extra) continue;
+                    $newQty = match ($extra->qty_type ?? 'manual') {
+                        'per_person' => max(1, $members),
+                        'per_car'    => $autoCars,
+                        'fixed'      => 1,
+                        default      => null,
+                    };
+                    if ($newQty !== null && $info['qty'] !== $newQty) {
+                        OdooService::writeOrderLine($info['id'], ['product_uom_qty' => $newQty]);
+                    }
                 }
             }
 
@@ -748,6 +859,25 @@ class CabinetController extends Controller
         ]);
     }
 
+    // ─── Helper: active pricelist for the current tour + date ────────────────────
+    private function buildPricelist(?object $tour, ?string $travelDate): array
+    {
+        if (!$tour) return [];
+        $pricelist = $tour->packages?->pricelist ?? [];
+        if ($travelDate && $tour->pricesbydates->isNotEmpty()) {
+            $seasonal = $tour->pricesbydates->first(
+                fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end
+            );
+            if ($seasonal?->packages?->pricelist) {
+                $pricelist = $seasonal->packages->pricelist;
+            }
+        }
+        return array_values(array_map(fn($e) => [
+            'members_count' => (int) ($e['members_count'] ?? 0),
+            'price'         => (int) ($e['price'] ?? 0),
+        ], $pricelist));
+    }
+
     // ─── Helper: build upgrade_tour option for shared tiers ──────────────────────
     private function buildUpgradeTour(?object $currentTour, bool $isPrivate, ?string $travelDate, int $members): ?array
     {
@@ -833,18 +963,15 @@ class CabinetController extends Controller
             return response()->json(['success' => false, 'error' => 'tours_id required'], 422);
         }
 
-        $order = \Noren\Booking\Models\Order::where('odoo_id', $odooId)->first();
-        if (!$order) {
-            return response()->json(['success' => false, 'error' => 'Local order not found'], 404);
-        }
-
         $upgradeTour = Tours::with(['packages', 'pricesbydates.packages', 'boat.closeddates', 'route.restaurant'])->find($upgradeToursId);
         if (!$upgradeTour) {
             return response()->json(['success' => false, 'error' => 'Upgrade tour not found'], 404);
         }
 
-        $members    = (int) ($order->adults + $order->kids);
-        $travelDate = $order->travel_date ? (string) $order->travel_date : null;
+        $members    = (int) ($odooOrder['x_studio_adults'] ?? 0) + (int) ($odooOrder['x_studio_kids'] ?? 0);
+        $travelDate = !empty($odooOrder['rental_start_date'])
+            ? Carbon::parse($odooOrder['rental_start_date'], 'UTC')->setTimezone('Asia/Makassar')->format('Y-m-d')
+            : null;
 
         // Re-check availability at upgrade time (same logic as FullController)
         if ($travelDate) {
@@ -870,22 +997,8 @@ class CabinetController extends Controller
             $newTourPrice = (int) ($entry['price'] ?? 0);
         }
 
-        $newFullPrice = $newTourPrice
-            + (int) ($order->transfer_price ?? 0)
-            + (int) ($order->cover_price    ?? 0)
-            + (int) ($order->extras_total   ?? 0);
-
-        // Update local order
         $newRoute      = $upgradeTour->route;
         $newRestaurant = $newRoute?->restaurant;
-
-        $order->tours_id      = $upgradeToursId;
-        $order->tour_price    = $newTourPrice;
-        $order->total_price   = $newFullPrice;
-        $order->full_price    = $newFullPrice;
-        $order->route_id      = $newRoute?->id;
-        $order->restaurant_id = $newRestaurant?->id;
-        $order->saveQuietly();
 
         // Update existing Odoo order (no recreate)
         $wasSale = ($odooOrder['state'] ?? '') === 'sale';

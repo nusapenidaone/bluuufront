@@ -36,6 +36,41 @@ class ChatbotControllerV2 extends Controller
         return response()->json(['error' => 'Unauthorized'], 401);
     }
 
+    // Merges Route::schedule_before_lunch + schedule_after_lunch (repeater
+    // fields already shown in the on-site route popup) into a flat timeline.
+    // 'or-chip' rows are UI separators ("or") between alternative activities,
+    // not real time slots, so they're excluded.
+    protected function buildItinerary($route): array
+    {
+        if (!$route) return [];
+
+        $steps = collect($route->schedule_before_lunch ?? [])
+            ->merge($route->schedule_after_lunch ?? []);
+
+        return $steps
+            ->filter(fn($step) => ($step['type'] ?? 'item') === 'item')
+            ->map(fn($step) => [
+                'time'  => $step['time']  ?? '',
+                'title' => $step['title'] ?? '',
+            ])
+            ->filter(fn($step) => $step['title'] !== '')
+            ->values()
+            ->toArray();
+    }
+
+    // Route::highlights is the same repeater shown as highlight chips on the
+    // route card/popup — used here as the inclusions list.
+    protected function buildInclusions($route): array
+    {
+        if (!$route) return [];
+
+        return collect($route->highlights ?? [])
+            ->pluck('label')
+            ->filter(fn($label) => $label !== null && $label !== '')
+            ->values()
+            ->toArray();
+    }
+
     protected function formatBoatFeatures(array $bf): array
     {
         $on = fn($v) => $v === true || $v === 1 || $v === '1';
@@ -147,6 +182,9 @@ class ChatbotControllerV2 extends Controller
                     'name'    => $route->restaurant->name,
                     'menu'    => $route->restaurant->menu,
                 ] : null,
+                'itinerary'   => $this->buildItinerary($route),
+                'inclusions'  => $this->buildInclusions($route),
+                'notes'       => $route->add_on_note ?: null,
             ];
         });
 
@@ -267,6 +305,9 @@ class ChatbotControllerV2 extends Controller
                     'name'    => $route->restaurant->name,
                     'menu'    => $route->restaurant->menu,
                 ] : null,
+                'itinerary'   => $this->buildItinerary($route),
+                'inclusions'  => $this->buildInclusions($route),
+                'notes'       => $route?->add_on_note ?: null,
                 'boats'       => $tour->boat->map(fn($b) => [
                     'id'         => $b->id,
                     'odoo_id'    => $b->odoo_id ? (int) $b->odoo_id : null,
@@ -340,7 +381,18 @@ class ChatbotControllerV2 extends Controller
         $externalId     = $request->input('external_id', '');
 
         // ── Load tour ────────────────────────────────────────────────────
-        $tour = Tours::with(['packages', 'pricesbydates.packages'])->find($tourId);
+        // pricesbydates filtered to date_end >= tomorrow — mirrors
+        // FullController::getTourDetail() so the chatbot picks the same
+        // seasonal price tier the website shows (expired/overlapping rows
+        // excluded, same as the site).
+        $tomorrow = Carbon::tomorrow();
+        $tour = Tours::with([
+            'packages',
+            'pricesbydates' => function ($query) use ($tomorrow) {
+                $query->where('date_end', '>=', $tomorrow);
+            },
+            'pricesbydates.packages',
+        ])->find($tourId);
         if (!$tour) {
             return response()->json(['success' => false, 'error' => 'Tour not found'], 404);
         }

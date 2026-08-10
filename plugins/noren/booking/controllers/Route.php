@@ -19,6 +19,7 @@ class Route extends Controller
     {
         parent::__construct();
         BackendMenu::setContext('Noren.Booking', 'main-menu-item', 'side-menu-item21');
+        $this->addJs('/plugins/noren/booking/assets/js/icon-svg-preview.js');
     }
 
 }

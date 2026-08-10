@@ -12,6 +12,7 @@ return [
         'guides'  => 'Guides2026!',
         'drivers' => 'Drivers2026!',
         'vendors' => 'Vendors2026!',
+        'penida'  => 'Penida2026!',
     ],
     // Per-manager passwords for the /manage page (Login with name + password)
     'managers' => [

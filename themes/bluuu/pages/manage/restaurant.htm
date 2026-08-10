@@ -66,8 +66,17 @@ function groupByBoat(orders) {
 
 // ─── BoatCard ─────────────────────────────────────────────────────────────────
 function BoatCard({ boatName, orders, isManagement }) {
-    const totalPax = orders.reduce((sum, o) => {
+    // "Per lead" = booked headcount from the order itself — what was sold.
+    // "Checked-in" = actual attendance recorded at check-in — what the
+    // restaurant should really bill for. Orders not yet resolved (no
+    // check-in/no-show recorded) contribute 0 to the checked-in total since
+    // attendance isn't known yet.
+    const totalPaxPerLead = orders.reduce((sum, o) => {
         return sum + (Number(o.x_studio_count_of_people) || (Number(o.x_studio_adults ?? 0) + Number(o.x_studio_kids ?? 0)));
+    }, 0);
+    const totalPaxCheckedIn = orders.reduce((sum, o) => {
+        const resolved = o.x_studio_customer_checked_in_and_cleared === true || o.x_studio_no_show_1 === true;
+        return sum + (resolved ? Number(o.x_studio_number_of_pax_checked_in ?? 0) : 0);
     }, 0);
 
     const time = fmtTime(orders[0].rental_start_date);
@@ -123,8 +132,12 @@ function BoatCard({ boatName, orders, isManagement }) {
                     </div>
                 )}
                 <div className="flex items-center gap-2">
-                    <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest w-28 shrink-0">Total pax</span>
-                    <span className="text-2xl font-bold text-emerald-600">{totalPax}</span>
+                    <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest w-28 shrink-0">Total checked-in pax</span>
+                    <span className="text-2xl font-bold text-emerald-600">{totalPaxCheckedIn}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className="text-slate-500 text-xs font-semibold uppercase tracking-widest w-28 shrink-0">Total pax per lead</span>
+                    <span className="text-lg font-bold text-slate-400">{totalPaxPerLead}</span>
                 </div>
                 {noShows.length > 0 && (
                     <div className="flex items-start gap-2">

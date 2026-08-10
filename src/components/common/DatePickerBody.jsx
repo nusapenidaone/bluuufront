@@ -5,7 +5,7 @@ import { cn } from "../../lib/utils";
 
 /**
  * Reusable date picker body — exact single date or flexible range.
- * Used in both private1.jsx (hero bar dropdown, inline) and shared.jsx (card section).
+ * Used in both privatenew.jsx (hero bar dropdown, inline) and shared.jsx (card section).
  *
  * Props:
  *   dateMode          "exact" | "flex"

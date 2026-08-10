@@ -33,6 +33,7 @@ class Transfer extends Model
     
     public $belongsTo = [
         'classes' => Classes::class,
+        'types'   => Types::class,
     ];
     
     

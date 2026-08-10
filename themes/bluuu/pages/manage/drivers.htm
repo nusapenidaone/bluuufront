@@ -258,8 +258,6 @@ function App() {
     const [filterType,  setFilterType]  = useState('');
     const [filterBoat,  setFilterBoat]  = useState('');
 
-    if (!token) return <LoginScreen onLogin={setToken} />;
-
     const load = useCallback(async d => {
         setLoading(true);
         setError('');
@@ -279,7 +277,7 @@ function App() {
         }
     }, [token]);
 
-    useEffect(() => { load(date); }, [date, load]);
+    useEffect(() => { if (token) load(date); }, [date, token, load]);
 
     const orders = useMemo(() => data?.orders || [], [data]);
 
@@ -309,6 +307,8 @@ function App() {
         s + (numVal(o.x_studio_count_of_people) || numVal(o.x_studio_adults) + numVal(o.x_studio_kids)), 0);
 
     const isToday = date === todayBali();
+
+    if (!token) return <LoginScreen onLogin={setToken} />;
 
     return (
         <div>

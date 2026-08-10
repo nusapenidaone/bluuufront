@@ -61,6 +61,21 @@ const LANYARD_HEX = {
     'Forrest Green': '#15803d', 'Yello': '#eab308', 'Orange': '#f97316',
     'Brown': '#92400e', 'Pink': '#ec4899',
 };
+const PENIDA_POINTS = ['Toya Pakeh', 'La Rossa', 'Orca Beach Club', 'No Land Tour'];
+const TIME_OPTIONS = Array.from({ length: 144 }, (_, i) =>
+    `${String(Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10).padStart(2, '0')}`
+);
+function floatToTimeStr(v) {
+    if (v === false || v === null || v === undefined || v === 0) return '';
+    const h = Math.floor(v);
+    const m = Math.round((v - h) * 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+function timeStrToFloat(s) {
+    if (!s) return false;
+    const [h, m] = s.split(':').map(Number);
+    return h + m / 60;
+}
 function copyPhone(phone) {
     navigator.clipboard.writeText(phone).catch(() => {});
 }
@@ -69,7 +84,7 @@ function waLink(phone) {
 }
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
-function OrderCard({ o, updateOrder }) {
+function OrderCard({ o, updateOrder, updateBoatOrders }) {
     const priv     = isPrivate(o);
     const adults   = Number(o.x_studio_adults  ?? 0);
     const kids     = Number(o.x_studio_kids    ?? 0);
@@ -88,6 +103,12 @@ function OrderCard({ o, updateOrder }) {
     const clientName = partnerName(o);
     const lanyard  = strVal(o.x_studio_group_lanyard_color);
     const lanyardHex = lanyard ? (LANYARD_HEX[lanyard] || '#94a3b8') : null;
+    const penidaTime  = floatToTimeStr(o.x_studio_penida_land_tour_pickup_time);
+    const penidaPoint = strVal(o.x_studio_penida_pickup_point_land_tour) || '';
+    const applyPenida = fields => {
+        if (updateBoatOrders) updateBoatOrders(o.x_studio_boat_name, fields);
+        else updateOrder && updateOrder(o.id, fields);
+    };
 
     const Field = ({ label, value, pre }) => {
         if (!value) return null;
@@ -133,6 +154,21 @@ function OrderCard({ o, updateOrder }) {
                             <span className="text-sm font-bold" style={{ color: lanyardHex }}>{lanyard}</span>
                         </div>
                     )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2" onClick={e => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Penida:</span>
+                    <select value={penidaTime}
+                        onChange={e => applyPenida({ x_studio_penida_land_tour_pickup_time: timeStrToFloat(e.target.value) })}
+                        className={SELECT + ' h-7 px-2 text-xs'}>
+                        <option value="">Time…</option>
+                        {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select value={penidaPoint}
+                        onChange={e => applyPenida({ x_studio_penida_pickup_point_land_tour: e.target.value || false })}
+                        className={SELECT + ' h-7 px-2 text-xs'}>
+                        <option value="">Pickup point…</option>
+                        {PENIDA_POINTS.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
                 </div>
             </div>
 
@@ -245,8 +281,6 @@ function App() {
     const [search,        setSearch]        = useState('');
     const [showFilters,   setShowFilters]   = useState(false);
 
-    if (!token) return <LoginScreen onLogin={setToken} />;
-
     const updateOrder = useCallback(async (odooId, fields) => {
         const res = await fetch(`/api/admin/odoo/order/${odooId}`, {
             method: 'PATCH',
@@ -260,6 +294,14 @@ function App() {
             orders: prev.orders.map(o => o.id === odooId ? { ...o, ...fields, ...(json.odoo || {}) } : o),
         } : prev);
     }, [token]);
+
+    // Apply a field change to every lead on the same boat (the day is already
+    // fixed by the date filter), mirroring the lanyard-color/boat-status pattern.
+    const updateBoatOrders = useCallback((boatName, fields) => {
+        (data?.orders || [])
+            .filter(o => o.x_studio_boat_name === boatName)
+            .forEach(o => updateOrder(o.id, fields));
+    }, [data, updateOrder]);
 
     const load = useCallback(async d => {
         setLoading(true);
@@ -283,7 +325,7 @@ function App() {
         }
     }, [token]);
 
-    useEffect(() => { load(date); }, [date, load]);
+    useEffect(() => { if (token) load(date); }, [date, token, load]);
 
     const orders = data?.orders || [];
 
@@ -333,6 +375,8 @@ function App() {
     const isToday   = date === todayBali();
     const hasFilter = filterGuide || filterBoat || filterLanyard || search;
     const clearFilters = () => { setFilterGuide(''); setFilterBoat(''); setFilterLanyard(''); setSearch(''); };
+
+    if (!token) return <LoginScreen onLogin={setToken} />;
 
     return (
         <div>
@@ -473,7 +517,7 @@ function App() {
                 )}
                 {!loading && filtered.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {filtered.map(o => <OrderCard key={o.id} o={o} updateOrder={updateOrder} />)}
+                        {filtered.map(o => <OrderCard key={o.id} o={o} updateOrder={updateOrder} updateBoatOrders={updateBoatOrders} />)}
                     </div>
                 )}
             </div>

@@ -200,8 +200,8 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
   const tourTier = hideTierBadges ? null : /first.class/i.test(sectionTitle || "") ? "first-class" : /premium/i.test(sectionTitle || "") ? "premium" : null;
   const restaurantData = restaurant;
   const [activeItem, setActiveItem] = useState(0);
-  const [menuExpanded, setMenuExpanded] = useState(false);
-  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [menuExpanded, setMenuExpanded] = useState(true);
+  const [detailsExpanded, setDetailsExpanded] = useState(true);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [autoPlay, setAutoPlay] = useState(true);
@@ -210,7 +210,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
   const openRestaurantGallery = (startIndex) => {
     const fallback = restaurantData?.image || "https://bluuu.tours/storage/app/uploads/public/688/e36/55e/thumb_478_400_400_0_0_crop.webp";
     const slides = restaurantData?.images_with_thumbs?.length
-      ? restaurantData.images_with_thumbs.map(img => ({ src: img.thumb, type: "image" }))
+      ? restaurantData.images_with_thumbs.map(img => ({ src: img.original || img.hero || img.thumb, type: "image" }))
       : [{ src: fallback, type: "image" }];
     Fancybox.show(slides, { startIndex: startIndex || 0 });
   };
@@ -246,8 +246,8 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
   const handleItemClick = (i) => {
     setAutoPlay(false);
     setActiveItem(i);
-    setDetailsExpanded(false);
-    setMenuExpanded(false);
+    setDetailsExpanded(true);
+    setMenuExpanded(true);
   };
 
   if (!sections.length) return (
@@ -414,7 +414,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     </button>
                   )}
                   {!isLunch && detailsText && <p className={cn("text-sm leading-relaxed", textSub)}>{detailsText}</p>}
-                  {!isLunch && extrasCatalog != null && (
+                  {!isLunch && (detailsText || extrasCatalog != null) && (
                     <button type="button" onClick={(e) => { e.stopPropagation(); setAutoPlay(false); setDetailsExpanded(!detailsExpanded); setMenuExpanded(false); }} className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-primary-500 hover:text-primary-400">
                       {detailsExpanded ? "Hide" : "Details"}<ChevronDown className={cn("h-4 w-4 transition-transform", detailsExpanded && "rotate-180")} />
                     </button>
@@ -441,84 +441,81 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                   {menuExpanded ? "Hide" : "Menu"}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", menuExpanded && "rotate-180")} />
                 </button>
               )}
-              {!isLunch && extrasCatalog != null && (
+              {!isLunch && (detailsText || extrasCatalog != null) && (
                 <button type="button" onClick={() => { setAutoPlay(false); setDetailsExpanded(!detailsExpanded); setMenuExpanded(false); }} className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-primary-500 hover:text-primary-400">
                   {detailsExpanded ? "Hide" : "Details"}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", detailsExpanded && "rotate-180")} />
                 </button>
               )}
             </div>
             {isLunch && restaurantData && menuExpanded && (
-              <div className={cn("border-t", borderFaint)} onClick={(e) => e.stopPropagation()}>
-                {/* Restaurant hero */}
-                <div className="relative overflow-hidden rounded-b-2xl">
-                  <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-                    {/* Photo — stretches to content height on desktop */}
-                    <div className="relative sm:min-h-[280px]">
-                      {(() => {
-                        const fallback = restaurantData.image || "https://bluuu.tours/storage/app/uploads/public/688/e36/55e/thumb_478_400_400_0_0_crop.webp";
-                        const photos = restaurantData.images_with_thumbs?.length
-                          ? restaurantData.images_with_thumbs.map(img => ({ thumb: img.thumb, thumb_small: img.thumb_small, path: img.thumb }))
-                          : [{ thumb: fallback, path: fallback }];
-                        const mainSrc = photos[0]?.thumb || fallback;
-                        return (
-                          <>
-                            {/* Mobile: carousel with aspect ratio */}
-                            <div className="sm:hidden">
-                              <PhotoCarousel
-                                images={photos}
-                                alt={restaurantData.name}
-                                className="aspect-[16/9] !rounded-none"
-                                onOpenGallery={(i) => openRestaurantGallery(i)}
-                                alwaysShowControls
-                              />
-                            </div>
-                            {/* Desktop: full-height image with arrows */}
-                            <div className="hidden sm:block absolute inset-0 rounded-bl-2xl overflow-hidden cursor-pointer group/photo" onClick={() => openRestaurantGallery(desktopPhotoIdx)}>
-                              <img src={photos[desktopPhotoIdx]?.thumb || mainSrc} alt={restaurantData.name} className="h-full w-full object-cover transition-all duration-500 group-hover/photo:scale-[1.03]" />
-                              {photos.length > 1 && (
-                                <>
-                                  <button type="button" onClick={(e) => { e.stopPropagation(); setDesktopPhotoIdx((desktopPhotoIdx - 1 + photos.length) % photos.length); }}
-                                    className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white transition hover:bg-black/50">
-                                    <ChevronLeft className="h-4 w-4" style={{ color: '#fff' }} />
-                                  </button>
-                                  <button type="button" onClick={(e) => { e.stopPropagation(); setDesktopPhotoIdx((desktopPhotoIdx + 1) % photos.length); }}
-                                    className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white transition hover:bg-black/50">
-                                    <ChevronRight className="h-4 w-4" style={{ color: '#fff' }} />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                    {/* Content */}
-                    <div className={cn("flex-1 min-w-0 px-6 py-5 flex flex-col", lt ? "bg-neutral-50" : "bg-white/[0.02]")}>
-                      {restaurantData.description && (
-                        <p className={cn("text-sm leading-relaxed italic", textSub)} dangerouslySetInnerHTML={{ __html: restaurantData.description }} />
-                      )}
-                      <MenuSections sections={restaurantData.menu_sections} fallbackHtml={restaurantData.menu} note={restaurantData.menu_note} dark={!lt} />
-                    </div>
+              <div className={cn("border-t-2", lt ? "border-neutral-200" : "border-white/10")} onClick={(e) => e.stopPropagation()}>
+                <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 sm:gap-5 p-4 sm:p-5">
+                  {/* Photo */}
+                  <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-sm">
+                    {(() => {
+                      const fallback = restaurantData.image || "https://bluuu.tours/storage/app/uploads/public/688/e36/55e/thumb_478_400_400_0_0_crop.webp";
+                      const photos = restaurantData.images_with_thumbs?.length
+                        ? restaurantData.images_with_thumbs.map(img => ({ thumb: img.thumb, thumb_small: img.thumb_small, path: img.thumb }))
+                        : [{ thumb: fallback, path: fallback }];
+                      const mainSrc = photos[0]?.thumb || fallback;
+                      return (
+                        <>
+                          {/* Mobile: carousel */}
+                          <div className="sm:hidden h-full">
+                            <PhotoCarousel
+                              images={photos}
+                              alt={restaurantData.name}
+                              className="h-full !rounded-none"
+                              onOpenGallery={(i) => openRestaurantGallery(i)}
+                              alwaysShowControls
+                            />
+                          </div>
+                          {/* Desktop: full-height image with arrows */}
+                          <div className="hidden sm:block absolute inset-0 cursor-pointer group/photo" onClick={() => openRestaurantGallery(desktopPhotoIdx)}>
+                            <img src={photos[desktopPhotoIdx]?.thumb || mainSrc} alt={restaurantData.name} className="h-full w-full object-cover transition-all duration-500 group-hover/photo:scale-[1.03]" />
+                            {photos.length > 1 && (
+                              <>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setDesktopPhotoIdx((desktopPhotoIdx - 1 + photos.length) % photos.length); }}
+                                  className="absolute left-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white transition hover:bg-black/50">
+                                  <ChevronLeft className="h-4 w-4" style={{ color: '#fff' }} />
+                                </button>
+                                <button type="button" onClick={(e) => { e.stopPropagation(); setDesktopPhotoIdx((desktopPhotoIdx + 1) % photos.length); }}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white transition hover:bg-black/50">
+                                  <ChevronRight className="h-4 w-4" style={{ color: '#fff' }} />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0 flex flex-col">
+                    {restaurantData.description && (
+                      <p className={cn("text-sm leading-relaxed italic", textSub)} dangerouslySetInnerHTML={{ __html: restaurantData.description }} />
+                    )}
+                    <MenuSections sections={restaurantData.menu_sections} fallbackHtml={restaurantData.menu} note={restaurantData.menu_note} dark={!lt} />
                   </div>
                 </div>
               </div>
             )}
             {/* Details panel for non-lunch items */}
             {!isLunch && detailsExpanded && (
-              <div className={cn("border-t", borderFaint)} onClick={(e) => e.stopPropagation()}>
-                <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <div className={cn("border-t-2", lt ? "border-neutral-200" : "border-white/10")} onClick={(e) => e.stopPropagation()}>
+                <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 sm:gap-5 p-4 sm:p-5">
                   {/* Photo — left column like restaurant */}
                   {(() => {
                     const imgs = parseItemImages(selected);
                     const activityPhoto = imgs[0] || getActivityPhoto(selected.title);
                     return activityPhoto ? (
-                      <div className="relative aspect-[4/3]">
+                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-sm">
                         <img src={activityPhoto} alt={displayTitle} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
                       </div>
                     ) : null;
                   })()}
                   {/* Description + Extras — right column */}
-                  <div className="p-4 sm:p-5 flex-1 min-w-0 flex flex-col">
+                  <div className="flex-1 min-w-0 flex flex-col">
                     {detailsText && <p className="text-sm text-secondary-600 leading-relaxed">{detailsText}</p>}
                     {(() => {
                       const recommendedExtras = getItemExtras(selected, allExtrasCatalog || extrasCatalog);
@@ -535,7 +532,10 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                               const isAdded = qty > 0 || hasChildSelected;
                               const imgSrc = extra.image || extra.images_with_thumbs?.[0]?.thumb || "";
                               return (
-                                <div key={extra.id} data-addon-card className={cn("shrink-0 w-32 rounded-2xl border overflow-hidden transition-all", isAdded ? "border-primary-500 border-2 bg-white" : "border-neutral-200 bg-white")}>
+                                <div key={extra.id} data-addon-card role="button" tabIndex={0}
+                                  onClick={() => onOpenExtra?.(extra.id)}
+                                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenExtra?.(extra.id); } }}
+                                  className={cn("shrink-0 w-32 rounded-2xl border overflow-hidden transition-all cursor-pointer", isAdded ? "border-primary-500 border-2 bg-white" : "border-neutral-200 bg-white hover:border-neutral-300")}>
                                   <div className="relative aspect-[4/3] overflow-hidden rounded-b-lg">
                                     {imgSrc ? <img src={imgSrc} alt={extra.name} className="h-full w-full object-cover" loading="lazy" /> : <div className="h-full w-full bg-neutral-100" />}
                                     {isAdded && (

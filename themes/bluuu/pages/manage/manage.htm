@@ -846,6 +846,9 @@ function LeadsTable({ orders, onRow, updateOrder }) {
         e.stopPropagation();
         const existingBy = (o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false)
             ? String(o.x_studio_checked_in_by) : '';
+        const bookedPax = Number(o.x_studio_count_of_people) || (Number(o.x_studio_adults ?? 0) + Number(o.x_studio_kids ?? 0)) || 0;
+        const resolved  = !!o.x_studio_customer_checked_in_and_cleared || !!o.x_studio_no_show_1;
+        const existingPaxIn = Number(o.x_studio_number_of_pax_checked_in ?? 0);
         setCheckPayDialog({
             orderId:    o.id,
             clientName: partnerName(o),
@@ -855,6 +858,8 @@ function LeadsTable({ orders, onRow, updateOrder }) {
             collect:    Number(o.x_studio_collect ?? 0),
             cash:       Number(o.x_studio_collected_by_cash ?? 0),
             edc:        Number(o.x_studio_collected_by_edcbank ?? 0),
+            bookedPax,
+            paxCheckedIn: resolved ? existingPaxIn : bookedPax,
             payMethod:  null,
             payAmount:  '',
         });
@@ -867,6 +872,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
             x_studio_customer_checked_in_and_cleared: d.checkedIn,
             x_studio_checked_in_by: d.checkedIn ? (d.checkedBy || false) : false,
             x_studio_no_show_1: d.noShow,
+            x_studio_number_of_pax_checked_in: d.checkedIn ? (parseInt(d.paxCheckedIn, 10) || 0) : 0,
         };
         if (d.payMethod && d.payAmount !== '') {
             const amt = parseFloat(d.payAmount) || 0;
@@ -919,6 +925,8 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                 const adults   = o.x_studio_adults ?? 0;
                 const kids     = o.x_studio_kids   ?? 0;
                 const collect  = Number(o.x_studio_collect ?? 0);
+                const resolved = !!o.x_studio_customer_checked_in_and_cleared || !!o.x_studio_no_show_1;
+                const paxIn    = resolved ? Number(o.x_studio_number_of_pax_checked_in ?? 0) : null;
                 const guides   = [o.x_studio_guide_1_1, o.x_studio_guide_2_1].filter(v => v && v !== false);
                 const date     = odooDateBali(o.rental_start_date);
                 const rowLunch = o.x_studio_lunch && o.x_studio_lunch !== false ? String(o.x_studio_lunch) : null;
@@ -1054,6 +1062,11 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                         by {String(o.x_studio_checked_in_by)}
                                     </div>
                                 )}
+                                {paxIn !== null && (
+                                    <div className="text-[10px] text-slate-500 font-medium mt-0.5 px-1">
+                                        {paxIn} pax checked in
+                                    </div>
+                                )}
                                 {/* Collected amounts — only show if there's something to collect or already collected */}
                                 {(collect > 0 || o.x_studio_collected_by_cash > 0 || o.x_studio_collected_by_edcbank > 0) && (
                                     <div className="mt-1.5 space-y-1">
@@ -1161,7 +1174,10 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Status</label>
                                 <div className="flex gap-2">
                                     <button
-                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: true, noShow: false }))}
+                                        onClick={() => setCheckPayDialog(d => ({
+                                            ...d, checkedIn: true, noShow: false,
+                                            paxCheckedIn: d.checkedIn ? d.paxCheckedIn : d.bookedPax,
+                                        }))}
                                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
                                             checkPayDialog.checkedIn
                                                 ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
@@ -1170,7 +1186,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                         ✓ Checked In
                                     </button>
                                     <button
-                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: false }))}
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: false, paxCheckedIn: 0 }))}
                                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
                                             !checkPayDialog.checkedIn && !checkPayDialog.noShow
                                                 ? 'bg-red-50 border-red-200 text-red-500'
@@ -1179,7 +1195,7 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                         ✗ Not In
                                     </button>
                                     <button
-                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: true }))}
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: true, paxCheckedIn: 0 }))}
                                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
                                             checkPayDialog.noShow
                                                 ? 'bg-red-600 border-red-700 text-white'
@@ -1189,6 +1205,23 @@ function LeadsTable({ orders, onRow, updateOrder }) {
                                     </button>
                                 </div>
                             </div>
+
+                            {checkPayDialog.checkedIn && (
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                                        Number of Pax Checked-in
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={checkPayDialog.bookedPax}
+                                        value={checkPayDialog.paxCheckedIn}
+                                        onChange={e => setCheckPayDialog(d => ({ ...d, paxCheckedIn: e.target.value }))}
+                                        className={INPUT + ' w-full'}
+                                    />
+                                    <div className="text-[10px] text-slate-400 mt-1">Booked: {checkPayDialog.bookedPax}</div>
+                                </div>
+                            )}
 
                             <div>
                                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Checked-in by</label>

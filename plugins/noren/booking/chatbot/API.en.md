@@ -140,9 +140,28 @@ X-Api-Key: bluuu-chatbot-2026
     "odoo_id": 65,
     "name": "Amarta Penida",
     "menu": "<div>...</div>"
-  }
+  },
+  "itinerary": [
+    { "time": "08:00", "title": "Meeting point" },
+    { "time": "08:30", "title": "Departure" },
+    { "time": "09:00", "title": "Snorkeling" },
+    { "time": "12:00", "title": "Lunch" },
+    { "time": "13:30", "title": "Land tour to Kelingking Cliff" },
+    { "time": "17:00", "title": "Cruise back to Bali" }
+  ],
+  "inclusions": [
+    "Swim with mantas",
+    "4 snorkeling spots"
+  ],
+  "notes": "Diving license required"
 }
 ```
+
+| Field | Type | Description |
+|------|-----|----------|
+| `itinerary` | array | Timeline for the day — merges the route's `schedule_before_lunch` + `schedule_after_lunch` (same data shown in the route popup on the site). Each step is `{ time, title }`. "Or" separators between alternative activities are excluded from the timeline |
+| `inclusions` | array | Route highlight chips (`route.highlights[].label`) — the same items shown as chips on the route card/popup |
+| `notes` | string\|null | Extra note for the route (e.g. "Diving license required"), `null` if not set |
 
 ### extras[]
 
@@ -290,6 +309,19 @@ X-Api-Key: bluuu-chatbot-2026
     "name": "Amarta Penida",
     "menu": "<div>...</div>"
   },
+  "itinerary": [
+    { "time": "08:00", "title": "Meeting point" },
+    { "time": "08:30", "title": "Departure" },
+    { "time": "09:00", "title": "Snorkeling" },
+    { "time": "12:00", "title": "Lunch" },
+    { "time": "13:30", "title": "Land tour to Kelingking Cliff" },
+    { "time": "17:00", "title": "Cruise back to Bali" }
+  ],
+  "inclusions": [
+    "Snorkeling at 4 top spots",
+    "Lunch at cliff restaurant"
+  ],
+  "notes": null,
   "boats": [
     { "id": 15, "odoo_id": 71,  "name": "Riki J",        "company": { "id": 18, "odoo_id": 26, "name": "PT Riki J Boat Charters" } },
     { "id": 17, "odoo_id": 90,  "name": "Standard Boat",  "company": { "id": 10, "odoo_id": 17, "name": "Weda Dharma" } },
@@ -303,6 +335,8 @@ X-Api-Key: bluuu-chatbot-2026
   "images": [...]
 }
 ```
+
+`itinerary`, `inclusions`, `notes` — same fields and logic as `routes[]` in the private endpoint (see table above), sourced from the route attached to this shared tour (`tour.route`). Shared tours have a single fixed route the customer doesn't pick, so these fields live directly on `boats[]` instead of a separate `routes[]` list.
 
 **Pricing logic:** `pricing.type = per_guest`. The entry with `members_count == guests` is taken from `pricelist`. If the date falls within a `seasonal_prices` range, that pricelist is used instead. `total = tier_price` (no boat_price).
 

@@ -224,8 +224,6 @@ function App() {
 
     useEffect(() => { load(date); setBoatFilter('all'); }, [date, load]);
 
-    if (!token) return <LoginScreen onLogin={setToken} />;
-
     const orders = useMemo(() =>
         (data?.orders || []).slice().sort((a, b) => {
             const ta = a.rental_start_date || '';
@@ -241,6 +239,8 @@ function App() {
     , [boatGroups, boatFilter]);
 
     const isToday = date === todayBali();
+
+    if (!token) return <LoginScreen onLogin={setToken} />;
 
     return (
         <div>

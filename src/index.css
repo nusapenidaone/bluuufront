@@ -623,7 +623,7 @@ img[data-image-loaded="true"] {
     color: var(--secondary-700);
 }
 
-/* Boat carousel scroll snap (used by private1/private2) */
+/* Boat carousel scroll snap (used by privatenew/private2) */
 .boat-carousel {
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;

@@ -21,8 +21,8 @@ export const useTours = () => useContext(ToursContext);
 function getPageNeeds() {
     const path = typeof window !== "undefined" ? window.location.pathname.replace(/\/+$/, "") || "/" : "/";
     const isHome = path === "/";
-    const isPrivate = path === "/private-tour-to-nusa-penida" || path === "/private1";
-    const isShared = path === "/shared-tour-to-nusa-penida" || path === "/shared1";
+    const isPrivate = path === "/private-tour-to-nusa-penida" || path === "/privatenew";
+    const isShared = path === "/shared-tour-to-nusa-penida" || path === "/sharednew";
     const isFaq = path === "/faq";
     const isGallery = path === "/gallery";
     return {

@@ -766,3 +766,9 @@ v1.0.255:
 v1.0.256:
     - 'Updated table noren_booking_order: add donation_amount'
     - builder_table_update_noren_booking_order_30.php
+v1.0.257:
+    - 'Updated table noren_booking_transfer: add types_id'
+    - builder_table_update_noren_booking_transfer_8.php
+v1.0.258:
+    - 'Updated table noren_booking_cover: add types_id'
+    - builder_table_update_noren_booking_cover_7.php

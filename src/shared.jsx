@@ -8289,7 +8289,7 @@ function StepCheckout({
   onFinalize,
   onCancel,
 }) {
-  const isLastStep = step === 3;
+  const isLastStep = step === 2;
   const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
   const [errors, setErrors] = useState({});
   const [sameAddress, setSameAddress] = useState(false);
@@ -8343,8 +8343,7 @@ function StepCheckout({
 
   const steps = [
     { num: 1, label: "Payment option" },
-    { num: 2, label: "Payment method" },
-    { num: 3, label: "Your details" },
+    { num: 2, label: "Your details" },
   ];
   const { activePolicyKey, activePolicy, openPolicy: openPolicyModal, closePolicy: closePolicyModal } = usePolicyModal();
 
@@ -8357,14 +8356,14 @@ function StepCheckout({
             <p className="mt-1 text-sm text-secondary-500 sm:text-base">Secure your spot in just a few steps.</p>
           </div>
 
-          <div className="relative mb-7">
-            <div className="absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 bg-neutral-100" />
-            <div className="relative flex justify-between">
-              {steps.map((s) => {
-                const isActive = s.num === step;
-                const isCompleted = s.num < step;
-                return (
-                  <div key={s.num} className="flex flex-col items-center gap-1.5">
+          <div className="mb-7 flex items-start justify-center">
+            {steps.map((s, i) => {
+              const isActive = s.num === step;
+              const isCompleted = s.num < step;
+              return (
+                <div key={s.num} className="flex items-start">
+                  {i > 0 && <div className="mx-6 mt-[17px] h-0.5 w-16 rounded bg-neutral-100 sm:mx-10 sm:w-28" />}
+                  <div className="flex flex-col items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
@@ -8381,23 +8380,22 @@ function StepCheckout({
                     <span
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
                       className={cn(
-                        "absolute -bottom-5 text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
+                        "text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors text-center",
                         isActive ? "text-primary-700" : isCompleted ? "text-primary-600 cursor-pointer" : "text-neutral-300"
-                      )}
-                      style={{ left: s.num === 1 ? '0' : s.num === 3 ? 'auto' : '50%', right: s.num === 3 ? '0' : 'auto', transform: s.num === 2 ? 'translateX(-50%)' : 'none' }}>
+                      )}>
                       {s.label}
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="mb-3 h-2" />
 
           <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg shadow-neutral-100/40 sm:p-6">
             <h3 className="mb-4 text-lg font-bold text-secondary-900 sm:mb-5 sm:text-xl">
-              {step === 1 ? "How would you like to pay?" : step === 2 ? "Select payment method" : "Contact details"}
+              {step === 1 ? "How would you like to pay?" : "Contact details"}
             </h3>
 
             {step === 1 && (
@@ -8460,30 +8458,6 @@ function StepCheckout({
             )}
 
             {step === 2 && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => onSetPayMethod("card")}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg border-2 p-3.5 transition",
-                    payMethod === "card" ? "border-primary-600 bg-primary-50/30" : "border-neutral-200 hover:border-neutral-300"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <img src="https://bluuu.tours/themes/bluuu/assets/icons/card_icon.svg" alt="Card" className="h-7 w-auto" />
-                    <div className="text-left">
-                      <div className="font-bold text-secondary-900">Card payment</div>
-                      <div className="text-xs text-secondary-500">Payment in IDR</div>
-                    </div>
-                  </div>
-                  <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "card" ? "border-primary-600" : "border-neutral-300")}>
-                    {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-                  </div>
-                </button>
-                {/* PayPal временно отключён */}
-              </div>
-            )}
-
-            {step === 3 && (
               <div className="space-y-3.5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -8639,11 +8613,11 @@ function StepCheckout({
                 <Button variant="ghost" onClick={onCancel} className="h-10 px-4 text-secondary-400 hover:bg-red-50 hover:text-red-500">Cancel</Button>
               )}
               <Button
-                onClick={() => step < 3 ? onSetStep(step + 1) : handleFinalize()}
-                disabled={step === 3 && (!agreedTerms || !agreedLiability)}
+                onClick={() => step < 2 ? onSetStep(step + 1) : handleFinalize()}
+                disabled={step === 2 && (!agreedTerms || !agreedLiability)}
                 className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
-                {step < 3 ? "Continue" : "Complete booking"}
+                {step < 2 ? "Continue" : "Complete booking"}
               </Button>
             </div>
           </div>
