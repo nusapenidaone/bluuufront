@@ -40,6 +40,7 @@ class Route extends Model
 
     public $attachMany = [
         'photos' => [\System\Models\File::class],
+        'schedule_photos' => [\System\Models\File::class],
     ];
     public $attachOne = [
         'map' => [\System\Models\File::class],

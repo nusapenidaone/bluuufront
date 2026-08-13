@@ -574,6 +574,7 @@ class FullController extends Controller
             'ecategories.extras.children.images',
             'ecategories.extras.images',
             'photos',
+            'schedule_photos',
             'restaurant.images',
         ])->where('classes_id', $classesId)->orderBy('sort_order')->get();
 
@@ -591,6 +592,12 @@ class FullController extends Controller
             $payload['map'] = $mapFile ? $mapFile->getPath() : null;
 
             $payload['photos'] = $route->photos->map(fn($p) => [
+                'path'        => $p->getPath(),
+                'thumb'       => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
+            ])->toArray();
+
+            $payload['schedule_photos'] = $route->schedule_photos->map(fn($p) => [
                 'path'        => $p->getPath(),
                 'thumb'       => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
                 'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
@@ -623,7 +630,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $route = Route::with(['restaurant', 'restaurant.images'])->find($id);
+        $route = Route::with(['restaurant', 'restaurant.images', 'schedule_photos'])->find($id);
 
         if (!$route) {
             return response()->json(null, 404);
@@ -643,6 +650,11 @@ class FullController extends Controller
             'popup_afternoon' => $route->popup_afternoon,
             'schedule_before_lunch' => $route->schedule_before_lunch,
             'schedule_after_lunch' => $route->schedule_after_lunch,
+            'schedule_photos' => $route->schedule_photos->map(fn($p) => [
+                'path'        => $p->getPath(),
+                'thumb'       => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
+            ])->toArray(),
             'map' => $mapFile ? $mapFile->getPath() : null,
             'restaurant' => $restaurant ? [
                 'id' => $restaurant->id,

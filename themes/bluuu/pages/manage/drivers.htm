@@ -50,6 +50,15 @@ function fmtTime(utcStr) {
     return new Date(utcStr.replace(' ', 'T') + 'Z')
         .toLocaleTimeString('en-GB', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' });
 }
+function fmtFloatTime(val) {
+    if (val === undefined || val === null || val === false || val === '') return null;
+    const num = Number(val);
+    if (!Number.isFinite(num)) return null;
+    const totalMinutes = Math.round(num * 60);
+    const h = Math.floor(totalMinutes / 60) % 24;
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
 function partnerName(o) {
     if (Array.isArray(o.partner_id)) return o.partner_id[1] || '—';
     return o.partner_id || '—';
@@ -72,6 +81,7 @@ function shareCard(o) {
     const boat      = o.x_studio_boat_name || '—';
     const time      = fmtTime(o.rental_start_date) || '—';
     const pickup    = strVal(o.x_studio_pickup_address);
+    const eta       = fmtFloatTime(o.x_studio_estimated_pickup_time);
     const dropoff   = strVal(o.x_studio_drop_off_address);
     const pickupCars  = numVal(o.x_studio_pickup_cars);
     const dropoffCars = numVal(o.x_studio_drop_off_cars);
@@ -83,7 +93,7 @@ function shareCard(o) {
     const lines = [
         `${carType} — ${boat} — ${total} persons`,
         `Departure: ${time}`,
-        pickup  ? `Pick Up (${pickupCars}): ${pickup}`   : null,
+        pickup  ? `Pick Up (${pickupCars}): ${pickup}${eta ? ' — ETA ' + eta : ''}` : null,
         dropoff ? `Drop Off (${dropoffCars}): ${dropoff}` : null,
         comments ? `Comments: ${comments}` : null,
         `${client}${phone ? ' ' + phone : ''}`,
@@ -100,6 +110,7 @@ function DriverCard({ o }) {
     const kids        = numVal(o.x_studio_kids);
     const time        = fmtTime(o.rental_start_date);
     const pickup      = strVal(o.x_studio_pickup_address);
+    const eta         = fmtFloatTime(o.x_studio_estimated_pickup_time);
     const dropoff     = strVal(o.x_studio_drop_off_address);
     const pickupCars  = numVal(o.x_studio_pickup_cars);
     const dropoffCars = numVal(o.x_studio_drop_off_cars);
@@ -162,6 +173,7 @@ function DriverCard({ o }) {
                 <div className="border-b border-white/70 pb-2">
                     <span className="font-semibold text-slate-700">Pick Up: ({pickupCars})</span>
                     <div className="text-slate-600">{pickup || '—'}</div>
+                    {eta && <div className="text-xs font-semibold text-slate-500 mt-0.5">ETA: {eta}</div>}
                 </div>
 
                 {/* Drop Off */}

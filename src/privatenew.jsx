@@ -4957,7 +4957,7 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
     </div>
   );
 }
-function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHighlightExtra, onOpenTourInfo, vibes = [], styles = [], extrasCatalog = [], allExtrasCatalog = [], hasDateCriteria = false, selectedBoatId = null, onFocusStepOne, priceDisplay = null, dateDisplay = null, guestsDisplay = null, capacityLabel = null, selectedExtras = {}, onExtraQtyChange, onShowExtras, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, formatIDR: formatPrice, onOpenExtra, totalGuests = 1 }) {
+function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHighlightExtra, onOpenTourInfo, vibes = [], styles = [], extrasCatalog = [], allExtrasCatalog = [], hasDateCriteria = false, selectedBoatId = null, onFocusStepOne, priceDisplay = null, dateDisplay = null, guestsDisplay = null, capacityLabel = null, selectedExtras = {}, onExtraQtyChange, onShowExtras, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, pickupAddressConfirmed = false, onSetPickupAddressConfirmed, dropoffAddressConfirmed = false, onSetDropoffAddressConfirmed, formatIDR: formatPrice, onOpenExtra, totalGuests = 1 }) {
   const { categories, loading: extrasLoading } = useExtras();
   const [ctaPulse, setCtaPulse] = useState(false);
   const [pickupModalOpen, setPickupModalOpen] = useState(false);
@@ -5205,7 +5205,20 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
               <div className="text-sm text-secondary-500">
                 Selected: <b className="text-secondary-900">{selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.name || "—") : "Make my own way"}</b>
               </div>
-              <Button className="h-12 w-full text-sm !font-black" onClick={() => { if (selectedTransferId === null) onSelectTransferId?.(""); setPickupModalOpen(false); setTransferDetailsPopup(null); }}>
+              <Button
+                className="h-12 w-full text-sm !font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={(() => {
+                  if (!selectedTransferId || skipPickupAddress) return false;
+                  const selT = transfers?.find(tr => String(tr.id) === String(selectedTransferId));
+                  const isShuttleSel = selT?.name?.toLowerCase().includes("shuttle") || selT?.name?.toLowerCase().includes("free");
+                  if (isShuttleSel) return false;
+                  const hasDropoffSel = selT?.name?.toLowerCase().includes("drop");
+                  const pickupNeedsConfirm = Boolean(pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
+                  const dropoffNeedsConfirm = Boolean(hasDropoffSel && !samePickupDropoff && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
+                  return pickupNeedsConfirm || dropoffNeedsConfirm;
+                })()}
+                onClick={() => { if (selectedTransferId === null) onSelectTransferId?.(""); setPickupModalOpen(false); setTransferDetailsPopup(null); }}
+              >
                 Confirm
               </Button>
             </div>
@@ -5269,6 +5282,11 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                           onSetPickupAddress?.(val);
                           if (samePickupDropoff && onSetDropoffAddress) onSetDropoffAddress(val);
                         }}
+                        confirmed={pickupAddressConfirmed}
+                        onConfirmedChange={(val) => {
+                          onSetPickupAddressConfirmed?.(val);
+                          if (samePickupDropoff) onSetDropoffAddressConfirmed?.(val);
+                        }}
                         placeholder="Enter your hotel or villa address"
                         className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                       />
@@ -5279,6 +5297,8 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         <AddressAutocomplete
                           value={dropoffAddress || ""}
                           onChange={(val) => onSetDropoffAddress?.(val)}
+                          confirmed={dropoffAddressConfirmed}
+                          onConfirmedChange={(val) => onSetDropoffAddressConfirmed?.(val)}
                           placeholder="Enter your dropoff address"
                           className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                         />
@@ -5305,7 +5325,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         <input type="checkbox" checked={samePickupDropoff}
                           onChange={(e) => {
                             setSamePickupDropoff(e.target.checked);
-                            if (e.target.checked && onSetDropoffAddress) onSetDropoffAddress(pickupAddress || "");
+                            if (e.target.checked && onSetDropoffAddress) {
+                              onSetDropoffAddress(pickupAddress || "");
+                              onSetDropoffAddressConfirmed?.(pickupAddressConfirmed);
+                            }
                           }}
                           className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
                         <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
@@ -5320,6 +5343,8 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                       if (e.target.checked) {
                         onSetPickupAddress?.("");
                         onSetDropoffAddress?.("");
+                        onSetPickupAddressConfirmed?.(false);
+                        onSetDropoffAddressConfirmed?.(false);
                       }
                     }}
                     className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
@@ -5401,7 +5426,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
       );
     }
     return null;
-  }, [cancellationSummaryCards, weatherGuaranteeCards, includedExtras, selectedExtras, onExtraQtyChange, openIncludedCategories, pickupModalOpen, expandedTransferId, showPickupMap, skipPickupAddress, samePickupDropoff, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, formatPrice]);
+  }, [cancellationSummaryCards, weatherGuaranteeCards, includedExtras, selectedExtras, onExtraQtyChange, openIncludedCategories, pickupModalOpen, expandedTransferId, showPickupMap, skipPickupAddress, samePickupDropoff, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, pickupAddressConfirmed, onSetPickupAddressConfirmed, dropoffAddressConfirmed, onSetDropoffAddressConfirmed, formatPrice]);
 
   const addOnNoteByStyleId = styles.reduce((acc, s) => {
     if (s.add_on_note) acc[s.id || s.slug] = s.add_on_note;
@@ -5834,6 +5859,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
                 onRestaurantClick={setRestaurantDataPopup}
+                schedulePhotos={style?.schedule_photos}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 onContinue={onContinue}
                 continueLabel="Choose your boat"
@@ -5904,7 +5930,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
           const scheduleItems = schedule ? [...(schedule.beforeLunch || []), ...(schedule.afterLunch || [])] : [];
           const rest = routeModalRestaurant || style.restaurant;
           const restPhotos = rest?.images_with_thumbs?.length
-            ? rest.images_with_thumbs.map(img => ({ thumb: img.thumb, path: img.thumb }))
+            ? rest.images_with_thumbs.map(img => ({ thumb: img.thumb, path: img.original || img.hero || img.thumb }))
             : rest?.image ? [{ thumb: rest.image, path: rest.image }] : [];
           const chips = style.highlights?.filter(h => h.label) || [];
           const imgSrc = (s) => s?.thumb || s?.path || s;
@@ -7453,6 +7479,10 @@ function StepFive({
   onSetPickupAddress,
   dropoffAddress,
   onSetDropoffAddress,
+  pickupAddressConfirmed = false,
+  onSetPickupAddressConfirmed,
+  dropoffAddressConfirmed = false,
+  onSetDropoffAddressConfirmed,
 }) {
   const [activeEditor, setActiveEditor] = useState(null);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -7528,12 +7558,20 @@ function StepFive({
   };
   const isTransferSelected = selectedTransferId !== null;
   const isProtectionSelected = selectedCoverId !== null;
-  const isReserveEnabled = isDateSelected && isBoatSelected;
+  const selectedTransferForAddress = transfers?.find(t => String(t.id) === String(selectedTransferId));
+  const isShuttleTransfer = selectedTransferForAddress?.name?.toLowerCase().includes("shuttle") || selectedTransferForAddress?.name?.toLowerCase().includes("free");
+  const hasDropoffTransfer = selectedTransferForAddress?.name?.toLowerCase().includes("drop");
+  const pickupAddressNeedsConfirm = Boolean(selectedTransferId && !isShuttleTransfer && !skipReviewAddress && pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
+  const dropoffAddressNeedsConfirm = Boolean(selectedTransferId && !isShuttleTransfer && hasDropoffTransfer && !sameReviewAddress && !skipReviewAddress && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
+  const addressNeedsConfirm = pickupAddressNeedsConfirm || dropoffAddressNeedsConfirm;
+  const isReserveEnabled = isDateSelected && isBoatSelected && !addressNeedsConfirm;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
       ? "Select tour to continue"
-      : "Reserve Now";
+      : addressNeedsConfirm
+        ? "Confirm pickup address to continue"
+        : "Reserve Now";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -7739,7 +7777,20 @@ function StepFive({
                   <div className="text-sm text-secondary-500">
                     Selected: <b className="text-secondary-900">{selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.name || "—") : "Make my own way"}</b>
                   </div>
-                  <Button className="h-12 w-full text-sm !font-black" onClick={() => { if (selectedTransferId === null) onSelectTransferId?.(""); setIsTransferOpen(false); }}>
+                  <Button
+                    className="h-12 w-full text-sm !font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={(() => {
+                      if (!selectedTransferId || skipReviewAddress) return false;
+                      const selT = transfers?.find(tr => String(tr.id) === String(selectedTransferId));
+                      const isShuttleSel = selT?.name?.toLowerCase().includes("shuttle") || selT?.name?.toLowerCase().includes("free");
+                      if (isShuttleSel) return false;
+                      const hasDropoffSel = selT?.name?.toLowerCase().includes("drop");
+                      const pickupNeedsConfirm = Boolean(pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
+                      const dropoffNeedsConfirm = Boolean(hasDropoffSel && !sameReviewAddress && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
+                      return pickupNeedsConfirm || dropoffNeedsConfirm;
+                    })()}
+                    onClick={() => { if (selectedTransferId === null) onSelectTransferId?.(""); setIsTransferOpen(false); }}
+                  >
                     Confirm
                   </Button>
                 </div>
@@ -7803,6 +7854,11 @@ function StepFive({
                               onSetPickupAddress?.(val);
                               if (sameReviewAddress && onSetDropoffAddress) onSetDropoffAddress(val);
                             }}
+                            confirmed={pickupAddressConfirmed}
+                            onConfirmedChange={(val) => {
+                              onSetPickupAddressConfirmed?.(val);
+                              if (sameReviewAddress) onSetDropoffAddressConfirmed?.(val);
+                            }}
                             placeholder="Enter your hotel or villa address"
                             className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                           />
@@ -7813,6 +7869,8 @@ function StepFive({
                             <AddressAutocomplete
                               value={dropoffAddress || ""}
                               onChange={(val) => onSetDropoffAddress?.(val)}
+                              confirmed={dropoffAddressConfirmed}
+                              onConfirmedChange={(val) => onSetDropoffAddressConfirmed?.(val)}
                               placeholder="Enter your dropoff address"
                               className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                             />
@@ -7839,7 +7897,10 @@ function StepFive({
                             <input type="checkbox" checked={sameReviewAddress}
                               onChange={(e) => {
                                 setSameReviewAddress(e.target.checked);
-                                if (e.target.checked && onSetDropoffAddress) onSetDropoffAddress(pickupAddress || "");
+                                if (e.target.checked && onSetDropoffAddress) {
+                                  onSetDropoffAddress(pickupAddress || "");
+                                  onSetDropoffAddressConfirmed?.(pickupAddressConfirmed);
+                                }
                               }}
                               className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
                             <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
@@ -7854,6 +7915,8 @@ function StepFive({
                           if (e.target.checked) {
                             onSetPickupAddress?.("");
                             onSetDropoffAddress?.("");
+                            onSetPickupAddressConfirmed?.(false);
+                            onSetDropoffAddressConfirmed?.(false);
                           }
                         }}
                         className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
@@ -10508,6 +10571,8 @@ export default function Premium_Private_With_Vibe() {
   const [datePricing, setDatePricing] = useState(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
+  const [pickupAddressConfirmed, setPickupAddressConfirmed] = useState(false);
+  const [dropoffAddressConfirmed, setDropoffAddressConfirmed] = useState(false);
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -11385,6 +11450,10 @@ export default function Premium_Private_With_Vibe() {
           onSetPickupAddress={setPickupAddress}
           dropoffAddress={dropoffAddress}
           onSetDropoffAddress={setDropoffAddress}
+          pickupAddressConfirmed={pickupAddressConfirmed}
+          onSetPickupAddressConfirmed={setPickupAddressConfirmed}
+          dropoffAddressConfirmed={dropoffAddressConfirmed}
+          onSetDropoffAddressConfirmed={setDropoffAddressConfirmed}
           formatIDR={formatIDR}
           onOpenExtra={(id) => {
             setShowExtrasSection(true);
@@ -11558,6 +11627,10 @@ export default function Premium_Private_With_Vibe() {
               onSetPickupAddress={setPickupAddress}
               dropoffAddress={dropoffAddress}
               onSetDropoffAddress={setDropoffAddress}
+              pickupAddressConfirmed={pickupAddressConfirmed}
+              onSetPickupAddressConfirmed={setPickupAddressConfirmed}
+              dropoffAddressConfirmed={dropoffAddressConfirmed}
+              onSetDropoffAddressConfirmed={setDropoffAddressConfirmed}
             />
             <AnimatePresence>
               {isCheckoutOpen && (

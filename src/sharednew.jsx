@@ -4299,7 +4299,7 @@ function StepTwo({
           const chips = boat.includes?.length ? boat.includes : TIER_EXTRA_CHIPS[tierIdx] || [];
           const restaurant = fcRestaurant;
           const restaurantPhotos = restaurant?.images_with_thumbs?.length
-            ? restaurant.images_with_thumbs.map(img => ({ thumb: img.thumb, path: img.thumb }))
+            ? restaurant.images_with_thumbs.map(img => ({ thumb: img.thumb, path: img.original || img.hero || img.thumb }))
             : restaurant?.image ? [{ thumb: restaurant.image, path: restaurant.image }] : [];
           const props = boat.boatProps || {};
           const specBoatType = [props.boat_type || null, boat.lengthMeters ? `${boat.lengthMeters}m` : null].filter(Boolean).join(" · ") || "—";
@@ -5159,6 +5159,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
                 onRestaurantClick={setRestaurantDataPopup}
+                schedulePhotos={style?.schedule_photos}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
                 onContinue={onContinue}
                 continueLabel="Choose your tour"
@@ -6545,6 +6546,10 @@ function StepFive({
   onSetPickupAddress,
   dropoffAddress,
   onSetDropoffAddress,
+  pickupAddressConfirmed = false,
+  onSetPickupAddressConfirmed,
+  dropoffAddressConfirmed = false,
+  onSetDropoffAddressConfirmed,
   pendingTransferModal,
   onPendingTransferModalConsumed,
 }) {
@@ -6610,12 +6615,6 @@ function StepFive({
     onKidsChange(draftKids);
     closeEditor();
   };
-  const isReserveEnabled = isDateSelected && isBoatSelected;
-  const reserveLabel = !isDateSelected
-    ? "Select date to continue"
-    : !isBoatSelected
-      ? "Select option to continue"
-      : "Reserve Now";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -6664,6 +6663,20 @@ function StepFive({
   const [skipSharedAddress, setSkipSharedAddress] = useState(false);
   const [sameSharedAddress, setSameSharedAddress] = useState(false);
   const [expandedCoverDetailId3, setExpandedCoverDetailId3] = useState(null);
+  const selectedTransferForAddress = transfers?.find(t => String(t.id) === String(selectedTransferId));
+  const isShuttleTransfer = selectedTransferForAddress?.name?.toLowerCase().includes("shuttle") || selectedTransferForAddress?.name?.toLowerCase().includes("free");
+  const hasDropoffTransfer = selectedTransferForAddress?.name?.toLowerCase().includes("drop");
+  const pickupAddressNeedsConfirm = Boolean(selectedTransferId && !isShuttleTransfer && !skipSharedAddress && pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
+  const dropoffAddressNeedsConfirm = Boolean(selectedTransferId && !isShuttleTransfer && hasDropoffTransfer && !sameSharedAddress && !skipSharedAddress && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
+  const addressNeedsConfirm = pickupAddressNeedsConfirm || dropoffAddressNeedsConfirm;
+  const isReserveEnabled = isDateSelected && isBoatSelected && !addressNeedsConfirm;
+  const reserveLabel = !isDateSelected
+    ? "Select date to continue"
+    : !isBoatSelected
+      ? "Select option to continue"
+      : addressNeedsConfirm
+        ? "Confirm pickup address to continue"
+        : "Reserve Now";
   const handleRowClick = (row) => {
     if (row.expandable) {
       setExpandedRow(expandedRow === row.id ? null : row.id);
@@ -6918,7 +6931,20 @@ function StepFive({
                   <div className="text-sm text-secondary-500">
                     Selected: <b className="text-secondary-900">{selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.name || "—") : "Free shuttle"}</b>
                   </div>
-                  <Button className="h-12 w-full text-sm !font-black" onClick={() => { onTransferConfirm?.(); setExpandedRow(null); }}>
+                  <Button
+                    className="h-12 w-full text-sm !font-black disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={(() => {
+                      if (!selectedTransferId || skipSharedAddress) return false;
+                      const selT = transfers?.find(tr => String(tr.id) === String(selectedTransferId));
+                      const isShuttleSel = selT?.name?.toLowerCase().includes("shuttle") || selT?.name?.toLowerCase().includes("free");
+                      if (isShuttleSel) return false;
+                      const hasDropoffSel = selT?.name?.toLowerCase().includes("drop");
+                      const pickupNeedsConfirm = Boolean(pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
+                      const dropoffNeedsConfirm = Boolean(hasDropoffSel && !sameSharedAddress && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
+                      return pickupNeedsConfirm || dropoffNeedsConfirm;
+                    })()}
+                    onClick={() => { onTransferConfirm?.(); setExpandedRow(null); }}
+                  >
                     Confirm
                   </Button>
                 </div>
@@ -7015,6 +7041,11 @@ function StepFive({
                                   onSetPickupAddress?.(val);
                                   if (sameSharedAddress && onSetDropoffAddress) onSetDropoffAddress(val);
                                 }}
+                                confirmed={pickupAddressConfirmed}
+                                onConfirmedChange={(val) => {
+                                  onSetPickupAddressConfirmed?.(val);
+                                  if (sameSharedAddress) onSetDropoffAddressConfirmed?.(val);
+                                }}
                                 placeholder="Enter your hotel or villa address"
                                 className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                               />
@@ -7025,6 +7056,8 @@ function StepFive({
                                 <AddressAutocomplete
                                   value={dropoffAddress || ""}
                                   onChange={(val) => onSetDropoffAddress?.(val)}
+                                  confirmed={dropoffAddressConfirmed}
+                                  onConfirmedChange={(val) => onSetDropoffAddressConfirmed?.(val)}
                                   placeholder="Enter your dropoff address"
                                   className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
                                 />
@@ -7051,7 +7084,10 @@ function StepFive({
                                 <input type="checkbox" checked={sameSharedAddress}
                                   onChange={(e) => {
                                     setSameSharedAddress(e.target.checked);
-                                    if (e.target.checked && onSetDropoffAddress) onSetDropoffAddress(pickupAddress || "");
+                                    if (e.target.checked && onSetDropoffAddress) {
+                                      onSetDropoffAddress(pickupAddress || "");
+                                      onSetDropoffAddressConfirmed?.(pickupAddressConfirmed);
+                                    }
                                   }}
                                   className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
                                 <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
@@ -7066,6 +7102,8 @@ function StepFive({
                               if (e.target.checked) {
                                 onSetPickupAddress?.("");
                                 onSetDropoffAddress?.("");
+                                onSetPickupAddressConfirmed?.(false);
+                                onSetDropoffAddressConfirmed?.(false);
                               }
                             }}
                             className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
@@ -9027,6 +9065,8 @@ export default function Shared_tour_01() {
   const [datePricing, setDatePricing] = useState(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
+  const [pickupAddressConfirmed, setPickupAddressConfirmed] = useState(false);
+  const [dropoffAddressConfirmed, setDropoffAddressConfirmed] = useState(false);
   const [inlineRouteSchedule, setInlineRouteSchedule] = useState(null);
   const [isFetchingInlineRoute, setIsFetchingInlineRoute] = useState(false);
   const [inlineRestaurantPopup, setInlineRestaurantPopup] = useState(null);
@@ -9094,6 +9134,7 @@ export default function Shared_tour_01() {
           afterLunch: Array.isArray(linkedRoute.schedule_after_lunch) ? linkedRoute.schedule_after_lunch : [],
           footerNotes: linkedRoute.popup_afternoon ? [linkedRoute.popup_afternoon] : [],
           restaurant: linkedRoute.restaurant ?? null,
+          schedulePhotos: Array.isArray(linkedRoute.schedule_photos) ? linkedRoute.schedule_photos : [],
         }
         : null;
       return {
@@ -9359,6 +9400,7 @@ export default function Shared_tour_01() {
           afterLunch: Array.isArray(data.schedule_after_lunch) ? data.schedule_after_lunch : [],
           footerNotes: data.popup_afternoon ? [data.popup_afternoon] : [],
           restaurant: restaurantObj,
+          schedulePhotos: Array.isArray(data.schedule_photos) ? data.schedule_photos : [],
         };
         setInlineRouteSchedule(base);
         if (restaurantId) {
@@ -10165,6 +10207,7 @@ export default function Shared_tour_01() {
                         }}
                         restaurant={inlineRouteSchedule?.restaurant || selectedYacht?.routeSchedule?.restaurant}
                         onRestaurantClick={setInlineRestaurantPopup}
+                        schedulePhotos={inlineRouteSchedule?.schedulePhotos || selectedYacht?.routeSchedule?.schedulePhotos}
                         priceDisplay={selectedYacht ? formatIDR((() => { const dateForPrice = dateMode === "exact" ? exactDate : selectedFlexDate; if (dateForPrice && selectedYacht.tourId) { const p = calculateBoatPrice(selectedYacht.tourId, dateForPrice, totalGuests, sharedTours); if (p !== null) return p; } return selectedYacht.priceValue; })()) : null}
                         dateDisplay={dateMode === "exact" ? (exactDate ? new Date(exactDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null) : (selectedFlexDate ? new Date(selectedFlexDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : rangeStart && rangeEnd ? `${new Date(rangeStart + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(rangeEnd + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : null)}
                         guestsDisplay={`${adults} adult${adults !== 1 ? "s" : ""}${kids > 0 ? `, ${kids} kid${kids !== 1 ? "s" : ""}` : ""}`}
@@ -10251,6 +10294,10 @@ export default function Shared_tour_01() {
               onSetPickupAddress={setPickupAddress}
               dropoffAddress={dropoffAddress}
               onSetDropoffAddress={setDropoffAddress}
+              pickupAddressConfirmed={pickupAddressConfirmed}
+              onSetPickupAddressConfirmed={setPickupAddressConfirmed}
+              dropoffAddressConfirmed={dropoffAddressConfirmed}
+              onSetDropoffAddressConfirmed={setDropoffAddressConfirmed}
               pendingTransferModal={pendingTransferModal}
               onPendingTransferModalConsumed={() => setPendingTransferModal(false)}
             />

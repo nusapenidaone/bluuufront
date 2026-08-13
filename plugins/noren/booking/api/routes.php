@@ -7,6 +7,7 @@ use Noren\Booking\Api\EtaController;
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\MarketingController;
 use Noren\Booking\Api\PrivateOrderController;
+use Noren\Booking\Api\QrController;
 use Noren\Booking\Api\SharedOrderController;
 // Tours
 Route::get('api/new/tours/private', [FullController::class, 'getPrivateTours']);
@@ -118,4 +119,8 @@ Route::post('api/new/checkin/{odoo_id}/pay',  [CheckinController::class, 'pay'])
 
 // ETA (время в пути до пункта назначения) — вызывается из Odoo automation
 Route::get('api/new/eta', [EtaController::class, 'estimate']);
+
+// QR-код заказа (PNG) по odoo_id + x_studio_unique_key
+Route::get('api/new/qr/{odoo_id}/{key}', [QrController::class, 'generate'])
+    ->where('odoo_id', '[0-9]+')->where('key', '[^/]+');
 

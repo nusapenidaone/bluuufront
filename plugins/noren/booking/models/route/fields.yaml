@@ -1,302 +1,173 @@
 tabs:
     fields:
         title:
-            label: Название
+            label: Title
             span: auto
             type: text
             tab: Main
         classes:
-            label: Класс
+            label: Class
             nameFrom: name
             descriptionFrom: description
             span: auto
             type: relation
             tab: Main
-        # slug:
-        #     label: Slug
-        #     span: auto
-        #     type: text
-        #     tab: Main
-
+        odoo_name:
+            label: 'Route name in Odoo'
+            span: auto
+            type: text
+            tab: Main
         start:
-            label: 'Время начала'
+            label: 'Start time'
             mode: time
             span: auto
             type: datepicker
             tab: Main
         end:
-            label: 'Время окончания'
+            label: 'End time'
             mode: time
             span: auto
             type: datepicker
             tab: Main
-
-
         restaurant:
-            label: Ресторан
+            label: Restaurant
             nameFrom: name
             descriptionFrom: description
             span: auto
             type: relation
             tab: Main
         badge:
-            label: Бейдж
-            span: auto
-            type: text
-            tab: Main
-        tone:
-            label: Тон
+            label: Badge
             span: auto
             type: text
             tab: Main
         best_for:
-            label: 'Подходит для'
-            span: full
-            type: text
-            tab: Main
-        best_with:
-            label: 'Хорошо сочетается с'
+            label: 'Best for'
             span: full
             type: text
             tab: Main
         description:
-            label: Описание
+            label: Description
             span: full
             size: small
             type: textarea
             tab: Main
         highlights:
-            label: Особенности
+            label: Highlights
             span: full
             type: repeater
+            itemsExpanded: false
             tab: Main
             form:
                 fields:
                     label:
-                        label: Текст
+                        label: Text
                         type: text
                         span: auto
+
                     icon_svg:
-                        label: 'SVG иконки'
+                        label: 'Icon SVG'
                         type: codeeditor
+
                         size: small
-                        span: full
-                        cssClass: icon-svg-field
-                        commentHtml: true
-                        comment: 'Вставьте SVG с <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → нажмите на иконку → Copy SVG. Заменяет Icon Name, если заполнено.'
+                        span: left
+
+                        comment: 'Paste an SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click an icon → Copy SVG. Overrides Icon Name when filled in.'
 
         add_on_note:
-            label: 'Заметка о доп. опции (например, требуется лицензия дайвера)'
+            label: 'Add-on note (e.g. diver license required)'
             span: full
             type: text
-            tab: Popup
+            tab: Main
         popup_title:
-            label: 'Заголовок попапа'
+            label: 'Popup title'
             span: auto
             type: text
-            tab: Popup
+            tab: Main
         popup_afternoon:
-            label: 'Описание послеобеденной части (попап)'
+            label: 'Afternoon section description (popup)'
             span: full
             size: small
             type: textarea
-            tab: Popup
+            tab: Main
         schedule_before_lunch:
-            label: 'Расписание: до обеда'
+            label: 'Before lunch'
             span: full
+            itemsExpanded: false
             type: repeater
-            tab: Popup
+            tab: Schedule
             form:
-                fields:
-                    type:
-                        label: Тип
-                        type: dropdown
+                fields: &schedule_item_fields
+                    title:
+                        label: Title
+                        type: text
                         span: auto
-                        options:
-                            item: Обычный слот
-                            or-chip: Разделитель "или"
-                        default: item
                     time:
-                        label: Время
+                        label: Time
                         type: text
                         span: auto
                     duration:
-                        label: Длительность
+                        label: Duration
                         type: text
                         span: auto
-                    title:
-                        label: Заголовок
-                        type: text
-                        span: auto
-                    is_restaurant:
-                        label: 'Показывать ресторан'
-                        type: switch
-                        span: auto
-                        default: 0
-                        comment: 'Показывать карточку ресторана для этого шага вместо допуслуг'
+
+
                     highlight:
-                        label: 'Выделение'
+                        label: Highlight
                         type: dropdown
                         span: auto
                         default: ''
                         options:
-                            '': Нет
-                            premium: Премиум
-                            first-class: 'Первый класс'
-                        comment: 'Показывать бейдж выделения для этой активности'
-                    icon_name:
-                        label: 'Название иконки'
-                        type: text
-                        span: auto
-                        commentHtml: true
-                        comment: 'Название иконки с <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev</a>, например: Waves, Ship, Fish, Camera, UtensilsCrossed'
+                            '': None
+                            premium: Premium
+                            first-class: 'First class'
+                        comment: 'Show a highlight badge for this activity (only for shared tours, not private tours).'
+                    is_restaurant:
+                        label: 'Show restaurant'
+                        type: switch
+                        span: full
+                        default: 0
+                        comment: 'Show the restaurant card for this step instead of add-ons'
                     icon_svg:
-                        label: 'SVG иконки (опционально, заменяет название)'
+                        label: 'Icon SVG (optional, overrides name)'
                         type: codeeditor
                         size: small
                         span: full
                         cssClass: icon-svg-field
                         commentHtml: true
-                        comment: 'Вставьте SVG с <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → нажмите на иконку → Copy SVG. Заменяет Icon Name, если заполнено.'
+                        comment: 'Paste an SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click an icon → Copy SVG. Overrides Icon Name when filled in.'
                     details:
-                        label: 'Детали / Текст'
+                        label: 'Details / Text'
                         type: textarea
                         size: small
-                        span: full
-                    info:
-                        label: Подробное описание (попап)
-                        type: textarea
-                        size: small
-                        span: full
-                    is_addon:
-                        label: Платная опция (добавляется отдельно)
-                        type: checkbox
                         span: auto
-                    extra_id:
-                        label: ID связанного Extra
-                        type: number
-                        span: auto
-                        comment: 'ID из таблицы extras — для кнопки добавления из расписания'
-                    badges:
-                        label: 'Теги (через запятую)'
-                        type: text
-                        span: full
-                        comment: 'Например: 50 min from port, Bumpy road, Amazing views'
-                    images:
-                        label: 'Фото слота (URLs, по одному на строку)'
-                        type: textarea
-                        size: small
-                        span: full
                     extras:
-                        label: 'Дополнительные услуги'
+                        label: 'Add-ons'
                         type: taglist
                         span: full
                         mode: array
                         options: getExtraOptions
-                        comment: 'Выберите допуслуги для показа как доп. опции для этого шага'
+                        comment: 'Select add-ons to show as options for this step'
         schedule_after_lunch:
-            label: 'Расписание: после обеда'
+            label: 'After lunch'
             span: full
             type: repeater
-            tab: Popup
+            tab: Schedule
+            itemsExpanded: false
             form:
-                fields:
-                    type:
-                        label: Тип
-                        type: dropdown
-                        span: auto
-                        options:
-                            item: Обычный слот
-                            or-chip: Разделитель "или"
-                        default: item
-                    time:
-                        label: Время
-                        type: text
-                        span: auto
-                    duration:
-                        label: Длительность
-                        type: text
-                        span: auto
-                    title:
-                        label: Заголовок
-                        type: text
-                        span: auto
-                    is_restaurant:
-                        label: 'Показывать ресторан'
-                        type: switch
-                        span: auto
-                        default: 0
-                        comment: 'Показывать карточку ресторана для этого шага вместо допуслуг'
-                    highlight:
-                        label: 'Выделение'
-                        type: dropdown
-                        span: auto
-                        default: ''
-                        options:
-                            '': Нет
-                            premium: Премиум
-                            first-class: 'Первый класс'
-                        comment: 'Показывать бейдж выделения для этой активности'
-                    icon_name:
-                        label: 'Название иконки'
-                        type: text
-                        span: auto
-                        commentHtml: true
-                        comment: 'Название иконки с <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev</a>, например: Waves, Ship, Fish, Camera, UtensilsCrossed'
-                    icon_svg:
-                        label: 'SVG иконки (опционально, заменяет название)'
-                        type: textarea
-                        size: small
-                        span: full
-                        cssClass: icon-svg-field
-                        commentHtml: true
-                        comment: 'Вставьте SVG с <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → нажмите на иконку → Copy SVG. Заменяет Icon Name, если заполнено.'
-                    details:
-                        label: 'Детали / Текст'
-                        type: textarea
-                        size: small
-                        span: full
-                    info:
-                        label: Подробное описание (попап)
-                        type: textarea
-                        size: small
-                        span: full
-                    is_addon:
-                        label: Платная опция (добавляется отдельно)
-                        type: checkbox
-                        span: auto
-                    extra_id:
-                        label: ID связанного Extra
-                        type: number
-                        span: auto
-                        comment: 'ID из таблицы extras — для кнопки добавления из расписания'
-                    badges:
-                        label: 'Теги (через запятую)'
-                        type: text
-                        span: full
-                        comment: 'Например: 50 min from port, Bumpy road, Amazing views'
-                    images:
-                        label: 'Фото слота (URLs, по одному на строку)'
-                        type: textarea
-                        size: small
-                        span: full
-                    extras:
-                        label: 'Дополнительные услуги'
-                        type: taglist
-                        span: full
-                        mode: array
-                        options: getExtraOptions
-                        comment: 'Выберите допуслуги для показа как доп. опции для этого шага'
-        photos:
-            label: Фото
+                fields: *schedule_item_fields
+        schedule_photos:
+            label: 'Schedule photos (in order)'
             span: full
             type: fileupload
             mode: image
             imageHeight: 100
             imageWidth: 100
-            tab: Images
-        map:
-            label: Карта
+            tab: Schedule
+            comment: 'Assigned in order to schedule steps (before+after lunch) that have no photo of their own. Order = file sort order.'
+
+        photos:
+            label: Photos
             span: full
             type: fileupload
             mode: image
@@ -304,7 +175,7 @@ tabs:
             imageWidth: 100
             tab: Images
         ecategories:
-            label: 'Категории допуслуг'
+            label: 'Add-on categories'
             nameFrom: name
             descriptionFrom: description
             span: full
@@ -313,14 +184,8 @@ tabs:
                 - preview
             type: relation
             tab: Extras
-        odoo_name:
-            label: 'Название маршрута в Odoo'
-            span: auto
-            type: text
-            tab: Main
-
         program:
-            label: Программа
+            label: Program
             nameFrom: name
             descriptionFrom: description
             span: auto

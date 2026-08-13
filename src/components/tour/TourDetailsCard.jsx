@@ -196,7 +196,7 @@ function computeAutoQty(qtyType, totalGuests) {
   return null;
 }
 
-function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, capacityLabel, extrasCatalog, allExtrasCatalog, selectedExtras, onChangeExtraQty, formatPrice, onOpenExtra, hideTierBadges, totalGuests = 1 }) {
+function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, capacityLabel, extrasCatalog, allExtrasCatalog, selectedExtras, onChangeExtraQty, formatPrice, onOpenExtra, hideTierBadges, totalGuests = 1, schedulePhotos }) {
   const tourTier = hideTierBadges ? null : /first.class/i.test(sectionTitle || "") ? "first-class" : /premium/i.test(sectionTitle || "") ? "premium" : null;
   const restaurantData = restaurant;
   const [activeItem, setActiveItem] = useState(0);
@@ -503,27 +503,31 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
             {/* Details panel for non-lunch items */}
             {!isLunch && detailsExpanded && (
               <div className={cn("border-t-2", lt ? "border-neutral-200" : "border-white/10")} onClick={(e) => e.stopPropagation()}>
-                <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 sm:gap-5 p-4 sm:p-5">
+                <div className="flex flex-col sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 sm:gap-5 p-4 sm:p-5 sm:pb-0">
                   {/* Photo — left column like restaurant */}
                   {(() => {
                     const imgs = parseItemImages(selected);
-                    const activityPhoto = imgs[0] || getActivityPhoto(selected.title);
+                    const routePhoto = Array.isArray(schedulePhotos) ? (schedulePhotos[activeItem]?.thumb || schedulePhotos[activeItem]?.path) : undefined;
+                    const activityPhoto = imgs[0] || routePhoto || (schedulePhotos === undefined ? getActivityPhoto(selected.title) : null);
                     return activityPhoto ? (
                       <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-sm">
                         <img src={activityPhoto} alt={displayTitle} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
                       </div>
                     ) : null;
                   })()}
-                  {/* Description + Extras — right column */}
+                  {/* Description — right column */}
                   <div className="flex-1 min-w-0 flex flex-col">
                     {detailsText && <p className="text-sm text-secondary-600 leading-relaxed">{detailsText}</p>}
-                    {(() => {
+                  </div>
+                </div>
+                {/* Recommended add-ons — full width row, not squeezed into the description column */}
+                {(() => {
                       const recommendedExtras = getItemExtras(selected, allExtrasCatalog || extrasCatalog);
                       if (!recommendedExtras.length) return null;
                       return (
-                        <div className="mt-auto pt-3">
+                        <div className="px-4 pt-3 pb-4 sm:px-5 sm:pb-5">
                           <div className="text-[10px] font-bold uppercase tracking-widest text-secondary-400 mb-2">Recommended add-ons</div>
-                          <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
+                          <div className="flex gap-2.5 overflow-x-auto no-scrollbar [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent_100%)]">
                             {recommendedExtras.map((extra) => {
                               const autoQty = computeAutoQty(extra.qtyType, totalGuests);
                               const isAuto = autoQty !== null;
@@ -588,8 +592,6 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                         </div>
                       );
                     })()}
-                  </div>
-                </div>
               </div>
             )}
           </div>
@@ -635,7 +637,8 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
       <Modal open={mobileDetailsOpen} onClose={() => setMobileDetailsOpen(false)} maxWidth="max-w-lg" showClose={false} hideDragHandle bodyClassName="p-0">
         {selected && (() => {
           const imgs = parseItemImages(selected);
-          const activityPhoto = imgs[0] || getActivityPhoto(selected.title);
+          const routePhoto = Array.isArray(schedulePhotos) ? (schedulePhotos[activeItem]?.thumb || schedulePhotos[activeItem]?.path) : undefined;
+          const activityPhoto = imgs[0] || routePhoto || (schedulePhotos === undefined ? getActivityPhoto(selected.title) : null);
           const recommendedExtras = getItemExtras(selected, extrasCatalog);
           return (
             <div>
@@ -663,7 +666,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
               {recommendedExtras.length > 0 && (
                 <div className="pb-6">
                   <div className="px-5 text-[10px] font-bold uppercase tracking-widest text-secondary-400 mb-2">Recommended add-ons</div>
-                  <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-5">
+                  <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-5 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent_100%)]">
                     {recommendedExtras.map((extra) => {
                       const qty = selectedExtras?.[extra.id] || 0;
                       const hasChildSelected = extra.hasChildren && extra.children?.some(c => (selectedExtras?.[c.id] || 0) > 0);
@@ -731,7 +734,7 @@ export default function TourDetailsCard({
   priceDisplay, dateDisplay, guestsDisplay,
   capacityLabel, scheduleExtrasSlot, reserveLabel,
   extrasCatalog, allExtrasCatalog, selectedExtras, onChangeExtraQty, formatPrice, onOpenExtra,
-  hideTierBadges, totalGuests = 1, withTimeline = false,
+  hideTierBadges, totalGuests = 1, withTimeline = false, schedulePhotos,
 }) {
   const [activeTab, setActiveTab] = useState("itinerary");
   const [activeDrawer, setActiveDrawer] = useState(null);
@@ -867,7 +870,7 @@ export default function TourDetailsCard({
               <div className={cn("rounded-3xl border border-neutral-200 bg-white p-5 sm:p-6 -mt-px", activeTab === "itinerary" && "rounded-tl-none", activeTab === "faq" && "rounded-tr-none sm:rounded-tr-3xl")}>
                 {activeTab === "itinerary" ? (
                   <>
-                    <ItineraryTimeline sections={sections} restaurant={restaurant} sectionTitle={sectionTitle} isLightTheme={isLightTheme} capacityLabel={capacityLabel} extrasCatalog={extrasCatalog} allExtrasCatalog={allExtrasCatalog} selectedExtras={selectedExtras} onChangeExtraQty={onChangeExtraQty} formatPrice={formatPrice} onOpenExtra={onOpenExtra} hideTierBadges={hideTierBadges} totalGuests={totalGuests} />
+                    <ItineraryTimeline sections={sections} restaurant={restaurant} sectionTitle={sectionTitle} isLightTheme={isLightTheme} capacityLabel={capacityLabel} extrasCatalog={extrasCatalog} allExtrasCatalog={allExtrasCatalog} selectedExtras={selectedExtras} onChangeExtraQty={onChangeExtraQty} formatPrice={formatPrice} onOpenExtra={onOpenExtra} hideTierBadges={hideTierBadges} totalGuests={totalGuests} schedulePhotos={schedulePhotos} />
                     {scheduleExtrasSlot}
                   </>
                 ) : (
