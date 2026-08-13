@@ -1,6 +1,7 @@
 title: CloseddatesTest
 modelClass: Noren\Booking\Models\CloseddatesTest
 list: $/noren/booking/models/closeddatestest/columns.yaml
+recordUrl: 'noren/booking/closeddatestest/update/:id'
 noRecordsMessage: 'backend::lang.list.no_records'
 recordsPerPage: 20
 showSetup: true

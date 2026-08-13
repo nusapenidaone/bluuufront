@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import ElfsightWidget from "./components/common/ElfsightWidget";
 import AddressAutocomplete from "./components/common/AddressAutocomplete";
 import Modal from "./components/common/Modal";
@@ -131,6 +132,7 @@ import {
   CloudRain,
   Coffee,
   ExternalLink,
+  Filter,
   Fish,
   Globe,
   Info,
@@ -215,7 +217,7 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
 import {
   REVIEW_SOURCE_ICON_MAP,
@@ -2546,6 +2548,7 @@ function StepTwo({
   const [showSoldOut, setShowSoldOut] = useState(false);
   const [sort, setSort] = useState("recommended");
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [partnerBoat, setPartnerBoat] = useState(null);
   const carouselRef = useRef(null);
@@ -3038,7 +3041,7 @@ function StepTwo({
             </div>
           );
         })()}
-        {isPickDayMode && (
+        {isPickDayMode && createPortal(
             <>
               <div
                 className="fixed inset-0 z-40 bg-black/40 anim-fade-in"
@@ -3146,7 +3149,8 @@ function StepTwo({
                 </button>
               </div>
             </div>
-          </>
+          </>,
+          document.body
         )}
     </div>
     );
@@ -3170,156 +3174,103 @@ function StepTwo({
           </div>
 
           {/* Filter + sort bar */}
-          <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center">
-            {/* Row 1 (mobile) / left part (desktop): toggle + categories + mobile sort */}
-            {/* Wrapper keeps sort button outside overflow-x-auto so dropdown isn't clipped */}
-            <div className="flex flex-1 items-center gap-2 sm:contents">
-              <div className="no-scrollbar flex flex-1 items-center gap-2 overflow-x-auto pb-0.5">
-                {/* All + category filter pills */}
+          <div className="mb-6 flex items-center gap-2">
+            {/* Filter dropdown (All boats + categories) */}
+            {allCategories.length > 0 && (
+              <div className="relative shrink-0">
                 <button
                   type="button"
-                  onClick={() => { setSelectedCategory(null); setFitsOnly(false); }}
+                  onClick={() => { setShowFilterMenu(v => !v); setShowSortMenu(false); }}
                   className={cn(
-                    "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
-                    !selectedCategory
-                      ? "border-secondary-900 bg-secondary-900 text-white shadow-sm"
-                      : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                  )}
-                >
-                  All boats
-                </button>
-
-                {allCategories.length > 0 && (
-                  <>
-                    {allCategories.map((cat) => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                        className={cn(
-                          "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
-                          selectedCategory === cat.id
-                            ? "border-secondary-900 bg-secondary-900 text-white shadow-sm"
-                            : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                        )}
-                      >
-                        {cat.name}
-                      </button>
-                    ))}
-                  </>
-                )}
-              </div>
-
-              {/* Sort — mobile only, outside overflow-x-auto so dropdown isn't clipped */}
-              <div className="relative shrink-0 sm:hidden">
-                <button
-                  type="button"
-                  onClick={() => setShowSortMenu(v => !v)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all select-none",
-                    sort !== "recommended"
+                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all select-none",
+                    selectedCategory
                       ? "border-secondary-900 bg-secondary-900 text-white"
                       : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
                   )}
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {sort === "price" ? "By price" : sort === "comfort" ? "Largest" : sort === "soonest" ? "Soonest" : "Sort"}
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", showSortMenu && "rotate-180")} />
+                  <Filter className="h-3.5 w-3.5" />
+                  {selectedCategory ? (allCategories.find((c) => c.id === selectedCategory)?.name || "Filter") : "All boats"}
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", showFilterMenu && "rotate-180")} />
                 </button>
-                {showSortMenu && (
+                {showFilterMenu && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-                      {[
-                        { value: "recommended", label: "Recommended" },
-                        { value: "price", label: "Lowest price" },
-                        { value: "comfort", label: "Largest boat" },
-                        { value: "soonest", label: "Soonest available" },
-                      ].map((opt) => (
+                    <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)} />
+                    <div className="absolute left-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedCategory(null); setFitsOnly(false); setShowFilterMenu(false); }}
+                        className={cn(
+                          "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
+                          !selectedCategory ? "font-semibold text-primary-600" : "text-secondary-700"
+                        )}
+                      >
+                        {!selectedCategory && <Check className="h-3.5 w-3.5 text-primary-500" />}
+                        <span className={selectedCategory ? "pl-5" : ""}>All boats</span>
+                      </button>
+                      {allCategories.map((cat) => (
                         <button
-                          key={opt.value}
+                          key={cat.id}
                           type="button"
-                          onClick={() => { setSort(opt.value); setShowSortMenu(false); }}
+                          onClick={() => { setSelectedCategory(cat.id); setShowFilterMenu(false); }}
                           className={cn(
                             "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
-                            sort === opt.value ? "font-semibold text-primary-600" : "text-secondary-700"
+                            selectedCategory === cat.id ? "font-semibold text-primary-600" : "text-secondary-700"
                           )}
                         >
-                          {sort === opt.value && <Check className="h-3.5 w-3.5 text-primary-500" />}
-                          <span className={sort !== opt.value ? "pl-5" : ""}>{opt.label}</span>
+                          {selectedCategory === cat.id && <Check className="h-3.5 w-3.5 text-primary-500" />}
+                          <span className={selectedCategory !== cat.id ? "pl-5" : ""}>{cat.name}</span>
                         </button>
                       ))}
                     </div>
                   </>
                 )}
-              </div>
-            </div>
-
-            {/* Row 2 (mobile) / right part (desktop): categories (mobile) + Sort (desktop) */}
-            {allCategories.length > 0 && (
-              <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-0.5 sm:hidden">
-                {allCategories.map((cat) => (
-                  <button
-                    key={`m-${cat.id}`}
-                    type="button"
-                    onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                    className={cn(
-                      "shrink-0 rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-all",
-                      selectedCategory === cat.id
-                        ? "border-secondary-900 bg-secondary-900 text-white shadow-sm"
-                        : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                    )}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
               </div>
             )}
 
-            {/* Sort dropdown — desktop only, outside overflow container so dropdown isn't clipped */}
-            <div className="relative hidden shrink-0 sm:block">
-                <button
-                  type="button"
-                  onClick={() => setShowSortMenu(v => !v)}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all select-none",
-                    sort !== "recommended"
-                      ? "border-secondary-900 bg-secondary-900 text-white"
-                      : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
-                  )}
-                >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  {sort === "price" ? "By price" : sort === "comfort" ? "Largest" : sort === "soonest" ? "Soonest" : "Sort"}
-                  <ChevronDown className={cn("h-3 w-3 transition-transform", showSortMenu && "rotate-180")} />
-                </button>
-                {showSortMenu && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
-                    <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-                      {[
-                        { value: "recommended", label: "Recommended" },
-                        { value: "price", label: "Lowest price" },
-                        { value: "comfort", label: "Largest boat" },
-                        { value: "soonest", label: "Soonest available" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => { setSort(opt.value); setShowSortMenu(false); }}
-                          className={cn(
-                            "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
-                            sort === opt.value ? "font-semibold text-primary-600" : "text-secondary-700"
-                          )}
-                        >
-                          {sort === opt.value && <Check className="h-3.5 w-3.5 text-primary-500" />}
-                          <span className={sort !== opt.value ? "pl-5" : ""}>{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </>
+            {/* Sort dropdown */}
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => { setShowSortMenu(v => !v); setShowFilterMenu(false); }}
+                className={cn(
+                  "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold transition-all select-none",
+                  sort !== "recommended"
+                    ? "border-secondary-900 bg-secondary-900 text-white"
+                    : "border-neutral-200 bg-white text-secondary-500 hover:border-neutral-300"
                 )}
-              </div>
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                {sort === "price" ? "By price" : sort === "comfort" ? "Largest" : sort === "soonest" ? "Soonest" : "Sort"}
+                <ChevronDown className={cn("h-3 w-3 transition-transform", showSortMenu && "rotate-180")} />
+              </button>
+              {showSortMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
+                  <div className="absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
+                    {[
+                      { value: "recommended", label: "Recommended" },
+                      { value: "price", label: "Lowest price" },
+                      { value: "comfort", label: "Largest boat" },
+                      { value: "soonest", label: "Soonest available" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => { setSort(opt.value); setShowSortMenu(false); }}
+                        className={cn(
+                          "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition hover:bg-neutral-50",
+                          sort === opt.value ? "font-semibold text-primary-600" : "text-secondary-700"
+                        )}
+                      >
+                        {sort === opt.value && <Check className="h-3.5 w-3.5 text-primary-500" />}
+                        <span className={sort !== opt.value ? "pl-5" : ""}>{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
+          </div>
 
           <div
             ref={carouselRef}
@@ -3454,6 +3405,7 @@ function StepTwo({
         showClose={false}
         closeOnBackdrop={true}
         bodyClassName="p-0"
+        backdropClassName="bg-black/40 backdrop-blur-sm"
       >
         {confirmModalData ? (
           <div className="relative flex flex-col">
@@ -3509,7 +3461,12 @@ function StepTwo({
               <button
                 type="button"
                 className="flex-1 h-11 rounded-full border border-neutral-200 bg-neutral-50 text-sm font-semibold text-secondary-500 transition hover:bg-white hover:text-secondary-700"
-                onClick={() => setConfirmModalData(null)}
+                onClick={() => {
+                  setConfirmModalData(null);
+                  setTimeout(() => {
+                    document.getElementById("step-3")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 80);
+                }}
               >
                 Another boat
               </button>
@@ -3990,10 +3947,17 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                       <div className="mt-4 border-t border-neutral-100 pt-4 flex flex-col gap-2">
                         <div className="flex flex-wrap gap-x-4 gap-y-2">
                           {chips.map((item) => {
-                            const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
+                            const Icon = (typeof item.icon === 'string' ? ICON_MAP[item.icon] : item.icon) || MapPin;
                             return (
                               <div key={item.label} className="flex items-center gap-1.5 text-sm font-medium text-secondary-700">
-                                <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                                {item.icon_svg ? (
+                                  <span
+                                    className="h-3.5 w-3.5 shrink-0 text-secondary-400 [&>svg]:h-full [&>svg]:w-full"
+                                    dangerouslySetInnerHTML={{ __html: item.icon_svg }}
+                                  />
+                                ) : (
+                                  <Icon className="h-3.5 w-3.5 shrink-0 text-secondary-400" />
+                                )}
                                 {item.label}
                               </div>
                             );
@@ -4132,9 +4096,10 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 schedule={schedule}
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
+                onRestaurantClick={setRestaurantDataPopup}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                onContinue={onContinue}
-                continueLabel="Choose your boat"
+                onReserve={onContinue}
+                reserveLabel="Choose your boat"
               />
             );
           })()}
@@ -4825,7 +4790,12 @@ function StepExtras({
     const qty = selectedExtras[extra.id] || 0;
     const isHighlighted = extra.id === highlightExtraId;
     const defaultQty = getDefaultQty(extra);
-    const carsQty = Math.ceil(totalGuests / 5) || 1;
+    const isAutoQty = extra.qtyType === 'per_car' || extra.per_car || extra.qtyType === 'per_person' || extra.qtyType === 'fixed';
+    const autoQty = (extra.qtyType === 'per_car' || extra.per_car)
+      ? (Math.ceil(totalGuests / 5) || 1)
+      : extra.qtyType === 'per_person'
+        ? (totalGuests || 1)
+        : 1;
     return (
       <div
         key={extra.id}
@@ -4889,7 +4859,7 @@ function StepExtras({
             >
               {extra.children.length} options
             </button>
-          ) : extra.per_car ? (
+          ) : isAutoQty ? (
             qty > 0 ? (
               <div className="flex items-center gap-2 sm:w-full sm:justify-end">
                 <div className="inline-flex h-9 w-full items-center justify-between rounded-full border border-neutral-200 bg-white px-2 text-secondary-900 shadow-sm sm:h-10 sm:px-2.5">
@@ -4905,7 +4875,7 @@ function StepExtras({
                     <Minus className="h-4 w-4" />
                   </button>
                   <div className="min-w-6 text-center text-base font-bold leading-none text-secondary-900 sm:min-w-7 sm:text-lg">
-                    ×{carsQty}
+                    ×{autoQty}
                   </div>
                   <div className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
@@ -4915,7 +4885,7 @@ function StepExtras({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onChangeExtraQty(extra.id, carsQty);
+                  onChangeExtraQty(extra.id, autoQty);
                 }}
                 className="inline-flex h-9 w-full items-center justify-center rounded-full border border-primary-50 bg-neutral-100 px-2.5 text-sm font-bold text-primary-600 transition duration-200 ease-out hover:bg-white active:scale-95 sm:h-10 sm:px-3"
               >
@@ -8065,10 +8035,6 @@ export default function Premium_Private_With_Vibe() {
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
     return () => cancelAnimationFrame(raf);
   }, []);
-  useSEO({
-    title: "Private Yacht Tour to Nusa Penida | Bluuu Tours",
-    description: "Exclusive private yacht charter from Bali to Nusa Penida. Manta rays, snorkeling, cliff views & gourmet lunch — up to 13 guests, fully crewed.",
-  });
   const { selectedCurrency } = useCurrency();
   const { privateTours, privateTransfers: transfers, privateCovers: allCovers, loading: toursLoading, error: toursError } = useTours();
   const { extras, privateRoutes } = useExtras();
@@ -8381,8 +8347,11 @@ export default function Premium_Private_With_Vibe() {
     };
     loadTourDetail();
   }, [selectedBoatId, selectedYacht, privateTours, fetchTourDetail]);
-  // Explicitly reset selected boat on mount as per user request
+  // Explicitly reset selected boat on mount as per user request — but NOT when a
+  // ?tour= param is present, otherwise this clobbers the boat the URL just
+  // pre-selected (this effect runs after the tour-read effect on mount).
   useEffect(() => {
+    if (urlTourIdRef.current) return;
     setSelectedBoatId(null);
   }, []);
   const totalGuests = adults + kids;
@@ -8475,6 +8444,7 @@ export default function Premium_Private_With_Vibe() {
       })),
       hasChildren: (e.children || []).length > 0,
       per_car: !!e.per_car,
+      qtyType: e.qty_type || 'manual',
     });
     // Use global extras
     return (extras || []).map(e => mapExtra(e, null));
@@ -8898,6 +8868,12 @@ export default function Premium_Private_With_Vibe() {
 
   return (
     <>
+      <SEO
+        title="Private Yacht Tour to Nusa Penida from Bali | Bluuu Tours"
+        description="Exclusive private yacht tour from Bali to Nusa Penida — manta rays, snorkeling, cliff views & gourmet lunch. Up to 13 guests, fully crewed."
+        image="https://bluuu.tours/storage/app/media/bluuu/private.webp"
+        canonical="https://bluuu.tours/private-tour-to-nusa-penida"
+      />
       <CurrencyBridge />
 
       {backFromPayment && (
@@ -9262,7 +9238,7 @@ function StepCheckout({
   onFinalize,
   onCancel,
 }) {
-  const isLastStep = step === 3;
+  const isLastStep = step === 2;
   const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
   const [errors, setErrors] = useState({});
 
@@ -9309,8 +9285,7 @@ function StepCheckout({
 
   const steps = [
     { num: 1, label: "Payment option" },
-    { num: 2, label: "Payment method" },
-    { num: 3, label: "Your details" },
+    { num: 2, label: "Your details" },
   ];
   const { activePolicyKey, activePolicy, openPolicy: openPolicyModal, closePolicy: closePolicyModal } = usePolicyModal();
 
@@ -9323,14 +9298,14 @@ function StepCheckout({
             <p className="mt-1 text-sm text-secondary-500 sm:text-base">Secure your spot in just a few steps.</p>
           </div>
 
-          <div className="relative mb-7">
-            <div className="absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 bg-neutral-100" />
-            <div className="relative flex justify-between">
-              {steps.map((s) => {
-                const isActive = s.num === step;
-                const isCompleted = s.num < step;
-                return (
-                  <div key={s.num} className="flex flex-col items-center gap-1.5">
+          <div className="mb-7 flex items-start justify-center">
+            {steps.map((s, i) => {
+              const isActive = s.num === step;
+              const isCompleted = s.num < step;
+              return (
+                <div key={s.num} className="flex items-start">
+                  {i > 0 && <div className="mx-6 mt-[17px] h-0.5 w-16 rounded bg-neutral-100 sm:mx-10 sm:w-28" />}
+                  <div className="flex flex-col items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
@@ -9347,23 +9322,22 @@ function StepCheckout({
                     <span
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
                       className={cn(
-                        "absolute -bottom-5 text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
+                        "text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors text-center",
                         isActive ? "text-primary-700" : isCompleted ? "text-primary-600 cursor-pointer" : "text-neutral-300"
-                      )}
-                      style={{ left: s.num === 1 ? '0' : s.num === 3 ? 'auto' : '50%', right: s.num === 3 ? '0' : 'auto', transform: s.num === 2 ? 'translateX(-50%)' : 'none' }}>
+                      )}>
                       {s.label}
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="mb-3 h-2" />
 
           <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg shadow-neutral-100/40 sm:p-6">
             <h3 className="mb-4 text-lg font-bold text-secondary-900 sm:mb-5 sm:text-xl">
-              {step === 1 ? "How would you like to pay?" : step === 2 ? "Select payment method" : "Contact details"}
+              {step === 1 ? "How would you like to pay?" : "Contact details"}
             </h3>
 
             {step === 1 && (
@@ -9426,30 +9400,6 @@ function StepCheckout({
             )}
 
             {step === 2 && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => onSetPayMethod("card")}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg border-2 p-3.5 transition",
-                    payMethod === "card" ? "border-primary-600 bg-primary-50/30" : "border-neutral-200 hover:border-neutral-300"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <img src="https://bluuu.tours/themes/bluuu/assets/icons/card_icon.svg" alt="Card" className="h-7 w-auto" />
-                    <div className="text-left">
-                      <div className="font-bold text-secondary-900">Card payment</div>
-                      <div className="text-xs text-secondary-500">Payment in IDR</div>
-                    </div>
-                  </div>
-                  <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "card" ? "border-primary-600" : "border-neutral-300")}>
-                    {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-                  </div>
-                </button>
-                {/* PayPal временно отключён */}
-              </div>
-            )}
-
-            {step === 3 && (
               <div className="space-y-3.5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -9572,11 +9522,11 @@ function StepCheckout({
                 <Button variant="ghost" onClick={onCancel} className="h-10 px-4 text-secondary-400 hover:bg-red-50 hover:text-red-500">Cancel</Button>
               )}
               <Button
-                onClick={() => step < 3 ? onSetStep(step + 1) : handleFinalize()}
-                disabled={step === 3 && (!agreedTerms || !agreedLiability)}
+                onClick={() => step < 2 ? onSetStep(step + 1) : handleFinalize()}
+                disabled={step === 2 && (!agreedTerms || !agreedLiability)}
                 className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
-                {step < 3 ? "Continue" : "Complete booking"}
+                {step < 2 ? "Continue" : "Complete booking"}
               </Button>
             </div>
           </div>

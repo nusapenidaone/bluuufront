@@ -15,6 +15,13 @@ fields:
         type: relation
         tab: Main
         emptyOption: '--'
+    types:
+        label: Tour Type
+        span: auto
+        type: relation
+        tab: Main
+        nameFrom: name
+        emptyOption: '-- All Types --'
         
     name:
         label: Name

@@ -1,5 +1,5 @@
 import React, { useMemo } from "react";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import { ChevronLeft, Images } from "lucide-react";
 import { Fancybox } from "@fancyapps/ui";
 import "@fancyapps/ui/dist/fancybox/fancybox.css";
@@ -38,10 +38,6 @@ function normalizeGalleryItems(apiGallery, privateTours) {
 }
 
 export default function GalleryPage() {
-  useSEO({
-    title: "Tour Gallery | Bluuu Tours",
-    description: "Browse photos and videos from our Nusa Penida day tours — manta rays, crystal-clear waters, cliffs, and unforgettable moments.",
-  });
   const { gallery, privateTours, loading } = useTours();
 
   const galleryItems = useMemo(
@@ -63,6 +59,11 @@ export default function GalleryPage() {
 
   return (
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
+      <SEO
+        title="Tour Gallery | Bluuu Tours"
+        description="Browse photos and videos from our Nusa Penida day tours — manta rays, crystal-clear waters, cliffs, and unforgettable moments."
+        canonical="https://bluuu.tours/gallery"
+      />
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}

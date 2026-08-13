@@ -1,0 +1,16 @@
+revision_history:
+    label: 'Revision History'
+    view:
+        toolbarButtons: []
+        recordsPerPage: 20
+        list:
+            columns:
+                field:
+                    label: Field
+                old_value:
+                    label: 'Old Value'
+                new_value:
+                    label: 'New Value'
+                created_at:
+                    label: 'Changed At'
+                    type: datetime

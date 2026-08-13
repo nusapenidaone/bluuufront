@@ -1,6 +1,6 @@
 url = "/manage/guides"
 title = "Guides"
-is_hidden = 1
+is_hidden = 0
 ==
 <!DOCTYPE html>
 <html lang="en">
@@ -8,16 +8,17 @@ is_hidden = 1
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bluuu Guides</title>
+     <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body class="bg-slate-100 text-slate-800 p-4 md:p-6 font-['Outfit']">
 <div id="root"></div>
 {% verbatim %}
-<script type="text/babel">
+<script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useCallback } = React;
 
 const TOKEN_KEY = 'bluuu_admin_token';
@@ -53,12 +54,37 @@ function isPrivate(o) {
 function strVal(v) {
     return v && v !== false ? String(v) : null;
 }
+const LANYARD_HEX = {
+    'Blue': '#3b82f6', 'Turquoise': '#06b6d4', 'Black': '#1e293b',
+    'White': '#e2e8f0', 'Grey': '#94a3b8', 'Indigo/Royal Blue': '#4f46e5',
+    'Violet/Purple': '#8b5cf6', 'Sea Green': '#0d9488', 'Emerald Green': '#10b981',
+    'Forrest Green': '#15803d', 'Yello': '#eab308', 'Orange': '#f97316',
+    'Brown': '#92400e', 'Pink': '#ec4899',
+};
+const PENIDA_POINTS = ['Toya Pakeh', 'La Rossa', 'Orca Beach Club', 'No Land Tour'];
+const TIME_OPTIONS = Array.from({ length: 144 }, (_, i) =>
+    `${String(Math.floor(i / 6)).padStart(2, '0')}:${String((i % 6) * 10).padStart(2, '0')}`
+);
+function floatToTimeStr(v) {
+    if (v === false || v === null || v === undefined || v === 0) return '';
+    const h = Math.floor(v);
+    const m = Math.round((v - h) * 60);
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+function timeStrToFloat(s) {
+    if (!s) return false;
+    const [h, m] = s.split(':').map(Number);
+    return h + m / 60;
+}
 function copyPhone(phone) {
     navigator.clipboard.writeText(phone).catch(() => {});
 }
+function waLink(phone) {
+    return `https://wa.me/${String(phone).replace(/[^\d]/g, '')}`;
+}
 
 // ─── OrderCard ────────────────────────────────────────────────────────────────
-function OrderCard({ o }) {
+function OrderCard({ o, updateOrder, updateBoatOrders }) {
     const priv     = isPrivate(o);
     const adults   = Number(o.x_studio_adults  ?? 0);
     const kids     = Number(o.x_studio_kids    ?? 0);
@@ -75,6 +101,14 @@ function OrderCard({ o }) {
     const pax_list = strVal(o.x_studio_passenger_list);
     const tourTitle = o.local_name || (priv ? 'Private Boat Tour' : 'Shared Boat Tour');
     const clientName = partnerName(o);
+    const lanyard  = strVal(o.x_studio_group_lanyard_color);
+    const lanyardHex = lanyard ? (LANYARD_HEX[lanyard] || '#94a3b8') : null;
+    const penidaTime  = floatToTimeStr(o.x_studio_penida_land_tour_pickup_time);
+    const penidaPoint = strVal(o.x_studio_penida_pickup_point_land_tour) || '';
+    const applyPenida = fields => {
+        if (updateBoatOrders) updateBoatOrders(o.x_studio_boat_name, fields);
+        else updateOrder && updateOrder(o.id, fields);
+    };
 
     const Field = ({ label, value, pre }) => {
         if (!value) return null;
@@ -103,8 +137,38 @@ function OrderCard({ o }) {
                         {total} ({kids} kids) persons
                     </span>
                 </div>
-                <div className="text-sm font-semibold text-slate-700">
-                    {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
+                <div className="flex items-start justify-between gap-2 mt-1">
+                    <div>
+                        <div className="text-sm font-semibold text-slate-700">
+                            {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
+                        </div>
+                        <button onClick={e => { e.stopPropagation(); updateOrder && updateOrder(o.id, { x_studio_boat_status: o.x_studio_boat_status === 'Boat Ready' ? 'Not Ready' : 'Boat Ready' }); }}
+                            className={`mt-1 text-[11px] font-bold px-2 py-0.5 rounded-lg transition-colors ${o.x_studio_boat_status === 'Boat Ready' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}>
+                            {o.x_studio_boat_status === 'Boat Ready' ? '✓ Boat Ready' : '✗ Not Ready'}
+                        </button>
+                    </div>
+                    {lanyard && (
+                        <div className="flex items-center gap-2 shrink-0" title={`Lanyard: ${lanyard}`}>
+                            <div className="w-6 h-6 rounded-full flex-shrink-0"
+                                 style={{ background: lanyardHex, border: lanyard === 'White' ? '1.5px solid #94a3b8' : 'none' }} />
+                            <span className="text-sm font-bold" style={{ color: lanyardHex }}>{lanyard}</span>
+                        </div>
+                    )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2" onClick={e => e.stopPropagation()}>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Penida:</span>
+                    <select value={penidaTime}
+                        onChange={e => applyPenida({ x_studio_penida_land_tour_pickup_time: timeStrToFloat(e.target.value) })}
+                        className={SELECT + ' h-7 px-2 text-xs'}>
+                        <option value="">Time…</option>
+                        {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <select value={penidaPoint}
+                        onChange={e => applyPenida({ x_studio_penida_pickup_point_land_tour: e.target.value || false })}
+                        className={SELECT + ' h-7 px-2 text-xs'}>
+                        <option value="">Pickup point…</option>
+                        {PENIDA_POINTS.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
                 </div>
             </div>
 
@@ -119,6 +183,20 @@ function OrderCard({ o }) {
                 <Field label="Pickup"    value={pickup} />
                 <Field label="Drop-off"  value={dropoff} />
                 <Field label="Names"     value={pax_list} pre />
+                <Field label="Special Requests" value={strVal(o.x_studio_special_requests)} pre />
+                {o.lines && o.lines.length > 0 && (
+                    <div className="border-b border-slate-100 pb-2">
+                        <span className="font-semibold text-slate-700 text-sm">Products</span>
+                        <div className="mt-1 space-y-0.5">
+                            {o.lines.map(l => (
+                                <div key={l.id} className="flex items-baseline justify-between gap-2">
+                                    <span className="text-slate-600 text-sm truncate">{l.name}</span>
+                                    <span className="text-slate-400 text-xs shrink-0">×{Number(l.product_uom_qty ?? 0)}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Footer */}
@@ -126,7 +204,7 @@ function OrderCard({ o }) {
                 <span className="text-sm font-semibold text-slate-700 truncate">{clientName}</span>
                 {phone && (
                     <div className="flex items-center gap-1.5 shrink-0">
-                        <a href={`tel:${phone}`}
+                        <a href={waLink(phone)} target="_blank" rel="noopener noreferrer"
                             className="text-sm font-semibold text-emerald-600 hover:text-emerald-500 transition-colors tabular-nums">
                             {phone}
                         </a>
@@ -197,10 +275,33 @@ function App() {
     const [data,        setData]        = useState(null);
     const [loading,     setLoading]     = useState(false);
     const [error,       setError]       = useState('');
-    const [filterGuide, setFilterGuide] = useState('');
-    const [filterBoat,  setFilterBoat]  = useState('');
+    const [filterGuide,   setFilterGuide]   = useState('');
+    const [filterBoat,    setFilterBoat]    = useState('');
+    const [filterLanyard, setFilterLanyard] = useState('');
+    const [search,        setSearch]        = useState('');
+    const [showFilters,   setShowFilters]   = useState(false);
 
-    if (!token) return <LoginScreen onLogin={setToken} />;
+    const updateOrder = useCallback(async (odooId, fields) => {
+        const res = await fetch(`/api/admin/odoo/order/${odooId}`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+        setData(prev => prev ? {
+            ...prev,
+            orders: prev.orders.map(o => o.id === odooId ? { ...o, ...fields, ...(json.odoo || {}) } : o),
+        } : prev);
+    }, [token]);
+
+    // Apply a field change to every lead on the same boat (the day is already
+    // fixed by the date filter), mirroring the lanyard-color/boat-status pattern.
+    const updateBoatOrders = useCallback((boatName, fields) => {
+        (data?.orders || [])
+            .filter(o => o.x_studio_boat_name === boatName)
+            .forEach(o => updateOrder(o.id, fields));
+    }, [data, updateOrder]);
 
     const load = useCallback(async d => {
         setLoading(true);
@@ -214,6 +315,9 @@ function App() {
             setData(json);
             setFilterGuide('');
             setFilterBoat('');
+            setFilterLanyard('');
+            setSearch('');
+            setShowFilters(false);
         } catch (e) {
             setError(e.message);
         } finally {
@@ -221,7 +325,7 @@ function App() {
         }
     }, [token]);
 
-    useEffect(() => { load(date); }, [date, load]);
+    useEffect(() => { if (token) load(date); }, [date, token, load]);
 
     const orders = data?.orders || [];
 
@@ -238,7 +342,14 @@ function App() {
         [...new Set(orders.map(o => o.x_studio_boat_name).filter(Boolean))].sort()
     , [orders]);
 
+    const lanyardOptions = useMemo(() =>
+        LANYARD_HEX
+            ? Object.keys(LANYARD_HEX).filter(c => orders.some(o => strVal(o.x_studio_group_lanyard_color) === c))
+            : []
+    , [orders]);
+
     const filtered = useMemo(() => {
+        const q = search.trim().toLowerCase();
         return orders
             .filter(o => {
                 if (filterBoat && (o.x_studio_boat_name || '') !== filterBoat) return false;
@@ -247,6 +358,11 @@ function App() {
                     const g2 = o.x_studio_guide_2_1 && o.x_studio_guide_2_1 !== false ? String(o.x_studio_guide_2_1) : '';
                     if (g1 !== filterGuide && g2 !== filterGuide) return false;
                 }
+                if (filterLanyard && strVal(o.x_studio_group_lanyard_color) !== filterLanyard) return false;
+                if (q) {
+                    const hay = [partnerName(o), o.odoo_phone].filter(Boolean).join(' ').toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
                 return true;
             })
             .sort((a, b) => {
@@ -254,23 +370,71 @@ function App() {
                 const tb = b.rental_start_date || '';
                 return ta < tb ? -1 : ta > tb ? 1 : 0;
             });
-    }, [orders, filterGuide, filterBoat]);
+    }, [orders, filterGuide, filterBoat, filterLanyard, search]);
 
-    const isToday = date === todayBali();
+    const isToday   = date === todayBali();
+    const hasFilter = filterGuide || filterBoat || filterLanyard || search;
+    const clearFilters = () => { setFilterGuide(''); setFilterBoat(''); setFilterLanyard(''); setSearch(''); };
+
+    if (!token) return <LoginScreen onLogin={setToken} />;
 
     return (
         <div>
             {/* Sticky header */}
-            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
-                <select className={SELECT} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
-                    <option value="">All guides</option>
-                    {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <select className={SELECT} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
-                    <option value="">All Boats</option>
-                    {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
+            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex flex-wrap items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
+                <div className="hidden md:flex items-center gap-2 flex-1 min-w-[280px]">
+                    <input type="text" placeholder="Search name or phone…" value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className={INPUT + ' h-9 w-48'} />
+                    <select className={SELECT + ' flex-1 min-w-[120px] max-w-[200px]'} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
+                        <option value="">All guides</option>
+                        {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                    </select>
+                    <select className={SELECT + ' flex-1 min-w-[120px] max-w-[200px]'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                        <option value="">All Boats</option>
+                        {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                    {hasFilter && (
+                        <button onClick={clearFilters}
+                            className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
+                            Clear
+                        </button>
+                    )}
+                </div>
 
+                <button onClick={() => setShowFilters(v => !v)} title="Filters"
+                    className={`md:hidden h-9 w-9 flex items-center justify-center border rounded-lg transition-all shadow-sm relative ${showFilters ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'}`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                        <polygon points="4 4 20 4 14 12 14 19 10 21 10 12 4 4" />
+                    </svg>
+                    {hasFilter && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-slate-100" />}
+                </button>
+
+                {lanyardOptions.length > 0 && (
+                    <div className="hidden md:flex w-full items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Lanyard:</span>
+                        {lanyardOptions.map(c => {
+                            const hex    = LANYARD_HEX[c] || '#94a3b8';
+                            const active = filterLanyard === c;
+                            return (
+                                <button key={c} title={c}
+                                    onClick={() => setFilterLanyard(active ? '' : c)}
+                                    style={{
+                                        background: hex,
+                                        border: active ? '2.5px solid #0f172a' : (c === 'White' ? '1.5px solid #94a3b8' : '2.5px solid transparent'),
+                                        boxShadow: active ? '0 0 0 2px #fff, 0 0 0 4px ' + hex : 'none',
+                                    }}
+                                    className="w-6 h-6 rounded-full transition-all hover:scale-110 flex-shrink-0" />
+                            );
+                        })}
+                        {filterLanyard && (
+                            <button onClick={() => setFilterLanyard('')}
+                                className="text-[10px] font-bold text-red-400 hover:text-red-500 uppercase tracking-widest ml-1 transition-colors">
+                                clear
+                            </button>
+                        )}
+                    </div>
+                )}
                 <div className="flex-1" />
                 {loading && <span className="text-[10px] text-blue-500 animate-pulse uppercase tracking-widest">Loading…</span>}
                 {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}
@@ -294,6 +458,50 @@ function App() {
                     className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all disabled:opacity-40 text-base">
                     ↺
                 </button>
+
+                {showFilters && (
+                    <div className="md:hidden w-full mt-2 flex flex-col gap-2">
+                        <input type="text" placeholder="Search name or phone…" value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className={INPUT + ' h-9 w-full'} />
+                        <select className={SELECT + ' w-full'} value={filterGuide} onChange={e => setFilterGuide(e.target.value)}>
+                            <option value="">All guides</option>
+                            {guideOptions.map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <select className={SELECT + ' w-full'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                            <option value="">All Boats</option>
+                            {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        {lanyardOptions.length > 0 && (
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1">Lanyard:</span>
+                                {lanyardOptions.map(c => {
+                                    const hex    = LANYARD_HEX[c] || '#94a3b8';
+                                    const active = filterLanyard === c;
+                                    return (
+                                        <button key={c} title={c}
+                                            onClick={() => setFilterLanyard(active ? '' : c)}
+                                            style={{
+                                                background: hex,
+                                                border: active ? '2.5px solid #0f172a' : (c === 'White' ? '1.5px solid #94a3b8' : '2.5px solid transparent'),
+                                                boxShadow: active ? '0 0 0 2px #fff, 0 0 0 4px ' + hex : 'none',
+                                            }}
+                                            className="w-6 h-6 rounded-full transition-all hover:scale-110 flex-shrink-0" />
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                            {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}
+                            {hasFilter && (
+                                <button onClick={clearFilters}
+                                    className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Content */}
@@ -309,7 +517,7 @@ function App() {
                 )}
                 {!loading && filtered.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {filtered.map(o => <OrderCard key={o.id} o={o} />)}
+                        {filtered.map(o => <OrderCard key={o.id} o={o} updateOrder={updateOrder} updateBoatOrders={updateBoatOrders} />)}
                     </div>
                 )}
             </div>

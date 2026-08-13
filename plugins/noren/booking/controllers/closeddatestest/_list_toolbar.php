@@ -1,6 +1,6 @@
 <div data-control="toolbar">
     <a
-        href="<?= Backend::url('noren/booking/closeddatestest/create') ?>"
+        href="<?= Backend::url('noren/booking/closeddates/create') ?>"
         class="btn btn-primary oc-icon-plus">
         <?= e(trans('backend::lang.form.create')) ?>
     </a>
@@ -14,12 +14,12 @@
         <?= e(trans('backend::lang.list.delete_selected')) ?>
     </button>
     <a
-        href="<?= Backend::url('noren/booking/closeddatestest/import') ?>"
+        href="<?= Backend::url('noren/booking/closeddates/import') ?>"
         class="btn btn-default oc-icon-upload">
         Import
     </a>
     <a
-        href="<?= Backend::url('noren/booking/closeddatestest/export') ?>"
+        href="<?= Backend::url('noren/booking/closeddates/export') ?>"
         class="btn btn-default oc-icon-download">
         Export
     </a>

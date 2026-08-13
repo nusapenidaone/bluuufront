@@ -1,4 +1,12 @@
-import { Clock, MapPin, Ship, Waves, UtensilsCrossed, Anchor, Camera } from "lucide-react";
+import { Clock, MapPin, Ship, Waves, UtensilsCrossed, Anchor, Camera, Fish, Sun, Shield, BadgeCheck, Coffee, Wine, Star, Users, Sparkles, LifeBuoy, Globe, Ticket, Car, Compass } from "lucide-react";
+
+const SCHEDULE_ICON_MAP = {
+  Clock, MapPin, Ship, Waves, UtensilsCrossed, Anchor, Camera, Fish, Sun,
+  Shield, BadgeCheck, Coffee, Wine, Star, Users, Sparkles, LifeBuoy, Globe,
+  Ticket, Car, Compass,
+};
+
+export const resolveIconByName = (name) => SCHEDULE_ICON_MAP[name] || null;
 
 const decodeBasicEntities = (value = "") =>
   value
@@ -69,6 +77,14 @@ export const getLunchDisplayData = (item, restaurant = null, fallbackRestaurant 
     description,
     popupRestaurant,
   };
+};
+
+// Schedule item titles are free-text CMS fields — capitalization is entered
+// by hand and sometimes inconsistent ("snorkeling" next to "Departure").
+// Force sentence case on display so the itinerary always reads consistently.
+export const capitalizeFirst = (value = "") => {
+  if (typeof value !== "string" || !value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
 };
 
 export const resolveScheduleIcon = (title = "") => {

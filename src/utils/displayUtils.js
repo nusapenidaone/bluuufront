@@ -1,5 +1,5 @@
 export const TRANSFER_DETAILS_FALLBACK_IMAGE =
-  "https://bluuu.tours/storage/app/uploads/public/68a/5fd/e10/68a5fde10e980917741317.jpg";
+  "https://bluuu.tours/storage/app/media/driver.webp";
 export const INSURANCE_DETAILS_FALLBACK_IMAGE =
   "https://bluuu.tours/storage/app/uploads/public/68f/9ed/c1a/68f9edc1a9270720998215.jpg";
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import Button from "../../common/Button";
 
@@ -18,7 +19,7 @@ export default function HeroDetails({
                     <div>
                         <div className="grid gap-8 lg:grid-cols-12 lg:items-start">
                             <div className="lg:col-span-12">
-                                <div>
+                                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
                                     <p className="text-sm font-semibold uppercase tracking-wide-3xl text-secondary-400">Value proof</p>
                                     <h2 className="mt-2 text-3xl font-semibold tracking-tight text-secondary-900 sm:text-4xl">
                                         Why Premium Private
@@ -80,7 +81,7 @@ export default function HeroDetails({
                                             </button>
                                         </div>
                                     </div>
-                                </div>
+                                </motion.div>
                             </div>
                         </div>
                     </div>

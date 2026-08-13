@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { fetchRates as apiFetchRates } from "./api/rates";
 
-const CurrencyContext = createContext();
+const DEFAULT_CONTEXT = { selectedCurrency: "USD", setSelectedCurrency: () => {}, rates: [], loading: false };
+const CurrencyContext = createContext(DEFAULT_CONTEXT);
 
-export const useCurrency = () => useContext(CurrencyContext);
+export const useCurrency = () => useContext(CurrencyContext) ?? DEFAULT_CONTEXT;
 
 const DEFAULT_RATES = [
     { code: "IDR", name: "Indonesian rupiah", rate: "1.00000000", symbol: "Rp" },

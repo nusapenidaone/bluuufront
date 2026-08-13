@@ -60,9 +60,13 @@ class OtaController extends Controller
         $members = max(1, (int) $request->query('members', 1));
         $amount  = (float) $request->query('amount', 0);
 
+
         if (!$date) {
             return response()->json(['error' => 'date required'], 422);
         }
+
+        // MAINTENANCE: OTA availability temporarily disabled
+        // return response()->json(['tour_id' => $id, 'date' => $date, 'available' => false]);
 
         $tour = Tours::with(['boat.closeddates', 'boat.company', 'route.restaurant', 'source', 'ota_transfer'])->find($id);
 
@@ -78,7 +82,9 @@ class OtaController extends Controller
         $available = $boatModel !== null;
 
         if (!$available && $tour->boat->isNotEmpty()) {
-            $boatModel = $tour->boat->first();
+            $boatModel = $isShared
+                ? $this->findBestPartialSharedBoat($tour, $date)
+                : $tour->boat->first();
         }
 
         $route      = $tour->route;
@@ -94,17 +100,21 @@ class OtaController extends Controller
         $transfer       = $tour->ota_transfer;
         $cars           = 0;
         $transferCost   = 0;
-        $carType        = '';
+        $carType        = 'No Transfer';
         $pickupCars     = 0;
         $dropOffCars    = 0;
 
         if ($transfer) {
             $cars         = (int) ceil($members / 5);
             $transferCost = $netAmount > 0 ? round((float) ($transfer->price ?? 0) * $cars, 2) : 0;
-            $carType      = $transfer->odoo_name ?? '';
             $transferId   = (int) $transfer->id;
             $pickupCars   = ($transferId === 1 || $transferId === 2) ? $cars : 0;
             $dropOffCars  = ($transferId === 2) ? $cars : 0;
+            if ($transferId === 3) {
+                $carType = 'Free Shuttle Bus';
+            } elseif (in_array($transferId, [1, 2])) {
+                $carType = 'Private Car';
+            }
         }
 
         $tourNet    = round($netAmount - $transferCost, 2);
@@ -151,6 +161,9 @@ class OtaController extends Controller
         $start = $route?->start ?? '08:00:00';
         $end   = $route?->end   ?? '18:00:00';
 
+        $rentalStart = Carbon::parse("{$date} {$start}", 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+        $rentalEnd   = Carbon::parse("{$date} {$end}",   'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+
         $odoo = [
             'x_studio_tour_type'      => $tour->odoo_type        ?? '',
             'x_studio_route_new'      => $route?->odoo_name      ?? '',
@@ -159,17 +172,15 @@ class OtaController extends Controller
             'x_studio_source'         => $tour->source?->name    ?? '',
             'x_studio_payment_source' => $tour->source?->name    ?? '',
             'company_id'              => $company?->odoo_id ? (int) $company->odoo_id : null,
-            'rental_start_date'       => Carbon::parse("{$date} {$start}", 'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
-            'rental_return_date'      => Carbon::parse("{$date} {$end}",   'Asia/Makassar')->utc()->format('Y-m-d H:i:s'),
+            'rental_start_date'       => $rentalStart,
+            'rental_return_date'      => $rentalEnd,
             'x_studio_deposit'        => $netAmount,
+            'x_studio_car_type'       => $carType,
+            'x_studio_pickup_cars'    => $pickupCars,
+            'x_studio_drop_off_cars'  => $dropOffCars,
             'order_lines'             => $orderLines,
         ];
 
-        if ($transfer) {
-            $odoo['x_studio_car_type']       = $carType;
-            $odoo['x_studio_pickup_cars']    = $pickupCars;
-            $odoo['x_studio_drop_off_cars']  = $dropOffCars;
-        }
 
         return response()->json([
             'tour_id'   => $tour->id,
@@ -230,6 +241,43 @@ class OtaController extends Controller
         }
 
         return null;
+    }
+
+    private function findBestPartialSharedBoat(Tours $tour, string $date): ?object
+    {
+        $tourType   = $tour->odoo_type ?? null;
+        $bestBoat   = null;
+        $bestSeats  = -1;
+
+        foreach ($tour->boat as $boat) {
+            if (!empty($boat->closed)) continue;
+
+            $records = $boat->closeddates->filter(
+                fn($cd) => $cd->deleted_at === null && substr($cd->date, 0, 10) === $date
+            );
+
+            $blocked = $records->contains(function ($cd) use ($tourType) {
+                $t = (int) $cd->type;
+                if ($cd->type === null || $cd->type === '' || in_array($t, [2, 3, 4])) return true;
+                if ($t === 1 && $cd->tour_type && $tourType && $cd->tour_type !== $tourType) return true;
+                return false;
+            });
+
+            if ($blocked) continue;
+
+            $booked = $records->where('type', 1)->filter(
+                fn($cd) => !$cd->tour_type || !$tourType || $cd->tour_type === $tourType
+            )->sum('qtty');
+
+            $available = max(0, (int) ($boat->capacity ?? 0) - (int) $booked);
+
+            if ($available > $bestSeats) {
+                $bestSeats = $available;
+                $bestBoat  = $boat;
+            }
+        }
+
+        return $bestBoat ?? $tour->boat->first();
     }
 
     private function findPrivateBoat(Tours $tour, string $date): ?object

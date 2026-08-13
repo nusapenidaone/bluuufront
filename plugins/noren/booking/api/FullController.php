@@ -75,7 +75,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat', 'included', 'includes'])
             ->whereIn('classes_id', [8])
             ->orderBy('sort_order')
             ->get();
@@ -98,6 +98,17 @@ class FullController extends Controller
                 'fleet_size' => $tour->boat->count(),
                 'categories' => $tour->category->filter(fn($c) => $c->status == 1)->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values(),
                 'boatFeatures' => $tour->props,
+                'included' => $tour->included->map(fn($i) => [
+                    'id'          => $i->id,
+                    'name'        => $i->name,
+                    'description' => $i->description,
+                    'icon_svg'    => $i->icon_svg,
+                ])->values(),
+                'includes' => $tour->includes->map(fn($i) => [
+                    'id'      => $i->id,
+                    'name'    => $i->name,
+                    'icon_svg'=> $i->icon_svg,
+                ])->values(),
             ];
         });
     }
@@ -400,12 +411,6 @@ class FullController extends Controller
             ->get();
 
         // ── Build per-boat closeddates index ───────────────────────────
-        // boatIndex[boat_id] = ['capacity' => int, 'dates' => [date => ['blocked' => bool, 'qtty' => int]]]
-        // Mirrors ToursController::calculateTourAvailability per-boat logic:
-        //   - boat.closed + any record → blocked
-        //   - type null/empty/2/3/4 → blocked
-        //   - type 1 → reduce by qtty
-        //   - no records → full capacity available
         $boatIndex = [];
         foreach ($tours as $tour) {
             foreach ($tour->boat as $boat) {
@@ -441,11 +446,9 @@ class FullController extends Controller
                         $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
                     } elseif ((int) $type === 1) {
                         if ($cd->tour_type && $cd->tour_type !== $tour->odoo_type) {
-                            // Another shared tour is using this boat — fully blocked
                             $boatIndex[$boat->id]['dates'][$dateStr]['blocked'] = true;
                             $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
                         } else {
-                            // Same tour or legacy null → count seats
                             $boatIndex[$boat->id]['dates'][$dateStr]['qtty'] += (int) ($cd->qtty ?? 0);
                             $boatIndex[$boat->id]['dates'][$dateStr]['real_record'] = true;
                         }
@@ -454,14 +457,15 @@ class FullController extends Controller
             }
         }
 
-        // ── Helper: availability for one date — picks the best boat ──────
-        // Returns available_seats and boat_id of the boat with most free seats.
+        // ── Helper: availability for one date ──────────────────────────
         $calcDate = function (array $boats, string $date) use ($boatIndex): array {
             $totalAvailable = 0;
+            $totalCapacity  = 0;
+            $totalBooked    = 0;
             $firstBoatId    = null;
 
             foreach ($boats as $boat) {
-                $boatId   = $boat->id;
+                $boatId = $boat->id;
                 if ($firstBoatId === null) {
                     $firstBoatId = $boatId;
                 }
@@ -470,36 +474,39 @@ class FullController extends Controller
                 $rec      = $boatIndex[$boatId]['dates'][$date] ?? null;
 
                 if ($rec === null) {
-                    $avail = $capacity;
+                    $avail  = $capacity;
+                    $booked = 0;
                 } elseif ($rec['blocked']) {
-                    $avail = 0;
+                    $avail  = 0;
+                    $booked = $capacity;
                 } else {
                     $booked = (int) ($rec['qtty'] ?? 0);
                     $avail  = max(0, $capacity - $booked);
                 }
 
                 $totalAvailable += $avail;
+                $totalCapacity  += $capacity;
+                $totalBooked    += $booked;
             }
 
             return [
                 'available_seats' => $totalAvailable,
                 'available'       => $totalAvailable > 0 ? 1 : 0,
                 'boat_id'         => $firstBoatId,
+                'capacity'        => $totalCapacity,
+                'booked'          => $totalBooked,
             ];
         };
 
         // ── Build response ─────────────────────────────────────────────
-        $result = [];
+        $result   = [];
         $datesSet = array_flip($dates);
 
         foreach ($tours as $tour) {
-            $boats = $tour->boat->all();
-            // ID лодок тура с closed=true — их не-крон записи блокируют весь тур
+            $boats          = $tour->boat->all();
             $blockerBoatIds = $tour->boat->filter(fn($b) => !empty($b->closed))->pluck('id')->toArray();
 
-            // Requested date range
             foreach ($dates as $date) {
-                // Если у closed=true лодки тура есть не-крон запись на эту дату — тур закрыт
                 $isBlocked = false;
                 foreach ($blockerBoatIds as $bId) {
                     if (!empty($boatIndex[$bId]['dates'][$date]['real_record'])) {
@@ -511,11 +518,10 @@ class FullController extends Controller
                     $result[] = ['tour_id' => $tour->id, 'date' => $date, 'available_seats' => 0, 'available' => 0, 'boat_id' => null];
                     continue;
                 }
-                $avail = $calcDate($boats, $date);
+                $avail    = $calcDate($boats, $date);
                 $result[] = array_merge(['tour_id' => $tour->id, 'date' => $date], $avail);
             }
 
-            // Extra blocked/booked dates outside the range (only when no explicit range)
             if (!$explicitRange) {
                 $extraDates = [];
                 foreach ($tour->boat as $boat) {
@@ -527,7 +533,6 @@ class FullController extends Controller
                 }
                 foreach (array_keys($extraDates) as $dateStr) {
                     $avail = $calcDate($boats, $dateStr);
-                    // Skip fully open dates outside the range
                     if ($avail['booked'] === 0 && $avail['available_seats'] === $avail['capacity']) {
                         continue;
                     }
@@ -569,6 +574,7 @@ class FullController extends Controller
             'ecategories.extras.children.images',
             'ecategories.extras.images',
             'photos',
+            'schedule_photos',
             'restaurant.images',
         ])->where('classes_id', $classesId)->orderBy('sort_order')->get();
 
@@ -591,6 +597,12 @@ class FullController extends Controller
                 'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
             ])->toArray();
 
+            $payload['schedule_photos'] = $route->schedule_photos->map(fn($p) => [
+                'path'        => $p->getPath(),
+                'thumb'       => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
+            ])->toArray();
+
             $payload['tour_images'] = [];
 
             $restaurant = $route->restaurant;
@@ -599,11 +611,13 @@ class FullController extends Controller
                 return $payload;
             }
             $payload['restaurant'] = [
-                'id' => $restaurant->id,
-                'name' => $restaurant->name,
-                'description' => $restaurant->description,
-                'menu' => $restaurant->menu,
-                'image' => $restaurant->image,
+                'id'            => $restaurant->id,
+                'name'          => $restaurant->name,
+                'description'   => $restaurant->description,
+                'menu'          => $restaurant->menu,
+                'menu_sections' => $restaurant->menu_sections ?: [],
+                'menu_note'     => $restaurant->menu_note,
+                'image'         => $restaurant->image,
                 'images_with_thumbs' => $restaurant->images_with_thumbs,
             ];
             return $payload;
@@ -616,7 +630,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $route = Route::with(['restaurant', 'restaurant.images'])->find($id);
+        $route = Route::with(['restaurant', 'restaurant.images', 'schedule_photos'])->find($id);
 
         if (!$route) {
             return response()->json(null, 404);
@@ -636,6 +650,11 @@ class FullController extends Controller
             'popup_afternoon' => $route->popup_afternoon,
             'schedule_before_lunch' => $route->schedule_before_lunch,
             'schedule_after_lunch' => $route->schedule_after_lunch,
+            'schedule_photos' => $route->schedule_photos->map(fn($p) => [
+                'path'        => $p->getPath(),
+                'thumb'       => $p->getThumb(800, 600, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
+                'thumb_small' => $p->getThumb(400, 300, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
+            ])->toArray(),
             'map' => $mapFile ? $mapFile->getPath() : null,
             'restaurant' => $restaurant ? [
                 'id' => $restaurant->id,

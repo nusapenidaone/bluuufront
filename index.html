@@ -12,7 +12,21 @@
   <link rel="dns-prefetch" href="https://elfsightcdn.com" />
   <!-- Critical assets -->
   <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
-  <link rel="preload" as="image" href="https://bluuu.tours/storage/app/media/poster.webp" fetchpriority="high" />
+  <!-- poster.webp is only rendered on Home/Explore/Discover — preload it there only,
+       so other routes (private/shared tour pages etc.) don't fetch an unused image
+       and trigger the "preloaded but not used" console warning -->
+  <script>
+  (function(){
+    var path = location.pathname.replace(/\/+$/, '') || '/';
+    if (path !== '/' && path !== '/explore' && path !== '/discover') return;
+    var link = document.createElement('link');
+    link.rel = 'preload';
+    link.as = 'image';
+    link.href = 'https://bluuu.tours/storage/app/media/poster.webp';
+    link.fetchPriority = 'high';
+    document.head.appendChild(link);
+  })();
+  </script>
   <link rel="preload" as="font" type="font/woff2" href="/src/assets/fonts/PetrovSans-Regular.woff2" crossorigin />
   <link rel="preload" as="font" type="font/woff2" href="/src/assets/fonts/PetrovSans-SemiBold.woff2" crossorigin />
   <script src="https://t.contentsquare.net/uxa/bf86ed7c81f77.js"></script>
@@ -64,31 +78,6 @@
       }, 'google_translate_element');
     }
 
-    // Elfsight — грузим только когда виджет входит во viewport
-    (function() {
-      var loaded = false;
-      function loadElfsight() {
-        if (loaded) return;
-        loaded = true;
-        var s = document.createElement('script');
-        s.src = 'https://elfsightcdn.com/platform.js';
-        s.async = true;
-        document.head.appendChild(s);
-      }
-
-      var io = new IntersectionObserver(function(entries) {
-        entries.forEach(function(e) {
-          if (e.isIntersecting) { loadElfsight(); io.disconnect(); mo.disconnect(); }
-        });
-      }, { rootMargin: '200px' });
-
-      // Ждём пока React отрендерит elfsight-app-* элемент
-      var mo = new MutationObserver(function() {
-        var el = document.querySelector('[class*="elfsight-app"]');
-        if (el) { io.observe(el); mo.disconnect(); }
-      });
-      mo.observe(document.body, { childList: true, subtree: true });
-    })();
   </script>
   <script async src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 

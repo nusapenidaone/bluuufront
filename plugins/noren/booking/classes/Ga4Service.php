@@ -11,7 +11,6 @@ class Ga4Service
 	public static function sendPurchase($order): bool
 {
     if (empty($order->ga_client_id)) {
-        Log::warning('GA4: missing client_id');
         return false;
     }
 

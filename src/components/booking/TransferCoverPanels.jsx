@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { Car, MapPin, Shield, ShieldCheck, Check, Info } from "lucide-react";
+import { Car, MapPin, Shield, ShieldCheck, Check, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
-import InfoDetailModal from "./InfoDetailModal";
 import { formatIDR } from "./utils";
 
 // --------------- Helpers ---------------
@@ -81,7 +80,7 @@ const buildOptionDetails = (
 };
 
 const TRANSFER_DETAILS_FALLBACK_IMAGE =
-  "https://bluuu.tours/storage/app/uploads/public/68a/5fd/e10/68a5fde10e980917741317.jpg";
+  "https://bluuu.tours/storage/app/media/driver.webp";
 const INSURANCE_DETAILS_FALLBACK_IMAGE =
   "https://bluuu.tours/storage/app/uploads/public/68f/9ed/c1a/68f9edc1a9270720998215.jpg";
 
@@ -96,45 +95,50 @@ export function TransfersCompact({
   dropoffAddress,
   setDropoffAddress,
   totalGuests,
+  defaultExpanded = false,
+  showHeader = true,
+  framed = true,
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [activeTransferDetails, setActiveTransferDetails] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(showHeader ? defaultExpanded : true);
+  const [expandedTransferDetailsId, setExpandedTransferDetailsId] = useState(null);
   const selectedTransfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
   const selectedTransferDescription = getOptionDescription(selectedTransfer);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md">
-      <div
-        className="flex items-center justify-between px-6 py-5 cursor-pointer hover:bg-neutral-100/50 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-secondary-600">
-            <Car className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-xl font-semibold text-secondary-900">Transfer</div>
-            <div className="text-sm text-secondary-500">
-              {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
+    <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
+      {showHeader && (
+        <div
+          className="flex items-center justify-between px-4 py-3.5 cursor-pointer hover:bg-neutral-100/50 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-secondary-600">
+              <Car className="h-5 w-5" />
             </div>
-            {selectedTransferDescription && (
-              <div className="mt-0.5 text-xs leading-relaxed text-secondary-400">
-                {selectedTransferDescription}
+            <div>
+              <div className="text-base font-semibold text-secondary-900">Transfer</div>
+              <div className="text-sm text-secondary-500">
+                {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
               </div>
-            )}
+              {selectedTransferDescription && (
+                <div className="mt-0.5 text-xs leading-relaxed text-secondary-400">
+                  {selectedTransferDescription}
+                </div>
+              )}
+            </div>
           </div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-secondary-400">
+            {isExpanded ? "Hide" : "Show"}
+          </span>
         </div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-secondary-400">
-          {isExpanded ? "Hide" : "Show"}
-        </span>
-      </div>
+      )}
 
-      {isExpanded && (
-        <div className="border-t border-neutral-200">
+      {(showHeader ? isExpanded : true) && (
+        <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
           <div className="flex flex-col divide-y divide-neutral-100">
             {/* Option: No thanks */}
             <label className={cn(
-              "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
+              "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
               !selectedTransferId ? "bg-primary-50/30" : "hover:bg-neutral-50"
             )}>
               <input
@@ -144,16 +148,16 @@ export function TransfersCompact({
                 checked={!selectedTransferId}
                 onChange={() => onSelectTransferId(null)}
               />
-              <div className="flex min-w-0 flex-1 items-center gap-4">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                  <MapPin className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                  <MapPin className={cn("h-4 w-4 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-secondary-900 sm:text-base">No, thanks. We'll meet you there.</div>
+                  <div className="text-sm font-bold text-secondary-900">No, thanks. We'll meet you there.</div>
                   <div className="mt-1 text-sm font-medium text-secondary-500">Self-arrival at the meeting point</div>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center justify-center">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                 <div className={cn(
                   "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                   !selectedTransferId
@@ -167,16 +171,17 @@ export function TransfersCompact({
 
             {/* Transfer Options */}
             {transfers && transfers.map(transfer => {
-              const unitPrice = Number(transfer.price || 0);
-              const cars = unitPrice > 0 ? Math.ceil(totalGuests / 5) : 0;
-              const totalTransferPrice = unitPrice * (cars || 1);
+              const isLargeGroup = totalGuests > 5;
+              const unitPrice = (isLargeGroup && transfer.bus_price)
+                ? Number(transfer.bus_price)
+                : Number(transfer.price || 0);
               const isSelected = String(selectedTransferId) === String(transfer.id);
               const finalName = transfer.name;
               const transferDescription = getOptionDescription(transfer);
 
               return (
                 <label key={transfer.id} className={cn(
-                  "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
+                  "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
                   isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
                 )}>
                   <input
@@ -186,15 +191,15 @@ export function TransfersCompact({
                     checked={isSelected}
                     onChange={() => onSelectTransferId(transfer.id)}
                   />
-                  <div className="flex min-w-0 flex-1 items-center gap-4">
-                    <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                      <Car className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                      <Car className={cn("h-4 w-4 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
+                      <div className="text-sm font-bold text-secondary-900">{finalName}</div>
                       <div className="mt-1 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                          {formatIDR(totalTransferPrice)}
+                        <span className="text-sm font-semibold text-secondary-900 tabular-nums">
+                          {formatIDR(unitPrice)}
                         </span>
                         <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
                       </div>
@@ -209,17 +214,23 @@ export function TransfersCompact({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setActiveTransferDetails({ title: finalName, description: transfer.description || transfer.short_description || transferDescription, image: transfer.image || null });
+                              setExpandedTransferDetailsId(prev => prev === transfer.id ? null : transfer.id);
                             }}
                             className="text-secondary-400 hover:text-primary-600 transition-colors"
                           >
-                            <Info className="h-4 w-4" />
+                            {String(expandedTransferDetailsId) === String(transfer.id) ? <ChevronUp className="h-4 w-4" /> : <Info className="h-4 w-4" />}
                           </button>
                         )}
                       </div>
+                      {String(expandedTransferDetailsId) === String(transfer.id) && (
+                        <div
+                          className="mt-2 text-xs leading-relaxed text-secondary-600 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-0.5"
+                          dangerouslySetInnerHTML={{ __html: transfer.description || transfer.short_description || transferDescription }}
+                        />
+                      )}
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center justify-center">
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center">
                     <div className={cn(
                       "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                       isSelected
@@ -236,8 +247,8 @@ export function TransfersCompact({
 
           {/* Address Input Section */}
           {selectedTransferId && (
-            <div className="mt-4 p-4 rounded-xl border border-neutral-200 bg-neutral-50 shadow-sm">
-              <div className="mb-3 text-sm font-bold text-secondary-900">Transfer Details</div>
+            <div className="px-4 pt-3 pb-4 border-t border-neutral-100">
+              <div className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary-400">Transfer Details</div>
               {(() => {
                 const transfer = transfers.find(t => String(t.id) === String(selectedTransferId));
                 const isShuttle = transfer?.name.toLowerCase().includes("shuttle") || transfer?.name.toLowerCase().includes("free");
@@ -245,7 +256,7 @@ export function TransfersCompact({
                 if (isShuttle) return null;
                 return (
                   <div className="flex flex-col gap-3">
-                    <div className={cn("grid gap-3", needsDropoff ? "sm:grid-cols-2" : "grid-cols-1")}>
+                    <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1">
                         <label className="block text-xs font-black uppercase tracking-wider text-secondary-500">Pickup Address</label>
                         <input
@@ -285,10 +296,6 @@ export function TransfersCompact({
           )}
         </div>
       )}
-      <InfoDetailModal
-        data={activeTransferDetails ? { ...activeTransferDetails, subtitle: "Pickup and route information" } : null}
-        onClose={() => setActiveTransferDetails(null)}
-      />
     </div>
   );
 }
@@ -305,12 +312,12 @@ export function CoversCompact({
   framed = true,
 }) {
   const selectedCover = covers?.find(c => String(c.id) === String(selectedCoverId));
-  const [activeCoverDetails, setActiveCoverDetails] = useState(null);
+  const [expandedCoverDetailsId, setExpandedCoverDetailsId] = useState(null);
   const optionsContent = (
     <div className="flex flex-col divide-y divide-neutral-100">
       {/* Option: No coverage */}
       <label className={cn(
-        "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
+        "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
         !selectedCoverId ? "bg-primary-50/30" : "hover:bg-neutral-50"
       )}>
         <input
@@ -320,16 +327,16 @@ export function CoversCompact({
           checked={!selectedCoverId}
           onChange={() => onSelectCoverId(null)}
         />
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-            <Shield className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedCoverId ? "text-primary-600" : "text-secondary-400")} />
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+            <Shield className={cn("h-4 w-4 transition-colors", !selectedCoverId ? "text-primary-600" : "text-secondary-400")} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold text-secondary-900 sm:text-base">No coverage</div>
+            <div className="text-sm font-bold text-secondary-900">No coverage</div>
             <div className="mt-1 text-sm font-medium text-secondary-500">I have my own insurance</div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center justify-center">
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center">
           <div className={cn(
             "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
             !selectedCoverId
@@ -352,7 +359,7 @@ export function CoversCompact({
         const hasCoverDetails = Boolean(coverDetails.description || coverDetails.image);
         return (
           <label key={cover.id} className={cn(
-            "group flex items-center gap-4 px-5 py-3 sm:py-4 cursor-pointer transition-all",
+            "group flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all",
             isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
           )}>
             <input
@@ -362,14 +369,14 @@ export function CoversCompact({
               checked={isSelected}
               onChange={() => onSelectCoverId(cover.id)}
             />
-            <div className="flex min-w-0 flex-1 items-center gap-4">
-              <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                <ShieldCheck className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
+                <ShieldCheck className={cn("h-4 w-4 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-bold text-secondary-900 sm:text-base">{cover.name}</div>
+                <div className="text-sm font-bold text-secondary-900">{cover.name}</div>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
+                  <span className="text-sm font-semibold text-secondary-900 tabular-nums">
                     {formatPrice(price)}
                   </span>
                   <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">{priceLabel}</span>
@@ -380,21 +387,24 @@ export function CoversCompact({
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setActiveCoverDetails({
-                        title: cover.name,
-                        description: cover.description || cover.short_description || coverDetails.description,
-                        image: coverDetails.image,
-                      });
+                      setExpandedCoverDetailsId(prev => prev === cover.id ? null : cover.id);
                     }}
-                    className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
                   >
                     <Info className="h-3.5 w-3.5" />
-                    <span>See full description</span>
+                    <span>{String(expandedCoverDetailsId) === String(cover.id) ? "Hide description" : "See full description"}</span>
+                    {String(expandedCoverDetailsId) === String(cover.id) ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   </button>
+                )}
+                {hasCoverDetails && String(expandedCoverDetailsId) === String(cover.id) && (
+                  <div
+                    className="mt-2 text-xs leading-relaxed text-secondary-600 prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-5 [&_li]:my-0.5"
+                    dangerouslySetInnerHTML={{ __html: cover.description || cover.short_description || coverDetails.description }}
+                  />
                 )}
               </div>
             </div>
-            <div className="flex shrink-0 items-center justify-center">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center">
               <div className={cn(
                 "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
                 isSelected
@@ -413,9 +423,9 @@ export function CoversCompact({
   return (
     <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
       {showHeader && (
-        <div className="flex items-center justify-between px-6 py-5">
+        <div className="flex items-center justify-between px-4 py-3.5">
           <div>
-            <div className="text-xl font-semibold text-secondary-900">Insurance</div>
+            <div className="text-base font-semibold text-secondary-900">Insurance</div>
             <div className="text-sm text-secondary-500">
               {selectedCover ? selectedCover.name : "Optional protect your trip"}
             </div>
@@ -426,10 +436,6 @@ export function CoversCompact({
       <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
         {optionsContent}
       </div>
-      <InfoDetailModal
-        data={activeCoverDetails ? { ...activeCoverDetails, subtitle: "Coverage information" } : null}
-        onClose={() => setActiveCoverDetails(null)}
-      />
     </div>
   );
 }

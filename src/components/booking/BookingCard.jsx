@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { getUtmQueryString } from "../../lib/analytics";
 import {
     Star,
     Users,
@@ -107,9 +106,7 @@ export default function BookingCard({
                 )
             );
         }
-        const utmQs = getUtmQueryString();
-        const checkoutUrl = `/new/checkout?${params.toString()}${utmQs ? `&${utmQs}` : ""}`;
-        window.location.href = checkoutUrl;
+        window.location.href = `/new/checkout?${params.toString()}`;
     };
 
     return (

@@ -1,0 +1,27 @@
+fields:
+    name:
+        label: Name
+        span: left
+        type: text
+    slug:
+        label: Slug
+        span: right
+        preset:
+            field: name
+            type: slug
+        type: text
+    title:
+        label: Title / Role
+        span: full
+        type: text
+        comment: e.g. "Senior Tour Guide · Bluuu Tours"
+    bio:
+        label: Bio
+        span: full
+        size: large
+        type: textarea
+    avatar:
+        label: Avatar URL
+        span: full
+        type: text
+        comment: Full URL to the author photo (https://…)

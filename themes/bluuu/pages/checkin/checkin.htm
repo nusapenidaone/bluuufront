@@ -41,6 +41,10 @@ function onStart()
         return Redirect::to('404');
     }
 
+    if (!empty($order['x_studio_online_check_in_complete'])) {
+        return Redirect::to('/checkin/' . $odooId . '/qr');
+    }
+
     if (request()->get('paid') === '1') {
         return Redirect::to('/checkin/' . $odooId . '/qr');
     }
@@ -64,7 +68,7 @@ function onStart()
     $travelTime = '';
 
     if ($startDate) {
-        $dt         = Carbon::parse($startDate, 'UTC')->setTimezone('+04:00');
+        $dt         = Carbon::parse($startDate, 'UTC')->setTimezone('Asia/Makassar');
         $travelDate = $dt->format('Y-m-d');
         $travelTime = $dt->format('H:i');
     }
@@ -199,12 +203,12 @@ function onStart()
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
 <script>
 const INIT = {{order | json_encode(constant('JSON_NUMERIC_CHECK'))|raw}};
 </script>
 {% verbatim %}
-<script type="text/babel">
+<script type="text/babel" data-presets="react">
 const { useState, useEffect } = React;
 
 const BLUE      = '#0073E0';
@@ -379,7 +383,7 @@ function fmtDate(d) {
     return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
 }
 
-const COUNTRIES = ["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Belarus","Belgium","Brazil","Bulgaria","Cambodia","Canada","Chile","China","Colombia","Croatia","Czech Republic","Denmark","Egypt","Estonia","Finland","France","Georgia","Germany","Ghana","Greece","Hong Kong","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Japan","Jordan","Kazakhstan","Kenya","Korea, Republic of","Kuwait","Latvia","Lebanon","Lithuania","Malaysia","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Norway","Pakistan","Philippines","Poland","Portugal","Qatar","Romania","Russian Federation","Saudi Arabia","Singapore","Slovakia","Slovenia","South Africa","Spain","Sri Lanka","Sweden","Switzerland","Taiwan","Thailand","Turkey","Ukraine","United Arab Emirates","United Kingdom","United States","Uzbekistan","Viet Nam"];
+const COUNTRIES = ["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Belarus","Belgium","Brazil","Bulgaria","Cambodia","Canada","Chile","China","Colombia","Croatia","Czech Republic","Denmark","Egypt","Estonia","Finland","France","Georgia","Germany","Ghana","Greece","Hong Kong","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Japan","Jordan","Kazakhstan","Kenya","Korea, Republic of","Kuwait","Latvia","Lebanon","Lithuania","Malaysia","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Norway","Pakistan","Philippines","Poland","Portugal","Qatar","Romania","Russian Federation","Saudi Arabia","Serbia","Singapore","Slovakia","Slovenia","South Africa","Spain","Sri Lanka","Sweden","Switzerland","Taiwan","Thailand","Turkey","Ukraine","United Arab Emirates","United Kingdom","United States","Uzbekistan","Viet Nam"];
 
 // ─── Step: Overview ───────────────────────────────────────────────────────────
 

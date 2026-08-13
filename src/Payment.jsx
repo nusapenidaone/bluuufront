@@ -75,6 +75,7 @@ export default function Payment() {
   const totalBoatPrice = parseFloat(params.get("totalBoatPrice") || String(boatPrice)); // pricelist + surcharge
   const guestFeeTotal = parseFloat(params.get("guestFeeTotal") || "0");
   const extrasTotal = parseFloat(params.get("extrasTotal") || "0");
+  const donationAmount = parseFloat(params.get("donationAmount") || "0");
   const restaurantId = params.get("restaurantId")
     ? parseInt(params.get("restaurantId"), 10) || null
     : null;
@@ -113,6 +114,9 @@ export default function Payment() {
   // Total without discount = all price components summed
   const fullTotal = totalBoatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
   const depositAmount = Math.round((fullTotal * deposite) / 100);
+  // Donation is added on top of whatever is charged now, but never folded into the
+  // deposit amount itself — the deposit field in Odoo must stay donation-free.
+  const chargeAmount = depositAmount + donationAmount;
   const analyticsCurrency = params.get("analyticsCurrency") || "IDR";
   const analyticsTotal = parseFloat(params.get("analyticsTotal") || String(fullTotal));
   const analyticsItemId = params.get("tourId") || boatId || `${tourType}-tour`;
@@ -230,6 +234,7 @@ export default function Payment() {
       coverPrice: coverTotalPrice,
       extrasTotal: pureExtrasTotal,
       deposite,
+      donationAmount,
       discount: 0,
       totalPrice: fullTotal,
       discountPrice: 0,
@@ -561,9 +566,15 @@ export default function Payment() {
                   <span className="font-semibold text-secondary-900">{fmt((e.price ?? 0) * (e.quantity ?? 1))}</span>
                 </div>
               ))}
+              {donationAmount > 0 && (
+                <div className="flex justify-between text-xs text-secondary-500">
+                  <span>Donation to children in need</span>
+                  <span className="font-semibold text-secondary-900">{fmt(donationAmount)}</span>
+                </div>
+              )}
               <div className="flex justify-between border-t border-neutral-100 pt-2.5 font-bold text-secondary-900">
                 <span>Total</span>
-                <span className="text-base">{fmt(fullTotal)}</span>
+                <span className="text-base">{fmt(fullTotal + donationAmount)}</span>
               </div>
             </div>
           </div>
@@ -614,8 +625,13 @@ export default function Payment() {
                     Remaining {fmt(fullTotal - depositAmount)} due before the tour
                   </div>
                 )}
+                {donationAmount > 0 && (
+                  <div className="mt-0.5 text-xs text-secondary-500">
+                    Includes {fmt(donationAmount)} donation
+                  </div>
+                )}
               </div>
-              <div className="text-2xl font-bold text-secondary-900">{fmt(depositAmount)}</div>
+              <div className="text-2xl font-bold text-secondary-900">{fmt(chargeAmount)}</div>
             </div>
           </div>
 
@@ -638,7 +654,7 @@ export default function Payment() {
                 : "bg-primary-600 hover:bg-primary-700 active:bg-primary-800"
             )}
           >
-            {loading ? "Processing…" : `Confirm & Pay ${fmt(depositAmount)}`}
+            {loading ? "Processing…" : `Confirm & Pay ${fmt(chargeAmount)}`}
             {!loading && <CreditCard className="h-5 w-5" />}
           </button>
 

@@ -95,6 +95,34 @@ class PrivateOrderController extends Controller
         $order->discount_price = $data['discountPrice'] ?? 0;
         $order->discount       = $data['discount']      ?? 0;
 
+        // Partner boat request (deposite=0): frontend sends 0 prices — calculate server-side
+        if ($order->status_id == 4 && $order->tour_price == 0) {
+            $tourForPricing = Tours::with(['packages', 'pricesbydates.packages'])->find($data['tourId']);
+            if ($tourForPricing) {
+                $pricelist = $tourForPricing->packages?->pricelist ?? [];
+                if ($order->travel_date && $tourForPricing->pricesbydates->isNotEmpty()) {
+                    $seasonal = $tourForPricing->pricesbydates->first(
+                        fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
+                    );
+                    if ($seasonal?->packages?->pricelist) {
+                        $pricelist = $seasonal->packages->pricelist;
+                    }
+                }
+                $members = (int) ($order->members ?? 0);
+                $tierPrice = 0;
+                if (!empty($pricelist) && $members > 0) {
+                    $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
+                    $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
+                    $tierPrice = (int) ($entry['price'] ?? 0);
+                }
+                $boatPrice = (int) ($tourForPricing->boat_price ?? 0);
+                $order->tour_price  = $tierPrice;
+                $order->boat_price  = $boatPrice;
+                $order->total_price = $tierPrice + $boatPrice;
+                $order->full_price  = $tierPrice + $boatPrice;
+            }
+        }
+
         // ── Promo / agent ─────────────────────────────────────────────
         $order->promocode  = $data['promocode']  ?? null;
         $order->agent_fee  = $data['agent_fee']  ?? 0;
@@ -106,6 +134,11 @@ class PrivateOrderController extends Controller
             $order->method_id     = $data['method'];
             $order->deposite_summ = $order->full_price * $order->deposite / 100;
         }
+
+        // ── Donation (charity add-on) ──────────────────────────────────
+        // Collected together with the deposit/full payment, but tracked separately
+        // from deposite_summ so it never inflates the Odoo x_studio_deposit field.
+        $order->donation_amount = $data['donationAmount'] ?? 0;
 
         // ── Extras ────────────────────────────────────────────────────
         $order->extras = $data['selectedExtras'] ?? [];
@@ -169,11 +202,15 @@ class PrivateOrderController extends Controller
                 . '&num_items=' . ($order->adults + $order->kids)
                 . '&content_ids=' . $order->tours_id;
 
+            // Charge includes the donation on top of the deposit/full payment,
+            // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
+            $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
+
             if ($order->method_id == 1) {
-                $successUrl = $successBase . '&amount=' . $order->deposite_summ . '&currency=IDR';
+                $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
                 $url = XenditService::createPaymentLink(
                     $order->external_id,
-                    $order->deposite_summ,
+                    $chargeAmount,
                     $order->email,
                     $successUrl,
                     url('/error'),
@@ -181,7 +218,7 @@ class PrivateOrderController extends Controller
                 );
             } else {
                 $usd_rate = Rates::find(2)->rate;
-                $usd_summ = $usd_rate * $order->deposite_summ;
+                $usd_summ = $usd_rate * $chargeAmount;
                 $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
                 $url = PayPalService::createPaymentLink(
                     $order->external_id,

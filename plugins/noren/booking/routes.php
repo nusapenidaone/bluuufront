@@ -20,5 +20,3 @@ require __DIR__ . '/odoo/routes.php';
 require __DIR__ . '/admin/routes.php';
 
 require __DIR__ . '/calendar/routes.php';
-
-require __DIR__ . '/old_routes.php';

@@ -6,7 +6,7 @@ import { loadGoogleMaps } from '../../lib/googleMaps';
 const BALI_BOUNDS = { south: -9.0, west: 114.4, north: -7.9, east: 116.0 };
 const BALI_CENTER = { lat: -8.719, lng: 115.169 }; // Kuta area
 
-export default function AddressAutocomplete({ value, onChange, placeholder, className }) {
+export default function AddressAutocomplete({ value, onChange, placeholder, className, confirmed = false, onConfirmedChange }) {
   const inputRef = useRef(null);
   const mapDivRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -48,6 +48,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   const handleInput = (e) => {
     const v = e.target.value;
     onChange(v);
+    onConfirmedChange?.(false);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(v), 250);
   };
@@ -58,6 +59,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
     const addr      = secondary ? `${main}, ${secondary}` : main;
 
     onChange(addr);
+    onConfirmedChange?.(true);
     if (inputRef.current) inputRef.current.value = addr;
     setSuggestions([]);
     setOpen(false);
@@ -79,9 +81,10 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
     if (results?.[0]) {
       const addr = results[0].formatted_address;
       onChange(addr);
+      onConfirmedChange?.(true);
       if (inputRef.current) inputRef.current.value = addr;
     }
-  }, [onChange]);
+  }, [onChange, onConfirmedChange]);
 
   // Initialize or update map when showMap becomes true
   useEffect(() => {
@@ -139,6 +142,9 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
     });
   }, [showMap, location, reverseGeocode]);
 
+  const confirmFeatureEnabled = typeof onConfirmedChange === 'function';
+  const showConfirmPrompt = confirmFeatureEnabled && Boolean(value && value.trim()) && !confirmed;
+
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
@@ -162,6 +168,19 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
         </button>
       </div>
 
+      {showConfirmPrompt && (
+        <div className="mt-1.5 flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs text-amber-800">
+          <span className="flex-1 min-w-[140px]">Pick a suggestion above, or confirm this address is correct.</span>
+          <button
+            type="button"
+            onClick={() => onConfirmedChange(true)}
+            className="shrink-0 rounded-full bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white transition hover:bg-amber-700"
+          >
+            Use as entered
+          </button>
+        </div>
+      )}
+
       {open && suggestions.length > 0 && dropdownRect && createPortal(
         <ul
           style={{
@@ -169,7 +188,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
             top: dropdownRect.bottom + 4,
             left: dropdownRect.left,
             width: dropdownRect.width,
-            zIndex: 9999,
+            zIndex: 10050,
           }}
           className="overflow-hidden rounded-lg border border-neutral-200 bg-white text-sm shadow-lg"
         >

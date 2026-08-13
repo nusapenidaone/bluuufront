@@ -5,31 +5,29 @@ tabs:
             span: auto
             type: text
             tab: Main
-        slug:
-            label: Slug
-            span: auto
-            type: text
-            tab: Main
-            
-        start:
-            label: 'Start Time'
-            mode: time
-            span: auto
-            type: datepicker
-            tab: Main
-        end:
-            label: 'End Time'
-            mode: time
-            span: auto
-            type: datepicker
-            tab: Main
-            
         classes:
             label: Class
             nameFrom: name
             descriptionFrom: description
             span: auto
             type: relation
+            tab: Main
+        odoo_name:
+            label: 'Route name in Odoo'
+            span: auto
+            type: text
+            tab: Main
+        start:
+            label: 'Start time'
+            mode: time
+            span: auto
+            type: datepicker
+            tab: Main
+        end:
+            label: 'End time'
+            mode: time
+            span: auto
+            type: datepicker
             tab: Main
         restaurant:
             label: Restaurant
@@ -43,18 +41,8 @@ tabs:
             span: auto
             type: text
             tab: Main
-        tone:
-            label: Tone
-            span: auto
-            type: text
-            tab: Main
         best_for:
             label: 'Best for'
-            span: full
-            type: text
-            tab: Main
-        best_with:
-            label: 'Best with'
             span: full
             type: text
             tab: Main
@@ -68,44 +56,52 @@ tabs:
             label: Highlights
             span: full
             type: repeater
+            itemsExpanded: false
             tab: Main
             form:
                 fields:
                     label:
-                        label: Label
+                        label: Text
                         type: text
                         span: auto
-                    icon:
-                        label: Icon
-                        type: text
-                        span: auto
-                        placeholder: MapPin
-                        commentHtml: true
-                        comment: 'Choose icon name from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a>. Use key from frontend map (src/private.jsx, ICON_MAP): MapPin, Fish, Clock, LifeBuoy, UtensilsCrossed, Camera, Shield, Waves, Anchor, Sun, BadgeCheck, Ship, Coffee, Ticket, Users, Wine, Globe, Star, Search.'
+
+                    icon_svg:
+                        label: 'Icon SVG'
+                        type: codeeditor
+
+                        size: small
+                        span: left
+
+                        comment: 'Paste an SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click an icon → Copy SVG. Overrides Icon Name when filled in.'
 
         add_on_note:
-            label: 'Add-on note (e.g. Diving license required)'
+            label: 'Add-on note (e.g. diver license required)'
             span: full
             type: text
-            tab: Popup
+            tab: Main
         popup_title:
             label: 'Popup title'
             span: auto
             type: text
-            tab: Popup
+            tab: Main
         popup_afternoon:
-            label: 'Popup afternoon description'
+            label: 'Afternoon section description (popup)'
             span: full
             size: small
             type: textarea
-            tab: Popup
+            tab: Main
         schedule_before_lunch:
-            label: 'Schedule: Before lunch'
+            label: 'Before lunch'
             span: full
+            itemsExpanded: false
             type: repeater
-            tab: Popup
+            tab: Schedule
             form:
-                fields:
+                fields: &schedule_item_fields
+                    title:
+                        label: Title
+                        type: text
+                        span: auto
                     time:
                         label: Time
                         type: text
@@ -114,39 +110,62 @@ tabs:
                         label: Duration
                         type: text
                         span: auto
-                    title:
-                        label: Title
-                        type: text
+
+
+                    highlight:
+                        label: Highlight
+                        type: dropdown
                         span: auto
-                    details:
-                        label: Details
-                        type: textarea
+                        default: ''
+                        options:
+                            '': None
+                            premium: Premium
+                            first-class: 'First class'
+                        comment: 'Show a highlight badge for this activity (only for shared tours, not private tours).'
+                    is_restaurant:
+                        label: 'Show restaurant'
+                        type: switch
+                        span: full
+                        default: 0
+                        comment: 'Show the restaurant card for this step instead of add-ons'
+                    icon_svg:
+                        label: 'Icon SVG (optional, overrides name)'
+                        type: codeeditor
                         size: small
                         span: full
+                        cssClass: icon-svg-field
+                        commentHtml: true
+                        comment: 'Paste an SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click an icon → Copy SVG. Overrides Icon Name when filled in.'
+                    details:
+                        label: 'Details / Text'
+                        type: textarea
+                        size: small
+                        span: auto
+                    extras:
+                        label: 'Add-ons'
+                        type: taglist
+                        span: full
+                        mode: array
+                        options: getExtraOptions
+                        comment: 'Select add-ons to show as options for this step'
         schedule_after_lunch:
-            label: 'Schedule: After lunch'
+            label: 'After lunch'
             span: full
             type: repeater
-            tab: Popup
+            tab: Schedule
+            itemsExpanded: false
             form:
-                fields:
-                    time:
-                        label: Time
-                        type: text
-                        span: auto
-                    duration:
-                        label: Duration
-                        type: text
-                        span: auto
-                    title:
-                        label: Title
-                        type: text
-                        span: auto
-                    details:
-                        label: Details
-                        type: textarea
-                        size: small
-                        span: full
+                fields: *schedule_item_fields
+        schedule_photos:
+            label: 'Schedule photos (in order)'
+            span: full
+            type: fileupload
+            mode: image
+            imageHeight: 100
+            imageWidth: 100
+            tab: Schedule
+            comment: 'Assigned in order to schedule steps (before+after lunch) that have no photo of their own. Order = file sort order.'
+
         photos:
             label: Photos
             span: full
@@ -155,16 +174,8 @@ tabs:
             imageHeight: 100
             imageWidth: 100
             tab: Images
-        map:
-            label: Map
-            span: full
-            type: fileupload
-            mode: image
-            imageHeight: 100
-            imageWidth: 100
-            tab: Images
         ecategories:
-            label: 'Extras categories'
+            label: 'Add-on categories'
             nameFrom: name
             descriptionFrom: description
             span: full
@@ -173,12 +184,6 @@ tabs:
                 - preview
             type: relation
             tab: Extras
-        odoo_name:
-            label: 'Odoo Route Name'
-            span: auto
-            type: text
-            tab: Main
-
         program:
             label: Program
             nameFrom: name

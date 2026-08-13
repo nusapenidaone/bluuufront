@@ -36,7 +36,7 @@ public function registerFormWidgets()
         \Noren\Booking\FormWidgets\PackageItemsEditor::class => [
             'label' => 'Package Items Editor',
             'code'  => 'packageitemseditor'
-        ]
+        ],
     ];
 }
 

@@ -23,17 +23,33 @@ columns:
         searchable: true
         sortable: true
     lead_id:
-        label: Lead
-        type: linkage
+        label: Kommo
+        type: number
+        searchable: true
+        sortable: true
+    odoo_id:
+        label: Odoo
+        type: number
         searchable: true
         sortable: true
 
-        attributes:
-            target: _blank
-        select: concat('https://baliboattours.kommo.com/leads/detail/', lead_id)
 
 
-
+    type:
+        label: Type
+        type: selectable
+        options:
+            1: Private
+            2: Shared
+            3: Manual
+            4: Auto
+            empty: Manual 2
+        
+        
+    tour_type:
+        label: Tour Type
+        type: text
+        
     created_at:
         label: Created
         type: datetime
@@ -46,10 +62,6 @@ columns:
         searchable: true
         sortable: true
         format: 'Y-m-d H:i:s'
-    type:
-        label: Type
-        type: text
-
     # delete:
     #     label: Delete
     #     type: switch

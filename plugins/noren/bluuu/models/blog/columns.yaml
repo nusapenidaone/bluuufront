@@ -2,18 +2,20 @@ columns:
     id:
         label: id
         type: number
-    created_at:
-        label: Created
-        type: datetime
-    updated_at:
-        label: Updated
-        type: datetime
     title:
         label: Title
         type: text
+        searchable: true
+    author[name]:
+        label: Author
+        relation: author
+        select: name
     slug:
         label: Link
         type: linkage
         attributes:
             target: _blank
         select: concat('/blog/', slug)
+    updated_at:
+        label: Updated
+        type: datetime

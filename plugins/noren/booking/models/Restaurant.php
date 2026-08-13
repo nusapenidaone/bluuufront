@@ -20,6 +20,7 @@ class Restaurant extends Model
      */
     public $rules = [
     ];
+    protected $jsonable = ['menu_sections'];
     protected $appends = ['images_with_thumbs'];
 
     protected $hidden = ['images'];
@@ -39,6 +40,8 @@ class Restaurant extends Model
 
         return $this->images->map(function ($image) {
             return [
+                'original'    => $image->getPath(),
+                'hero'        => $image->getThumb(1200, 700, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 85]),
                 'thumb'       => $image->getThumb(400, 400, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]),
                 'thumb_small' => $image->getThumb(200, 200, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]),
             ];
@@ -51,6 +54,7 @@ class Restaurant extends Model
     public function afterSave()
     {
         foreach ($this->images as $image) {
+            $image->getThumb(1200, 700, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 85]);
             $image->getThumb(400, 400, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 80]);
             $image->getThumb(200, 200, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 75]);
         }

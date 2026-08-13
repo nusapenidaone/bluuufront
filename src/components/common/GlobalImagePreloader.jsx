@@ -45,6 +45,7 @@ export default function GlobalImagePreloader() {
       });
     });
 
+    if (!(document.body instanceof Node)) return () => observer.disconnect();
     observer.observe(document.body, {
       childList: true,
       subtree: true,

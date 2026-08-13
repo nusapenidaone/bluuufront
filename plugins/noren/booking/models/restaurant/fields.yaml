@@ -15,11 +15,46 @@ fields:
         span: left
         type: richeditor
     menu:
-        label: Menu
-        size: giant
-        span: auto
+        label: 'Menu (HTML)'
+        size: large
+        span: full
         type: richeditor
+    menu_sections:
+        label: 'Menu (structured)'
+        span: full
+        type: repeater
+        prompt: 'Add category'
+        form:
+            fields:
+                title:
+                    label: 'Category'
+                    type: text
+                    span: full
+                    placeholder: 'e.g. Starters, Main Course, Dessert, Drinks'
+                items:
+                    label: Dishes
+                    type: repeater
+                    span: full
+                    prompt: 'Add dish'
+                    form:
+                        fields:
+                            name:
+                                label: Name
+                                type: text
+                                span: auto
+                                placeholder: 'e.g. Caesar salad'
+                            description:
+                                label: 'Short description'
+                                type: text
+                                span: auto
+                                placeholder: 'e.g. Fresh romaine, parmesan, croutons'
         
+    menu_note:
+        label: 'Menu note (shown below menu)'
+        span: full
+        type: textarea
+        size: small
+        placeholder: 'e.g. Should you desire cocktails, wine or other selections, please ask for the restaurant''s general menu...'
     images:
         label: Images
         mode: image

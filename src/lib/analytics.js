@@ -9,7 +9,7 @@ function readCookie(name) {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_referrer"];
+const UTM_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "utm_referrer", "fbclid", "gclid", "ttclid"];
 const UTM_STORAGE_KEY = "bluuu_utm";
 
 export function captureUtm() {

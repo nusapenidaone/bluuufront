@@ -1,0 +1,309 @@
+import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Menu, X, ArrowRight, Mail, MessageCircle, Phone, Instagram, Youtube } from 'lucide-react';
+import { useSiteContacts } from '../../hooks/useSiteContacts';
+import { COMPANY_LINKS, POLICY_LINKS, SOCIAL_LINKS, resolveSocialHref } from './siteNavigation';
+
+const LOGO_SVG = (
+  <svg width="140" height="30" viewBox="0 0 140 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <g clipPath="url(#navClip)">
+      <path d="M8.55478 6.47086C5.92052 4.49424 1.1896 2.89157 0.571354 6.47086C0.221911 8.47419 -0.0468934 12.561 0.00686701 16.7279C0.114388 26.9315 0.275669 28.1335 1.21648 28.8547C1.4584 29.0417 1.7272 29.1753 2.02288 29.2821C6.80757 30.8581 11.431 23.4057 12.8556 20.2805C14.9523 15.7129 13.0438 9.83645 8.55478 6.47086Z" fill="#2E53D9"/>
+      <path d="M29.711 3.6661C25.9477 -0.0734532 21.5394 0.0868102 15.2763 0.00667695C11.1636 0.00667695 5.57252 -0.0200325 2.7501 0.0333897C0.196474 0.00667858 0.357756 0.460767 2.34689 1.23539C2.64258 1.34223 2.93825 1.47579 3.20706 1.60934C5.30371 2.62436 7.61542 3.98663 9.55079 5.50916C12.5614 7.7796 15.3032 11.0918 18.2869 12.7479C21.1093 14.3505 25.0876 15.1519 28.0444 14.0567C32.5334 12.6143 32.8291 6.63103 29.711 3.6661Z" fill="#2E53D9"/>
+      <path d="M22.5062 16.7003C18.1785 18.116 13.9314 21.0275 11.8078 24.9006C8.66289 31.1243 19.7644 30.1627 23.6352 29.5483C28.3661 28.8004 32.2906 26.6101 33.4464 22.3363C34.8711 15.9257 28.2586 14.5901 22.5062 16.7003Z" fill="#2E53D9"/>
+      <path d="M62.6931 13.8691C66.5101 10.8507 64.9241 3.47852 58.0697 3.47852H41.2695V24.1796C41.2695 25.2213 42.1028 26.0761 43.1243 26.0761H59.0105C67.424 26.1028 69.1712 16.3265 62.6931 13.8691ZM45.194 7.32492H58.0428C61.4297 7.32492 61.1609 12.7472 58.0697 12.7472H45.194V7.32492ZM59.0105 22.2564H45.194V16.1395H58.8492C63.7145 16.1663 63.4188 22.2564 59.0105 22.2564Z" fill="#2E53D9"/>
+      <path d="M68.418 5.40172V26.1829H70.4878C71.5092 26.1829 72.3425 25.3282 72.3425 24.2864V3.47852H70.2727C69.2513 3.50523 68.418 4.33328 68.418 5.40172Z" fill="#2E53D9"/>
+      <path d="M95.2169 21.3484V8.04624L93.0127 8.07296C92.0451 8.07296 91.2655 8.84758 91.2655 9.80918V19.9861C91.2655 20.2265 91.1849 20.4402 91.0505 20.6272C90.1634 21.8559 88.5506 22.7908 85.9701 22.7908C82.2875 22.7908 78.8737 21.562 78.8737 17.9828V8.01953H76.6964C75.7287 8.01953 74.9492 8.79415 74.9492 9.75575V17.9828C74.9492 24.34 80.0833 26.5036 85.7551 26.5036C90.271 26.5036 93.0127 24.2064 93.6847 23.5921C94.4374 22.9243 95.2438 22.2832 95.2169 21.3484Z" fill="#2E53D9"/>
+      <path d="M136.101 8.04624V18.0095C136.101 21.5888 132.66 22.8175 129.005 22.8175C126.424 22.8175 124.838 21.8826 123.924 20.6539C123.79 20.4669 123.709 20.2532 123.709 20.0128V9.83588C123.709 8.87428 122.93 8.09966 121.962 8.09966L119.758 8.01953V21.3216C119.758 22.2565 120.537 22.9243 121.263 23.5921C121.935 24.2064 124.677 26.5036 129.193 26.5036C134.864 26.5036 139.999 24.34 139.999 17.9828V9.75575C139.999 8.79415 139.219 8.01953 138.251 8.01953L136.101 8.04624Z" fill="#2E53D9"/>
+      <path d="M117.691 21.3484V8.01953L115.487 8.04624C114.519 8.04624 113.739 8.82087 113.739 9.78246V19.906C113.739 20.1731 113.659 20.4135 113.471 20.6272C112.691 21.5353 111.105 22.7908 107.449 22.7908C104.358 22.7908 102.342 21.5888 101.482 20.6539C101.294 20.4669 101.213 20.1998 101.213 19.9327V9.78246C101.213 8.82087 100.434 8.04624 99.4659 8.04624L97.2617 8.01953V21.3216C97.2617 22.0161 97.9337 23.0312 98.7133 23.5654C100.944 25.1146 102.96 26.1831 105.89 26.3967C106.939 26.5036 107.396 26.4769 108.551 26.4235C108.551 26.4235 113.39 26.2365 116.159 23.5654C116.938 22.9243 117.691 22.0161 117.691 21.3484Z" fill="#2E53D9"/>
+    </g>
+    <defs><clipPath id="navClip"><rect width="140" height="30" fill="white"/></clipPath></defs>
+  </svg>
+);
+
+function MenuSection({ title, links, onNavigate }) {
+  if (!links?.length) return null;
+  return (
+    <div>
+      <div className="text-xs font-black uppercase tracking-[0.24em] text-secondary-400">{title}</div>
+      <div className="mt-3 grid gap-1.5">
+        {links.map((link) => (
+          <a
+            key={link.label}
+            href={link.href}
+            target={link.external ? '_blank' : undefined}
+            rel={link.external ? 'noreferrer' : undefined}
+            onClick={onNavigate}
+            className="group flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-100 hover:text-secondary-900"
+          >
+            <span>{link.label}</span>
+            <ArrowRight className="h-4 w-4 text-secondary-300 transition group-hover:translate-x-0.5 group-hover:text-primary-600" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export default function HomeNavbar({ links }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navRef = useRef(null);
+  const contacts = useSiteContacts();
+
+  // Scroll detection — direct DOM manipulation to avoid CSS specificity issues
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    nav.style.transition = 'transform 0.28s ease, background-color 0.3s, box-shadow 0.3s, backdrop-filter 0.3s';
+    const getY = () =>
+      document.body.scrollTop ||
+      document.documentElement.scrollTop ||
+      window.scrollY ||
+      0;
+    let lastY = getY();
+    const handleScroll = () => {
+      const y = getY();
+      if (y > 60) {
+        nav.style.background = 'rgba(7,15,31,0.97)';
+        nav.style.backdropFilter = 'blur(20px)';
+        nav.style.webkitBackdropFilter = 'blur(20px)';
+        nav.style.boxShadow = '0 1px 0 rgba(255,255,255,0.06)';
+        nav.classList.add('scrolled');
+      } else {
+        nav.style.background = '';
+        nav.style.backdropFilter = '';
+        nav.style.webkitBackdropFilter = '';
+        nav.style.boxShadow = '';
+        nav.classList.remove('scrolled');
+      }
+
+      if (menuOpen || y < 80) {
+        nav.style.transform = 'translateY(0)';
+      } else if (y > lastY + 5) {
+        nav.style.transform = 'translateY(-110%)';
+      } else if (y < lastY - 5) {
+        nav.style.transform = 'translateY(0)';
+      }
+      lastY = y;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true });
+    document.body.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll);
+      document.body.removeEventListener('scroll', handleScroll);
+    };
+  }, [menuOpen]);
+
+  // Body scroll lock while menu open
+  useEffect(() => {
+    const orig = document.body.style.overflow;
+    const origHtml = document.documentElement.style.overflow;
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    }
+    return () => {
+      document.body.style.overflow = orig;
+      document.documentElement.style.overflow = origHtml;
+    };
+  }, [menuOpen]);
+
+  // Escape key closes menu
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  const contactActions = [
+    {
+      label: 'WhatsApp',
+      value: contacts.whatsapp?.number || 'Chat with our team',
+      href: contacts.whatsapp?.link || '',
+      icon: MessageCircle,
+      external: true,
+    },
+    {
+      label: 'Email',
+      value: contacts.email || '',
+      href: contacts.email ? `mailto:${contacts.email}` : '',
+      icon: Mail,
+      external: false,
+    },
+    {
+      label: 'Phone',
+      value: contacts.phone?.number || '',
+      href: contacts.phone?.link || '',
+      icon: Phone,
+      external: false,
+    },
+  ].filter((item) => item.value && item.href);
+
+  const socialMenuLinks = SOCIAL_LINKS.map((item) => ({
+    label: item.label,
+    href: resolveSocialHref(contacts, item.key),
+    external: true,
+  })).filter((item) => item.href && item.href !== '#');
+
+  const socialIconLinks = [
+    { label: 'Instagram', href: contacts.instagram || '', icon: Instagram },
+    { label: 'WhatsApp', href: contacts.whatsapp?.link || '', icon: MessageCircle },
+    { label: 'YouTube', href: contacts.youtube || '', icon: Youtube },
+  ].filter((item) => item.href);
+
+  const navLinks = links ?? [
+    { href: '#tours', label: 'Tours', internal: true },
+    { href: '#faq', label: 'FAQ', internal: true },
+    { href: '/blog', label: 'Blog', internal: false },
+  ];
+
+  return (
+    <>
+      <nav ref={navRef} className="navbar" id="navbar">
+        <div className="inner">
+          <a href="https://bluuu.tours" className="logo" aria-label="Bluuu Tours">
+            {LOGO_SVG}
+          </a>
+          <div className="nav-right">
+            {navLinks.map((link) => (
+              <a key={link.href} href={link.href} className="nav-link-faq">
+                {link.label}
+              </a>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            className="flex h-10 items-center gap-2 px-3 py-2 text-sm font-semibold text-white/90 transition hover:text-white"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {menuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <span className="hidden sm:inline">{menuOpen ? 'Close' : 'Menu'}</span>
+          </button>
+        </div>
+      </nav>
+
+      {createPortal(
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={closeMenu}
+            className="fixed inset-0 z-[10000] bg-black/40 p-4"
+          >
+            <div className="flex h-full items-center justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.97, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97, y: 12 }}
+                transition={{ type: 'spring', bounce: 0.15, duration: 0.35 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+              >
+                <div className="flex items-center justify-between border-b border-neutral-200 px-6 pt-5 shrink-0">
+                  <div className="pb-3 text-sm font-semibold text-secondary-900">Menu</div>
+                  <button
+                    type="button"
+                    onClick={closeMenu}
+                    className="-mr-2 mb-3 rounded-full p-2 transition-colors hover:bg-neutral-100"
+                    aria-label="Close"
+                  >
+                    <X className="h-5 w-5 text-secondary-600" />
+                  </button>
+                </div>
+
+                <div
+                  className="flex-1 overflow-y-auto bg-white px-6 py-5"
+                  style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain', touchAction: 'pan-y' }}
+                >
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    <MenuSection title="Explore" links={COMPANY_LINKS} onNavigate={closeMenu} />
+                    <MenuSection title="Policies" links={POLICY_LINKS} onNavigate={closeMenu} />
+
+                    {(contactActions.length > 0 || socialIconLinks.length > 0 || socialMenuLinks.length > 0) && (
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-[0.24em] text-secondary-400">Contact</div>
+
+                        {contactActions.length > 0 && (
+                          <div className="mt-3 space-y-1.5">
+                            {contactActions.map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <a
+                                  key={item.label}
+                                  href={item.href}
+                                  target={item.external ? '_blank' : undefined}
+                                  rel={item.external ? 'noreferrer' : undefined}
+                                  onClick={closeMenu}
+                                  className="group flex items-center justify-between rounded-2xl px-3 py-2.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-100 hover:text-secondary-900"
+                                >
+                                  <span className="flex min-w-0 items-center gap-3">
+                                    <Icon className="h-4 w-4 shrink-0 text-primary-600" />
+                                    <span className="truncate">{item.value}</span>
+                                  </span>
+                                  <ArrowRight className="h-4 w-4 shrink-0 text-secondary-300 transition group-hover:translate-x-0.5 group-hover:text-primary-600" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {socialMenuLinks.length > 0 && (
+                          <div className="mt-4 flex flex-wrap gap-2">
+                            {socialMenuLinks.map((link) => (
+                              <a
+                                key={link.label}
+                                href={link.href}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={closeMenu}
+                                className="inline-flex items-center gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.14em] text-secondary-500 transition hover:bg-primary-50/70 hover:text-primary-600"
+                              >
+                                {link.label}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+
+                        {socialIconLinks.length > 0 && (
+                          <div className="mt-4 flex items-center gap-2 text-secondary-400">
+                            {socialIconLinks.map((item) => {
+                              const Icon = item.icon;
+                              return (
+                                <a
+                                  key={item.label}
+                                  href={item.href}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={closeMenu}
+                                  className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 transition hover:bg-primary-50 hover:text-primary-600"
+                                  aria-label={item.label}
+                                >
+                                  <Icon className="h-4 w-4" />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>,
+      document.body
+      )}
+    </>
+  );
+}

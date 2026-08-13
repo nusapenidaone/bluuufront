@@ -258,7 +258,7 @@ class AccountController extends Controller
 
         // ── Recreate Odoo order ───────────────────────────────────────────────
         try {
-            $result         = OdooService::recreateLead($order);
+            $result         = OdooService::recreateLead($order, $order->status_id == 2);
             $order->odoo_id = $result['order_id'];
             $order->saveQuietly();
         } catch (\Exception $e) {

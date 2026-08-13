@@ -1,5 +1,5 @@
 import React from "react";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import { useRules } from "./contexts/RulesContext";
 import { ChevronLeft } from "lucide-react";
 import Footer from "./components/common/Footer";
@@ -15,13 +15,17 @@ const POLICY_SEO = {
 
 export default function PolicyPage({ policyKey }) {
   const seo = POLICY_SEO[policyKey] || { title: "Policy | Bluuu Tours", description: "" };
-  useSEO(seo);
   const { getPolicy, loading } = useRules();
   const policy = getPolicy(policyKey);
   const hasPolicyContent = Boolean(policy?.html?.trim());
 
   return (
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
+      <SEO
+        title={seo.title}
+        description={seo.description}
+        canonical={`https://bluuu.tours/policy/${policyKey}`}
+      />
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}

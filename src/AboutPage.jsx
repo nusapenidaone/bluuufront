@@ -1,5 +1,6 @@
 import React from "react";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
+import { schemaLocalBusiness } from "./lib/schemas";
 import { ArrowRight, ChevronLeft, ShieldCheck, Star, Globe, Anchor } from "lucide-react";
 import Footer from "./components/common/Footer";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
@@ -59,12 +60,14 @@ const STATS = [
 ];
 
 export default function AboutPage() {
-  useSEO({
-    title: "About Bluuu Tours | Nusa Penida Yacht Experts",
-    description: "Bluuu is Bali's #1 yacht tour company. Award-winning private and shared tours to Nusa Penida with 8,500+ five-star reviews on TripAdvisor, Viator, and Klook.",
-  });
   return (
     <div className="min-h-screen bg-neutral-100 text-secondary-900">
+      <SEO
+        title="About Bluuu Tours | Nusa Penida Yacht Experts"
+        description="Bluuu is Bali's #1 yacht tour company. Award-winning private and shared tours to Nusa Penida with 8,500+ five-star reviews on TripAdvisor, Viator, and Klook."
+        canonical="https://bluuu.tours/about"
+        schema={schemaLocalBusiness}
+      />
       <Navbar
         variant="fullbar"
         links={SITE_NAV_LINKS}

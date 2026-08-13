@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+html, body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 @font-face {
     font-family: Petrov Sans;
     font-style: normal;
@@ -84,7 +89,7 @@ html {
 }
 
 body {
-    overflow-x: hidden;
+    overflow-x: clip;
     width: 100%;
 }
 
@@ -121,6 +126,32 @@ h3 {
 
 .no-scrollbar::-webkit-scrollbar-thumb {
     background: transparent;
+}
+
+/* Thin, rounded scrollbar for modal bodies — the plain scrollbar-thin/scrollbar-thumb-*
+   Tailwind classes used to sit here do nothing without the tailwind-scrollbar plugin
+   (not installed), so modals fell back to the browser's full-width default scrollbar,
+   which visibly cuts through the modal card's rounded corners. */
+.modal-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.modal-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+}
+
+.modal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
 }
 
 .step-1-pulse:after {
@@ -523,6 +554,26 @@ img[data-image-loaded="true"] {
     animation: num-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* ─── Pay Now button shine sweep ─── */
+@keyframes btn-shine {
+  0%   { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(250%)  skewX(-15deg); }
+}
+.btn-pay-now {
+    position: relative;
+    overflow: hidden;
+}
+.btn-pay-now::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.45) 50%, transparent 100%);
+    width: 40%;
+    animation: btn-shine 2.2s ease-in-out infinite;
+    animation-delay: 1s;
+    pointer-events: none;
+}
+
 /* ─── Button animations ──────────────────────────────────── */
 .btn-primary,
 .btn-outline {
@@ -570,4 +621,21 @@ img[data-image-loaded="true"] {
     border-left: 2px solid var(--neutral-300);
     padding-left: 0.8rem;
     color: var(--secondary-700);
+}
+
+/* Boat carousel scroll snap (used by privatenew/private2) */
+.boat-carousel {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scroll-behavior: auto;
+}
+.boat-carousel > * {
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+@media (min-width: 640px) {
+  .boat-carousel {
+    scroll-snap-type: none !important;
+  }
 }

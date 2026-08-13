@@ -8,7 +8,7 @@ use Model;
 class Closeddates extends Model
 {
     use \October\Rain\Database\Traits\Validation;
-
+    use \October\Rain\Database\Traits\Revisionable;
 
     /**
      * @var string table in the database used by the model.
@@ -20,11 +20,18 @@ class Closeddates extends Model
      */
     public $rules = [
     ];
-    
-    public $belongsTo =[
-        'boat'=> Boat::class,
+
+    protected $revisionable = ['date', 'boat_id', 'qtty', 'type', 'odoo_id', 'tour_type'];
+
+    public $morphMany = [
+        'revision_history' => [\System\Models\Revision::class, 'name' => 'revisionable'],
     ];
-    protected $fillable = ['date','lead_id','boat_id','qtty', 'type', 'odoo_id', 'tour_type'];
+
+    public $belongsTo = [
+        'boat' => Boat::class,
+    ];
+
+    protected $fillable = ['date', 'lead_id', 'boat_id', 'qtty', 'type', 'odoo_id', 'tour_type'];
 
     public function scopeFilterType($query, $scope)
     {

@@ -1,19 +1,20 @@
 import { useEffect, useState } from "react";
 import { apiUrl } from "../api/base";
+import { WA, WA_MSG, EMAIL, INSTAGRAM, YOUTUBE } from "../lib/contacts";
 
 // ── WhatsApp routing by utm_source ───────────────────────────────────────────
 // number — E.164 без + (для wa.me)
 // message — pre-filled текст (plain, не encoded)
 // Default используется когда utm_source не задан или не в списке
 const WA_DEFAULT = {
-  number:  "6281547483381",
-  message: "Hi Bluuu! I want to book a tour [G]",
+  number:  WA.google,
+  message: WA_MSG.google,
 };
 
 const UTM_WHATSAPP_MAP = {
-  meta:    { number: "628213845159",  message: "Hi Bluuu! I want to book a tour [M]" },
-  tiktok:  { number: "628214097657",  message: "Hi Bluuu! I just submitted my inquiry [T]" },
-  google:  { number: "6281547483381", message: "Hi Bluuu! I want to book a tour [G]" },
+  meta:    { number: WA.meta,   message: WA_MSG.meta   },
+  tiktok:  { number: WA.tiktok, message: WA_MSG.tiktok },
+  google:  { number: WA.google, message: WA_MSG.google },
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -22,25 +23,14 @@ function buildWaEntry({ number, message }) {
   return { number: `+${number}`, link };
 }
 
-function getUtmSource() {
-  try {
-    // URL первичен (начальная загрузка с меткой)
-    const fromUrl = new URLSearchParams(window.location.search).get("utm_source");
-    if (fromUrl) return fromUrl.toLowerCase().trim();
-    // Fallback: sessionStorage (после внутренней навигации без UTM в URL)
-    const raw = sessionStorage.getItem("bluuu_utm");
-    if (raw) {
-      const saved = JSON.parse(raw);
-      if (saved?.utm_source) return saved.utm_source.toLowerCase().trim();
-    }
-  } catch (_) {}
-  return "";
-}
-
 function getUtmWhatsapp() {
-  const source = getUtmSource();
-  const entry = UTM_WHATSAPP_MAP[source] || WA_DEFAULT;
-  return buildWaEntry(entry);
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const source = (params.get("utm_source") || "").toLowerCase().trim();
+    const entry = UTM_WHATSAPP_MAP[source] || WA_DEFAULT;
+    return buildWaEntry(entry);
+  } catch (_) {}
+  return buildWaEntry(WA_DEFAULT);
 }
 
 const DEFAULT_CONTACTS = {
@@ -54,10 +44,10 @@ const DEFAULT_CONTACTS = {
     number: "",
     link: "",
   },
-  email: "",
+  email: EMAIL,
   facebook: "",
-  youtube: "",
-  instagram: "",
+  youtube: YOUTUBE,
+  instagram: INSTAGRAM,
   map: "",
 };
 

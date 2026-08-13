@@ -162,6 +162,7 @@ const REVIEW_SOURCES = [];
 const INFO_REVIEWS = [];
 // Shared Components
 import CustomDatePicker from "./components/common/CustomDatePicker";
+import DatePickerBody from "./components/common/DatePickerBody";
 import PhoneInput from "./components/common/PhoneInput";
 import PolicyModal, { usePolicyModal } from "./components/common/PolicyModal";
 import Button from "./components/common/Button";
@@ -169,7 +170,7 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
 import { cn } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
-import { useSEO } from "./hooks/useSEO";
+import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
 
 function SkeletonCard() {
@@ -1741,15 +1742,6 @@ function StepOne({
   const todayISO = useMemo(() => {
     return new Date(today.getTime() - today.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   }, [today]);
-  const rangeDays = useMemo(() => {
-    if (!rangeStart || !rangeEnd) return 0;
-    const start = new Date(rangeStart + 'T00:00:00Z');
-    const end = new Date(rangeEnd + 'T00:00:00Z');
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0;
-    const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    return diff > 0 ? diff : 0;
-  }, [rangeStart, rangeEnd]);
-  const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const contacts = useSiteContacts();
   return (
     <PremiumSection
@@ -1796,92 +1788,18 @@ function StepOne({
                 </div>
               </div>
               <div className="h-px w-full bg-neutral-100" />
-              {dateMode === "exact" ? (
-                <div className="space-y-3">
-                  <label className="group flex flex-col gap-1.5">
-                    <span className="text-xs font-black uppercase tracking-widest text-secondary-300 group-focus-within:text-primary-600 transition-colors">Exact day</span>
-                    <div className="relative" id="step1-exact-date">
-                      <CustomDatePicker
-                        mode="single"
-                        selected={exactDate ? new Date(exactDate + 'T00:00:00') : undefined}
-                        onSelect={(date) => {
-                          if (date) {
-                            const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                            onExactDateChange(iso);
-                          }
-                        }}
-                        className="w-full rounded-xl border border-neutral-200 bg-white shadow-none"
-                      />
-                    </div>
-                  </label>
-                  {exactDate && globalAvailabilityMap && globalAvailabilityMap[exactDate] === false && (
-                    <div className="flex items-center gap-4 rounded-xl border border-red-100 bg-red-50/50 p-4 text-red-800">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100/50">
-                        <AlertTriangle className="h-5 w-5" />
-                      </div>
-                      <div className="text-sm">
-                        <p className="font-black">Sold out for this date</p>
-                        <p className="font-semibold opacity-70">Try flexible dates or chat with our team on WhatsApp.</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {[7, 10, 14].map((days) => (
-                        <button
-                          key={days}
-                          type="button"
-                          onClick={() => {
-                            const base = rangeStart || todayISO;
-                            onRangeStartChange(base);
-                            const start = new Date(base + 'T00:00:00Z');
-                            const end = new Date(start);
-                            end.setDate(end.getDate() + days - 1);
-                            onRangeEndChange(end.toISOString().slice(0, 10));
-                          }}
-                          className={cn(
-                            "flex items-center justify-center rounded-xl px-4 py-2.5 text-sm font-black transition-all duration-200",
-                            rangeDays === days
-                              ? "bg-primary-600 text-white shadow-lg scale-102"
-                              : "bg-neutral-100 text-secondary-500 hover:bg-neutral-100"
-                          )}
-                        >
-                          {days} Days
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2" id="step1-range-start">
-                    <CustomDatePicker
-                      mode="range"
-                      selected={{
-                        from: rangeStart ? new Date(rangeStart + 'T00:00:00') : undefined,
-                        to: rangeEnd ? new Date(rangeEnd + 'T00:00:00') : undefined,
-                      }}
-                      onSelect={(range) => {
-                        if (range?.from) {
-                          const fromIso = new Date(range.from.getTime() - range.from.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                          onRangeStartChange(fromIso);
-                        } else {
-                          onRangeStartChange("");
-                        }
-                        if (range?.to && range?.from) {
-                          const maxTo = new Date(range.from.getTime() + 13 * 24 * 60 * 60 * 1000);
-                          const cappedTo = range.to > maxTo ? maxTo : range.to;
-                          const toIso = new Date(cappedTo.getTime() - cappedTo.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-                          onRangeEndChange(toIso);
-                        } else {
-                          onRangeEndChange("");
-                        }
-                      }}
-                      className="w-full rounded-xl border border-neutral-200 bg-white shadow-none"
-                    />
-                  </div>
-                </div>
-              )}
+              <DatePickerBody
+                dateMode={dateMode}
+                exactDate={exactDate}
+                onExactDateChange={onExactDateChange}
+                rangeStart={rangeStart}
+                rangeEnd={rangeEnd}
+                onRangeStartChange={onRangeStartChange}
+                onRangeEndChange={onRangeEndChange}
+                globalAvailabilityMap={globalAvailabilityMap}
+                todayISO={todayISO}
+                maxRangeDays={14}
+              />
             </div>
             {/* Separator - Horizontal on mobile only */}
             <div className="lg:hidden h-px w-full bg-neutral-100" />
@@ -2363,6 +2281,13 @@ function StepTwo({
   const [showAllBoats, setShowAllBoats] = useState(false);
   const [draftFlexDate, setDraftFlexDate] = useState("");
   const [confirmModalData, setConfirmModalData] = useState(null);
+  // Where to land after the confirm modal closes. Selecting a boat collapses the
+  // boat grid into the tour-details section, so while the modal is open the page
+  // behind is already clamped near the bottom. Restoring to the pre-open scroll
+  // offset (Choose your option) and then scrolling back down produced a visible
+  // "jump up then scroll down". Instead each close action names its target here
+  // and the Modal scrolls straight there on close — no restore, no double motion.
+  const confirmCloseTargetRef = useRef(null);
   const hasRange = dateMode === "flex" && rangeStart && rangeEnd;
   const rangeDays = useMemo(() => {
     if (!rangeStart || !rangeEnd) return 0;
@@ -3135,6 +3060,8 @@ function StepTwo({
         showClose={false}
         closeOnBackdrop={true}
         bodyClassName="p-0"
+        backdropClassName="bg-black/40 backdrop-blur-sm"
+        scrollRestoreRef={confirmCloseTargetRef}
       >
         {confirmModalData ? (
           <div className="relative flex flex-col">
@@ -3185,10 +3112,8 @@ function StepTwo({
                 type="button"
                 className="flex-1 h-11 rounded-full border border-neutral-200 bg-white text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50"
                 onClick={() => {
+                  confirmCloseTargetRef.current = "step-2";
                   setConfirmModalData(null);
-                  setTimeout(() => {
-                    document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 80);
                 }}
               >
                 Another option
@@ -3196,10 +3121,8 @@ function StepTwo({
               <Button
                 className="flex-1 rounded-full h-11 text-sm font-black normal-case tracking-normal transition-all hover:scale-101 active:scale-98"
                 onClick={() => {
+                  confirmCloseTargetRef.current = "tour-details-section";
                   setConfirmModalData(null);
-                  setTimeout(() => {
-                    document.getElementById("tour-details-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                  }, 80);
                 }}
               >
                 Tour details <ArrowRight className="h-4 w-4" />
@@ -3692,7 +3615,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                         {chips.map((item) => {
                           const Icon = typeof item.icon === 'string' ? ICON_MAP[item.icon] || MapPin : item.icon;
                           return (
-                            <Pill key={item.label} icon={Icon}>
+                            <Pill key={item.label} icon={Icon} iconSvg={item.icon_svg}>
                               {item.label}
                             </Pill>
                           );
@@ -3817,9 +3740,16 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                 schedule={schedule}
                 note={note}
                 restaurant={selectedRestaurantData || style?.restaurant}
+                onRestaurantClick={setRestaurantDataPopup}
                 onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                onContinue={onContinue}
-                continueLabel="Choose your tour"
+                onReserve={onContinue}
+                reserveLabel="Choose your tour"
+                infoContent={(activeTab) => {
+                  const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }));
+                  const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
+                  const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
+                  return <TourTabContent activeTab={activeTab} includedSections={includedSections} cancellationSummaryCards={cancellationSummaryCards} weatherGuaranteeCards={weatherGuaranteeCards} />;
+                }}
               />
             );
           })()}
@@ -5102,6 +5032,7 @@ function StepFive({
   onRangeEndChange,
   onAdultsChange,
   onKidsChange,
+  onSelectBoatId,
   groupSize,
   selectedBoat,
   selectedStyleTitle,
@@ -5176,16 +5107,32 @@ function StepFive({
     closeEditor();
   };
   const applyGuestEdit = () => {
+    const newGroupSize = draftAdults + draftKids;
     onAdultsChange(draftAdults);
     onKidsChange(draftKids);
+    if (selectedBoat) {
+      const exceedsCapacity = newGroupSize > selectedBoat.people;
+      const entry = exactDate ? availabilityMap?.[selectedBoat.id]?.[exactDate] : null;
+      const notEnoughSeats = entry != null && entry.available_seats < newGroupSize;
+      if (exceedsCapacity || notEnoughSeats) {
+        onSelectBoatId?.(null);
+      }
+    }
     closeEditor();
   };
-  const isReserveEnabled = isDateSelected && isBoatSelected;
+  const boatSeatsEntry = selectedBoat && exactDate ? availabilityMap?.[selectedBoat.id]?.[exactDate] : null;
+  const boatHasEnoughSeats = !selectedBoat || !exactDate || boatSeatsEntry == null
+    ? true
+    : boatSeatsEntry.available_seats >= groupSize;
+  const boatFitsGroup = !selectedBoat || groupSize <= selectedBoat.people;
+  const isReserveEnabled = isDateSelected && isBoatSelected && boatFitsGroup && boatHasEnoughSeats;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
       ? "Select option to continue"
-      : "Reserve Now";
+      : (!boatFitsGroup || !boatHasEnoughSeats)
+        ? "Not enough seats — change option"
+        : "Reserve Now";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -5422,6 +5369,19 @@ function StepFive({
                                 </div>
                               </div>
                             </div>
+                            {(() => {
+                              const draftSize = draftAdults + draftKids;
+                              const entry = exactDate ? availabilityMap?.[selectedBoat?.id]?.[exactDate] : null;
+                              const exceedsCapacity = selectedBoat && draftSize > selectedBoat.people;
+                              const notEnoughSeats = entry != null && draftSize > entry.available_seats;
+                              if (!selectedBoat || (!exceedsCapacity && !notEnoughSeats)) return null;
+                              const seatsLeft = entry != null ? entry.available_seats : selectedBoat.people;
+                              return (
+                                <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700">
+                                  Only {seatsLeft} seat{seatsLeft !== 1 ? "s" : ""} available on this date. You'll need to choose a new option after applying.
+                                </div>
+                              );
+                            })()}
                             <div className="mt-4 flex flex-wrap gap-2">
                               <Button type="button" onClick={applyGuestEdit} size="sm">
                                 Apply
@@ -7051,10 +7011,6 @@ export default function Shared_tour_01() {
     const raf = requestAnimationFrame(() => window.scrollTo(0, 0));
     return () => cancelAnimationFrame(raf);
   }, []);
-  useSEO({
-    title: "Shared Speedboat Tour to Nusa Penida | Bluuu Tours",
-    description: "Affordable shared speedboat day tour from Bali to Nusa Penida. Manta rays, snorkeling & land tour — all-inclusive from IDR 1,300,000 per person.",
-  });
   const { selectedCurrency } = useCurrency();
   const { sharedTours, sharedTransfers: transfers, sharedCovers: allCovers, loading, error: toursError } = useTours();
   const { extras, sharedRoutes: privateRoutes } = useExtras();
@@ -7401,8 +7357,11 @@ export default function Shared_tour_01() {
     return () => { isMounted = false; };
   }, [selectedYacht]);
 
-  // Explicitly reset selected boat on mount as per user request
+  // Explicitly reset selected boat on mount as per user request — but NOT when a
+  // ?tour= param is present, otherwise this clobbers the boat the URL just
+  // pre-selected (this effect runs after the tour-read effect on mount).
   useEffect(() => {
+    if (urlTourIdRef.current) return;
     setSelectedBoatId(null);
   }, []);
   const totalGuests = adults + kids;
@@ -7929,6 +7888,12 @@ export default function Shared_tour_01() {
 
   return (
     <>
+      <SEO
+        title="Shared Yacht Tour to Nusa Penida | Bluuu"
+        description="Book a shared yacht tour to Nusa Penida — enjoy group snorkeling, island sights, and manta rays on a day trip from Bali."
+        image="https://bluuu.tours/storage/app/media/bluuu/shared.webp"
+        canonical="https://bluuu.tours/shared-tour-to-nusa-penida"
+      />
       <CurrencyBridge />
       <div
         className="min-h-screen text-secondary-900 bg-neutral-100"
@@ -8136,10 +8101,17 @@ export default function Shared_tour_01() {
                       footerNotes: inlineRouteSchedule?.footerNotes || selectedYacht?.routeSchedule?.footerNotes || [],
                     }}
                     restaurant={inlineRouteSchedule?.restaurant || selectedYacht?.routeSchedule?.restaurant}
+                    onRestaurantClick={setInlineRestaurantPopup}
                     onAnotherRoute={() => document.getElementById("step-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    onContinue={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    continueLabel="Add extras"
+                    onReserve={() => document.getElementById("step-4")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    reserveLabel="Add extras"
                     anotherRouteLabel="Another option"
+                    infoContent={(activeTab) => {
+                      const cancellationSummaryCards = (tourInfo.cancellationCards ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon], accentClassName: card.accent, iconClassName: card.iconColor, iconWrapClassName: card.bg }));
+                      const weatherGuaranteeCards = (tourInfo.weatherGuarantee ?? []).map(card => ({ ...card, icon: ICON_MAP[card.icon] }));
+                      const includedSections = tourInfo.includedSections.map(section => ({ ...section, items: section.items.map(item => ({ ...item, icon: ICON_MAP[item.icon] })) }));
+                      return <TourTabContent activeTab={activeTab} includedSections={includedSections} cancellationSummaryCards={cancellationSummaryCards} weatherGuaranteeCards={weatherGuaranteeCards} />;
+                    }}
                   />
                 )}
               </PremiumContainer>
@@ -8211,6 +8183,7 @@ export default function Shared_tour_01() {
               onRangeEndChange={setRangeEnd}
               onAdultsChange={setAdults}
               onKidsChange={setKids}
+              onSelectBoatId={setSelectedBoatId}
               groupSize={totalGuests}
               selectedBoat={selectedYacht}
               selectedStyleTitle={selectedStyleTitle}
@@ -8316,7 +8289,7 @@ function StepCheckout({
   onFinalize,
   onCancel,
 }) {
-  const isLastStep = step === 3;
+  const isLastStep = step === 2;
   const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
   const [errors, setErrors] = useState({});
   const [sameAddress, setSameAddress] = useState(false);
@@ -8370,8 +8343,7 @@ function StepCheckout({
 
   const steps = [
     { num: 1, label: "Payment option" },
-    { num: 2, label: "Payment method" },
-    { num: 3, label: "Your details" },
+    { num: 2, label: "Your details" },
   ];
   const { activePolicyKey, activePolicy, openPolicy: openPolicyModal, closePolicy: closePolicyModal } = usePolicyModal();
 
@@ -8384,14 +8356,14 @@ function StepCheckout({
             <p className="mt-1 text-sm text-secondary-500 sm:text-base">Secure your spot in just a few steps.</p>
           </div>
 
-          <div className="relative mb-7">
-            <div className="absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 bg-neutral-100" />
-            <div className="relative flex justify-between">
-              {steps.map((s) => {
-                const isActive = s.num === step;
-                const isCompleted = s.num < step;
-                return (
-                  <div key={s.num} className="flex flex-col items-center gap-1.5">
+          <div className="mb-7 flex items-start justify-center">
+            {steps.map((s, i) => {
+              const isActive = s.num === step;
+              const isCompleted = s.num < step;
+              return (
+                <div key={s.num} className="flex items-start">
+                  {i > 0 && <div className="mx-6 mt-[17px] h-0.5 w-16 rounded bg-neutral-100 sm:mx-10 sm:w-28" />}
+                  <div className="flex flex-col items-center gap-1.5">
                     <button
                       type="button"
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
@@ -8408,23 +8380,22 @@ function StepCheckout({
                     <span
                       onClick={() => isCompleted ? onSetStep(s.num) : null}
                       className={cn(
-                        "absolute -bottom-5 text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors",
+                        "text-xs leading-tight font-bold uppercase tracking-wider whitespace-nowrap transition-colors text-center",
                         isActive ? "text-primary-700" : isCompleted ? "text-primary-600 cursor-pointer" : "text-neutral-300"
-                      )}
-                      style={{ left: s.num === 1 ? '0' : s.num === 3 ? 'auto' : '50%', right: s.num === 3 ? '0' : 'auto', transform: s.num === 2 ? 'translateX(-50%)' : 'none' }}>
+                      )}>
                       {s.label}
                     </span>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="mb-3 h-2" />
 
           <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg shadow-neutral-100/40 sm:p-6">
             <h3 className="mb-4 text-lg font-bold text-secondary-900 sm:mb-5 sm:text-xl">
-              {step === 1 ? "How would you like to pay?" : step === 2 ? "Select payment method" : "Contact details"}
+              {step === 1 ? "How would you like to pay?" : "Contact details"}
             </h3>
 
             {step === 1 && (
@@ -8487,30 +8458,6 @@ function StepCheckout({
             )}
 
             {step === 2 && (
-              <div className="space-y-3">
-                <button
-                  onClick={() => onSetPayMethod("card")}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-lg border-2 p-3.5 transition",
-                    payMethod === "card" ? "border-primary-600 bg-primary-50/30" : "border-neutral-200 hover:border-neutral-300"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <img src="https://bluuu.tours/themes/bluuu/assets/icons/card_icon.svg" alt="Card" className="h-7 w-auto" />
-                    <div className="text-left">
-                      <div className="font-bold text-secondary-900">Card payment</div>
-                      <div className="text-xs text-secondary-500">Payment in IDR</div>
-                    </div>
-                  </div>
-                  <div className={cn("h-5 w-5 rounded-full border-2 flex items-center justify-center", payMethod === "card" ? "border-primary-600" : "border-neutral-300")}>
-                    {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-                  </div>
-                </button>
-                {/* PayPal временно отключён */}
-              </div>
-            )}
-
-            {step === 3 && (
               <div className="space-y-3.5">
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
@@ -8666,11 +8613,11 @@ function StepCheckout({
                 <Button variant="ghost" onClick={onCancel} className="h-10 px-4 text-secondary-400 hover:bg-red-50 hover:text-red-500">Cancel</Button>
               )}
               <Button
-                onClick={() => step < 3 ? onSetStep(step + 1) : handleFinalize()}
-                disabled={step === 3 && (!agreedTerms || !agreedLiability)}
+                onClick={() => step < 2 ? onSetStep(step + 1) : handleFinalize()}
+                disabled={step === 2 && (!agreedTerms || !agreedLiability)}
                 className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
-                {step < 3 ? "Continue" : "Complete booking"}
+                {step < 2 ? "Continue" : "Complete booking"}
               </Button>
             </div>
           </div>

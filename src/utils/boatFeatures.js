@@ -6,7 +6,7 @@ export const getBoatFeatures = (boatFeatures) => {
   const bf = boatFeatures || {};
   return [
     {
-      label: bfOn(bf.shade) ? "Full shade + flybridge" : "Partial shade",
+      label: bfOn(bf.shade) ? "Shade + flybridge" : "Partial shade",
       present: true,
       Icon: Umbrella,
     },
@@ -21,7 +21,7 @@ export const getBoatFeatures = (boatFeatures) => {
       Icon: Wind,
     },
     {
-      label: bfOn(bf.sound) ? "In-built Sound System " : "JBL Speaker",
+      label: bfOn(bf.sound) ? "Sound system" : "JBL Speaker",
       present: true,
       Icon: Music,
     },

@@ -1,101 +1,70 @@
 import React from "react";
-import PhoneInput from "react-phone-number-input";
-import "react-phone-number-input/style.css";
+import { PhoneInput as IntlPhoneInput } from "react-international-phone";
+import "react-international-phone/style.css";
 
-const STYLE = `
-.bluuu-phone {
-  display: flex;
+const PHONE_STYLE = `
+.react-international-phone-input-container {
   width: 100%;
-}
-
-.bluuu-phone .PhoneInputCountry {
-  height: 2.75rem;
-  border-radius: 0.75rem 0 0 0.75rem;
-  border: 1px solid #e5e7eb;
-  border-right: 1px solid #e5e7eb;
-  background: #ffffff;
-  padding: 0 0.5rem 0 0.75rem;
   display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  flex-shrink: 0;
 }
-
-.bluuu-phone .PhoneInputCountrySelect {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
+.react-international-phone-input-container .react-international-phone-input {
+  height: 2.625rem;
   width: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.bluuu-phone .PhoneInputCountryIcon {
-  width: 1.25rem;
-  height: auto;
-  display: flex;
-  align-items: center;
-}
-
-.bluuu-phone .PhoneInputCountryIcon--border {
-  box-shadow: none;
-  background: none;
-}
-
-.bluuu-phone .PhoneInputCountrySelectArrow {
-  width: 0.35em;
-  height: 0.35em;
-  border-color: #9ca3af;
-  opacity: 1;
-  margin-left: 0.25rem;
-}
-
-.bluuu-phone .PhoneInputInput {
-  height: 2.75rem;
-  width: 100%;
-  border-radius: 0 0.75rem 0.75rem 0;
-  border: 1px solid #e5e7eb;
+  border-radius: 0 0.5rem 0.5rem 0;
+  border: 1px solid #e5e5e5;
   border-left: none;
-  background: #ffffff;
+  background: #fafafa;
   font-size: 0.875rem;
   line-height: 1.25rem;
-  color: #111827;
+  color: #1a1a2e;
   padding: 0.625rem 0.75rem;
   outline: none;
   box-shadow: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
-
-.bluuu-phone .PhoneInputInput:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+.react-international-phone-input-container .react-international-phone-input:focus {
+  border-color: var(--color-primary-600, #2563eb);
+  box-shadow: 0 0 0 1px var(--color-primary-600, #2563eb);
 }
-
-.bluuu-phone .PhoneInputInput::placeholder {
-  color: #9ca3af;
+.react-international-phone-input-container .react-international-phone-country-selector-button {
+  height: 2.625rem;
+  border-radius: 0.5rem 0 0 0.5rem;
+  border: 1px solid #e5e5e5;
+  border-right: 1px solid #e5e5e5;
+  background: #fafafa;
+  padding: 0 0.5rem 0 0.75rem;
+  transition: background 0.15s;
+}
+.react-international-phone-input-container .react-international-phone-country-selector-button:hover {
+  background: #f0f0f0;
+}
+.react-international-phone-input-container .react-international-phone-country-selector-button--active {
+  border-color: var(--color-primary-600, #2563eb);
+  box-shadow: 0 0 0 1px var(--color-primary-600, #2563eb);
+}
+.react-international-phone-input-container .react-international-phone-country-selector-dropdown {
+  border-radius: 0.5rem;
+  border: 1px solid #e5e5e5;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  z-index: 50;
 }
 `;
 
 let styleInjected = false;
 
-export default function PhoneInputComponent({ value, onChange }) {
+export default function PhoneInput({ value, onChange }) {
   if (!styleInjected && typeof document !== "undefined") {
     const style = document.createElement("style");
-    style.textContent = STYLE;
+    style.textContent = PHONE_STYLE;
     document.head.appendChild(style);
     styleInjected = true;
   }
 
   return (
-    <PhoneInput
-      className="bluuu-phone"
-      international
-      defaultCountry="ID"
+    <IntlPhoneInput
       value={value}
       onChange={onChange}
-      limitMaxLength={false}
+      disableDialCodePrefill
     />
   );
 }

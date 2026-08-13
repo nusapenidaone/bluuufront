@@ -134,7 +134,7 @@ class ViatorController extends Controller
 
     /**
      * Цена тура: для private — цена за лодку; для shared — цена на человека.
-     * Mirrors ChatbotController::getQuote() pricing logic.
+     * Mirrors ChatbotControllerV2::getQuote() pricing logic.
      */
     private function getPrice(Tours $tour, Carbon $date, int $members): int
     {

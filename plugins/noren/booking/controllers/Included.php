@@ -18,6 +18,7 @@ class Included extends Controller
     {
         parent::__construct();
         BackendMenu::setContext('Noren.Booking', 'main-menu-item', 'side-menu-item19');
+        $this->addJs('/plugins/noren/booking/assets/js/icon-svg-preview.js');
     }
 
 }

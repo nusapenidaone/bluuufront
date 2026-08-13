@@ -2,6 +2,7 @@
 
 namespace Noren\Booking\Chatbot;
 
+use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Noren\Booking\Models\Tours;
@@ -13,8 +14,76 @@ use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Closeddates;
 use System\Models\File as SystemFile;
 
-class ChatbotControllerV2 extends ChatbotController
+class ChatbotControllerV2 extends Controller
 {
+    protected function corsHeaders()
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+    }
+
+    protected function authenticate(Request $request): bool
+    {
+        $apiKey   = $request->header('X-Api-Key') ?? $request->query('api_key');
+        $validKey = env('CHATBOT_API_KEY', 'bluuu-chatbot-2026');
+
+        return $apiKey && $apiKey === $validKey;
+    }
+
+    protected function unauthorized()
+    {
+        return response()->json(['error' => 'Unauthorized'], 401);
+    }
+
+    // Merges Route::schedule_before_lunch + schedule_after_lunch (repeater
+    // fields already shown in the on-site route popup) into a flat timeline.
+    // 'or-chip' rows are UI separators ("or") between alternative activities,
+    // not real time slots, so they're excluded.
+    protected function buildItinerary($route): array
+    {
+        if (!$route) return [];
+
+        $steps = collect($route->schedule_before_lunch ?? [])
+            ->merge($route->schedule_after_lunch ?? []);
+
+        return $steps
+            ->filter(fn($step) => ($step['type'] ?? 'item') === 'item')
+            ->map(fn($step) => [
+                'time'  => $step['time']  ?? '',
+                'title' => $step['title'] ?? '',
+            ])
+            ->filter(fn($step) => $step['title'] !== '')
+            ->values()
+            ->toArray();
+    }
+
+    // Route::highlights is the same repeater shown as highlight chips on the
+    // route card/popup — used here as the inclusions list.
+    protected function buildInclusions($route): array
+    {
+        if (!$route) return [];
+
+        return collect($route->highlights ?? [])
+            ->pluck('label')
+            ->filter(fn($label) => $label !== null && $label !== '')
+            ->values()
+            ->toArray();
+    }
+
+    protected function formatBoatFeatures(array $bf): array
+    {
+        $on = fn($v) => $v === true || $v === 1 || $v === '1';
+
+        return [
+            'shade'  => $on($bf['shade']  ?? null) ? 'Full shade + flybridge' : 'Partial shade',
+            'cabin'  => $on($bf['cabin']  ?? null),
+            'ac'     => $on($bf['ac']     ?? null),
+            'sound'  => $on($bf['sound']  ?? null) ? 'Bose sound' : null,
+            'toilet' => $on($bf['toilet'] ?? null),
+        ];
+    }
+
     // ─── GET /api/v2/chatbot/boats/private ───────────────────────────────────
 
     public function getPrivateBoats(Request $request)
@@ -113,6 +182,9 @@ class ChatbotControllerV2 extends ChatbotController
                     'name'    => $route->restaurant->name,
                     'menu'    => $route->restaurant->menu,
                 ] : null,
+                'itinerary'   => $this->buildItinerary($route),
+                'inclusions'  => $this->buildInclusions($route),
+                'notes'       => $route->add_on_note ?: null,
             ];
         });
 
@@ -233,6 +305,9 @@ class ChatbotControllerV2 extends ChatbotController
                     'name'    => $route->restaurant->name,
                     'menu'    => $route->restaurant->menu,
                 ] : null,
+                'itinerary'   => $this->buildItinerary($route),
+                'inclusions'  => $this->buildInclusions($route),
+                'notes'       => $route?->add_on_note ?: null,
                 'boats'       => $tour->boat->map(fn($b) => [
                     'id'         => $b->id,
                     'odoo_id'    => $b->odoo_id ? (int) $b->odoo_id : null,
@@ -306,7 +381,18 @@ class ChatbotControllerV2 extends ChatbotController
         $externalId     = $request->input('external_id', '');
 
         // ── Load tour ────────────────────────────────────────────────────
-        $tour = Tours::with(['packages', 'pricesbydates.packages'])->find($tourId);
+        // pricesbydates filtered to date_end >= tomorrow — mirrors
+        // FullController::getTourDetail() so the chatbot picks the same
+        // seasonal price tier the website shows (expired/overlapping rows
+        // excluded, same as the site).
+        $tomorrow = Carbon::tomorrow();
+        $tour = Tours::with([
+            'packages',
+            'pricesbydates' => function ($query) use ($tomorrow) {
+                $query->where('date_end', '>=', $tomorrow);
+            },
+            'pricesbydates.packages',
+        ])->find($tourId);
         if (!$tour) {
             return response()->json(['success' => false, 'error' => 'Tour not found'], 404);
         }
@@ -408,7 +494,7 @@ class ChatbotControllerV2 extends ChatbotController
                 $adults, $kids, $guests, $date,
                 $pickupAddress, $dropoffAddress, $cars,
                 $customerName, $customerEmail, $customerPhone, $externalId,
-                $boatBasePrice, $transferPrice, $coverPrice, $finalTotalIDR
+                $boatBasePrice, $transferPrice, $coverPrice
             ),
             'currency_idr' => [
                 'total_price'   => $finalTotalIDR,
@@ -441,6 +527,212 @@ class ChatbotControllerV2 extends ChatbotController
                 'guests'    => $guests,
             ],
         ]);
+    }
+
+    // ─── GET /api/v2/chatbot/availability ────────────────────────────────────
+    // Tour-level free/booked snapshot for a date, read from Closeddates (kept
+    // in sync with Odoo via OdooWebhookController), so it never reports a tour
+    // as available when its boats are actually booked in Odoo.
+
+    public function getAvailability(Request $request)
+    {
+        $this->corsHeaders();
+        if (!$this->authenticate($request)) return $this->unauthorized();
+
+        $date = $request->input('date');
+        if (!$date || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return response()->json(['success' => false, 'error' => 'date (YYYY-MM-DD) is required'], 422);
+        }
+
+        $tourId = $request->input('tour_id');
+        $guests = $request->input('guests') !== null ? (int) $request->input('guests') : null;
+
+        $available   = [];
+        $unavailable = [];
+
+        foreach ([
+            ...$this->privateTourAvailability($date, $tourId, $guests),
+            ...$this->sharedTourAvailability($date, $tourId, $guests),
+        ] as $row) {
+            if ($row['available']) {
+                $available[] = $row['data'];
+            } else {
+                $unavailable[] = $row['data'];
+            }
+        }
+
+        return response()->json([
+            'success'     => true,
+            'date'        => $date,
+            'available'   => $available,
+            'unavailable' => $unavailable,
+            'updated_at'  => Carbon::now()->toISOString(),
+        ]);
+    }
+
+    // Private: "slots" = free physical boats (a private booking takes over a
+    // whole boat). type=3/4 (manual/cron) closures → blackout; a boat taken by
+    // an actual private booking (type=2, or legacy/untyped) → fully_booked.
+    private function privateTourAvailability(string $date, $tourId, ?int $guests): array
+    {
+        $tours = Tours::with(['boat' => fn($q) => $q->with('company')
+                ->orderBy('noren_booking_tours_boat.sort_order')
+                ->orderBy('noren_booking_boat.sort_order')
+                ->orderBy('noren_booking_boat.id')])
+            ->whereIn('classes_id', [8])
+            ->where('status', '!=', 'disabled')
+            ->when($tourId, fn($q) => $q->where('id', $tourId))
+            ->orderBy('sort_order')
+            ->get();
+
+        $rows = [];
+
+        foreach ($tours as $tour) {
+            $boats   = $tour->boat->filter(fn($b) => empty($b->closed))->values();
+            $boatIds = $boats->pluck('id');
+
+            $closedRows = Closeddates::whereIn('boat_id', $boatIds)
+                ->where('date', $date)
+                ->whereNull('deleted_at')
+                ->get()
+                ->groupBy('boat_id');
+
+            $freeBoats     = 0;
+            $blackoutSeen  = false;
+            $totalCapacity = 0;
+
+            foreach ($boats as $boat) {
+                $totalCapacity += (int) ($boat->capacity ?? 0);
+                $records = $closedRows->get($boat->id, collect());
+
+                if ($records->isEmpty()) {
+                    if ($guests === null || (int) $boat->capacity >= $guests) {
+                        $freeBoats++;
+                    }
+                    continue;
+                }
+
+                if ($records->contains(fn($r) => in_array((int) $r->type, [3, 4], true))) {
+                    $blackoutSeen = true;
+                }
+            }
+
+            $tourData = [
+                'tour_id' => $tour->id,
+                'odoo_id' => $tour->odoo_id ? (int) $tour->odoo_id : null,
+                'name'    => $tour->name,
+                'type'    => 'private',
+            ];
+
+            // Cap at the tour's official registered capacity — the summed boat
+            // capacity is informational and shouldn't advertise more than what
+            // the tour is actually configured to carry.
+            $capacity = $tour->capacity ? min($totalCapacity, (int) $tour->capacity) : $totalCapacity;
+
+            $rows[] = $freeBoats > 0
+                ? ['available' => true, 'data' => $tourData + [
+                    'capacity'   => $capacity,
+                    'slots_left' => $freeBoats,
+                ]]
+                : ['available' => false, 'data' => $tourData + [
+                    'reason' => $blackoutSeen ? 'blackout' : 'fully_booked',
+                ]];
+        }
+
+        return $rows;
+    }
+
+    // Shared: a group always books a single boat (never split across boats),
+    // so "slots_left" is the largest single-boat opening, not a sum. A boat
+    // hard-blocked by a private booking / manual / cron closure, or filled by
+    // ANOTHER shared tour, counts toward "blackout"; capacity purely consumed
+    // by this same tour's own passengers counts toward "fully_booked".
+    private function sharedTourAvailability(string $date, $tourId, ?int $guests): array
+    {
+        $tours = Tours::with(['boat' => fn($q) => $q->with('company')
+                ->orderBy('noren_booking_tours_boat.sort_order')
+                ->orderBy('noren_booking_boat.sort_order')
+                ->orderBy('noren_booking_boat.id')])
+            ->whereIn('classes_id', [9])
+            ->where('status', '!=', 'disabled')
+            ->when($tourId, fn($q) => $q->where('id', $tourId))
+            ->orderBy('sort_order')
+            ->get();
+
+        $rows = [];
+
+        foreach ($tours as $tour) {
+            $tourType = $tour->odoo_type ?? null;
+
+            $allBoatIds = $tour->boat->pluck('id');
+            $closedRows = Closeddates::whereIn('boat_id', $allBoatIds)
+                ->where('date', $date)
+                ->whereNull('deleted_at')
+                ->get()
+                ->groupBy('boat_id');
+
+            $blockedByBlocker = $tour->boat->filter(fn($b) => !empty($b->closed))->contains(
+                fn($b) => $closedRows->get($b->id, collect())->contains(fn($cd) => (int) $cd->type !== 4)
+            );
+
+            $bestSingleBoat = 0;
+            $blackoutSeen   = false;
+            $totalCapacity  = 0;
+
+            foreach ($tour->boat as $boat) {
+                if (!empty($boat->closed)) continue;
+
+                $capacity = (int) ($boat->capacity ?? 0);
+                $totalCapacity += $capacity;
+                $records  = $closedRows->get($boat->id, collect());
+
+                $hardBlocked = $blockedByBlocker || $records->contains(function ($r) use ($tourType) {
+                    $t = $r->type;
+                    if ($t === null || $t === '' || in_array((int) $t, [2, 3, 4])) return true;
+                    if ((int) $t === 1 && $r->tour_type && $r->tour_type !== $tourType) return true;
+                    return false;
+                });
+
+                if ($hardBlocked) {
+                    $blackoutSeen = true;
+                    continue;
+                }
+
+                $booked    = (int) $records->where('type', 1)
+                    ->filter(fn($r) => !$r->tour_type || $r->tour_type === $tourType)
+                    ->sum('qtty');
+                $available = max(0, $capacity - $booked);
+                $bestSingleBoat = max($bestSingleBoat, $available);
+            }
+
+            // Cap at the tour's official registered capacity — the summed boat
+            // capacity is informational and shouldn't advertise more than what
+            // the tour is actually configured to carry.
+            $displayCapacity = $tour->capacity ? min($totalCapacity, (int) $tour->capacity) : $totalCapacity;
+
+            // Defensive clamp — slots_left must never read higher than capacity.
+            $bestSingleBoat = min($bestSingleBoat, $displayCapacity);
+
+            $tourData = [
+                'tour_id' => $tour->id,
+                'odoo_id' => $tour->odoo_id ? (int) $tour->odoo_id : null,
+                'name'    => $tour->name,
+                'type'    => 'shared',
+            ];
+
+            $fits = $guests === null ? $bestSingleBoat > 0 : $bestSingleBoat >= $guests;
+
+            $rows[] = $fits
+                ? ['available' => true, 'data' => $tourData + [
+                    'capacity'   => $displayCapacity,
+                    'slots_left' => $bestSingleBoat,
+                ]]
+                : ['available' => false, 'data' => $tourData + [
+                    'reason' => $blackoutSeen ? 'blackout' : 'fully_booked',
+                ]];
+        }
+
+        return $rows;
     }
 
     // ─── Available boats (same logic as PrivateOrderController / SharedOrderController) ──
@@ -537,20 +829,25 @@ class ChatbotControllerV2 extends ChatbotController
         int $adults, int $kids, int $guests, ?string $date,
         string $pickupAddress, string $dropoffAddress, int $cars,
         string $customerName, string $customerEmail, string $customerPhone, string $externalId,
-        float $boatBasePrice, float $transferPrice, float $coverPrice, float $totalPrice
+        float $boatBasePrice, float $transferPrice, float $coverPrice
     ): array {
         $company      = $boat?->company;
         $isShared     = in_array((int) $tour->classes_id, [9, 10]);
-        $routeName    = $route?->name ?? $route?->title ?? '';
+        // x_studio_route_new / x_studio_lunch are Odoo "selection" fields — the value
+        // must match the option exactly, hence odoo_name (not name/title) as in
+        // OdooService::buildOrderData().
+        $restaurant   = $route?->restaurant;
+        $routeName    = $route?->odoo_name ?? '';
+        $lunchName    = $restaurant?->odoo_name ?? '';
         $routeStart   = $route?->start ?? '08:00:00';
         $routeEnd     = $route?->end   ?? '18:00:00';
         $transferType = $transfer?->type ?? '';
 
         $rentalStart = $date
-            ? Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->format('Y-m-d H:i:s')
+            ? Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s')
             : null;
         $rentalEnd = $date
-            ? Carbon::parse($date . ' ' . $routeEnd, 'Asia/Makassar')->utc()->format('Y-m-d H:i:s')
+            ? Carbon::parse($date . ' ' . $routeEnd, 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s')
             : null;
 
         // ── Order — exact fields sent to Odoo createSaleOrder ────────────
@@ -563,7 +860,8 @@ class ChatbotControllerV2 extends ChatbotController
             'x_studio_adults'           => $adults,
             'x_studio_kids'             => $kids,
             'x_studio_count_of_people'  => $guests,
-            'x_studio_route'            => $routeName,
+            'x_studio_route_new'        => $routeName,
+            'x_studio_lunch'            => $lunchName,
             'x_studio_pickup_address'   => $pickupAddress,
             'x_studio_drop_off_address' => $dropoffAddress,
             'x_studio_pickup_cars'      => in_array($transfer?->id, [1, 2]) ? 1 : 0,
@@ -571,7 +869,9 @@ class ChatbotControllerV2 extends ChatbotController
             'x_studio_car_type'         => $this->resolveCarTypeFromTransfer($transfer, $guests),
             'x_studio_tour_type'        => $tour->odoo_type ?? '',
             'x_studio_deposit'          => 0.0,
-            'x_studio_collect'          => (float) $totalPrice,
+            // x_studio_collect is readonly/computed in Odoo (amount_total - deposit -
+            // collected_by_*) — sending it on create is rejected, so it's intentionally
+            // omitted here. Use currency_idr.total_price for the amount to collect.
             'client_order_ref'          => $externalId,
             // Customer (used for partner lookup/create)
             'partner_name'              => $customerName,
@@ -630,7 +930,6 @@ class ChatbotControllerV2 extends ChatbotController
         }
 
         // 5. Restaurant
-        $restaurant = $route?->restaurant;
         if ($restaurant?->odoo_id) {
             $lines[] = [
                 'label'      => 'restaurant',

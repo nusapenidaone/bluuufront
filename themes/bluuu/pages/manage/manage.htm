@@ -1,7 +1,7 @@
 url = "/manage"
 title = "Manage"
-is_hidden = 1
-==
+is_hidden = 0
+
 ==
 <!DOCTYPE html>
 <html lang="en">
@@ -9,28 +9,49 @@ is_hidden = 1
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bluuu Admin</title>
+     <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body class="bg-slate-100 text-slate-800 p-4 md:p-6 font-['Outfit']">
 <div id="root"></div>
 {% verbatim %}
-<script type="text/babel">
+<script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useRef, useCallback } = React;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const TOKEN_KEY = 'bluuu_admin_token';
-const API_KEY   = 'e4f3b1a9c2d8e7f6a1b2c3d4e5f67890';
+const TOKEN_KEY   = 'bluuu_admin_token';
+const MANAGER_KEY = 'bluuu_admin_manager';
 
 const INPUT  = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-blue-400';
 const SELECT = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 h-9 text-sm outline-none';
-const GLASS  = 'bg-white border border-slate-200 rounded-2xl shadow-sm';
+const GLASS  = 'bg-white border border-slate-200 shadow-sm';
 const BTN    = 'bg-white border border-slate-200 text-slate-500 hover:text-slate-800 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all shadow-sm';
 const TH     = 'px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-slate-200 whitespace-nowrap bg-slate-50';
 const TD     = 'px-3 py-2.5 border-b border-slate-100 align-top text-sm text-slate-700 whitespace-nowrap';
+
+const LANYARD_COLORS = [
+    { value: 'Blue',              color: '#3b82f6' },
+    { value: 'Turquoise',         color: '#06b6d4' },
+    { value: 'Black',             color: '#1e293b' },
+    { value: 'White',             color: '#e2e8f0', border: '#94a3b8' },
+    { value: 'Grey',              color: '#94a3b8' },
+    { value: 'Indigo/Royal Blue', color: '#4f46e5' },
+    { value: 'Violet/Purple',     color: '#8b5cf6' },
+    { value: 'Sea Green',         color: '#0d9488' },
+    { value: 'Emerald Green',     color: '#10b981' },
+    { value: 'Forrest Green',     color: '#15803d' },
+    { value: 'Yello',             color: '#eab308' },
+    { value: 'Orange',            color: '#f97316' },
+    { value: 'Brown',             color: '#92400e' },
+    { value: 'Pink',              color: '#ec4899' },
+];
+function lanyardColorInfo(value) {
+    return LANYARD_COLORS.find(c => c.value === value) || null;
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const fmt = dt => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
@@ -63,6 +84,11 @@ function fmtDisplayDate(ymd) {
     const [y, m, d] = ymd.split('-');
     return `${d}.${m}.${y}`;
 }
+function fmtDisplayDateShort(ymd) {
+    if (!ymd) return '';
+    const [, m, d] = ymd.split('-');
+    return `${d}.${m}`;
+}
 function fmtMoney(v) {
     if (!v && v !== 0) return '—';
     return Number(v).toLocaleString('id-ID');
@@ -77,6 +103,15 @@ function fmtOdooDate(utcStr) {
     const date = d.toLocaleDateString('ru-RU', { timeZone: 'Asia/Makassar' });
     const time = d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' });
     return `${date} ${time}`;
+}
+function fmtFloatTime(val) {
+    if (val === undefined || val === null || val === false || val === '') return null;
+    const num = Number(val);
+    if (!Number.isFinite(num)) return null;
+    const totalMinutes = Math.round(num * 60);
+    const h = Math.floor(totalMinutes / 60) % 24;
+    const m = totalMinutes % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 function tourTypeName(o) {
     if (o.x_studio_tour_type && o.x_studio_tour_type !== false) return String(o.x_studio_tour_type);
@@ -98,7 +133,7 @@ const statusCls = type => {
     if (type === 1) return 'bg-blue-500 text-white';
     if (type === 2) return 'bg-violet-500 text-white';
     if (type === 3) return 'bg-red-500 text-white';
-    return 'bg-emerald-400 text-white hover:bg-emerald-500';
+    return 'bg-violet-500 text-white'; // null/unknown → CRM
 };
 const statusLabel = (type, records, capacity) => {
     if (type === 4) return 'AUTO';
@@ -108,7 +143,7 @@ const statusLabel = (type, records, capacity) => {
     }
     if (type === 2) return 'CRM';
     if (type === 3) return 'BLOCK';
-    return 'OPEN';
+    return 'CRM'; // null/unknown → CRM
 };
 
 // ─── MiniCalendar ─────────────────────────────────────────────────────────────
@@ -167,55 +202,104 @@ function MiniCalendar({ value, onChange, rangeFrom, rangeTo }) {
 // ─── DatePicker ───────────────────────────────────────────────────────────────
 function DatePicker({ value, onChange, rangeFrom, rangeTo, align = 'left' }) {
     const [open, setOpen] = useState(false);
-    const ref = useRef(null);
+    const [pos,  setPos]  = useState({ top: 0, left: 0 });
+    const btnRef  = useRef(null);
+    const dropRef = useRef(null);
 
     useEffect(() => {
         if (!open) return;
-        const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        const handler = e => {
+            if (btnRef.current?.contains(e.target) || dropRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, [open]);
 
-    const handleChange = v => { onChange(v); setOpen(false); };
+    const handleToggle = () => {
+        if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 6, left: align === 'right' ? r.right - 232 : r.left });
+        }
+        setOpen(o => !o);
+    };
 
     return (
-        <div className="relative" ref={ref}>
-            <button onClick={() => setOpen(o => !o)}
-                className={`px-4 py-2 text-sm font-bold transition-colors leading-none ${open ? 'text-blue-600 bg-blue-50' : 'text-slate-700 hover:bg-slate-50'}`}>
-                {fmtDisplayDate(value)}
+        <div>
+            <button ref={btnRef} onClick={handleToggle}
+                className={`h-full px-1.5 md:px-2.5 text-sm font-bold whitespace-nowrap transition-colors ${open ? 'text-blue-600' : 'text-slate-800 hover:text-slate-600'}`}>
+                <span className="md:hidden">{fmtDisplayDateShort(value)}</span>
+                <span className="hidden md:inline">{fmtDisplayDate(value)}</span>
             </button>
-            {open && (
-                <div className={`absolute top-full mt-1.5 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl ${align === 'right' ? 'right-0' : 'left-0'}`}>
-                    <MiniCalendar value={value} onChange={handleChange} rangeFrom={rangeFrom} rangeTo={rangeTo} />
-                </div>
+            {open && ReactDOM.createPortal(
+                <div ref={dropRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+                    className="bg-white border border-slate-200 rounded-2xl shadow-xl">
+                    <MiniCalendar value={value} onChange={v => { onChange(v); setOpen(false); }} rangeFrom={rangeFrom} rangeTo={rangeTo} />
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
+
+// ─── MenuButton ───────────────────────────────────────────────────────────────
+function MenuButton({ tabs, activeTab, setActiveTab, onLogout }) {
+    const [open, setOpen] = useState(false);
+    const [pos,  setPos]  = useState({ top: 0, left: 0 });
+    const btnRef  = useRef(null);
+    const dropRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = e => {
+            if (btnRef.current?.contains(e.target) || dropRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const toggle = () => {
+        if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 6, left: r.left });
+        }
+        setOpen(o => !o);
+    };
+
+    return (
+        <div>
+            <button ref={btnRef} onClick={toggle}
+                className={`h-9 w-9 flex items-center justify-center bg-white border rounded-lg shadow-sm transition-all text-base ${open ? 'text-blue-600 border-blue-300' : 'text-slate-600 border-slate-200 hover:text-slate-800 hover:border-slate-300'}`}>
+                ☰
+            </button>
+            {open && ReactDOM.createPortal(
+                <div ref={dropRef} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+                    className="bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 min-w-[170px]">
+                    {tabs.map(tab => (
+                        <button key={tab.id}
+                            onClick={() => { setActiveTab(tab.id); setOpen(false); }}
+                            className={`w-full text-left px-3 py-2 rounded-xl text-sm font-bold uppercase tracking-wider transition-colors ${activeTab === tab.id ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+                            {tab.label}
+                        </button>
+                    ))}
+                    <div className="my-1.5 border-t border-slate-100" />
+                    <button onClick={() => { setOpen(false); onLogout(); }}
+                        className="w-full text-left px-3 py-2 rounded-xl text-sm font-bold uppercase tracking-wider text-red-500 hover:bg-red-50 transition-colors">
+                        Logout
+                    </button>
+                </div>,
+                document.body
             )}
         </div>
     );
 }
 
 // ─── DateRangeBar ─────────────────────────────────────────────────────────────
-function DateRangeBar({ dateFrom, dateTo, onFrom, onTo, extraPresets, navPrev, navNext, trailing, loading }) {
-    const [presetVal, setPresetVal] = useState('');
-    const presets = [
-        { label: 'Today',      fn: () => { const t = todayBali();       onFrom(t);       onTo(t);        } },
-        { label: 'Tomorrow',   fn: () => { const t = baliOffset(1);     onFrom(t);       onTo(t);        } },
-        { label: 'This week',  fn: () => { const r = baliWeekRange();   onFrom(r.start); onTo(r.end);    } },
-        { label: '7 days',     fn: () => { onFrom(todayBali());          onTo(baliOffset(6));            } },
-        { label: 'This month', fn: () => { const r = baliMonthRange(0); onFrom(r.start); onTo(r.end);    } },
-        ...(extraPresets || []),
-    ];
-    const handlePreset = e => {
-        const p = presets.find(x => x.label === e.target.value);
-        if (p) p.fn();
-        setTimeout(() => setPresetVal(''), 0);
-    };
+function DateRangeBar({ dateFrom, dateTo, onFrom, onTo, navPrev, navNext, trailing, loading, menu }) {
     return (
-        <div className="flex items-center gap-2">
-            <select value={presetVal} onChange={handlePreset}
-                className={SELECT + ' shadow-sm cursor-pointer min-w-[140px]'}>
-                <option value="">Quick select…</option>
-                {presets.map(p => <option key={p.label} value={p.label}>{p.label}</option>)}
-            </select>
+        <div className="flex items-center gap-1.5 md:gap-2 min-w-max">
+            {menu}
             <div className="flex items-center gap-1">
                 {navPrev && (
                     <button onClick={navPrev}
@@ -223,14 +307,14 @@ function DateRangeBar({ dateFrom, dateTo, onFrom, onTo, extraPresets, navPrev, n
                         ‹
                     </button>
                 )}
-                <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm overflow-visible">
+                <div className="flex items-center bg-white border border-slate-300 rounded-lg h-9 shadow-sm overflow-visible">
                     <DatePicker
                         value={dateFrom}
                         onChange={v => { onFrom(v); if (v > dateTo) onTo(v); }}
                         rangeFrom={dateFrom} rangeTo={dateTo}
                         align="left"
                     />
-                    <span className="text-slate-300 font-bold select-none px-0.5">–</span>
+                    <span className="text-slate-300 select-none">–</span>
                     <DatePicker
                         value={dateTo}
                         onChange={v => { onTo(v); if (v < dateFrom) onFrom(v); }}
@@ -253,11 +337,11 @@ function DateRangeBar({ dateFrom, dateTo, onFrom, onTo, extraPresets, navPrev, n
 }
 
 // ─── CalendarView ─────────────────────────────────────────────────────────────
-function CalendarView() {
+function CalendarView({ tabs, activeTab, setActiveTab, onLogout }) {
     const [data,          setData]          = useState({ boats: [], tours: [] });
     const [loading,       setLoading]       = useState(true);
     const [startDate,     setStartDate]     = useState(() => todayBali());
-    const [endDate,       setEndDate]       = useState(() => baliOffset(6));
+    const [endDate,       setEndDate]       = useState(() => baliOffset(2));
     const [selectedClass, setSelectedClass] = useState('');
     const [selectedTour,  setSelectedTour]  = useState('');
     const [editItem,      setEditItem]      = useState(null);
@@ -265,7 +349,7 @@ function CalendarView() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
-            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${startDate}&end=${endDate}`);
+            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${startDate}&end=${endDate}`, { headers: calendarHeaders() });
             const json = await res.json();
             setData(json);
         } catch (e) { console.error(e); }
@@ -280,10 +364,13 @@ function CalendarView() {
         return result;
     }, [startDate, endDate]);
 
-    const shiftMonth = d => {
-        const base = new Date(startDate + 'T00:00:00');
-        const r = monthRange(base.getFullYear(), base.getMonth() + d);
-        setStartDate(r.start); setEndDate(r.end);
+    const shiftRange = d => {
+        const s = new Date(startDate + 'T00:00:00');
+        s.setDate(s.getDate() + d * 3);
+        setStartDate(fmt(s));
+        const e = new Date(s);
+        e.setDate(s.getDate() + 2);
+        setEndDate(fmt(e));
     };
     const visibleTours = useMemo(() =>
         selectedClass ? data.tours.filter(t => t.classes_id === parseInt(selectedClass)) : data.tours,
@@ -310,13 +397,18 @@ function CalendarView() {
         }
     };
 
+    const calendarHeaders = () => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem(TOKEN_KEY) || ''}`,
+    });
+
     const saveItem = async item => {
         setLoading(true);
         try {
             const url = item.id
                 ? `https://bluuu.tours/api/new/calendar/update/${item.id}`
                 : `https://bluuu.tours/api/new/calendar/create`;
-            const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...item, key: API_KEY }) });
+            const res = await fetch(url, { method: 'POST', headers: calendarHeaders(), body: JSON.stringify(item) });
             if (res.ok) { await fetchData(); setEditItem(null); }
         } catch (e) { alert('Failed'); }
         setLoading(false);
@@ -326,7 +418,7 @@ function CalendarView() {
         if (!confirm('Delete?')) return;
         setLoading(true);
         try {
-            const res = await fetch(`https://bluuu.tours/api/new/calendar/delete/${id}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: API_KEY }) });
+            const res = await fetch(`https://bluuu.tours/api/new/calendar/delete/${id}`, { method: 'POST', headers: calendarHeaders(), body: JSON.stringify({}) });
             if (res.ok) { await fetchData(); setEditItem(null); }
         } catch (e) { alert('Failed'); }
         setLoading(false);
@@ -341,11 +433,13 @@ function CalendarView() {
 
     return (
         <div>
-            <div className="sticky top-[52px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 mb-5 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
+            <div className="sticky top-0 z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 mb-5 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
                 <DateRangeBar
+                    menu={<MenuButton tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />}
                     dateFrom={startDate} dateTo={endDate}
-                    onFrom={setStartDate} onTo={setEndDate}
-                    navPrev={() => shiftMonth(-1)} navNext={() => shiftMonth(1)}
+                    onFrom={v => { setStartDate(v); const mx = new Date(v+'T00:00:00'); mx.setDate(mx.getDate()+2); if (endDate > fmt(mx)) setEndDate(fmt(mx)); if (v > endDate) setEndDate(v); }}
+                    onTo={v => { setEndDate(v); const mn = new Date(v+'T00:00:00'); mn.setDate(mn.getDate()-2); if (startDate < fmt(mn)) setStartDate(fmt(mn)); if (v < startDate) setStartDate(v); }}
+                    navPrev={() => shiftRange(-1)} navNext={() => shiftRange(1)}
                     loading={loading}
                     trailing={
                         <>
@@ -387,8 +481,8 @@ function CalendarView() {
                                     const primary = records[0];
                                     const pax     = primary?.type === 1 ? records.reduce((s, r) => s + (Number(r.qtty) || 0), 0) : null;
                                     const full    = pax !== null && boat.capacity && pax >= boat.capacity;
-                                    const sc      = full ? 'bg-orange-500 text-white' : statusCls(primary?.type);
-                                    const lbl     = statusLabel(primary?.type, records, boat.capacity);
+                                    const sc      = records.length === 0 ? 'bg-emerald-400 text-white hover:bg-emerald-500' : (full ? 'bg-orange-500 text-white' : statusCls(primary?.type));
+                                    const lbl     = records.length === 0 ? 'OPEN' : statusLabel(primary?.type, records, boat.capacity);
                                     return (
                                         <div key={d} onClick={() => handleCellClick(boat, d, records)}
                                             className={`flex flex-col justify-center items-center text-[10px] font-bold border-t border-l border-slate-200 min-h-[44px] min-w-[44px] cursor-pointer transition-colors ${sc}`}>
@@ -585,6 +679,7 @@ function OrderDetailModal({ order: o, onClose }) {
                         <Sec title="Transfer">
                             <Row label="Type"    value={o.x_studio_car_type && o.x_studio_car_type !== false ? String(o.x_studio_car_type) : null} />
                             <Row label="Pickup"  value={o.x_studio_pickup_address} />
+                            <Row label="ETA pickup" value={fmtFloatTime(o.x_studio_estimated_pickup_time)} />
                             <Row label="Dropoff" value={o.x_studio_drop_off_address} />
                             <Row label="Pickup cars"  value={o.x_studio_pickup_cars > 0 ? String(o.x_studio_pickup_cars) : null} />
                             <Row label="Drop-off cars" value={o.x_studio_drop_off_cars > 0 ? String(o.x_studio_drop_off_cars) : null} />
@@ -662,45 +757,199 @@ function OrderDetailModal({ order: o, onClose }) {
     );
 }
 
-// ─── LeadsTable ───────────────────────────────────────────────────────────────
-function LeadsTable({ orders, onRow }) {
+const CHECKIN_BY = ['Weda', 'Ryan', 'Widya', 'Chida', 'Jelin', 'Finance Team', 'MODs', 'Management', 'Guides', 'Porters'];
+
+// ─── LanyardColorPicker ───────────────────────────────────────────────────────
+function LanyardColorPicker({ value, onChange }) {
+    const [open, setOpen] = useState(false);
+    const [pos,  setPos]  = useState({ top: 0, left: 0 });
+    const btnRef  = useRef(null);
+    const dropRef = useRef(null);
+
+    useEffect(() => {
+        if (!open) return;
+        const handler = e => {
+            if (btnRef.current?.contains(e.target) || dropRef.current?.contains(e.target)) return;
+            setOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [open]);
+
+    const toggle = e => {
+        e.stopPropagation();
+        if (!open && btnRef.current) {
+            const r = btnRef.current.getBoundingClientRect();
+            setPos({ top: r.bottom + 4, left: r.left });
+        }
+        setOpen(o => !o);
+    };
+
+    const info = lanyardColorInfo(value);
+    const dotStyle = info
+        ? { background: info.color, border: info.border ? `1.5px solid ${info.border}` : '2px solid transparent' }
+        : { background: '#f1f5f9', border: '1.5px dashed #cbd5e1' };
+
     return (
-        <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
+        <div onClick={e => e.stopPropagation()}>
+            <button ref={btnRef} onClick={toggle} title={value || 'Set lanyard color'}
+                className="w-6 h-6 rounded-full flex-shrink-0 transition-transform hover:scale-110"
+                style={dotStyle} />
+            {open && ReactDOM.createPortal(
+                <div ref={dropRef} onClick={e => e.stopPropagation()}
+                    style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+                    className="bg-white border border-slate-200 rounded-xl shadow-xl p-2">
+                    <div className="grid grid-cols-7 gap-1">
+                        {LANYARD_COLORS.map(c => (
+                            <button key={c.value} title={c.value}
+                                onClick={() => { onChange(c.value); setOpen(false); }}
+                                style={{
+                                    background: c.color,
+                                    border: c.value === value ? '2px solid #0f172a' : (c.border ? `1.5px solid ${c.border}` : '2px solid transparent'),
+                                }}
+                                className="w-6 h-6 rounded-full transition-transform hover:scale-125" />
+                        ))}
+                        <button title="Clear" onClick={() => { onChange(false); setOpen(false); }}
+                            className="w-6 h-6 rounded-full bg-slate-100 border border-dashed border-slate-300 text-slate-400 text-[10px] font-bold flex items-center justify-center hover:bg-red-50 hover:border-red-200 hover:text-red-400 transition-colors">
+                            ×
+                        </button>
+                    </div>
+                    {value && <div className="text-[10px] text-slate-500 text-center mt-1.5">{value}</div>}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
+
+// ─── LeadsTable ───────────────────────────────────────────────────────────────
+function LeadsTable({ orders, onRow, updateOrder }) {
+    const [checkPayDialog, setCheckPayDialog] = useState(null);
+    const [saving,         setSaving]         = useState(false);
+    const [sort, setSort] = useState({ key: null, dir: 'asc' });
+
+    const currentManager = localStorage.getItem(MANAGER_KEY) || '';
+
+    const toggleSort = key => setSort(prev =>
+        prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }
+    );
+
+    const sortedOrders = useMemo(() => {
+        if (!sort.key) return orders;
+        return [...orders].sort((a, b) => {
+            let av = a[sort.key], bv = b[sort.key];
+            if (sort.key === 'partner_id') {
+                av = Array.isArray(av) ? av[1] : av;
+                bv = Array.isArray(bv) ? bv[1] : bv;
+            }
+            if (av === false || av == null) av = '';
+            if (bv === false || bv == null) bv = '';
+            const cmp = (typeof av === 'number' && typeof bv === 'number')
+                ? av - bv : String(av).localeCompare(String(bv));
+            return sort.dir === 'asc' ? cmp : -cmp;
+        });
+    }, [orders, sort]);
+
+    const SI = ({ k }) => sort.key === k ? (sort.dir === 'asc' ? ' ^' : ' v') : '';
+
+    const openCheckPay = (e, o) => {
+        e.stopPropagation();
+        const existingBy = (o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false)
+            ? String(o.x_studio_checked_in_by) : '';
+        const bookedPax = Number(o.x_studio_count_of_people) || (Number(o.x_studio_adults ?? 0) + Number(o.x_studio_kids ?? 0)) || 0;
+        const resolved  = !!o.x_studio_customer_checked_in_and_cleared || !!o.x_studio_no_show_1;
+        const existingPaxIn = Number(o.x_studio_number_of_pax_checked_in ?? 0);
+        setCheckPayDialog({
+            orderId:    o.id,
+            clientName: partnerName(o),
+            checkedIn:  !!o.x_studio_customer_checked_in_and_cleared,
+            noShow:     !!o.x_studio_no_show_1,
+            checkedBy:  existingBy || currentManager,
+            collect:    Number(o.x_studio_collect ?? 0),
+            cash:       Number(o.x_studio_collected_by_cash ?? 0),
+            edc:        Number(o.x_studio_collected_by_edcbank ?? 0),
+            bookedPax,
+            paxCheckedIn: resolved ? existingPaxIn : bookedPax,
+            payMethod:  null,
+            payAmount:  '',
+        });
+    };
+
+    const saveCheckPay = async () => {
+        setSaving(true);
+        const d = checkPayDialog;
+        const fields = {
+            x_studio_customer_checked_in_and_cleared: d.checkedIn,
+            x_studio_checked_in_by: d.checkedIn ? (d.checkedBy || false) : false,
+            x_studio_no_show_1: d.noShow,
+            x_studio_number_of_pax_checked_in: d.checkedIn ? (parseInt(d.paxCheckedIn, 10) || 0) : 0,
+        };
+        if (d.payMethod && d.payAmount !== '') {
+            const amt = parseFloat(d.payAmount) || 0;
+            if (d.payMethod === 'cash') fields.x_studio_collected_by_cash    = amt;
+            else                        fields.x_studio_collected_by_edcbank = amt;
+        }
+        try {
+            await updateOrder(d.orderId, fields);
+            setCheckPayDialog(null);
+        } catch (err) { alert(err.message); }
+        setSaving(false);
+    };
+
+    return (
+        <div className="overflow-x-auto overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
             {/* Header */}
-            <div className="flex gap-0 bg-slate-50 border-b-2 border-slate-200 sticky top-0 z-10">
+            <div className="flex gap-0 bg-slate-50 border-b-2 border-slate-200 sticky top-0 z-10 min-w-max">
                 <div className="w-1 shrink-0" />
-                <div className="flex-1 flex items-center gap-4 px-4 py-2 min-w-0">
-                    <div className="w-[84px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</div>
-                    <div className="w-[140px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Client</div>
-                    <div className="w-[140px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Boat</div>
-                    <div className="w-[110px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Type</div>
-                    <div className="w-[120px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Route</div>
-                    <div className="w-[110px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Guides</div>
-                    <div className="w-[120px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Lunch</div>
-                    <div className="w-[130px] shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transfer</div>
-                    <div className="w-[54px] shrink-0 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pax</div>
-                    <div className="w-[130px] shrink-0 text-right text-[10px] font-bold text-slate-400 uppercase tracking-widest">Finance</div>
+                <div className="flex items-center gap-4 px-4 py-2">
+                    {[
+                        { label: 'Date',        key: 'rental_start_date',                       w: 84  },
+                        { label: 'Client',      key: 'partner_id',                              w: 140 },
+                        { label: 'Pax',         key: 'x_studio_count_of_people',                w: 50  },
+                        { label: 'Lanyard',     key: null,                                      w: 48  },
+                        { label: 'Boat',        key: 'x_studio_boat_name',                      w: 160 },
+                        { label: 'Type',        key: 'x_studio_tour_type',                      w: 130 },
+                        { label: 'Guides',      key: null,                                      w: 110 },
+                        { label: 'Lunch',       key: 'x_studio_lunch',                          w: 120 },
+                        { label: 'Transfer',    key: 'x_studio_car_type',                       w: 130 },
+                        { label: 'Special Req', key: null,                                      w: 180 },
+                        { label: 'Finance',     key: 'amount_total',              align: 'right', w: 130},
+                        { label: 'Check In',    key: 'x_studio_customer_checked_in_and_cleared', w: 260},
+                        { label: 'Products',    key: null,                                      w: 220 },
+                    ].map(col => (
+                        <div
+                            key={col.label}
+                            style={{ width: col.w }}
+                            className={`shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-widest select-none whitespace-nowrap ${col.key ? 'cursor-pointer hover:text-slate-600 transition-colors' : ''} ${col.align === 'right' ? 'text-right' : ''}`}
+                            onClick={() => col.key && toggleSort(col.key)}
+                        >
+                            {col.label}{col.key && <SI k={col.key} />}
+                        </div>
+                    ))}
                 </div>
             </div>
             {/* Rows */}
             <div className="divide-y divide-slate-100">
-            {orders.map(o => {
-                const priv    = isPrivate(o);
-                const adults  = o.x_studio_adults ?? 0;
-                const kids    = o.x_studio_kids   ?? 0;
-                const collect = Number(o.x_studio_collect ?? 0);
-                const guides  = [o.x_studio_guide_1_1, o.x_studio_guide_2_1].filter(v => v && v !== false);
-                const date    = odooDateBali(o.rental_start_date);
+            {sortedOrders.map(o => {
+                const priv     = isPrivate(o);
+                const adults   = o.x_studio_adults ?? 0;
+                const kids     = o.x_studio_kids   ?? 0;
+                const collect  = Number(o.x_studio_collect ?? 0);
+                const resolved = !!o.x_studio_customer_checked_in_and_cleared || !!o.x_studio_no_show_1;
+                const paxIn    = resolved ? Number(o.x_studio_number_of_pax_checked_in ?? 0) : null;
+                const guides   = [o.x_studio_guide_1_1, o.x_studio_guide_2_1].filter(v => v && v !== false);
+                const date     = odooDateBali(o.rental_start_date);
                 const rowLunch = o.x_studio_lunch && o.x_studio_lunch !== false ? String(o.x_studio_lunch) : null;
+                const lines    = o.lines || [];
 
                 return (
                     <div key={o.id} onClick={() => onRow(o)}
-                        className="relative flex gap-0 hover:bg-blue-50/30 transition-colors cursor-pointer group">
+                        className="relative flex gap-0 hover:bg-blue-50/30 transition-colors cursor-pointer group min-w-max">
 
                         {/* type accent bar */}
                         <div className={`w-1 shrink-0 self-stretch ${priv ? 'bg-violet-300' : 'bg-blue-300'}`} />
 
-                        <div className="flex-1 flex items-start gap-4 px-4 py-3.5 min-w-0">
+                        <div className="flex items-start gap-4 px-4 py-3.5">
 
                             {/* Date + ID */}
                             <div className="w-[84px] shrink-0">
@@ -722,27 +971,40 @@ function LeadsTable({ orders, onRow }) {
                                 )}
                             </div>
 
+                            {/* Pax */}
+                            <div className="w-[50px] shrink-0 pt-0.5 tabular-nums">
+                                <div className="text-sm font-semibold text-slate-800 leading-snug">{adults}<span className="text-[10px] text-slate-400 ml-0.5">ad</span></div>
+                                <div className="text-sm font-semibold text-slate-500 leading-snug">{kids}<span className="text-[10px] text-slate-400 ml-0.5">ch</span></div>
+                            </div>
+
+                            {/* Lanyard */}
+                            <div className="w-[48px] shrink-0 flex items-start pt-1">
+                                <LanyardColorPicker
+                                    value={o.x_studio_group_lanyard_color && o.x_studio_group_lanyard_color !== false ? String(o.x_studio_group_lanyard_color) : ''}
+                                    onChange={v => { const boatDate = odooDateBali(o.rental_start_date); orders.filter(other => other.x_studio_boat_name === o.x_studio_boat_name && odooDateBali(other.rental_start_date) === boatDate).forEach(other => updateOrder(other.id, { x_studio_group_lanyard_color: v })); }}
+                                />
+                            </div>
+
                             {/* Boat */}
-                            <div className="w-[140px] shrink-0 min-w-0 pt-0.5">
+                            <div className="w-[160px] shrink-0 pt-0.5">
                                 <div className={`text-sm font-bold truncate ${priv ? 'text-violet-600' : 'text-blue-600'}`}>
                                     {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
                                 </div>
+                                <button onClick={e => { e.stopPropagation(); const newStatus = o.x_studio_boat_status === 'Boat Ready' ? 'Not Ready' : 'Boat Ready'; const boatDate = odooDateBali(o.rental_start_date); orders.filter(other => other.x_studio_boat_name === o.x_studio_boat_name && odooDateBali(other.rental_start_date) === boatDate).forEach(other => updateOrder(other.id, { x_studio_boat_status: newStatus })); }}
+                                    className={`mt-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md transition-colors ${o.x_studio_boat_status === 'Boat Ready' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}>
+                                    {o.x_studio_boat_status === 'Boat Ready' ? '✓ Boat Ready' : '✗ Not Ready'}
+                                </button>
                             </div>
 
-                            {/* Tour type */}
-                            <div className="w-[110px] shrink-0 min-w-0 pt-0.5">
+                            {/* Tour type + Route */}
+                            <div className="w-[130px] shrink-0 pt-0.5">
                                 {(() => { const t = tourTypeName(o); return t
                                     ? <div className="text-sm text-slate-600 font-medium truncate">{t}</div>
                                     : null;
                                 })()}
-                            </div>
-
-                            {/* Route */}
-                            <div className="w-[120px] shrink-0 min-w-0 pt-0.5">
-                                {o.x_studio_route_new && o.x_studio_route_new !== false
-                                    ? <div className="text-sm text-slate-600 font-medium truncate">{String(o.x_studio_route_new)}</div>
-                                    : <span className="text-slate-300 text-sm">—</span>
-                                }
+                                {o.x_studio_route_new && o.x_studio_route_new !== false && (
+                                    <div className="text-[11px] text-slate-400 truncate mt-0.5">{String(o.x_studio_route_new)}</div>
+                                )}
                             </div>
 
                             {/* Guides */}
@@ -767,15 +1029,18 @@ function LeadsTable({ orders, onRow }) {
                                     ? <>
                                         <div className="text-sm text-emerald-700 font-semibold truncate">{String(o.x_studio_car_type)}</div>
                                         {o.x_studio_pickup_address && <div className="text-[10px] text-slate-400 mt-0.5 truncate">{o.x_studio_pickup_address}</div>}
+                                        {fmtFloatTime(o.x_studio_estimated_pickup_time) && <div className="text-[10px] text-slate-500 font-medium mt-0.5">ETA pickup: {fmtFloatTime(o.x_studio_estimated_pickup_time)}</div>}
                                       </>
                                     : <span className="text-slate-300 text-sm">—</span>
                                 }
                             </div>
 
-                            {/* Pax */}
-                            <div className="w-[54px] shrink-0 text-right pt-0.5 tabular-nums">
-                                <div className="text-sm font-semibold text-slate-800 leading-snug">{adults}<span className="text-[10px] text-slate-400 ml-0.5">ad</span></div>
-                                <div className="text-sm font-semibold text-slate-500 leading-snug">{kids}<span className="text-[10px] text-slate-400 ml-0.5">ch</span></div>
+                            {/* Special Requests */}
+                            <div className="w-[180px] shrink-0 pt-0.5">
+                                {o.x_studio_special_requests && o.x_studio_special_requests !== false
+                                    ? <div className="text-sm text-slate-600 leading-snug line-clamp-3 whitespace-pre-line">{String(o.x_studio_special_requests)}</div>
+                                    : <span className="text-slate-300 text-sm">—</span>
+                                }
                             </div>
 
                             {/* Finance */}
@@ -789,17 +1054,214 @@ function LeadsTable({ orders, onRow }) {
                                     <div className="text-[9px] text-slate-400 uppercase tracking-wider mt-1">{o.x_studio_payment_source}</div>
                                 )}
                             </div>
+
+                            {/* Check In + Collect — combined column */}
+                            <div className="w-[260px] shrink-0 pt-0.5">
+                                {/* Check-in status button */}
+                                <button onClick={e => openCheckPay(e, o)}
+                                    className={`text-[11px] font-bold px-2 py-1 rounded-lg transition-colors leading-snug ${
+                                        o.x_studio_customer_checked_in_and_cleared
+                                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                                            : o.x_studio_no_show_1
+                                                ? 'bg-red-600 text-white hover:bg-red-700'
+                                                : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                    }`}>
+                                    {o.x_studio_customer_checked_in_and_cleared ? '✓ Checked In' : o.x_studio_no_show_1 ? '✗ No-Show' : '✗ Not In'}
+                                </button>
+                                {o.x_studio_checked_in_by && o.x_studio_checked_in_by !== false && (
+                                    <div className="text-[10px] text-slate-500 font-medium mt-0.5 px-1">
+                                        by {String(o.x_studio_checked_in_by)}
+                                    </div>
+                                )}
+                                {paxIn !== null && (
+                                    <div className="text-[10px] text-slate-500 font-medium mt-0.5 px-1">
+                                        {paxIn} pax checked in
+                                    </div>
+                                )}
+                                {/* Collected amounts — only show if there's something to collect or already collected */}
+                                {(collect > 0 || o.x_studio_collected_by_cash > 0 || o.x_studio_collected_by_edcbank > 0) && (
+                                    <div className="mt-1.5 space-y-1">
+                                        <button onClick={e => openCheckPay(e, o)} className="flex items-center gap-2 w-full group/btn">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 group-hover/btn:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors shrink-0">Cash</span>
+                                            <span className={`text-[12px] font-semibold tabular-nums ${o.x_studio_collected_by_cash > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>
+                                                {o.x_studio_collected_by_cash > 0 ? fmtMoney(o.x_studio_collected_by_cash) : '—'}
+                                            </span>
+                                        </button>
+                                        <button onClick={e => openCheckPay(e, o)} className="flex items-center gap-2 w-full group/btn">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 group-hover/btn:bg-slate-200 text-slate-500 px-1.5 py-0.5 rounded transition-colors shrink-0">EDC</span>
+                                            <span className={`text-[12px] font-semibold tabular-nums ${o.x_studio_collected_by_edcbank > 0 ? 'text-emerald-700' : 'text-slate-300'}`}>
+                                                {o.x_studio_collected_by_edcbank > 0 ? fmtMoney(o.x_studio_collected_by_edcbank) : '—'}
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Products */}
+                            <div className="w-[220px] shrink-0 pt-0.5">
+                                {lines.length === 0 && (
+                                    <span className="text-slate-300 text-sm">—</span>
+                                )}
+                                {lines.length > 0 && lines.map(l => {
+                                    const qty = Number(l.product_uom_qty ?? 0);
+                                    return (
+                                        <div key={l.id} className="flex items-baseline gap-1.5 leading-snug">
+                                            <span className="text-[12px] text-slate-700 truncate">{l.name}</span>
+                                            <span className="text-[11px] text-slate-400 shrink-0">×{qty}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 );
             })}
             </div>
+
+            {/* ─── Check In + Collect combined popup ─── */}
+            {checkPayDialog && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setCheckPayDialog(null)}>
+                    <div className="bg-white border border-slate-200 rounded-2xl p-6 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+
+                        {/* Header */}
+                        <div className="flex justify-between items-start mb-5">
+                            <div>
+                                <div className="text-sm font-bold text-slate-800 uppercase tracking-widest">Check In</div>
+                                <div className="text-xs text-slate-400 mt-0.5 truncate max-w-[220px]">{checkPayDialog.clientName}</div>
+                            </div>
+                            <button onClick={() => setCheckPayDialog(null)}
+                                className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none">×</button>
+                        </div>
+
+                        {/* Collect section */}
+                        {checkPayDialog.collect > 0 && (
+                            <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                                <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-3">
+                                    To collect: {fmtMoney(checkPayDialog.collect)}
+                                </div>
+                                <div className="flex gap-2 mb-3">
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, payMethod: 'cash', payAmount: String(d.collect), checkedIn: true }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                                            checkPayDialog.payMethod === 'cash'
+                                                ? 'bg-slate-800 border-slate-700 text-white'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                                        }`}>
+                                        Cash
+                                    </button>
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, payMethod: 'edc', payAmount: String(d.collect), checkedIn: true }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold border transition-colors ${
+                                            checkPayDialog.payMethod === 'edc'
+                                                ? 'bg-slate-800 border-slate-700 text-white'
+                                                : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                                        }`}>
+                                        EDC
+                                    </button>
+                                </div>
+                                {checkPayDialog.payMethod && (
+                                    <input
+                                        type="number"
+                                        placeholder="Amount"
+                                        value={checkPayDialog.payAmount}
+                                        onChange={e => setCheckPayDialog(d => ({ ...d, payAmount: e.target.value }))}
+                                        className={INPUT + ' w-full text-base'}
+                                        autoFocus
+                                    />
+                                )}
+                                {/* Already collected */}
+                                {(checkPayDialog.cash > 0 || checkPayDialog.edc > 0) && (
+                                    <div className="mt-3 flex gap-3 text-[11px] text-slate-400">
+                                        {checkPayDialog.cash > 0 && <span>Cash: {fmtMoney(checkPayDialog.cash)}</span>}
+                                        {checkPayDialog.edc > 0  && <span>EDC: {fmtMoney(checkPayDialog.edc)}</span>}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Check-in status */}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Status</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({
+                                            ...d, checkedIn: true, noShow: false,
+                                            paxCheckedIn: d.checkedIn ? d.paxCheckedIn : d.bookedPax,
+                                        }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
+                                            checkPayDialog.checkedIn
+                                                ? 'bg-emerald-100 border-emerald-300 text-emerald-700'
+                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                        }`}>
+                                        ✓ Checked In
+                                    </button>
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: false, paxCheckedIn: 0 }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
+                                            !checkPayDialog.checkedIn && !checkPayDialog.noShow
+                                                ? 'bg-red-50 border-red-200 text-red-500'
+                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                        }`}>
+                                        ✗ Not In
+                                    </button>
+                                    <button
+                                        onClick={() => setCheckPayDialog(d => ({ ...d, checkedIn: false, noShow: true, paxCheckedIn: 0 }))}
+                                        className={`flex-1 py-2 rounded-xl text-sm font-bold transition-colors border ${
+                                            checkPayDialog.noShow
+                                                ? 'bg-red-600 border-red-700 text-white'
+                                                : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                        }`}>
+                                        ✗ No-Show
+                                    </button>
+                                </div>
+                            </div>
+
+                            {checkPayDialog.checkedIn && (
+                                <div>
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">
+                                        Number of Pax Checked-in
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max={checkPayDialog.bookedPax}
+                                        value={checkPayDialog.paxCheckedIn}
+                                        onChange={e => setCheckPayDialog(d => ({ ...d, paxCheckedIn: e.target.value }))}
+                                        className={INPUT + ' w-full'}
+                                    />
+                                    <div className="text-[10px] text-slate-400 mt-1">Booked: {checkPayDialog.bookedPax}</div>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Checked-in by</label>
+                                <div className={INPUT + ' w-full text-slate-500 bg-slate-50 cursor-default'}>
+                                    {checkPayDialog.checkedBy || '—'}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mt-6">
+                            <button onClick={() => setCheckPayDialog(null)}
+                                className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm uppercase tracking-widest transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={saveCheckPay}
+                                disabled={saving || (checkPayDialog.collect > 0 && (!checkPayDialog.payMethod || !parseFloat(checkPayDialog.payAmount)))}
+                                className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm uppercase tracking-widest transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                {saving ? '...' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
 // ─── LeadsView ────────────────────────────────────────────────────────────────
-function LeadsView() {
+function LeadsView({ tabs, activeTab, setActiveTab, onLogout }) {
     const token                     = localStorage.getItem(TOKEN_KEY) || '';
     const [dateFrom,   setDateFrom] = useState(todayBali);
     const [dateTo,     setDateTo]   = useState(todayBali);
@@ -808,12 +1270,20 @@ function LeadsView() {
     const [error,      setError]    = useState('');
     const [detail,      setDetail]    = useState(null);
     const [showTotals,  setShowTotals] = useState(false);
+    const [showBoats,   setShowBoats]  = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
     const [filters,     setFilters]   = useState({ boat: '', transfer: '', type: '' });
-    const load = useCallback(async (from, to) => {
+    const [page,        setPage]      = useState(1);
+    const [search,      setSearch]    = useState('');
+    const singleDay = dateFrom === dateTo;
+    const load = useCallback(async (from, to, pg = 1) => {
         setLoading(true);
         setError('');
         try {
-            const res  = await fetch(`/api/admin/leads?date_from=${from}&date_to=${to}`, {
+            const qs  = singleDay
+                ? `date_from=${from}&date_to=${to}`
+                : `date_from=${from}&date_to=${to}&page=${pg}`;
+            const res  = await fetch(`/api/admin/leads?${qs}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const json = await res.json();
@@ -821,63 +1291,105 @@ function LeadsView() {
             setData(json);
             setDetail(null);
             setFilters({ boat: '', transfer: '', type: '' });
+            setSearch('');
+            setShowBoats(false);
         } catch (e) {
             setError(e.message);
         } finally {
             setLoading(false);
         }
+    }, [token, singleDay]);
+
+    const updateOrder = useCallback(async (odooId, fields) => {
+        const res = await fetch(`/api/admin/odoo/order/${odooId}`, {
+            method: 'PATCH',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify(fields),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+        setData(prev => ({
+            ...prev,
+            orders: prev.orders.map(o => o.id === odooId ? { ...o, ...fields, ...json.odoo } : o),
+        }));
     }, [token]);
 
-    useEffect(() => { load(dateFrom, dateTo); }, [dateFrom, dateTo]);
+    useEffect(() => { load(dateFrom, dateTo, page); }, [dateFrom, dateTo, page]); // eslint-disable-line
 
     const filtered = useMemo(() => {
         if (!data) return [];
+        const q = search.trim().toLowerCase();
         return data.orders.filter(o => {
             if (filters.boat     && (o.x_studio_boat_name || '') !== filters.boat)                                                        return false;
             if (filters.transfer && (o.x_studio_car_type && o.x_studio_car_type !== false ? String(o.x_studio_car_type) : '') !== filters.transfer) return false;
             if (filters.type     && (o.x_studio_tour_type || '') !== filters.type)                                                        return false;
+            if (q) {
+                const hay = [
+                    partnerName(o), o.x_studio_boat_name, String(o.id),
+                    o.name, o.odoo_phone, o.client_order_ref,
+                ].filter(Boolean).join(' ').toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
             return true;
         });
-    }, [data, filters]);
+    }, [data, filters, search]);
 
     const boats     = useMemo(() => data ? [...new Set(data.orders.map(o => o.x_studio_boat_name).filter(Boolean))].sort() : [], [data]);
     const transfers = useMemo(() => data ? [...new Set(data.orders.map(o => o.x_studio_car_type && o.x_studio_car_type !== false ? String(o.x_studio_car_type) : '').filter(Boolean))].sort() : [], [data]);
     const types     = useMemo(() => data ? [...new Set(data.orders.map(o => o.x_studio_tour_type || '').filter(Boolean))].sort() : [], [data]);
-    const hasFilter = filters.boat || filters.transfer || filters.type;
+    const hasFilter = filters.boat || filters.transfer || filters.type || search;
 
     return (
         <div>
-            <div className="sticky top-[52px] z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
+            <div className="sticky top-0 z-20 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 pt-1 pb-3 mb-4 shadow-[0_3px_10px_rgba(0,0,0,0.07)] overflow-x-auto">
                 <DateRangeBar
+                    menu={<MenuButton tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} onLogout={onLogout} />}
                     dateFrom={dateFrom} dateTo={dateTo}
-                    onFrom={setDateFrom} onTo={setDateTo}
-                    extraPresets={[{ label: 'Next month', fn: () => { const r = baliMonthRange(1); setDateFrom(r.start); setDateTo(r.end); } }]}
+                    onFrom={v => { setDateFrom(v); setPage(1); }}
+                    onTo={v => { setDateTo(v); setPage(1); }}
                     trailing={
                         <>
-                            <select className={SELECT} value={filters.boat} onChange={e => setFilters(f => ({...f, boat: e.target.value}))}>
-                                <option value="">All boats</option>
-                                {boats.map(b => <option key={b} value={b}>{b}</option>)}
-                            </select>
-                            <select className={SELECT} value={filters.transfer} onChange={e => setFilters(f => ({...f, transfer: e.target.value}))}>
-                                <option value="">All transfers</option>
-                                {transfers.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                            <select className={SELECT} value={filters.type} onChange={e => setFilters(f => ({...f, type: e.target.value}))}>
-                                <option value="">All types</option>
-                                {types.map(t => <option key={t} value={t}>{t}</option>)}
-                            </select>
-                            {hasFilter && (
-                                <button onClick={() => setFilters({ boat: '', transfer: '', type: '' })}
-                                    className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
-                                    Clear
-                                </button>
-                            )}
-                            {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {data.total}</span>}
-                            <button onClick={() => setShowTotals(v => !v)}
-                                className={`h-9 px-3 flex items-center border rounded-lg text-sm font-bold uppercase tracking-wider transition-all shadow-sm ${showTotals ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'}`}>
-                                Totals
+                            <div className="hidden md:flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Search…"
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    className={INPUT + ' h-9 w-40'}
+                                />
+                                <select className={SELECT} value={filters.boat} onChange={e => setFilters(f => ({...f, boat: e.target.value}))}>
+                                    <option value="">All boats</option>
+                                    {boats.map(b => <option key={b} value={b}>{b}</option>)}
+                                </select>
+                                <select className={SELECT} value={filters.transfer} onChange={e => setFilters(f => ({...f, transfer: e.target.value}))}>
+                                    <option value="">All transfers</option>
+                                    {transfers.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                <select className={SELECT} value={filters.type} onChange={e => setFilters(f => ({...f, type: e.target.value}))}>
+                                    <option value="">All types</option>
+                                    {types.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                                {hasFilter && (
+                                    <button onClick={() => { setFilters({ boat: '', transfer: '', type: '' }); setSearch(''); }}
+                                        className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
+                                        Clear
+                                    </button>
+                                )}
+                                {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {data.total}</span>}
+                            </div>
+                            <button onClick={() => setShowFilters(v => !v)} title="Filters"
+                                className={`md:hidden h-9 w-9 flex items-center justify-center border rounded-lg transition-all shadow-sm relative ${showFilters ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'}`}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                                    <polygon points="4 4 20 4 14 12 14 19 10 21 10 12 4 4" />
+                                </svg>
+                                {hasFilter && <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-blue-500 border-2 border-slate-100" />}
                             </button>
-                            <button onClick={() => load(dateFrom, dateTo)} disabled={loading}
+                            <button onClick={() => setShowTotals(v => { const next = !v; if (!next) setShowBoats(false); return next; })}
+                                className={`h-9 px-3 flex items-center gap-1.5 border rounded-lg text-sm font-bold uppercase tracking-wider transition-all shadow-sm ${showTotals ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800'}`}>
+                                Totals
+                                {!singleDay && <span className={`text-[9px] font-bold tracking-widest ${showTotals ? 'text-slate-400' : 'text-slate-400'}`}>· page</span>}
+                            </button>
+                            <button onClick={() => load(dateFrom, dateTo, page)} disabled={loading}
                                 className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all disabled:opacity-40 text-base">
                                 ↺
                             </button>
@@ -885,6 +1397,38 @@ function LeadsView() {
                     }
                     loading={loading}
                 />
+                {showFilters && (
+                    <div className="md:hidden mt-2 flex flex-col gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search…"
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            className={INPUT + ' h-9 w-full'}
+                        />
+                        <select className={SELECT + ' w-full'} value={filters.boat} onChange={e => setFilters(f => ({...f, boat: e.target.value}))}>
+                            <option value="">All boats</option>
+                            {boats.map(b => <option key={b} value={b}>{b}</option>)}
+                        </select>
+                        <select className={SELECT + ' w-full'} value={filters.transfer} onChange={e => setFilters(f => ({...f, transfer: e.target.value}))}>
+                            <option value="">All transfers</option>
+                            {transfers.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <select className={SELECT + ' w-full'} value={filters.type} onChange={e => setFilters(f => ({...f, type: e.target.value}))}>
+                            <option value="">All types</option>
+                            {types.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <div className="flex items-center justify-between">
+                            {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {data.total}</span>}
+                            {hasFilter && (
+                                <button onClick={() => { setFilters({ boat: '', transfer: '', type: '' }); setSearch(''); }}
+                                    className="text-[10px] text-red-500 hover:text-red-400 font-bold uppercase tracking-widest px-2 transition-colors">
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {error && (
@@ -894,13 +1438,51 @@ function LeadsView() {
                 <div className="flex justify-center mt-16 text-blue-500 font-bold animate-pulse tracking-[0.2em] text-sm">LOADING FROM ODOO...</div>
             )}
             {!loading && data && (
-                <div className={GLASS + ' overflow-hidden'}>
+                <div className={GLASS + (showTotals ? '' : ' overflow-hidden')}>
                     {showTotals
-                        ? <TotalsView orders={filtered} />
+                        ? <div className="flex flex-col md:flex-row md:h-[calc(100vh-70px)]">
+                            <div className="flex-1 min-w-0 overflow-y-auto md:h-full">
+                                <TotalsView orders={filtered} />
+                            </div>
+                            {singleDay && (
+                                <div className="hidden md:block w-72 shrink-0 border-l border-slate-100 p-6 overflow-y-auto h-full">
+                                    <BoatAvailabilityPanel date={dateFrom} />
+                                </div>
+                            )}
+                          </div>
                         : filtered.length === 0
                             ? <div className="py-16 text-center text-sm text-slate-400">No orders for {fmtDisplayDate(dateFrom)}{dateFrom !== dateTo ? ` — ${fmtDisplayDate(dateTo)}` : ''}</div>
-                            : <LeadsTable orders={filtered} onRow={setDetail} />
+                            : <LeadsTable orders={filtered} onRow={setDetail} updateOrder={updateOrder} />
                     }
+                </div>
+            )}
+
+            {showTotals && singleDay && (
+                <button onClick={() => setShowBoats(true)}
+                    className="md:hidden fixed bottom-0 inset-x-0 z-40 h-14 pb-[env(safe-area-inset-bottom)] flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white shadow-[0_-4px_12px_rgba(0,0,0,0.15)] font-bold text-sm uppercase tracking-wider">
+                    ⛵ Boats
+                </button>
+            )}
+
+            {showBoats && (
+                <div className="md:hidden fixed inset-0 z-50 flex items-end bg-black/40 backdrop-blur-sm" onClick={() => setShowBoats(false)}>
+                    <div className="bg-white w-full rounded-t-3xl max-h-[80vh] overflow-y-auto p-6 shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-4" />
+                        <BoatAvailabilityPanel date={dateFrom} onClose={() => setShowBoats(false)} />
+                    </div>
+                </div>
+            )}
+            {!singleDay && data && data.last_page > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                        Page {data.current_page} of {data.last_page} · {data.total} orders
+                    </span>
+                    <div className="flex gap-2">
+                        <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}
+                            className={BTN + ' disabled:opacity-40'}>← Prev</button>
+                        <button disabled={page >= data.last_page} onClick={() => setPage(p => p + 1)}
+                            className={BTN + ' disabled:opacity-40'}>Next →</button>
+                    </div>
                 </div>
             )}
             {detail && <OrderDetailModal order={detail} onClose={() => setDetail(null)} />}
@@ -910,6 +1492,7 @@ function LeadsView() {
 
 // ─── TotalsView ───────────────────────────────────────────────────────────────
 function TotalsView({ orders }) {
+    const [tab, setTab] = useState('type');
     const byType = {}, byBoat = {};
     let totalPax = 0, totalRevenue = 0, totalDeposit = 0, totalCollect = 0;
 
@@ -947,9 +1530,9 @@ function TotalsView({ orders }) {
     const maxBoatOrders = boatEntries[0]?.[1]?.orders || 1;
 
     return (
-        <div className="p-6 space-y-6">
-            {/* Summary row */}
-            <div className="flex flex-wrap items-end gap-6">
+        <div className="p-4 pb-24 md:p-6 md:pb-6 space-y-4 md:space-y-6">
+            {/* Summary row — desktop */}
+            <div className="hidden md:flex flex-wrap items-end gap-6">
                 <div>
                     <div className="text-3xl font-bold text-slate-800">{orders.length}</div>
                     <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Orders</div>
@@ -976,8 +1559,48 @@ function TotalsView({ orders }) {
                 </div>
             </div>
 
+            {/* Summary row — mobile (compact) */}
+            <div className="md:hidden flex items-stretch divide-x divide-slate-100">
+                <div className="pr-3">
+                    <div className="text-xl font-bold text-slate-800 leading-none">{orders.length}</div>
+                    <div className="text-[9px] text-slate-400 uppercase tracking-widest mt-1">Orders</div>
+                </div>
+                <div className="px-3">
+                    <div className="text-xl font-bold text-slate-800 leading-none">{totalPax}</div>
+                    <div className="text-[9px] text-slate-400 uppercase tracking-widest mt-1">People</div>
+                </div>
+                <div className="pl-3 flex-1 min-w-0 space-y-0.5">
+                    <div className="flex justify-between gap-2 text-[11px]">
+                        <span className="text-slate-400 uppercase tracking-wide">Revenue</span>
+                        <span className="font-bold text-slate-800 tabular-nums">{fmtMoney(totalRevenue)}</span>
+                    </div>
+                    <div className="flex justify-between gap-2 text-[11px]">
+                        <span className="text-slate-400 uppercase tracking-wide">Deposit</span>
+                        <span className="font-semibold text-emerald-700 tabular-nums">{fmtMoney(totalDeposit)}</span>
+                    </div>
+                    {totalCollect > 0 && (
+                        <div className="flex justify-between gap-2 text-[11px]">
+                            <span className="text-slate-400 uppercase tracking-wide">Collect</span>
+                            <span className="font-semibold text-amber-500 tabular-nums">{fmtMoney(totalCollect)}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Mobile tab switcher */}
+            <div className="flex gap-2 md:hidden">
+                <button onClick={() => setTab('type')}
+                    className={`flex-1 h-9 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border ${tab === 'type' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+                    By Type
+                </button>
+                <button onClick={() => setTab('boat')}
+                    className={`flex-1 h-9 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border ${tab === 'boat' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-500'}`}>
+                    By Boat
+                </button>
+            </div>
+
             {/* By Tour Type */}
-            <div>
+            <div className={`${tab === 'type' ? 'block' : 'hidden'} md:block`}>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pb-1 border-b border-slate-100">By Tour Type</div>
                 <div className="space-y-3">
                     {typeEntries.map(([type, { pax, orders: cnt, revenue, boats }]) => {
@@ -986,21 +1609,21 @@ function TotalsView({ orders }) {
                         return (
                             <div key={type}>
                                 {/* Type header row */}
-                                <div className="flex items-center gap-3">
-                                    <span className={`text-sm font-semibold w-44 shrink-0 truncate ${priv ? 'text-violet-600' : 'text-blue-600'}`}>{type}</span>
+                                <div className="flex items-center gap-2 md:gap-3">
+                                    <span className={`text-sm font-semibold w-24 md:w-44 shrink-0 truncate ${priv ? 'text-violet-600' : 'text-blue-600'}`}>{type}</span>
                                     <Bar val={cnt} max={maxTypeOrders} cls={priv ? 'bg-violet-400' : 'bg-blue-400'} />
-                                    <span className="text-xl font-bold text-slate-800 w-10 text-right shrink-0 tabular-nums">{cnt}</span>
-                                    <span className="text-sm text-slate-400 w-14 text-right shrink-0 tabular-nums">{pax || 0} pax</span>
-                                    <span className="text-sm text-slate-400 w-32 text-right shrink-0 tabular-nums">{fmtMoney(revenue)}</span>
+                                    <span className="text-sm text-slate-400 w-8 md:w-10 text-right shrink-0 tabular-nums">{cnt}</span>
+                                    <span className="text-base md:text-xl font-bold text-slate-800 w-12 md:w-14 text-right shrink-0 tabular-nums">{pax || 0} <span className="text-sm font-semibold text-slate-500">pax</span></span>
+                                    <span className="hidden sm:inline text-sm text-slate-400 w-20 md:w-32 text-right shrink-0 tabular-nums">{fmtMoney(revenue)}</span>
                                 </div>
                                 {/* Boats under type */}
                                 {boatList.length > 0 && (
                                     <div className="mt-1.5 ml-1 space-y-0.5">
                                         {boatList.map(([b, bs]) => (
                                             <div key={b} className="flex items-center gap-2 pl-3 border-l-2" style={{borderColor: priv ? '#ddd6fe' : '#bfdbfe'}}>
-                                                <span className="text-[12px] font-medium text-slate-600 w-40 truncate shrink-0">{b}</span>
-                                                <span className={`text-[11px] font-bold tabular-nums ${priv ? 'text-violet-500' : 'text-blue-500'}`}>{bs.orders} leads</span>
-                                                <span className="text-[11px] text-slate-400 tabular-nums">{bs.pax} pax</span>
+                                                <span className="text-[12px] font-medium text-slate-600 w-28 md:w-40 truncate shrink-0">{b}</span>
+                                                <span className="text-[10px] text-slate-400 tabular-nums">{bs.orders} leads</span>
+                                                <span className={`text-sm font-bold tabular-nums ${priv ? 'text-violet-600' : 'text-blue-600'}`}>{bs.pax} <span className="text-[10px] font-semibold opacity-70">pax</span></span>
                                             </div>
                                         ))}
                                     </div>
@@ -1012,16 +1635,16 @@ function TotalsView({ orders }) {
             </div>
 
             {/* By Boat */}
-            <div>
+            <div className={`${tab === 'boat' ? 'block' : 'hidden'} md:block`}>
                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pb-1 border-b border-slate-100">By Boat</div>
                 <div className="space-y-2">
                     {boatEntries.map(([boat, { pax, orders: cnt, revenue }]) => (
-                        <div key={boat} className="flex items-center gap-3">
-                            <span className="text-sm text-slate-700 font-medium w-44 truncate shrink-0">{boat}</span>
+                        <div key={boat} className="flex items-center gap-2 md:gap-3">
+                            <span className="text-sm text-slate-700 font-medium w-24 md:w-44 truncate shrink-0">{boat}</span>
                             <Bar val={cnt} max={maxBoatOrders} cls="bg-emerald-400" />
-                            <span className="text-xl font-bold text-slate-800 w-10 text-right shrink-0 tabular-nums">{cnt}</span>
-                            <span className="text-sm text-slate-400 w-14 text-right shrink-0 tabular-nums">{pax || 0} pax</span>
-                            <span className="text-sm text-slate-400 w-32 text-right shrink-0 tabular-nums">{fmtMoney(revenue)}</span>
+                            <span className="text-base md:text-xl font-bold text-slate-800 w-8 md:w-10 text-right shrink-0 tabular-nums">{cnt}</span>
+                            <span className="text-sm text-slate-400 w-12 md:w-14 text-right shrink-0 tabular-nums">{pax || 0} pax</span>
+                            <span className="hidden sm:inline text-sm text-slate-400 w-20 md:w-32 text-right shrink-0 tabular-nums">{fmtMoney(revenue)}</span>
                         </div>
                     ))}
                 </div>
@@ -1030,25 +1653,191 @@ function TotalsView({ orders }) {
     );
 }
 
+// ─── BoatAvailabilityPanel ────────────────────────────────────────────────────
+function BoatAvailabilityPanel({ date, onClose }) {
+    const [data,     setData]     = useState(null);
+    const [loading,  setLoading]  = useState(false);
+    const [editItem, setEditItem] = useState(null);
+
+    const calHeaders = () => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem(TOKEN_KEY) || ''}`,
+    });
+
+    const fetchData = useCallback(async () => {
+        if (!date) return;
+        setLoading(true);
+        try {
+            const res  = await fetch(`https://bluuu.tours/api/new/calendar/data?start=${date}&end=${date}`, { headers: calHeaders() });
+            const json = await res.json();
+            setData(json);
+        } catch (e) { console.error(e); }
+        setLoading(false);
+    }, [date]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const saveItem = async item => {
+        try {
+            const url = item.id
+                ? `https://bluuu.tours/api/new/calendar/update/${item.id}`
+                : `https://bluuu.tours/api/new/calendar/create`;
+            await fetch(url, { method: 'POST', headers: calHeaders(), body: JSON.stringify(item) });
+            await fetchData();
+            setEditItem(null);
+        } catch (e) { alert('Failed'); }
+    };
+
+    const deleteItem = async id => {
+        if (!confirm('Delete this record?')) return;
+        try {
+            await fetch(`https://bluuu.tours/api/new/calendar/delete/${id}`, { method: 'POST', headers: calHeaders(), body: JSON.stringify({}) });
+            await fetchData();
+            setEditItem(null);
+        } catch (e) { alert('Failed'); }
+    };
+
+    if (!data) return (
+        <div className="flex justify-center items-center h-24 text-blue-500 text-xs font-bold animate-pulse uppercase tracking-widest">Loading…</div>
+    );
+
+    return (
+        <div>
+            <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Boat Availability</div>
+                <div className="flex items-center gap-3">
+                    <button onClick={fetchData} disabled={loading} title="Refresh"
+                        className="text-slate-400 hover:text-slate-600 transition-colors text-base leading-none disabled:opacity-40">↺</button>
+                    {onClose && (
+                        <button onClick={onClose} className="text-slate-400 hover:text-slate-700 text-xl leading-none p-1 -m-1">×</button>
+                    )}
+                </div>
+            </div>
+            <div className="space-y-1.5">
+                {data.boats.map(boat => {
+                    const records = boat.closed_dates.filter(c => c.date === date);
+                    const primary = records[0];
+                    const isOpen  = records.length === 0;
+                    const pax     = primary?.type === 1 ? records.reduce((s, r) => s + (Number(r.qtty) || 0), 0) : null;
+                    const full    = pax !== null && boat.capacity && pax >= boat.capacity;
+
+                    let sc, lbl;
+                    if      (isOpen)          { sc = 'bg-emerald-100 text-emerald-700'; lbl = 'Open'; }
+                    else if (full)            { sc = 'bg-orange-100  text-orange-600';  lbl = `Full ${pax}/${boat.capacity}`; }
+                    else if (primary?.type === 1) { sc = 'bg-blue-100 text-blue-700';   lbl = `Shared ${pax}/${boat.capacity}`; }
+                    else if (primary?.type === 3) { sc = 'bg-red-100   text-red-600';   lbl = 'Manual Block'; }
+                    else if (primary?.type === 4) { sc = 'bg-slate-200 text-slate-500'; lbl = 'Auto'; }
+                    else                      { sc = 'bg-violet-100 text-violet-600';    lbl = 'CRM'; }
+
+                    return (
+                        <div key={boat.id}
+                            onClick={() => setEditItem({ ...(records[0] || {}), boatName: boat.name, boat_id: boat.id, date, allRecords: records, capacity: boat.capacity })}
+                            className="flex items-center justify-between px-3 py-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition-colors">
+                            <div className="min-w-0 mr-2">
+                                <div className="text-sm font-semibold text-slate-700 leading-tight truncate">{boat.name}</div>
+                                <div className="text-[10px] text-slate-400">cap {boat.capacity}</div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase tracking-wide whitespace-nowrap ${sc}`}>{lbl}</span>
+                                {isOpen && (
+                                    <button onClick={e => { e.stopPropagation(); saveItem({ boat_id: boat.id, date, type: 3 }); }}
+                                        className="text-[10px] font-bold text-slate-300 hover:text-red-500 transition-colors leading-none">
+                                        Block
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {editItem && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm" onClick={() => setEditItem(null)}>
+                    <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-slate-800">{editItem.boatName}</h2>
+                                <p className="text-blue-600 text-sm font-semibold uppercase tracking-widest mt-1">{fmtDisplayDate(date)}</p>
+                            </div>
+                            <button onClick={() => setEditItem(null)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-700 transition-colors text-xl leading-none">×</button>
+                        </div>
+                        <div className="space-y-3 max-h-[40vh] overflow-y-auto pr-1">
+                            {editItem.allRecords.map((r, i) => (
+                                <div key={i} className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Record #{i+1}</span>
+                                        <button onClick={() => deleteItem(r.id)} className="text-red-500 hover:text-red-400 p-1 text-sm font-bold">✕</button>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Type</label>
+                                            <select className={SELECT + ' w-full'} value={r.type} onChange={e => saveItem({...r, type: e.target.value})}>
+                                                <option value="1">Shared</option>
+                                                <option value="2">CRM</option>
+                                                <option value="3">Manual</option>
+                                                <option value="4">Auto</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Qty</label>
+                                            <input type="number" className={INPUT + ' w-full'} value={r.qtty || 0} onChange={e => saveItem({...r, qtty: e.target.value})} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {!editItem.allRecords.length && (
+                                <div className="text-center py-6 text-slate-400 text-sm italic">No closeddate records for this date.</div>
+                            )}
+                        </div>
+                        <div className="mt-6 grid grid-cols-2 gap-3">
+                            <button onClick={() => saveItem({ boat_id: editItem.boat_id, date, type: 3 })}
+                                className="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-sm uppercase tracking-widest border border-slate-200 transition-colors">
+                                + Block
+                            </button>
+                            <button onClick={() => setEditItem(null)}
+                                className="py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl text-sm uppercase tracking-widest transition-colors">
+                                Done
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── LoginScreen ──────────────────────────────────────────────────────────────
 function LoginScreen({ onLogin }) {
+    const [managers, setManagers] = useState([]);
+    const [name,     setName]     = useState('');
     const [password, setPassword] = useState('');
     const [loading,  setLoading]  = useState(false);
     const [error,    setError]    = useState('');
+
+    useEffect(() => {
+        fetch('/api/admin/managers')
+            .then(r => r.json())
+            .then(json => setManagers(Array.isArray(json.managers) ? json.managers : []))
+            .catch(() => setManagers(CHECKIN_BY));
+    }, []);
 
     const submit = async e => {
         e.preventDefault();
         setLoading(true);
         setError('');
         try {
+            const body = { password, page: 'manage' };
+            if (name) body.username = name;
             const res  = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password, page: 'manage' }),
+                body: JSON.stringify(body),
             });
             const json = await res.json();
             if (!res.ok) throw new Error(json.error || 'Wrong password');
             localStorage.setItem(TOKEN_KEY, json.token);
+            const managerName = json.manager_name || name || '';
+            if (managerName) localStorage.setItem(MANAGER_KEY, managerName);
             onLogin(json.token);
         } catch (e) {
             setError(e.message);
@@ -1062,13 +1851,20 @@ function LoginScreen({ onLogin }) {
             <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 w-full max-w-xs">
                 <h1 className="text-base font-bold text-slate-800 mb-6 uppercase tracking-[0.2em] text-center">Bluuu Admin</h1>
                 <form onSubmit={submit} className="space-y-3">
+                    <select
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        className={SELECT + ' w-full'}
+                    >
+                        <option value="">Select your name…</option>
+                        {managers.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
                     <input
                         type="password"
                         placeholder="Password"
                         value={password}
                         onChange={e => setPassword(e.target.value)}
                         className={INPUT + ' w-full'}
-                        autoFocus
                     />
                     {error && <div className="text-xs text-red-500 font-semibold">{error}</div>}
                     <button type="submit" disabled={loading}
@@ -1083,42 +1879,31 @@ function LoginScreen({ onLogin }) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 function App() {
-    const [token,     setToken]     = useState(() => localStorage.getItem(TOKEN_KEY) || '');
+    const [token,     setToken]     = useState(() => {
+        const t = localStorage.getItem(TOKEN_KEY) || '';
+        if (t && !localStorage.getItem(MANAGER_KEY)) {
+            localStorage.removeItem(TOKEN_KEY);
+            return '';
+        }
+        return t;
+    });
     const [activeTab, setActiveTab] = useState('leads');
 
     if (!token) return <LoginScreen onLogin={setToken} />;
 
-    const logout = () => { localStorage.removeItem(TOKEN_KEY); setToken(''); };
+    const logout = () => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(MANAGER_KEY); setToken(''); };
 
     const tabs = [
         { id: 'calendar', label: 'Calendar' },
         { id: 'leads',    label: 'Leads'    },
     ];
 
+    const viewProps = { tabs, activeTab, setActiveTab, onLogout: logout };
+
     return (
         <div>
-            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex gap-1 items-center border-b border-slate-200/80">
-                {tabs.map(tab => (
-                    <button key={tab.id}
-                        onClick={() => !tab.disabled && setActiveTab(tab.id)}
-                        className={`px-4 py-1.5 rounded-lg text-sm font-bold uppercase tracking-wider transition-all border ${
-                            activeTab === tab.id
-                                ? 'bg-slate-800 border-slate-700 text-white'
-                                : tab.disabled
-                                    ? 'bg-white border-slate-200 text-slate-300 cursor-not-allowed'
-                                    : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 shadow-sm'
-                        }`}>
-                        {tab.label}
-                    </button>
-                ))}
-                <div className="flex-1" />
-                <button onClick={logout}
-                    className="text-[10px] text-slate-400 hover:text-red-500 font-bold uppercase tracking-widest transition-colors px-2">
-                    Logout
-                </button>
-            </div>
-            {activeTab === 'calendar' && <CalendarView />}
-            {activeTab === 'leads'    && <LeadsView />}
+            {activeTab === 'calendar' && <CalendarView {...viewProps} />}
+            {activeTab === 'leads'    && <LeadsView {...viewProps} />}
         </div>
     );
 }

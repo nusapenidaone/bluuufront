@@ -1,13 +1,13 @@
 fields:
     name:
-        label: name
-        span: left
-        type: text
-    icon:
-        label: Icon
-        mode: image
-        thumbOptions:
-            mode: crop
-            extension: auto
+        label: Name
         span: auto
-        type: mediafinder
+        type: text
+    icon_svg:
+        label: 'Icon SVG'
+        span: auto
+        type: codeeditor
+        size: small
+        cssClass: icon-svg-field
+        commentHtml: true
+        comment: 'Paste SVG from <a href="https://lucide.dev/icons/" target="_blank" rel="noopener">lucide.dev/icons</a> → click icon → Copy SVG. Replaces Icon Name when filled.'

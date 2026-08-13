@@ -4,6 +4,8 @@ import { Suspense, lazy, useEffect, useLayoutEffect } from "react";
 const Home = lazy(() => import("./home.jsx"));
 const Private = lazy(() => import("./private.jsx"));
 const Shared = lazy(() => import("./shared.jsx"));
+const PrivateNew = lazy(() => import("./privatenew.jsx"));
+const SharedNew = lazy(() => import("./sharednew.jsx"));
 const Payment = lazy(() => import("./Payment.jsx"));
 const PolicyPage = lazy(() => import("./PolicyPage.jsx"));
 const ReviewsPage = lazy(() => import("./ReviewsPage.jsx"));
@@ -14,6 +16,7 @@ const BlogPage = lazy(() => import("./BlogPage.jsx"));
 const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
 const AccountPage = lazy(() => import("./AccountPage.jsx"));
+const Cabinet = lazy(() => import("./cabinet.jsx"));
 const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImagePreloader.jsx"));
 
 function NotFound() {
@@ -110,6 +113,15 @@ function WhatsAppButton() {
         .wa-sticky-btn { padding: 12px; }
         .wa-sticky-label { display: none; }
       }
+      @media (max-width: 639px) {
+        body.wa-hidden .wa-sticky-btn,
+        body[style*="overflow: hidden"] .wa-sticky-btn,
+        body[style*="overflow:hidden"] .wa-sticky-btn {
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.15s ease;
+        }
+      }
     `}</style>
     </>
   );
@@ -204,6 +216,14 @@ export default function App() {
       return <Shared />;
     }
 
+    if (path === "/privatenew") {
+      return <PrivateNew />;
+    }
+
+    if (path === "/sharednew") {
+      return <SharedNew />;
+    }
+
     if (path === "/payment") {
       return <Payment />;
     }
@@ -214,6 +234,11 @@ export default function App() {
 
     if (path === "/account") {
       return <AccountPage />;
+    }
+
+    const cabinetMatch = path.match(/^\/cabinet\/(\d+)\/(.+)$/);
+    if (cabinetMatch) {
+      return <Cabinet odooId={cabinetMatch[1]} uniqueKey={cabinetMatch[2]} />;
     }
 
     if (path === "/reviews") {

@@ -45,13 +45,13 @@ https://bluuu.tours/new/private?date=2026-07-01&adults=2&kids=1&tour=1&route=5
 
 - If `date` is provided — the page opens in **exact date** mode (not flexible), with the calendar positioned on the correct month.
 - If `date` is omitted — default state ("pick later").
-- `tour` corresponds to `id` from `/api/chatbot/boats/private` or `/api/chatbot/boats/shared`.
-- `route` corresponds to `id` from the `routes` array in `/api/chatbot/boats/private`.
+- `tour` corresponds to `id` from `/api/v2/chatbot/boats/private` or `/api/v2/chatbot/boats/shared`.
+- `route` corresponds to `id` from the `routes` array in `/api/v2/chatbot/boats/private`.
 - Private only: if `tour` is passed without `route` — the boat is pre-selected but no route is chosen.
 
 ## Chatbot integration
 
-The `POST /api/chatbot/quote` endpoint automatically returns a `booking_url` field with all available parameters pre-filled:
+The `POST /api/v2/chatbot/quote` endpoint automatically returns a `booking_url` field with all available parameters pre-filled:
 
 ```json
 {

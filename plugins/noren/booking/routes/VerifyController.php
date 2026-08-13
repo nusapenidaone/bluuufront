@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Response;
 
 use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\OrderPaymentService;
-use Noren\Booking\Classes\KommoService;
 use Noren\Booking\Odoo\OdooService;
 
 class VerifyController extends Controller
@@ -122,17 +121,6 @@ class VerifyController extends Controller
     }
     
     private function SendPayNote($lead_id, $amount, $description){
-
-    	$data=[
-		    [
-		        "note_type"=> "common",
-		        "entity_id"=> (int)$lead_id,
-		        "params"=>[
-		            "text"=>"Payment received amount: {$amount} description: {$description}"
-		        ]
-		    ]
-		];
-			    
-		KommoService::sendNote($data);
+        // Kommo removed
     }
 }
