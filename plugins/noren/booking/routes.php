@@ -17,6 +17,7 @@ require __DIR__ . '/chatbot/routes.php';
 require __DIR__ . '/viator/routes.php';
 require __DIR__ . '/ota/routes.php';
 require __DIR__ . '/odoo/routes.php';
+require __DIR__ . '/doku/routes.php';
 require __DIR__ . '/admin/routes.php';
 
 require __DIR__ . '/calendar/routes.php';

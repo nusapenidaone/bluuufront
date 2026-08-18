@@ -679,7 +679,7 @@ class OdooService
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => ['|', ['id', '=', $odooOrderId], ['name', '=', 'S' . $odooOrderId]],
-            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit'],
+            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit', 'x_studio_unique_key'],
             'limit'  => 1,
         ]);
 
@@ -691,8 +691,9 @@ class OdooService
         $row = $result[0];
 
         return [
-            'state'   => $row['state'] ?? '',
-            'collect' => (float) ($row['x_studio_collect'] ?? 0),
+            'state'      => $row['state'] ?? '',
+            'collect'    => (float) ($row['x_studio_collect'] ?? 0),
+            'unique_key' => $row['x_studio_unique_key'] ?? '',
         ];
     }
 
