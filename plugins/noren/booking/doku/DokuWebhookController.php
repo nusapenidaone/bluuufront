@@ -11,9 +11,6 @@ class DokuWebhookController extends Controller
 {
     const NOTIFICATION_PATH = '/api/doku/webhook';
 
-    // DRY-RUN: пока только логируем входящие уведомления DOKU, ничего не пишем
-    // в БД/Odoo — включаем обработку (см. закомментированный блок ниже) после
-    // того как убедимся по логам, что формат payload/подпись совпадают с ожидаемым.
     public function handle(Request $request)
     {
         $rawBody = $request->getContent();
@@ -45,7 +42,6 @@ class DokuWebhookController extends Controller
             'is_paid'     => $isPaid,
         ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
-        /*
         if (!$signatureValid) {
             Log::warning('[Doku] Invalid webhook signature');
             return Response::make('Forbidden', 403);
@@ -61,10 +57,9 @@ class DokuWebhookController extends Controller
         } elseif (str_starts_with($externalId, 'odoo_')) {
             if ($isPaid) {
                 $odooOrderId = (int) str_replace('odoo_', '', $externalId);
-                OdooService::registerPayment($odooOrderId, $amount);
+                OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_doku');
             }
         }
-        */
 
         return response('ok', 200);
     }

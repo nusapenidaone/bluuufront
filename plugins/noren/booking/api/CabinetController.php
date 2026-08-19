@@ -348,6 +348,7 @@ class CabinetController extends Controller
                 'covers'        => $covers,
                 'routes'        => $routes,
                 'price_list'    => $this->buildPricelist($tour ?? null, $travelDate),
+                'pricing'       => $this->buildPricing($tour ?? null),
                 'upgrade_tour'  => $this->buildUpgradeTour(
                     isset($tour) ? $tour : null,
                     $isPrivate,
@@ -876,6 +877,28 @@ class CabinetController extends Controller
             'members_count' => (int) ($e['members_count'] ?? 0),
             'price'         => (int) ($e['price'] ?? 0),
         ], $pricelist));
+    }
+
+    // ─── Helper: raw default + seasonal pricelists so the frontend can resolve
+    // the correct package for ANY date (e.g. when previewing a date change),
+    // not just the order's current travel_date. Mirrors PricesByDates lookup
+    // used in update() and buildPricelist().
+    private function buildPricing(?object $tour): ?array
+    {
+        if (!$tour) return null;
+        $mapEntries = fn($list) => array_values(array_map(fn($e) => [
+            'members_count' => (int) ($e['members_count'] ?? 0),
+            'price'         => (int) ($e['price'] ?? 0),
+        ], $list ?? []));
+
+        return [
+            'default'  => $mapEntries($tour->packages?->pricelist ?? []),
+            'seasonal' => $tour->pricesbydates->map(fn($p) => [
+                'date_start' => $p->date_start,
+                'date_end'   => $p->date_end,
+                'pricelist'  => $mapEntries($p->packages?->pricelist ?? []),
+            ])->values(),
+        ];
     }
 
     // ─── Helper: build upgrade_tour option for shared tiers ──────────────────────

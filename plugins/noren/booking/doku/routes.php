@@ -8,7 +8,9 @@ use Noren\Booking\Doku\DokuTestController;
 Route::post('api/doku/webhook', [DokuWebhookController::class, 'handle']);
 
 // Doku weblink — like odoo/weblink/{id}, but also requires x_studio_unique_key
-Route::get('doku-weblink/{id}/{key}', [DokuPayController::class, 'pay']);
+// Constrain {id} to digits so garbage requests 404 instead of hitting the
+// int-typed controller argument and throwing a TypeError with a full stack trace.
+Route::get('doku-weblink/{id}/{key}', [DokuPayController::class, 'pay'])->where('id', '[0-9]+');
 
 // TEMP: ручной тест создания checkout-сессии — удалить после проверки
 Route::get('api/doku/test', [DokuTestController::class, 'test']);

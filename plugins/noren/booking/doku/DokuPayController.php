@@ -31,9 +31,13 @@ class DokuPayController extends Controller
             return view('noren.booking::odoo_pay_error', ['message' => 'Nothing to pay']);
         }
 
+        // DOKU rejects a re-used invoice_number ("INVOICE ALREADY USED") — append a
+        // per-click nonce so retries/repeat visits to the same weblink work. The
+        // 'odoo_{id}' prefix (needed by the webhook to route the payment) still
+        // parses correctly since (int) casting stops at the first non-digit char.
         $returnUrl  = url("doku-weblink/{$id}/{$key}/callback");
         $invoiceUrl = DokuService::createLink(
-            'odoo_' . $id,
+            'odoo_' . $id . '_' . time(),
             $amount,
             $returnUrl,
             $returnUrl,

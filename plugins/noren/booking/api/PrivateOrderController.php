@@ -14,6 +14,7 @@ use Noren\Booking\Models\Route;
 
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PayPalService;
+use Noren\Booking\Doku\DokuService;
 
 class PrivateOrderController extends Controller
 {
@@ -209,6 +210,16 @@ class PrivateOrderController extends Controller
             if ($order->method_id == 1) {
                 $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
                 $url = XenditService::createPaymentLink(
+                    $order->external_id,
+                    $chargeAmount,
+                    $order->email,
+                    $successUrl,
+                    url('/error'),
+                    $order->tours->name ?? 'Private Tour'
+                );
+            } elseif ($order->method_id == 3) {
+                $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+                $url = DokuService::createPaymentLink(
                     $order->external_id,
                     $chargeAmount,
                     $order->email,

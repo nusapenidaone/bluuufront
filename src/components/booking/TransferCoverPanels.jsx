@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Car, MapPin, Shield, ShieldCheck, Check, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { formatIDR } from "./utils";
+import AddressAutocomplete from "../common/AddressAutocomplete";
 
 // --------------- Helpers ---------------
 
@@ -94,6 +95,10 @@ export function TransfersCompact({
   setPickupAddress,
   dropoffAddress,
   setDropoffAddress,
+  pickupAddressConfirmed,
+  setPickupAddressConfirmed,
+  dropoffAddressConfirmed,
+  setDropoffAddressConfirmed,
   totalGuests,
   defaultExpanded = false,
   showHeader = true,
@@ -259,10 +264,11 @@ export function TransfersCompact({
                     <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1">
                         <label className="block text-xs font-black uppercase tracking-wider text-secondary-500">Pickup Address</label>
-                        <input
-                          type="text"
-                          value={pickupAddress}
-                          onChange={(e) => setPickupAddress(e.target.value)}
+                        <AddressAutocomplete
+                          value={pickupAddress || ""}
+                          onChange={(val) => setPickupAddress(val)}
+                          confirmed={pickupAddressConfirmed}
+                          onConfirmedChange={setPickupAddressConfirmed}
                           placeholder="Hotel name or address"
                           className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-secondary-900 placeholder:text-secondary-600 focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-accent"
                         />
@@ -270,10 +276,11 @@ export function TransfersCompact({
                       {needsDropoff && (
                         <div className="space-y-1">
                           <label className="block text-xs font-black uppercase tracking-wider text-secondary-500">Dropoff Address</label>
-                          <input
-                            type="text"
-                            value={dropoffAddress}
-                            onChange={(e) => setDropoffAddress(e.target.value)}
+                          <AddressAutocomplete
+                            value={dropoffAddress || ""}
+                            onChange={(val) => setDropoffAddress(val)}
+                            confirmed={dropoffAddressConfirmed}
+                            onConfirmedChange={setDropoffAddressConfirmed}
                             placeholder="Hotel name or address"
                             className="w-full rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm text-secondary-900 placeholder:text-secondary-600 focus:border-primary-600 focus:outline-none focus:ring-1 focus:ring-accent"
                           />
@@ -283,7 +290,10 @@ export function TransfersCompact({
                     {needsDropoff && (
                       <button
                         type="button"
-                        onClick={() => setDropoffAddress(pickupAddress)}
+                        onClick={() => {
+                          setDropoffAddress(pickupAddress);
+                          setDropoffAddressConfirmed?.(pickupAddressConfirmed);
+                        }}
                         className="self-start inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1.5 border border-neutral-200 text-xs font-black text-primary-600 hover:border-primary-50 hover:bg-neutral-100 transition-all active:scale-95"
                       >
                         Same address for both

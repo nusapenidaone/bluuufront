@@ -93,7 +93,8 @@ export default function Payment() {
   // ── Derived values ───────────────────────────────────────────────────────
   const totalGuests = adults + kids;
   const deposite = payMode === "part" ? 50 : 100;
-  const method = payMethod === "paypal" ? 2 : 1;             // 1=Xendit, 2=PayPal
+  const testDoku = params.get("m") === "test";
+  const method = testDoku ? 3 : (payMethod === "paypal" ? 2 : 1); // 1=Xendit, 2=PayPal, 3=DOKU
 
   // Extract transfer/cover IDs from extras (they use "transfer-{id}", "cover-{id}" prefixes)
   const transferExtra = extras.find((e) => String(e.id).startsWith("transfer-"));
@@ -361,7 +362,7 @@ export default function Payment() {
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
-  const methodLabel = method === 2 ? "PayPal" : "Card / Bank transfer";
+  const methodLabel = method === 3 ? "DOKU (test)" : method === 2 ? "PayPal" : "Card / Bank transfer";
   const depositLabel = payMode === "part" ? "50% deposit" : "Full payment";
 
   if (ratesLoading && !isIDR) {

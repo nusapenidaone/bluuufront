@@ -40,7 +40,7 @@ class DokuService
         if ($description) {
             $body['order']['line_items'] = [[
                 'id' => (string) $orderId,
-                'name' => (string) $description,
+                'name' => self::sanitizeText((string) $description),
                 'quantity' => 1,
                 'price' => (int) round($amount),
             ]];
@@ -77,6 +77,13 @@ class DokuService
         Log::error('[Doku] Checkout failed: ' . $response->status() . ' ' . $response->body());
 
         return $cancelUrl;
+    }
+
+    // DOKU rejects any character outside a-z A-Z 0-9 . - / + , = _ : ' @ % ( ) —
+    // real tour names/descriptions are free text, so strip anything else.
+    protected static function sanitizeText(string $text): string
+    {
+        return preg_replace('/[^a-zA-Z0-9.\-\/+,=_:\'@%() ]/', '', $text);
     }
 
     protected static function buildSignature($clientId, $secretKey, $requestId, $timestamp, $path, $digest)

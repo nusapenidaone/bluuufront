@@ -697,30 +697,31 @@ class OdooService
         ];
     }
 
-    public static function registerPayment(int $odooOrderId, float $amount): void
+    public static function registerPayment(int $odooOrderId, float $amount, string $field = 'x_studio_collected_by_xendit'): void
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_collected_by_xendit'],
+            'fields' => [$field],
             'limit'  => 1,
         ]);
 
         if (empty($result[0])) return;
 
-        $currentCollected = (float) ($result[0]['x_studio_collected_by_xendit'] ?? 0);
+        $currentCollected = (float) ($result[0][$field] ?? 0);
 
         // x_studio_collect is a readonly field in Odoo computed from amount_total minus
-        // all x_studio_collected_by_* fields, so updating collected_by_xendit alone is
-        // enough to make it recalculate.
+        // all x_studio_collected_by_* fields, so updating one collected_by_* field alone
+        // is enough to make it recalculate.
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
             'vals' => [
-                'x_studio_collected_by_xendit' => $currentCollected + $amount,
+                $field => $currentCollected + $amount,
             ],
         ]);
 
+        $via = $field === 'x_studio_collected_by_doku' ? 'DOKU' : 'Xendit';
         static::addLogNote($odooOrderId,
-            '<p>💳 Weblink payment received: <strong>' . number_format($amount, 0, '.', ',') . ' IDR</strong> via Xendit.</p>'
+            '<p>💳 Weblink payment received: <strong>' . number_format($amount, 0, '.', ',') . ' IDR</strong> via ' . $via . '.</p>'
         );
     }
 

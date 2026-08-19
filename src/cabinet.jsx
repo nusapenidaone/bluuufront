@@ -592,6 +592,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [editDate, setEditDate] = useState("");
   const [editPickup, setEditPickup] = useState("");
   const [editDropoff, setEditDropoff] = useState("");
+  const [editPickupConfirmed, setEditPickupConfirmed] = useState(false);
+  const [editDropoffConfirmed, setEditDropoffConfirmed] = useState(false);
   const [editAdults, setEditAdults] = useState(0);
   const [editKids, setEditKids] = useState(0);
   const [editTransfer, setEditTransfer] = useState(null);
@@ -657,6 +659,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
       setEditDate(json.local.travel_date || "");
       setEditPickup(json.local.pickup_address || "");
       setEditDropoff(json.local.dropoff_address || "");
+      setEditPickupConfirmed(Boolean(json.local.pickup_address));
+      setEditDropoffConfirmed(Boolean(json.local.dropoff_address));
       setEditAdults(json.local.adults || 0);
       setEditKids(json.local.kids || 0);
       const initTransfer = json.local.transfer_id ? Number(json.local.transfer_id) : null;
@@ -836,6 +840,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
     setEditDate(local.travel_date || "");
     setEditPickup(local.pickup_address || "");
     setEditDropoff(local.dropoff_address || "");
+    setEditPickupConfirmed(Boolean(local.pickup_address));
+    setEditDropoffConfirmed(Boolean(local.dropoff_address));
     setEditAdults(local.adults || 0);
     setEditKids(local.kids || 0);
     setEditTransfer(local.transfer_id ? Number(local.transfer_id) : null);
@@ -1115,14 +1121,28 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const liveAddOns  = livePrices?.total || 0;
   const addonsDelta = hasChanges ? liveAddOns - savedAddOns : 0;
 
-  // Tour price delta from guest count change using server pricelist
-  const pricelist = options.price_list || [];
-  const plLookup  = (members) => {
-    const e = pricelist.find((r) => Number(r.members_count) === Number(members));
-    return e ? Number(e.price) : null;
+  // Tour price delta from date/guest count change, resolving the seasonal
+  // package (PricesByDates) per date instead of freezing the pricelist that
+  // was active on the order's original travel_date.
+  const resolvePricelist = (dateStr) => {
+    const pricing = options.pricing;
+    if (!pricing) return options.price_list || [];
+    if (dateStr && pricing.seasonal?.length) {
+      const season = pricing.seasonal.find((p) => dateStr >= p.date_start && dateStr <= p.date_end);
+      if (season?.pricelist?.length) return season.pricelist;
+    }
+    return pricing.default || [];
   };
-  const baseTourPrice = plLookup(local.members);
-  const liveTourPrice = plLookup(editAdults + editKids);
+  const plLookup = (pricelist, members) => {
+    const exact = pricelist.find((r) => Number(r.members_count) === Number(members));
+    if (exact) return Number(exact.price);
+    if (!pricelist.length) return null;
+    const sorted = [...pricelist].sort((a, b) => Number(a.members_count) - Number(b.members_count));
+    const closest = [...sorted].reverse().find((r) => Number(r.members_count) <= Number(members));
+    return Number((closest || sorted[0]).price);
+  };
+  const baseTourPrice = plLookup(resolvePricelist(local.travel_date), local.members);
+  const liveTourPrice = plLookup(resolvePricelist(editDate), editAdults + editKids);
   const tourPriceDelta = hasChanges && baseTourPrice !== null && liveTourPrice !== null
     ? liveTourPrice - baseTourPrice
     : 0;
@@ -1491,6 +1511,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
             setPickupAddress={setEditPickup}
             dropoffAddress={editDropoff}
             setDropoffAddress={setEditDropoff}
+            pickupAddressConfirmed={editPickupConfirmed}
+            setPickupAddressConfirmed={setEditPickupConfirmed}
+            dropoffAddressConfirmed={editDropoffConfirmed}
+            setDropoffAddressConfirmed={setEditDropoffConfirmed}
             totalGuests={editMembers}
             showHeader={false}
           />
