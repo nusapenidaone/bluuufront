@@ -7,9 +7,8 @@ require __DIR__ . '/redirects.php';
 // get rates
 Route::post('api/rates', [RatesController::class, 'getRates']);
 
-// payment verification (called by Xendit / PayPal servers)
+// payment verification (called by Xendit servers)
 Route::post('api/verify/xendit', [VerifyController::class, 'VerifyXendit']);
-Route::post('api/verify/paypal', [VerifyController::class, 'VerifyPayPal']);
 
 
 require __DIR__ . '/api/routes.php';

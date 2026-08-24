@@ -6,11 +6,10 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
-use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Order;
-use Noren\Booking\Models\Rates;
 use Noren\Booking\Models\Transfer;
 use Noren\Booking\Odoo\OdooService;
 
@@ -292,8 +291,6 @@ class AccountController extends Controller
             return response()->json(['error' => 'Order not found'], 404);
         }
 
-        $method = (int) $request->input('method', $order->method_id ?? 1);
-
         try {
             $collectAmount = OdooService::getOrderCollect((int) $order->odoo_id);
         } catch (\Exception $e) {
@@ -307,16 +304,19 @@ class AccountController extends Controller
         $order->loadMissing('tours');
         $description = $order->tours?->name ?? 'Bluuu Tour';
 
-        // Use 'odoo_{odoo_id}' prefix: VerifyController handles it via OdooService::registerPayment / clearCollect
+        // Use 'odoo_{odoo_id}' prefix: VerifyController/DokuWebhookController handle it via OdooService::registerPayment
         $collectExtId = 'odoo_' . $order->odoo_id;
         $cancelUrl    = url('/account') . '?key=' . $key;
         $successUrl   = url('/account') . '?key=' . $key . '&paid=1';
 
-        if ($method === 2) {
-            $rate     = Rates::where('code', 'USD')->orderBy('id', 'desc')->first();
-            $usdAmt   = $rate ? round((float) $rate->rate * $collectAmount, 2) : 0;
-            $payUrl   = PayPalService::createPaymentLink(
-                $collectExtId, $usdAmt, $order->email, $successUrl, $cancelUrl, $description
+        $method = (int) $request->input('method', 3);
+
+        if ($method === 3) {
+            // Unique per attempt — DOKU rejects a re-used invoice_number, and the
+            // odoo_{id} prefix (needed by the webhook) still parses fine since
+            // (int) casting stops at the first non-digit character.
+            $payUrl = DokuService::createPaymentLink(
+                $collectExtId . '_' . time(), $collectAmount, $order->email, $successUrl, $cancelUrl, $description
             );
         } else {
             $payUrl = XenditService::createPaymentLink(

@@ -30,10 +30,13 @@ class DokuService
                 'callback_url' => $returnUrl,
                 'callback_url_cancel' => $cancelUrl,
                 'callback_url_result' => $returnUrl,
+                // Without this, DOKU shows its own result page with a manual
+                // "Back to Merchant" button instead of redirecting automatically.
+                'auto_redirect' => true,
             ],
             'payment' => [
                 'payment_due_date' => 60,
-                'payment_method_types' => ['CREDIT_CARD', 'QRIS'],
+                'payment_method_types' => ['CREDIT_CARD','QRIS'],//, 'QRIS'
             ],
         ];
 

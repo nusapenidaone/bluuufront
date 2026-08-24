@@ -7,13 +7,11 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Session;
 
 use Noren\Booking\Models\Order;
-use Noren\Booking\Models\Rates;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Route;
 
 use Noren\Booking\Classes\XenditService;
-use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Doku\DokuService;
 
 class PrivateOrderController extends Controller
@@ -169,7 +167,7 @@ class PrivateOrderController extends Controller
     /**
      * POST /api/new/order/private/pay
      *
-     * Accepts {external_id}, loads the saved order, calls Xendit or PayPal,
+     * Accepts {external_id}, loads the saved order, calls Xendit or DOKU,
      * and returns the payment URL. Safe to retry — order already exists.
      */
     public function createPaymentLink(Request $request)
@@ -207,18 +205,9 @@ class PrivateOrderController extends Controller
             // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
 
-            if ($order->method_id == 1) {
-                $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
-                $url = XenditService::createPaymentLink(
-                    $order->external_id,
-                    $chargeAmount,
-                    $order->email,
-                    $successUrl,
-                    url('/error'),
-                    $order->tours->name ?? 'Private Tour'
-                );
-            } elseif ($order->method_id == 3) {
-                $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+            $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+
+            if ($order->method_id == 3) {
                 $url = DokuService::createPaymentLink(
                     $order->external_id,
                     $chargeAmount,
@@ -228,12 +217,9 @@ class PrivateOrderController extends Controller
                     $order->tours->name ?? 'Private Tour'
                 );
             } else {
-                $usd_rate = Rates::find(2)->rate;
-                $usd_summ = $usd_rate * $chargeAmount;
-                $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
-                $url = PayPalService::createPaymentLink(
+                $url = XenditService::createPaymentLink(
                     $order->external_id,
-                    $usd_summ,
+                    $chargeAmount,
                     $order->email,
                     $successUrl,
                     url('/error'),

@@ -9570,7 +9570,7 @@ function CheckoutModal({
       isOpen={isOpen}
       onClose={onClose}
       title={step === 1 ? "1. Choose to pay" : step === 2 ? "2. Select payment method" : "3. Contact details"}
-      subtitle={step === 1 ? "Pay now or pay 50% later" : step === 2 ? "We accept Visa, MasterCard, AmEx, PayPal, and PayLater." : "Enter your contact details"}
+      subtitle={step === 1 ? "Pay now or pay 50% later" : step === 2 ? "We accept Visa, MasterCard, AmEx, and more." : "Enter your contact details"}
       maxWidth="max-w-3xl"
     >
       <div className="p-1">
@@ -9653,7 +9653,6 @@ function CheckoutModal({
                 {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
             </button>
-            {/* PayPal временно отключён */}
           </div>
         )}
 

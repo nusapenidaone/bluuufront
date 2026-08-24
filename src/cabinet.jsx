@@ -990,7 +990,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const payCollect = async () => {
     setPaying(true);
     try {
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/pay`), { method: "POST" });
+      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/pay`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+      });
       const json = await res.json();
       if (json.payment_url) {
         window.location.href = json.payment_url;
@@ -1051,7 +1055,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const waNumber = contacts?.whatsapp?.number || WA.google;
   const waMsg = encodeURIComponent(`Hii Bluuu Tours! I want to ask about one of your tours ${odoo.order_number || odooId}`);
   const waLink = `https://wa.me/${waNumber}?text=${waMsg}`;
-  const depositPaid = odoo.deposit_paid || 0;
 
   // Time-based edit restrictions
   const hoursUntilTour = (() => {
@@ -1150,7 +1153,16 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const priceDelta  = addonsDelta + tourPriceDelta;
 
   // estNewTotal: swap add-ons + tour portion
-  const odooTotal   = (collect || 0) + (depositPaid || 0);
+  // amount_total comes straight from Odoo's sale.order — the authoritative total.
+  // (collect + deposit_paid is NOT a substitute: x_studio_collect subtracts every
+  // x_studio_collected_by_* field — cash/EDC/Xendit/DOKU — so any payment beyond
+  // the deposit makes that reconstruction undercount the real total.)
+  const odooTotal   = odoo.amount_total || 0;
+  // What's actually been paid so far — NOT the same as deposit_paid once any
+  // top-up payment (Xendit weblink, DOKU, cash, EDC) lands after the deposit.
+  // collect is Odoo's authoritative "still owed" figure, so total-collect is
+  // always the true paid-so-far amount regardless of which channel(s) paid it.
+  const amountPaid  = odooTotal - collect;
   const estNewTotal = lastPrices
     ? (lastPrices.tour_price || 0) + (lastPrices.boat_price || 0) + liveAddOns + tourPriceDelta
     : odooTotal - savedAddOns + liveAddOns + tourPriceDelta;
@@ -1855,10 +1867,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 IDR {fmt(lastPrices ? lastPrices.full_price : odooTotal)}
               </span>
             </div>
-            {depositPaid > 0 && (
+            {amountPaid > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-secondary-400">Deposit paid</span>
-                <span className="text-sm font-semibold text-emerald-600">− IDR {fmt(depositPaid)}</span>
+                <span className="text-sm text-secondary-400">Paid</span>
+                <span className="text-sm font-semibold text-emerald-600">− IDR {fmt(amountPaid)}</span>
               </div>
             )}
             {collect > 0 && (
@@ -1867,7 +1879,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <span className="text-sm font-extrabold text-primary-700">IDR {fmt(collect)}</span>
               </div>
             )}
-            {collect === 0 && depositPaid > 0 && (
+            {collect === 0 && amountPaid > 0 && (
               <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5">
                 <span className="text-sm font-semibold text-emerald-700">Fully paid</span>
                 <span className="text-sm font-extrabold text-emerald-600">✓</span>
@@ -1952,7 +1964,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
               <div>
                 <div className="text-sm font-bold text-emerald-700">Fully paid — you&apos;re all set!</div>
-                {depositPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(depositPaid)}</div>}
+                {amountPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(amountPaid)}</div>}
               </div>
             </div>
             {saved && (
@@ -1967,8 +1979,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">Remaining balance</div>
                 <div className="mt-1 text-3xl font-extrabold tracking-tight text-white">IDR {fmt(collect)}</div>
-                {depositPaid > 0 && (
-                  <div className="mt-0.5 text-xs text-white/50">Deposit paid: IDR {fmt(depositPaid)}</div>
+                {amountPaid > 0 && (
+                  <div className="mt-0.5 text-xs text-white/50">Paid so far: IDR {fmt(amountPaid)}</div>
                 )}
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">

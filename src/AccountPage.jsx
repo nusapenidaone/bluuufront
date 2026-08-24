@@ -159,7 +159,11 @@ export default function AccountPage() {
   const payCollect = async () => {
     setSavingPay(true);
     try {
-      const res = await fetch(API + key + "/pay", { method: "POST" });
+      const res = await fetch(API + key + "/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+      });
       const json = await res.json();
       if (json.payment_url) {
         window.location.href = json.payment_url;

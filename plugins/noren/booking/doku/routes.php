@@ -12,5 +12,8 @@ Route::post('api/doku/webhook', [DokuWebhookController::class, 'handle']);
 // int-typed controller argument and throwing a TypeError with a full stack trace.
 Route::get('doku-weblink/{id}/{key}', [DokuPayController::class, 'pay'])->where('id', '[0-9]+');
 
+// Where DOKU redirects the customer's browser back after payment (auto_redirect)
+Route::get('doku-weblink/{id}/{key}/callback', [DokuPayController::class, 'callback'])->where('id', '[0-9]+');
+
 // TEMP: ручной тест создания checkout-сессии — удалить после проверки
 Route::get('api/doku/test', [DokuTestController::class, 'test']);

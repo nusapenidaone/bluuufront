@@ -17,30 +17,12 @@ class DokuWebhookController extends Controller
 
         $signatureValid = $this->verifySignature($request, $rawBody);
 
-        Log::info('[Doku] Webhook received: ' . json_encode([
-            'headers' => [
-                'Client-Id'         => $request->header('Client-Id'),
-                'Request-Id'        => $request->header('Request-Id'),
-                'Request-Timestamp' => $request->header('Request-Timestamp'),
-                'Signature'         => $request->header('Signature'),
-            ],
-            'signature_valid' => $signatureValid,
-            'body'            => $rawBody,
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
-
         $payload = json_decode($rawBody, true) ?: [];
 
         $externalId = $payload['order']['invoice_number'] ?? null;
         $status     = strtoupper($payload['transaction']['status'] ?? '');
         $amount     = (float) ($payload['order']['amount'] ?? 0);
         $isPaid     = in_array($status, ['SUCCESS', 'SETTLEMENT']);
-
-        Log::info('[Doku] Webhook parsed: ' . json_encode([
-            'external_id' => $externalId,
-            'status'      => $status,
-            'amount'      => $amount,
-            'is_paid'     => $isPaid,
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 
         if (!$signatureValid) {
             Log::warning('[Doku] Invalid webhook signature');
@@ -57,7 +39,7 @@ class DokuWebhookController extends Controller
         } elseif (str_starts_with($externalId, 'odoo_')) {
             if ($isPaid) {
                 $odooOrderId = (int) str_replace('odoo_', '', $externalId);
-                OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_doku');
+                OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_doku', $externalId);
             }
         }
 

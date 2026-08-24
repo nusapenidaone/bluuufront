@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
@@ -339,6 +340,7 @@ class CabinetController extends Controller
                 'rental_return_date' => $odooOrder['rental_return_date']  ?? null,
                 'deposit_paid'       => (float) ($odooOrder['x_studio_deposit'] ?? 0),
                 'collect'            => (float) ($odooOrder['x_studio_collect']  ?? 0),
+                'amount_total'       => (float) ($odooOrder['amount_total']      ?? 0),
                 'partner_name'       => $partnerName,
                 'lines'              => $odooOrder['lines'] ?? [],
                 'online_checked_in'  => !empty($odooOrder['x_studio_online_check_in_complete']),
@@ -394,8 +396,17 @@ class CabinetController extends Controller
         $newKids   = $kids   ?? $curKids;
         $members   = $newAdults + $newKids;
 
-        $dateChanged    = $date !== null;
-        $membersChanged = $adults !== null || $kids !== null;
+        // cabinet.jsx always sends date/adults/kids in the PATCH body even when the
+        // user only touched transfer/cover/extras — so "was the key present" is not
+        // "did it change". Compare against the order's actual current values instead,
+        // otherwise the tour-price recalc (and transfer/cover/restaurant qty recalcs)
+        // below fire on every save.
+        $currentTravelDate = !empty($odooOrder['rental_start_date'])
+            ? Carbon::parse($odooOrder['rental_start_date'], 'UTC')->setTimezone('Asia/Makassar')->format('Y-m-d')
+            : null;
+
+        $dateChanged    = $date !== null && $date !== $currentTravelDate;
+        $membersChanged = ($adults !== null && $adults !== $curAdults) || ($kids !== null && $kids !== $curKids);
 
         // ── Header fields ──────────────────────────────────────────────────────
         $fields = [];
@@ -523,7 +534,7 @@ class CabinetController extends Controller
                         }
                     }
                 }
-            } elseif ($adults !== null || $kids !== null) {
+            } elseif ($membersChanged) {
                 if ($existingTransferLine && in_array($existingTransferLine['local_id'], [1, 2])) {
                     $cars = max(1, (int) ceil($members / 5));
                     OdooService::writeOrderLine($existingTransferLine['id'], ['product_uom_qty' => $cars]);
@@ -561,7 +572,7 @@ class CabinetController extends Controller
                         }
                     }
                 }
-            } elseif (($adults !== null || $kids !== null) && $existingCoverLine) {
+            } elseif ($membersChanged && $existingCoverLine) {
                 $covObj = $allCovers->firstWhere('id', $existingCoverLine['local_id']);
                 if ($covObj && !$covObj->per_boat) {
                     OdooService::writeOrderLine($existingCoverLine['id'], ['product_uom_qty' => max(1, $members)]);
@@ -569,7 +580,7 @@ class CabinetController extends Controller
             }
 
             // ── Restaurant qty (follows members count) ────────────────────────
-            if (($adults !== null || $kids !== null) && $existingRestaurantLine) {
+            if ($membersChanged && $existingRestaurantLine) {
                 if ($existingRestaurantLine['qty'] !== $members) {
                     OdooService::writeOrderLine($existingRestaurantLine['id'], ['product_uom_qty' => max(1, $members)]);
                 }
@@ -765,9 +776,20 @@ class CabinetController extends Controller
         $baseUrl      = url("/cabinet/{$odooId}/{$key}");
         $collectExtId = 'odoo_' . $odooId;
 
-        $payUrl = XenditService::createPaymentLink(
-            $collectExtId, $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
-        );
+        $method = (int) $request->input('method', 3);
+
+        if ($method === 3) {
+            // Unique per attempt — DOKU rejects a re-used invoice_number, and the
+            // odoo_{id} prefix (needed by the webhook) still parses fine since
+            // (int) casting stops at the first non-digit character.
+            $payUrl = DokuService::createPaymentLink(
+                $collectExtId . '_' . time(), $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+            );
+        } else {
+            $payUrl = XenditService::createPaymentLink(
+                $collectExtId, $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+            );
+        }
 
         return response()->json(['payment_url' => $payUrl]);
     }

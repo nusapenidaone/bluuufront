@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'mode' => 'sandbox', // 'sandbox' | 'production'
+    'mode' => 'production', // 'sandbox' | 'production'
     'sandbox' => [
         'base_url'   => 'https://api-sandbox.doku.com',
         'client_id'  => 'BRN-0245-1786615308594',

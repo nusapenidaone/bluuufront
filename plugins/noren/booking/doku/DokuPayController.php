@@ -46,4 +46,14 @@ class DokuPayController extends Controller
 
         return redirect($invoiceUrl);
     }
+
+    // ─── GET /doku-weblink/{id}/{key}/callback ─────────────────────────────────
+    // DOKU redirects here after payment (auto_redirect) — the actual payment
+    // confirmation happens separately via the /api/doku/webhook notification;
+    // this page is just what the customer's browser lands on.
+
+    public function callback(int $id, string $key)
+    {
+        return view('noren.booking::odoo_pay_success');
+    }
 }
