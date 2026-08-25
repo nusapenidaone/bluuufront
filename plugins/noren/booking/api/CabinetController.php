@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
@@ -776,7 +777,7 @@ class CabinetController extends Controller
         $baseUrl      = url("/cabinet/{$odooId}/{$key}");
         $collectExtId = 'odoo_' . $odooId;
 
-        $method = (int) $request->input('method', 3);
+        $method = PaymentMethod::default();
 
         if ($method === 3) {
             // Unique per attempt — DOKU rejects a re-used invoice_number, and the

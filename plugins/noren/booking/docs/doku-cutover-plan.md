@@ -1,27 +1,33 @@
 # DOKU — основная система оплаты, Xendit — резервная
 
-> **Переключено (2026-08-20).** DOKU — дефолт везде, жёстко (`method: 3`), без URL-флага. Xendit остаётся в коде как экстренный резерв, но включить его с фронтенда через URL больше нельзя (флаг `?m=xendit` убран 2026-08-20 по просьбе пользователя) — только прямой вызов API с `{"method": 1}` в теле запроса (вручную, curl/Postman). PayPal полностью удалён из проекта (2026-08-20). Составлен 2026-08-18, обновлён 2026-08-20.
+> **Переключено (2026-08-20), быстрое переключение добавлено (2026-08-20).** DOKU — дефолт везде. Переключение между DOKU и Xendit теперь — одна строка в `plugins/noren/booking/payment_method.config.php`, без пересборки фронтенда и без правки других файлов. PayPal полностью удалён из проекта (2026-08-20). Составлен 2026-08-18, обновлён 2026-08-20.
+
+## Быстрое переключение DOKU ↔ Xendit
+
+Единственное место: **`plugins/noren/booking/payment_method.config.php`**
+```php
+return [
+    'default' => 3, // 3 = DOKU, 1 = Xendit
+];
+```
+Поменять `3` на `1` (или обратно) на сервере по FTP — действует сразу, без деплоя фронтенда и без правки контроллеров. Читает это значение `Noren\Booking\Classes\PaymentMethod::default()`, которую используют все точки создания платежа:
+- `PrivateOrderController.php` / `SharedOrderController.php` — при сохранении `order->method_id`
+- `CabinetController.php::createPayment()`
+- `CheckinController.php::pay()`
+- `AccountController.php::createPayment()`
+
+Фронтенд (`Payment.jsx`, `cabinet.jsx`, `AccountPage.jsx`, `checkin.htm`) больше не решает, какой шлюз использовать — что бы он ни прислал в `method`, бэкенд теперь всегда берёт значение из `PaymentMethod::default()`. Значения `method`, которые фронтенд шлёт в теле запроса, — мёртвый код, оставлены как есть, не мешают.
 
 ## Текущая архитектура
 
-- **DOKU** — основная система оплаты, жёстко закодированный `method = 3` везде: новое бронирование, личный кабинет (и старый по `key`, и новый Odoo-based), веб-чекин.
-- **Xendit** — резервная, но без удобного переключателя с фронтенда. Бэкенд по-прежнему принимает `method: 1` в теле запроса (все контроллеры не трогали), так что в экстренном случае можно вызвать `.../pay` эндпоинт напрямую с `{"method": 1}` — сайт сам туда больше не поведёт.
+- **DOKU** — основная система оплаты (`payment_method.config.php` → `default: 3`).
+- **Xendit** — резервная. Чтобы вернуть его дефолтом — один флип в конфиге выше, откатывать код не нужно.
 - Xendit-код **не удалён и не будет удаляться** — `XenditService.php`, `VerifyController::VerifyXendit()`, роут `api/verify/xendit` остаются рабочими постоянно.
 - `doku/services.config.php` — `mode: production`.
 
 ## Где это реализовано
 
-**Фронтенд (жёстко `method: 3`, без флагов):**
-- `src/Payment.jsx` — новое бронирование private/shared
-- `src/cabinet.jsx` — личный кабинет (Odoo-based, `/cabinet/{odooId}/{key}`)
-- `src/AccountPage.jsx` — личный кабинет (легаси, по `key`)
-- `themes/bluuu/pages/checkin/checkin.htm` — веб-чекин
-
-**Бэкенд (дефолт `method = 3`, читается из тела/параметра запроса):**
-- `PrivateOrderController.php` / `SharedOrderController.php` — `method_id` берётся из заказа, сохранённого при бронировании (значение пришло с фронта)
-- `CabinetController.php::createPayment()` — `$request->input('method', 3)`
-- `CheckinController.php::pay()` — `$request->input('method', 3)`
-- `AccountController.php::createPayment()` — `$request->input('method', 3)` (раньше DOKU здесь вообще не было — добавлено при переключении)
+**`plugins/noren/booking/classes/PaymentMethod.php`** — читает `payment_method.config.php`, метод `PaymentMethod::default(): int`.
 
 **DOKU-инфраструктура (без изменений с момента интеграции):**
 - `plugins/noren/booking/doku/DokuService.php` — создание checkout-сессии, `auto_redirect: true`, санитизация текста
@@ -32,11 +38,8 @@
 - `noren_booking_method` — `{id: 3, name: 'DOKU'}`, `{id: 2, name: 'Paypal'}` (не удалять — старые записи)
 - `plugins/noren/booking/doku/DokuTestController.php` + роут `GET api/doku/test` — временный, для ручных проверок
 
-## Если Xendit понадобится вернуть дефолтом
-
-Все изменения переключения — это буквально значение `3` (было `1`) в перечисленных выше местах на фронте. Откат — поменять `method: 3` обратно на `method: 1` (или `method_id ?? 1`) в тех же 4 фронтенд-файлах.
-
 ## Verification
 
 1. `php -l` на все изменённые PHP-файлы (php.exe в `/c/xampp/php/`)
-2. Полный цикл (дефолт DOKU): бронирование/доплата → редирект на DOKU → оплата → авто-редирект на callback → вебхук → `status_id`/`Payment.method=3`/`x_studio_payment_source=DOKU`/`x_studio_collected_by_doku`/`x_studio_payment_reference` в Odoo
+2. Полный цикл с `default: 3`: бронирование/доплата → редирект на DOKU → оплата → авто-редирект на callback → вебхук → `status_id`/`Payment.method=3`/`x_studio_payment_source=DOKU`/`x_studio_collected_by_doku`/`x_studio_payment_reference` в Odoo
+3. Переключить `default` на `1`, повторить цикл — должен полностью уйти в Xendit

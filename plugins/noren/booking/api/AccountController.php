@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Order;
@@ -309,7 +310,7 @@ class AccountController extends Controller
         $cancelUrl    = url('/account') . '?key=' . $key;
         $successUrl   = url('/account') . '?key=' . $key . '&paid=1';
 
-        $method = (int) $request->input('method', 3);
+        $method = PaymentMethod::default();
 
         if ($method === 3) {
             // Unique per attempt — DOKU rejects a re-used invoice_number, and the

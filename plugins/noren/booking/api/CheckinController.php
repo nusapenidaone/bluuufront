@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Odoo\OdooService;
 
@@ -103,7 +104,7 @@ class CheckinController extends Controller
     {
         $this->cors();
 
-        $method = (int) $request->input('method', 3);
+        $method = PaymentMethod::default();
         $email  = (string) $request->input('email', '');
 
         try {

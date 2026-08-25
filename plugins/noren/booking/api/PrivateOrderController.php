@@ -12,6 +12,7 @@ use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Route;
 
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 
 class PrivateOrderController extends Controller
@@ -130,7 +131,7 @@ class PrivateOrderController extends Controller
         // ── Deposit & payment method ──────────────────────────────────
         $order->deposite = $data['deposite'] ?? 0;
         if ($order->deposite > 0) {
-            $order->method_id     = $data['method'];
+            $order->method_id     = PaymentMethod::default();
             $order->deposite_summ = $order->full_price * $order->deposite / 100;
         }
 

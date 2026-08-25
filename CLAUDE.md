@@ -164,10 +164,25 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - `Route` → `Ecategories`: pivot `noren_booking_route_ecategories`
 - Цепочка: Route → Ecategories → Extras
 - При выборе route на сайте показываются только extras из категорий привязанных к этому route
+- **У каждого route свой набор категорий, а у каждой категории — свой набор extras.** Поменялся route → поменялся и весь список доступных extras (другие категории → другие товары внутри них). Уже выбранные в корзине extras при смене route не сбрасываются автоматически (см. Private booking logic)
 
 - Дополнительные услуги (снаряжение, фото и т.д.) — только для **private** туров
 - Хранятся на ордере как JSON: `Order.extras = [{id, name, qty, price}, ...]`
 - `Extras` модель имеет `odoo_id` — каждый экстра уходит отдельной строкой в Odoo order lines
+- `Extras.by_request = true` — экстра "по запросу" (не бронируется онлайн напрямую)
+- `Extras.recomended = true` — помечается как рекомендованный на сайте
+- `Extras.children` — у экстраса могут быть вложенные варианты (subitems), у каждого свой `qty_type` и `price`
+
+**`Extras.qty_type` — тип расчёта количества:**
+
+| Значение | Кол-во (qty) | Кто выставляет |
+|----------|--------------|----------------|
+| `manual` (default) | вводит клиент вручную | клиент |
+| `per_car` | `ceil(members / 5)` — по числу машин | авто |
+| `per_person` | `= members` (adults + kids) | авто |
+| `fixed` | всегда `1` | авто |
+
+- При изменении `members` на существующем ордере (`CabinetController`) qty у extras с `qty_type = per_person/per_car/fixed` **пересчитывается автоматически**; `manual` не трогается
 
 ## Cover (страховка)
 
