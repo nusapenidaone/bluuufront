@@ -3,8 +3,8 @@ import { trackPurchase, trackPixelPurchase } from "./lib/analytics";
 
 function formatAmount(amount, currency) {
   if (!amount) return null;
-  if (currency === "IDR") return "IDR " + Number(amount).toLocaleString("id-ID");
-  return "$" + Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (currency === "IDR") return Number(amount).toLocaleString("id-ID") + " IDR";
+  return Number(amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + currency;
 }
 
 const BLUE = "#0073E0";

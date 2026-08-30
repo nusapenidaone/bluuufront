@@ -561,7 +561,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                                       </div>
                                     )}
                                     <div className="mt-1 flex items-center justify-between gap-1">
-                                      <span className="text-xs font-black text-secondary-900">{Number(extra.price) > 0 ? (formatPrice ? formatPrice(extra.price) : `$${extra.price}`) : "Free"}</span>
+                                      <span className="text-xs font-black text-secondary-900">{Number(extra.price) > 0 ? (formatPrice ? formatPrice(extra.price) : `${extra.price} IDR`) : "Free"}</span>
                                       {isAuto ? (
                                         <button
                                           type="button"
@@ -690,7 +690,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                           <div className="p-2">
                             <div className="text-xs font-bold text-secondary-900 truncate">{extra.name}</div>
                             <div className="mt-1 flex items-center justify-between gap-1">
-                              <span className="text-xs font-black text-secondary-900">{Number(extra.price) > 0 ? (formatPrice ? formatPrice(extra.price) : `$${extra.price}`) : "Free"}</span>
+                              <span className="text-xs font-black text-secondary-900">{Number(extra.price) > 0 ? (formatPrice ? formatPrice(extra.price) : `${extra.price} IDR`) : "Free"}</span>
                               <button type="button" onClick={() => onOpenExtra?.(extra.id)}
                                 className={cn("shrink-0 h-8 px-3.5 rounded-full text-xs font-semibold transition",
                                   isAdded ? "border border-primary-500/50 bg-primary-50 text-primary-600" : "bg-primary-600 text-white hover:bg-primary-700"

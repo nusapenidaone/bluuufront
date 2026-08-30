@@ -317,7 +317,7 @@ export function CoversCompact({
   selectedCoverId,
   onSelectCoverId,
   priceLabel = "per person",
-  formatPrice = (v) => `IDR ${Number(v).toLocaleString()}`,
+  formatPrice = (v) => `${Number(v).toLocaleString()} IDR`,
   showHeader = true,
   framed = true,
 }) {

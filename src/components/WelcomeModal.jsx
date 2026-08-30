@@ -141,8 +141,8 @@ const WelcomeModal = () => {
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-base font-bold ${selectedCurrency === r.code ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-secondary-400"}`}>
-                                                            {r.symbol}
+                                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-bold ${selectedCurrency === r.code ? "bg-primary-100 text-primary-600" : "bg-neutral-100 text-secondary-400"}`}>
+                                                            {r.code}
                                                         </div>
                                                         <div>
                                                             <div className="font-semibold text-sm leading-tight">{r.code}</div>

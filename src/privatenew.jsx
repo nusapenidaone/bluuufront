@@ -2043,7 +2043,7 @@ function Hero({ children }) {
             Choose your boat and your pace. Private crew,<br className="sm:hidden" /> safety-first routing, pure comfort.
           </p>
           <p className="mt-3 text-xs font-normal text-white/60 sm:text-sm">
-            From <span className="font-bold text-white">$750</span> / boat
+            From <span className="font-bold text-white">{formatUSD(750)}</span> / boat
             <span className="mx-1.5 text-white/30">·</span>
             Free cancellation <span className="font-bold text-white">24h</span>
           </p>
@@ -9950,7 +9950,7 @@ function Compare() {
       name: "Premium Private",
       variant: "shared",
       badge: "Best value",
-      price: `from $35`,
+      price: `from ${formatUSD(35)}`,
       highlights: [
         "Upgraded premium yacht",
         "La Rossa beachclub lunch",
@@ -9967,7 +9967,7 @@ function Compare() {
       name: "Premium Private",
       variant: "premiumPrivate",
       badge: "Ultimate Choice",
-      price: "$1200+",
+      price: `${formatUSD(1200)}+`,
       highlights: [
         "Everything in Premium Private included",
         "Private boat  only your group onboard",
@@ -9983,7 +9983,7 @@ function Compare() {
       name: "Private",
       variant: "private",
       badge: "For families & groups",
-      price: "from $799",
+      price: `from ${formatUSD(799)}`,
       highlights: [
         "Choose your yacht model",
         "Private boat  only your group onboard",
@@ -10063,7 +10063,7 @@ function Compare() {
 
               {isFeatured ? (
                 <div className="mt-8">
-                  <div className="text-3xl font-bold text-white">$1200+</div>
+                  <div className="text-3xl font-bold text-white">{formatUSD(1200)}+</div>
                   <div className="text-sm text-slate-400">/group</div>
                 </div>
               ) : null}

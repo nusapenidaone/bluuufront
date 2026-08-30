@@ -36,10 +36,7 @@ import {
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
 import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
-
-function fmt(n) {
-  return Number(n).toLocaleString("en-US");
-}
+import { useCurrency } from "./CurrencyContext";
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -279,6 +276,7 @@ function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggl
 
 // ─── Extra row (list item matching the site's renderExtraRow style) ──────────
 function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty, locked, savedQty, savedExtrasMap }) {
+  const { formatPrice } = useCurrency();
   const isAuto = item.qty_type && item.qty_type !== "manual";
   const autoQty = isAuto ? computeAutoQty(item.qty_type, members) : null;
   const isSaved = (savedQty || 0) > 0; // this item was on the order when loaded
@@ -309,8 +307,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
           <div className="line-clamp-1 text-sm font-bold text-secondary-900">{item.name}</div>
           <div className="mt-0.5 text-xs text-secondary-500">
             {hasChildren
-              ? `from IDR ${fmt(Math.min(...item.children.map((c) => c.price)))}`
-              : `IDR ${fmt(item.price)}`}
+              ? `from ${formatPrice(Math.min(...item.children.map((c) => c.price)))}`
+              : formatPrice(item.price)}
             {!hasChildren && isAuto && autoQty && <span className="ml-1">{autoQtyLabel(item.qty_type, autoQty)}</span>}
           </div>
         </div>
@@ -391,7 +389,7 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-secondary-900">{child.name}</div>
                   <div className="text-xs text-secondary-500">
-                    IDR {fmt(child.price)}
+                    {formatPrice(child.price)}
                     {childIsAuto && childAutoQty && <span className="ml-1">{autoQtyLabel(child.qty_type, childAutoQty)}</span>}
                   </div>
                 </div>
@@ -579,6 +577,7 @@ function GuestsInline({ adults, kids, onAdultsChange, onKidsChange, capacity }) 
 
 // ─── Cabinet page ─────────────────────────────────────────────────────────────
 export default function Cabinet({ odooId, uniqueKey }) {
+  const { formatPrice } = useCurrency();
   const contacts = useSiteContacts();
   const params = new URLSearchParams(window.location.search);
   const justPaid  = params.get("paid")  === "1";
@@ -1541,7 +1540,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
             selectedCoverId={editCover}
             onSelectCoverId={handleCoverChange}
             priceLabel={local.is_private ? "per group" : "per person"}
-            formatPrice={(v) => `IDR ${fmt(Number(v))}`}
+            formatPrice={(v) => formatPrice(Number(v))}
             showHeader={false}
             framed
           />
@@ -1624,7 +1623,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-semibold text-secondary-400">{item.name}</div>
                                 <div className="mt-0.5 text-xs text-secondary-300">
-                                  IDR {fmt((effectiveQty || 1) * item.price)}
+                                  {formatPrice((effectiveQty || 1) * item.price)}
                                   {isAuto && autoQty && <span className="ml-1">{autoQtyLabel(item.qty_type, autoQty)}</span>}
                                 </div>
                               </div>
@@ -1757,7 +1756,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               {upgradeChecked && cd?.available && cd.price_diff > 0 && (
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3">
                   <div className="flex-1 text-xs text-amber-700">Extra to pay for upgrade</div>
-                  <div className="text-base font-extrabold text-amber-900">+IDR {fmt(cd.price_diff)}</div>
+                  <div className="text-base font-extrabold text-amber-900">+{formatPrice(cd.price_diff)}</div>
                 </div>
               )}
 
@@ -1778,7 +1777,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
                 >
                   {cd.price_diff > 0
-                    ? `Upgrade · +IDR ${fmt(cd.price_diff)} →`
+                    ? `Upgrade · +${formatPrice(cd.price_diff)} →`
                     : `Upgrade to ${tierLabel} →`}
                 </button>
               ) : null}
@@ -1852,11 +1851,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
             {/* Detailed breakdown when available (after save in session) */}
             {lastPrices ? (
               <>
-                <PriceRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
-                {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={`IDR ${fmt(lastPrices.boat_price)}`} />}
-                {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
-                {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
-                {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
+                <PriceRow label="Tour" value={formatPrice(lastPrices.tour_price)} />
+                {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={formatPrice(lastPrices.boat_price)} />}
+                {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={formatPrice(lastPrices.transfer_price)} />}
+                {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={formatPrice(lastPrices.cover_price)} />}
+                {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={formatPrice(lastPrices.extras_total)} />}
               </>
             ) : null}
 
@@ -1864,19 +1863,19 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className={cn("flex items-center justify-between", lastPrices ? "border-t border-neutral-100 pt-2.5" : "")}>
               <span className="text-sm font-bold text-secondary-900">Total</span>
               <span className={cn("text-sm font-extrabold", hasChanges && priceDelta !== 0 ? "text-secondary-300 line-through" : "text-secondary-900")}>
-                IDR {fmt(lastPrices ? lastPrices.full_price : odooTotal)}
+                {formatPrice(lastPrices ? lastPrices.full_price : odooTotal)}
               </span>
             </div>
             {amountPaid > 0 && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-secondary-400">Paid</span>
-                <span className="text-sm font-semibold text-emerald-600">− IDR {fmt(amountPaid)}</span>
+                <span className="text-sm font-semibold text-emerald-600">− {formatPrice(amountPaid)}</span>
               </div>
             )}
             {collect > 0 && (
               <div className="flex items-center justify-between rounded-xl bg-primary-50 px-3 py-2.5">
                 <span className="text-sm font-semibold text-primary-700">Remaining balance</span>
-                <span className="text-sm font-extrabold text-primary-700">IDR {fmt(collect)}</span>
+                <span className="text-sm font-extrabold text-primary-700">{formatPrice(collect)}</span>
               </div>
             )}
             {collect === 0 && amountPaid > 0 && (
@@ -1898,12 +1897,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   {priceDelta > 0 ? "Extra to pay" : "Price decrease"}
                 </span>
                 <span className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
-                  {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
+                  {priceDelta > 0 ? "+" : "−"} {formatPrice(Math.abs(priceDelta))}
                 </span>
               </div>
               <div className={cn("mt-1 text-[11px]", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
                 {priceDelta > 0
-                  ? `New total: IDR ${fmt(estNewTotal)}`
+                  ? `New total: ${formatPrice(estNewTotal)}`
                   : "Refund will be processed through Odoo"}
               </div>
             </div>
@@ -1926,12 +1925,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 {priceDelta > 0 ? (
                   <>
                     <div className="text-xs font-semibold text-white/70">Additional payment required</div>
-                    <div className="mt-0.5 text-base font-extrabold text-white">+IDR {fmt(priceDelta)}</div>
+                    <div className="mt-0.5 text-base font-extrabold text-white">+{formatPrice(priceDelta)}</div>
                   </>
                 ) : (
                   <>
                     <div className="text-xs font-semibold text-white/70">Price difference</div>
-                    <div className="mt-0.5 text-base font-extrabold text-white">−IDR {fmt(Math.abs(priceDelta))}</div>
+                    <div className="mt-0.5 text-base font-extrabold text-white">−{formatPrice(Math.abs(priceDelta))}</div>
                     <div className="mt-1 text-[11px] text-white/60">Refund will be processed through Odoo</div>
                   </>
                 )}
@@ -1964,7 +1963,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
               <div>
                 <div className="text-sm font-bold text-emerald-700">Fully paid — you&apos;re all set!</div>
-                {amountPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(amountPaid)}</div>}
+                {amountPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: {formatPrice(amountPaid)}</div>}
               </div>
             </div>
             {saved && (
@@ -1978,9 +1977,9 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">Remaining balance</div>
-                <div className="mt-1 text-3xl font-extrabold tracking-tight text-white">IDR {fmt(collect)}</div>
+                <div className="mt-1 text-3xl font-extrabold tracking-tight text-white">{formatPrice(collect)}</div>
                 {amountPaid > 0 && (
-                  <div className="mt-0.5 text-xs text-white/50">Paid so far: IDR {fmt(amountPaid)}</div>
+                  <div className="mt-0.5 text-xs text-white/50">Paid so far: {formatPrice(amountPaid)}</div>
                 )}
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -1997,7 +1996,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               disabled={paying}
               className="btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
             >
-              {paying ? "Redirecting…" : `Pay IDR ${fmt(collect)} →`}
+              {paying ? "Redirecting…" : `Pay ${formatPrice(collect)} →`}
             </button>
           </div>
         )}

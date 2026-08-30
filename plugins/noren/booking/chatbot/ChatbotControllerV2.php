@@ -407,6 +407,9 @@ class ChatbotControllerV2 extends Controller
 
         $tourId         = $request->input('tour_id');
         $date           = $request->input('date');
+        if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $date = null; // e.g. LLM sends "undecided" when the user hasn't picked a date yet
+        }
         $adults         = (int) $request->input('adults', 0);
         $kids           = (int) $request->input('kids', 0);
         $guests         = ($adults + $kids) ?: (int) $request->input('guests', 1);

@@ -38,8 +38,8 @@ function getCsrfToken() {
 }
 
 function formatIDR(value) {
-  if (!value && value !== 0) return "IDR 0";
-  return "IDR " + Number(value).toLocaleString("id-ID");
+  if (!value && value !== 0) return "0 IDR";
+  return Number(value).toLocaleString("id-ID") + " IDR";
 }
 
 export default function Payment() {

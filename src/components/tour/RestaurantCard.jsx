@@ -22,9 +22,9 @@ export default function RestaurantCard({ restaurant, onClick }) {
         </div>
       )}
       <div className="flex-1 min-w-0 px-3 py-2">
-        <div className="text-sm font-bold text-secondary-900 truncate">{name}</div>
+        <div className="text-sm font-bold text-secondary-900 leading-snug break-words line-clamp-2">{name}</div>
       </div>
-      <div className="shrink-0 pr-3 text-sm font-semibold text-primary-600 flex items-center gap-1">
+      <div className="shrink-0 self-center pr-3 text-sm font-semibold text-primary-600 flex items-center gap-1">
         View menu
         <ExternalLink className="h-3.5 w-3.5 text-primary-400" />
       </div>
