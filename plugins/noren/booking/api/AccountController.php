@@ -140,9 +140,20 @@ class AccountController extends Controller
             $odooFields['rental_start_date']  = Carbon::parse($date . ' ' . $routeStart, 'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s');
             $odooFields['rental_return_date'] = Carbon::parse($date . ' ' . $routeEnd,   'Asia/Makassar')->utc()->addHours(4)->format('Y-m-d H:i:s');
             $order->travel_date = $date;
+            // Tour date changed — pickup_time/duration depend on it too (used as
+            // Distance Matrix departure_time), so invalidate them for recompute.
+            $odooFields['x_studio_estimated_pickup_time'] = false;
+            $odooFields['x_studio_estimated_trip_duration_google'] = false;
         }
 
         if ($pickupAddress !== null) {
+            if ($pickupAddress !== $order->pickup_address) {
+                // Address changed — invalidate stale ETA/km so the Odoo automation
+                // recomputes them (it skips already-populated fields, see docs/eta-automation.md)
+                $odooFields['x_studio_estimated_pickup_time'] = false;
+                $odooFields['x_studio_estimated_trip_duration_google'] = false;
+                $odooFields['x_studio_estimated_distance'] = false;
+            }
             $odooFields['x_studio_pickup_address'] = $pickupAddress;
             $order->pickup_address = $pickupAddress;
         }

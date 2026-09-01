@@ -215,7 +215,7 @@ import Card from "./components/common/Card";
 import Section from "./components/common/Section";
 import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Accordion from "./components/common/Accordion";
-import { cn } from "./lib/utils";
+import { cn, getExtraConflict } from "./lib/utils";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import SEO from "./components/SEO";
 import Footer from "./components/common/Footer";
@@ -4401,6 +4401,7 @@ function StepExtras({
   onSelectCoverId,
   totalGuests,
   extrasCatalog,
+  allExtrasById,
   selectedExtras,
   isSelectionModalOpen,
   setIsSelectionModalOpen,
@@ -4789,19 +4790,23 @@ function StepExtras({
   const renderExtraRow = (extra, isChild = false) => {
     const qty = selectedExtras[extra.id] || 0;
     const isHighlighted = extra.id === highlightExtraId;
+    const conflict = qty <= 0 ? getExtraConflict(extra, selectedExtras, allExtrasById) : null;
     const defaultQty = getDefaultQty(extra);
-    const isAutoQty = extra.qtyType === 'per_car' || extra.per_car || extra.qtyType === 'per_person' || extra.qtyType === 'fixed';
+    const isAutoQty = extra.qtyType === 'per_car' || extra.per_car || extra.qtyType === 'per_14_guests' || extra.qtyType === 'per_person' || extra.qtyType === 'fixed';
     const autoQty = (extra.qtyType === 'per_car' || extra.per_car)
       ? (Math.ceil(totalGuests / 5) || 1)
-      : extra.qtyType === 'per_person'
-        ? (totalGuests || 1)
-        : 1;
+      : extra.qtyType === 'per_14_guests'
+        ? (Math.ceil(totalGuests / 14) || 1)
+        : extra.qtyType === 'per_person'
+          ? (totalGuests || 1)
+          : 1;
     return (
       <div
         key={extra.id}
         className={cn(
           "group flex items-center gap-3 px-4 py-2.5 transition duration-200 ease-out sm:px-5 sm:py-3",
-          isHighlighted ? "bg-neutral-100" : "hover:bg-neutral-50"
+          isHighlighted ? "bg-neutral-100" : "hover:bg-neutral-50",
+          conflict && "opacity-50"
         )}
       >
         <div
@@ -4880,6 +4885,15 @@ function StepExtras({
                   <div className="h-7 w-7 sm:h-8 sm:w-8" />
                 </div>
               </div>
+            ) : conflict ? (
+              <button
+                type="button"
+                disabled
+                title={`Conflicts with ${conflict.name}`}
+                className="inline-flex h-9 w-full cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-2.5 text-sm font-bold text-secondary-300 sm:h-10 sm:px-3"
+              >
+                Add
+              </button>
             ) : (
               <button
                 type="button"
@@ -4922,6 +4936,15 @@ function StepExtras({
                 </button>
               </div>
             </div>
+          ) : conflict ? (
+            <button
+              type="button"
+              disabled
+              title={`Conflicts with ${conflict.name}`}
+              className="inline-flex h-9 w-full cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-2.5 text-sm font-bold text-secondary-300 sm:h-10 sm:px-3"
+            >
+              Add
+            </button>
           ) : (
             <button
               type="button"
@@ -5244,6 +5267,7 @@ function StepExtras({
         activeExtraId={activeExtraId}
         setActiveExtraId={setActiveExtraId}
         extrasCatalog={extrasCatalog}
+        allExtrasById={allExtrasById}
         selectedExtras={selectedExtras}
         onChangeExtraQty={onChangeExtraQty}
         formatIDR={formatIDR}
@@ -8445,6 +8469,7 @@ export default function Premium_Private_With_Vibe() {
       hasChildren: (e.children || []).length > 0,
       per_car: !!e.per_car,
       qtyType: e.qty_type || 'manual',
+      conflictIds: (e.conflict_ids || []).map(String),
     });
     // Use global extras
     return (extras || []).map(e => mapExtra(e, null));
@@ -8457,6 +8482,15 @@ export default function Premium_Private_With_Vibe() {
       return extra.categoryIds.some(catId => allowedIds.has(catId));
     });
   }, [rawExtrasCatalog, selectedStyle]);
+  const allExtrasById = useMemo(() => {
+    return rawExtrasCatalog.reduce((acc, extra) => {
+      acc[extra.id] = extra;
+      if (extra.children?.length) {
+        extra.children.forEach((child) => { acc[child.id] = child; });
+      }
+      return acc;
+    }, {});
+  }, [rawExtrasCatalog]);
   const extraLookupById = useMemo(() => {
     return extrasCatalog.reduce((acc, extra) => {
       acc[extra.id] = extra;
@@ -8704,8 +8738,12 @@ export default function Premium_Private_With_Vibe() {
         delete next[id];
         return next;
       }
+      // Block if a conflicting extra is already selected
+      const extra = allExtrasById[id] || extraLookupById[id];
+      if (getExtraConflict(extra, prev, allExtrasById)) {
+        return prev;
+      }
       // Respect `available` limit from extras
-      const extra = extraLookupById[id];
       const maxQty = extra?.available != null ? extra.available : Infinity;
       next[id] = Math.min(qty, maxQty);
       return next;
@@ -9085,6 +9123,7 @@ export default function Premium_Private_With_Vibe() {
               onSelectCoverId={setSelectedCoverId}
               totalGuests={totalGuests}
               extrasCatalog={extrasCatalog}
+              allExtrasById={allExtrasById}
               selectedExtras={selectedExtras}
               isSelectionModalOpen={isSelectionModalOpen}
               setIsSelectionModalOpen={setIsSelectionModalOpen}

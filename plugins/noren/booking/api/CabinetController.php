@@ -193,6 +193,7 @@ class CabinetController extends Controller
                     'ecategories'                  => fn($q) => $q->orderBy('sort_order'),
                     'ecategories.extras'           => fn($q) => $q->whereNull('parent_id')->orderBy('sort_order'),
                     'ecategories.extras.children'  => fn($q) => $q->orderBy('sort_order'),
+                    'ecategories.extras.conflicts',
                 ])
                 ->where('classes_id', $classesId)
                 ->orderBy('sort_order')
@@ -240,17 +241,19 @@ class CabinetController extends Controller
             }
 
             $mapExtra = fn($e) => [
-                'id'       => $e->id,
-                'name'     => $e->name,
-                'price'    => (int) $e->price,
-                'qty_type' => $e->qty_type ?? 'manual',
-                'image'    => $e->images_with_thumbs[0]['thumb_small'] ?? null,
-                'children' => ($e->children ?? collect())->sortBy('sort_order')->map(fn($c) => [
-                    'id'       => $c->id,
-                    'name'     => $c->name,
-                    'price'    => (int) $c->price,
-                    'qty_type' => $c->qty_type ?? 'manual',
-                    'image'    => $c->images_with_thumbs[0]['thumb_small'] ?? null,
+                'id'           => $e->id,
+                'name'         => $e->name,
+                'price'        => (int) $e->price,
+                'qty_type'     => $e->qty_type ?? 'manual',
+                'image'        => $e->images_with_thumbs[0]['thumb_small'] ?? null,
+                'conflict_ids' => $e->conflict_ids ?? [],
+                'children'     => ($e->children ?? collect())->sortBy('sort_order')->map(fn($c) => [
+                    'id'           => $c->id,
+                    'name'         => $c->name,
+                    'price'        => (int) $c->price,
+                    'qty_type'     => $c->qty_type ?? 'manual',
+                    'image'        => $c->images_with_thumbs[0]['thumb_small'] ?? null,
+                    'conflict_ids' => $c->conflict_ids ?? [],
                 ])->values(),
             ];
 
@@ -425,6 +428,19 @@ class CabinetController extends Controller
 
         if ($pickupAddress  !== null) $fields['x_studio_pickup_address']   = $pickupAddress;
         if ($dropoffAddress !== null) $fields['x_studio_drop_off_address'] = $dropoffAddress;
+
+        // Pickup address/time drive the ETA/km Odoo automation — it only recomputes when
+        // these fields are empty, so a real change must invalidate the stale values here,
+        // otherwise the automation skips them forever (see docs/eta-automation.md).
+        $pickupAddressChanged = $pickupAddress !== null
+            && trim($pickupAddress) !== trim((string) ($odooOrder['x_studio_pickup_address'] ?? ''));
+        if ($pickupAddressChanged || $dateChanged) {
+            $fields['x_studio_estimated_pickup_time'] = false;
+            $fields['x_studio_estimated_trip_duration_google'] = false;
+        }
+        if ($pickupAddressChanged) {
+            $fields['x_studio_estimated_distance'] = false;
+        }
 
         // ── Parse current order lines → match to local models ─────────────────
         $allTransfers    = Transfer::orderBy('id')->get();
@@ -702,18 +718,20 @@ class CabinetController extends Controller
                 }
             }
 
-            // ── Auto-extras qty recalculation (per_car / per_person / fixed) ──
+            // ── Auto-extras qty recalculation (per_car / per_14_guests / per_person / fixed) ──
             if ($membersChanged) {
                 $autoCars = max(1, (int) ceil($members / 5));
+                $auto14Guests = max(1, (int) ceil($members / 14));
                 foreach ($existingExtrasLines as $productOdooId => $info) {
                     if ($info['qty'] <= 0) continue;
                     $extra = $allExtrasById->first(fn($e) => (int) ($e->odoo_id ?? 0) === $productOdooId);
                     if (!$extra) continue;
                     $newQty = match ($extra->qty_type ?? 'manual') {
-                        'per_person' => max(1, $members),
-                        'per_car'    => $autoCars,
-                        'fixed'      => 1,
-                        default      => null,
+                        'per_person'    => max(1, $members),
+                        'per_car'       => $autoCars,
+                        'per_14_guests' => $auto14Guests,
+                        'fixed'         => 1,
+                        default         => null,
                     };
                     if ($newQty !== null && $info['qty'] !== $newQty) {
                         OdooService::writeOrderLine($info['id'], ['product_uom_qty' => $newQty]);

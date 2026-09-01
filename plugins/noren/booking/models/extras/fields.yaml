@@ -8,6 +8,7 @@ tabs:
             options:
                 manual: 'Manual (user sets qty)'
                 per_car: 'Per car (ceil guests/5), auto'
+                per_14_guests: 'Per 14 guests (ceil guests/14), auto'
                 per_person: 'Per person (qty = guests), auto'
                 fixed: 'Fixed 1, auto'
             default: manual
@@ -50,6 +51,12 @@ tabs:
             label: Categories
             nameFrom: name
             descriptionFrom: description
+            span: auto
+            type: relation
+            tab: Main
+        conflicts:
+            label: 'Conflicts with (cannot be selected together)'
+            nameFrom: name
             span: auto
             type: relation
             tab: Main

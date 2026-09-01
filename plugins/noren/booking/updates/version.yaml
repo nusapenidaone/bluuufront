@@ -775,3 +775,6 @@ v1.0.258:
 v1.0.259:
     - 'Seed noren_booking_method: add DOKU (id=3)'
     - seed_method_doku.php
+v1.0.260:
+    - 'Created table noren_booking_extras_conflicts'
+    - builder_table_create_noren_booking_extras_conflicts.php

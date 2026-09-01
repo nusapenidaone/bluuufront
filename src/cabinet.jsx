@@ -7,7 +7,7 @@ import Button from "./components/common/Button";
 import CustomDatePicker from "./components/common/CustomDatePicker";
 import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
 import { apiUrl } from "./api/base";
-import { cn } from "./lib/utils";
+import { cn, getExtraConflict } from "./lib/utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -52,6 +52,7 @@ function toISODate(d) {
 
 function computeAutoQty(qtyType, members) {
   if (qtyType === "per_car") return Math.max(1, Math.ceil(members / 5));
+  if (qtyType === "per_14_guests") return Math.max(1, Math.ceil(members / 14));
   if (qtyType === "per_person") return Math.max(1, members);
   if (qtyType === "fixed") return 1;
   return null;
@@ -59,6 +60,7 @@ function computeAutoQty(qtyType, members) {
 
 function autoQtyLabel(qtyType, qty) {
   if (qtyType === "per_car") return `×${qty} car${qty !== 1 ? "s" : ""} (auto)`;
+  if (qtyType === "per_14_guests") return `×${qty} set${qty !== 1 ? "s" : ""} (auto)`;
   if (qtyType === "per_person") return `×${qty} guest${qty !== 1 ? "s" : ""} (auto)`;
   if (qtyType === "fixed") return `×1 (auto)`;
   return null;
@@ -275,7 +277,7 @@ function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggl
 }
 
 // ─── Extra row (list item matching the site's renderExtraRow style) ──────────
-function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty, locked, savedQty, savedExtrasMap }) {
+function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, allExtrasById, onChildQty, locked, savedQty, savedExtrasMap }) {
   const { formatPrice } = useCurrency();
   const isAuto = item.qty_type && item.qty_type !== "manual";
   const autoQty = isAuto ? computeAutoQty(item.qty_type, members) : null;
@@ -283,6 +285,7 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
   const minusDisabled = isAuto ? isSaved : qty <= (savedQty || 0);
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
   const [expanded, setExpanded] = useState(false);
+  const conflict = !isSelected && !hasChildren ? getExtraConflict(item, editExtras, allExtrasById) : null;
 
   // Count selected children
   const selectedChildCount = hasChildren
@@ -293,7 +296,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
     <div>
       <div className={cn(
         "flex items-center gap-3 px-4 py-3 transition",
-        isSelected && !hasChildren ? "bg-primary-50/60" : "hover:bg-neutral-50"
+        isSelected && !hasChildren ? "bg-primary-50/60" : "hover:bg-neutral-50",
+        conflict && "opacity-50"
       )}>
         {/* Thumbnail */}
         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
@@ -340,6 +344,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                 <span className="min-w-[1.75rem] text-center text-sm font-bold tabular-nums">×{autoQty}</span>
                 <div className="h-7 w-7" />
               </div>
+            ) : conflict ? (
+              <button type="button" disabled title={`Conflicts with ${conflict.name}`}
+                className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-4 text-sm font-bold text-secondary-300">
+                Add
+              </button>
             ) : (
               <button type="button" onClick={onToggle}
                 className="inline-flex h-9 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-4 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -358,6 +367,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
+          ) : conflict ? (
+            <button type="button" disabled title={`Conflicts with ${conflict.name}`}
+              className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-4 text-sm font-bold text-secondary-300">
+              Add
+            </button>
           ) : (
             <button type="button" onClick={() => onChangeQty(1)}
               className="inline-flex h-9 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-4 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -376,10 +390,12 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
             const childAutoQty = childIsAuto ? computeAutoQty(child.qty_type, members) : null;
             const childSavedQty = savedExtrasMap?.[child.id] || 0;
             const childMinusDisabled = childIsAuto ? childSavedQty > 0 : childQty <= childSavedQty;
+            const childConflict = childQty <= 0 ? getExtraConflict(child, editExtras, allExtrasById) : null;
             return (
               <div key={child.id} className={cn(
                 "flex items-center gap-3 py-2.5 pl-8 pr-4 transition",
-                childQty > 0 ? "bg-primary-50/40" : "hover:bg-neutral-100/80"
+                childQty > 0 ? "bg-primary-50/40" : "hover:bg-neutral-100/80",
+                childConflict && "opacity-50"
               )}>
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-neutral-200">
                   {child.image
@@ -408,6 +424,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                         <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums">×{childAutoQty}</span>
                         <div className="h-6 w-6" />
                       </div>
+                    ) : childConflict ? (
+                      <button type="button" disabled title={`Conflicts with ${childConflict.name}`}
+                        className="inline-flex h-8 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-3 text-sm font-bold text-secondary-300">
+                        Add
+                      </button>
                     ) : (
                       <button type="button" onClick={() => onChildQty(child, childAutoQty || 1)}
                         className="inline-flex h-8 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-3 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -426,6 +447,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                         <Plus className="h-3 w-3" />
                       </button>
                     </div>
+                  ) : childConflict ? (
+                    <button type="button" disabled title={`Conflicts with ${childConflict.name}`}
+                      className="inline-flex h-8 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-3 text-sm font-bold text-secondary-300">
+                      Add
+                    </button>
                   ) : (
                     <button type="button" onClick={() => onChildQty(child, 1)}
                       className="inline-flex h-8 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-3 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -765,6 +791,19 @@ export default function Cabinet({ odooId, uniqueKey }) {
     return routes.find((r) => String(r.id) === editRoute) || null;
   }, [data, editRoute]);
 
+  // Flat id -> extra map across ALL routes (not just the selected one), so a conflicting
+  // extra from a different route/category can still be resolved by id/name.
+  const allExtrasById = useMemo(() => {
+    const map = {};
+    for (const route of (data?.options?.routes || [])) {
+      for (const e of (route.extras || [])) {
+        map[e.id] = e;
+        for (const child of (e.children || [])) map[child.id] = child;
+      }
+    }
+    return map;
+  }, [data]);
+
   const catalogCategories = selectedRoute?.categories || [];
   const catalogExtrasFlat = selectedRoute?.extras || [];
 
@@ -789,6 +828,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
     const minQty = savedExtrasMap[item.id] || 0;
     const safeQty = Math.max(minQty, qty);
     setEditExtras((prev) => {
+      // Block if a conflicting extra is already selected
+      if (safeQty > 0 && getExtraConflict(item, prev, allExtrasById)) {
+        return prev;
+      }
       const next = { ...prev };
       if (safeQty <= 0) {
         delete next[item.id];
@@ -803,6 +846,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
     // Saved extras can't be removed, only newly added ones can be toggled off
     if (savedExtrasMap[item.id]) return;
     setEditExtras((prev) => {
+      // Block if a conflicting extra is already selected
+      if (!prev[item.id] && getExtraConflict(item, prev, allExtrasById)) {
+        return prev;
+      }
       const next = { ...prev };
       if (next[item.id]) {
         delete next[item.id];
@@ -1600,6 +1647,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                           onToggle={() => toggleAutoExtra(item)}
                           onChangeQty={(v) => setExtraQty(item, v)}
                           editExtras={editExtras}
+                          allExtrasById={allExtrasById}
                           onChildQty={(child, v) => setExtraQty(child, v)}
                           locked={allEditLocked}
                           savedQty={savedExtrasMap[item.id] || 0}

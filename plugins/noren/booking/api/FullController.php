@@ -291,7 +291,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        return Extras::with(['ecategories', 'images', 'children.images'])
+        return Extras::with(['ecategories', 'images', 'children.images', 'conflicts'])
             ->whereNull('parent_id')
             ->get();
     }

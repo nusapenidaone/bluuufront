@@ -35,14 +35,20 @@ class DokuPayController extends Controller
         // per-click nonce so retries/repeat visits to the same weblink work. The
         // 'odoo_{id}' prefix (needed by the webhook to route the payment) still
         // parses correctly since (int) casting stops at the first non-digit char.
-        $returnUrl  = url("doku-weblink/{$id}/{$key}/callback");
-        $invoiceUrl = DokuService::createLink(
-            'odoo_' . $id . '_' . time(),
-            $amount,
-            $returnUrl,
-            $returnUrl,
-            'Payment for order ' . $id
-        );
+        $returnUrl = url("doku-weblink/{$id}/{$key}/callback");
+
+        try {
+            $invoiceUrl = DokuService::createLink(
+                'odoo_' . $id . '_' . time(),
+                $amount,
+                $returnUrl,
+                $returnUrl,
+                'Payment for order ' . $id
+            );
+        } catch (\Throwable $e) {
+            \Log::error('[Doku] pay() failed: ' . $e->getMessage());
+            return view('noren.booking::odoo_pay_error', ['message' => 'Payment gateway is temporarily unavailable, please try again later']);
+        }
 
         return redirect($invoiceUrl);
     }

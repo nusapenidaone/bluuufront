@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Sparkles, Check, Shield, CloudRain, Car, HelpCircle, Ship, Compass, Calendar, Clock, Users, Sun, Moon, X } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn, getExtraConflict } from "../../lib/utils";
 import { resolveScheduleIcon, resolveIconByName, sanitizeDisplayText, getLunchDisplayData, capitalizeFirst } from "../../utils/tourScheduleUtils";
 import Modal from "../common/Modal";
 import PhotoCarousel from "../common/PhotoCarousel";
@@ -82,6 +82,16 @@ function parseItemImages(item) {
   }
   if (item.image) return [item.image];
   return [];
+}
+
+function buildExtrasByIdMap(extrasCatalog) {
+  return (extrasCatalog || []).reduce((acc, extra) => {
+    acc[extra.id] = extra;
+    if (extra.children?.length) {
+      extra.children.forEach((child) => { acc[child.id] = child; });
+    }
+    return acc;
+  }, {});
 }
 
 function getItemExtras(item, extrasCatalog) {
@@ -191,6 +201,7 @@ function MenuSections({ sections, fallbackHtml, note, dark = false }) {
 
 function computeAutoQty(qtyType, totalGuests) {
   if (qtyType === 'per_car') return Math.ceil(totalGuests / 5);
+  if (qtyType === 'per_14_guests') return Math.ceil(totalGuests / 14);
   if (qtyType === 'per_person') return totalGuests;
   if (qtyType === 'fixed') return 1;
   return null;
@@ -524,6 +535,7 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                 {(() => {
                       const recommendedExtras = getItemExtras(selected, allExtrasCatalog || extrasCatalog);
                       if (!recommendedExtras.length) return null;
+                      const extrasByIdForConflict = buildExtrasByIdMap(allExtrasCatalog || extrasCatalog);
                       return (
                         <div className="px-4 pt-3 pb-4 sm:px-5 sm:pb-5">
                           <div className="text-[10px] font-bold uppercase tracking-widest text-secondary-400 mb-2">Recommended add-ons</div>
@@ -534,12 +546,13 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                               const qty = selectedExtras?.[extra.id] || 0;
                               const hasChildSelected = extra.hasChildren && extra.children?.some(c => (selectedExtras?.[c.id] || 0) > 0);
                               const isAdded = qty > 0 || hasChildSelected;
+                              const conflict = !isAdded ? getExtraConflict(extra, selectedExtras, extrasByIdForConflict) : null;
                               const imgSrc = extra.image || extra.images_with_thumbs?.[0]?.thumb || "";
                               return (
                                 <div key={extra.id} data-addon-card role="button" tabIndex={0}
                                   onClick={() => onOpenExtra?.(extra.id)}
                                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenExtra?.(extra.id); } }}
-                                  className={cn("shrink-0 w-32 rounded-2xl border overflow-hidden transition-all cursor-pointer", isAdded ? "border-primary-500 border-2 bg-white" : "border-neutral-200 bg-white hover:border-neutral-300")}>
+                                  className={cn("shrink-0 w-32 rounded-2xl border overflow-hidden transition-all cursor-pointer", isAdded ? "border-primary-500 border-2 bg-white" : "border-neutral-200 bg-white hover:border-neutral-300", conflict && "opacity-60")}>
                                   <div className="relative aspect-[4/3] overflow-hidden rounded-b-lg">
                                     {imgSrc ? <img src={imgSrc} alt={extra.name} className="h-full w-full object-cover" loading="lazy" /> : <div className="h-full w-full bg-neutral-100" />}
                                     {isAdded && (
@@ -555,23 +568,38 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                                   </div>
                                   <div className="p-2">
                                     <div className="text-xs font-bold text-secondary-900 truncate">{extra.name}</div>
-                                    {isAuto && (
+                                    {conflict ? (
+                                      <div className="mt-0.5 text-[10px] font-semibold text-amber-600 truncate" title={`Conflicts with ${conflict.name}`}>
+                                        Conflicts with {conflict.name}
+                                      </div>
+                                    ) : isAuto && (
                                       <div className="mt-0.5 text-[10px] text-secondary-400">
-                                        {extra.qtyType === 'per_car' ? `×${autoQty} car${autoQty > 1 ? 's' : ''}` : extra.qtyType === 'per_person' ? `×${autoQty} guests` : `×1`}
+                                        {extra.qtyType === 'per_car' ? `×${autoQty} car${autoQty > 1 ? 's' : ''}` : extra.qtyType === 'per_14_guests' ? `×${autoQty} set${autoQty > 1 ? 's' : ''}` : extra.qtyType === 'per_person' ? `×${autoQty} guests` : `×1`}
                                       </div>
                                     )}
                                     <div className="mt-1 flex items-center justify-between gap-1">
                                       <span className="text-xs font-black text-secondary-900">{Number(extra.price) > 0 ? (formatPrice ? formatPrice(extra.price) : `${extra.price} IDR`) : "Free"}</span>
                                       {isAuto ? (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => { e.stopPropagation(); onChangeExtraQty?.(extra.id, isAdded ? 0 : autoQty); }}
-                                          className={cn("shrink-0 h-8 px-3.5 rounded-full text-xs font-bold transition",
-                                            isAdded ? "border border-[#2563eb]/50 bg-[#2563eb]/10 text-[#2563eb]" : "bg-primary-600 text-white hover:bg-primary-700"
-                                          )}
-                                        >
-                                          {isAdded ? "Remove" : "Add"}
-                                        </button>
+                                        conflict ? (
+                                          <button
+                                            type="button"
+                                            disabled
+                                            title={`Conflicts with ${conflict.name}`}
+                                            className="shrink-0 h-8 px-3.5 rounded-full text-xs font-bold cursor-not-allowed border border-neutral-100 bg-neutral-50 text-secondary-300"
+                                          >
+                                            Add
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={(e) => { e.stopPropagation(); onChangeExtraQty?.(extra.id, isAdded ? 0 : autoQty); }}
+                                            className={cn("shrink-0 h-8 px-3.5 rounded-full text-xs font-bold transition",
+                                              isAdded ? "border border-[#2563eb]/50 bg-[#2563eb]/10 text-[#2563eb]" : "bg-primary-600 text-white hover:bg-primary-700"
+                                            )}
+                                          >
+                                            {isAdded ? "Remove" : "Add"}
+                                          </button>
+                                        )
                                       ) : (
                                         <button
                                           type="button"
@@ -663,7 +691,9 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
               <div className="px-5 pt-4 pb-6 space-y-4">
                 {detailsText && <p className="text-sm text-secondary-600 leading-relaxed">{detailsText}</p>}
               </div>
-              {recommendedExtras.length > 0 && (
+              {recommendedExtras.length > 0 && (() => {
+                const extrasByIdForConflict = buildExtrasByIdMap(allExtrasCatalog || extrasCatalog);
+                return (
                 <div className="pb-6">
                   <div className="px-5 text-[10px] font-bold uppercase tracking-widest text-secondary-400 mb-2">Recommended add-ons</div>
                   <div className="flex gap-2.5 overflow-x-auto no-scrollbar px-5 [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent_100%)]">
@@ -671,9 +701,10 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                       const qty = selectedExtras?.[extra.id] || 0;
                       const hasChildSelected = extra.hasChildren && extra.children?.some(c => (selectedExtras?.[c.id] || 0) > 0);
                       const isAdded = qty > 0 || hasChildSelected;
+                      const conflict = !isAdded ? getExtraConflict(extra, selectedExtras, extrasByIdForConflict) : null;
                       const imgSrc = extra.image || extra.images_with_thumbs?.[0]?.thumb || "";
                       return (
-                        <div key={extra.id} className={cn("shrink-0 w-36 rounded-2xl border overflow-hidden transition-all", isAdded ? "border-primary-500 border-2 bg-white" : "border-neutral-200 bg-white")}>
+                        <div key={extra.id} className={cn("shrink-0 w-36 rounded-2xl border overflow-hidden transition-all", isAdded ? "border-primary-500 border-2 bg-white" : "border-neutral-200 bg-white", conflict && "opacity-60")}>
                           <div className="relative aspect-[4/3] overflow-hidden rounded-b-lg">
                             {imgSrc ? <img src={imgSrc} alt={extra.name} className="h-full w-full object-cover" loading="lazy" /> : <div className="h-full w-full bg-neutral-100" />}
                             {isAdded && (
@@ -689,6 +720,11 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                           </div>
                           <div className="p-2">
                             <div className="text-xs font-bold text-secondary-900 truncate">{extra.name}</div>
+                            {conflict && (
+                              <div className="mt-0.5 text-[10px] font-semibold text-amber-600 truncate" title={`Conflicts with ${conflict.name}`}>
+                                Conflicts with {conflict.name}
+                              </div>
+                            )}
                             <div className="mt-1 flex items-center justify-between gap-1">
                               <span className="text-xs font-black text-secondary-900">{Number(extra.price) > 0 ? (formatPrice ? formatPrice(extra.price) : `${extra.price} IDR`) : "Free"}</span>
                               <button type="button" onClick={() => onOpenExtra?.(extra.id)}
@@ -704,7 +740,8 @@ function ItineraryTimeline({ sections, restaurant, sectionTitle, isLightTheme, c
                     })}
                   </div>
                 </div>
-              )}
+                );
+              })()}
             </div>
           );
         })()}
