@@ -1547,7 +1547,7 @@ function Hero() {
               </a>
             </div>
             <p className="mt-4 text-sm font-medium text-secondary-500">
-              From $75 / person | Small groups | Free cancellation 24h
+              From {formatUSD(75)} / person | Small groups | Free cancellation 24h
             </p>
           </div>
         </div>
@@ -6682,7 +6682,7 @@ function Compare() {
       name: "Premium Private",
       variant: "shared",
       badge: "Best value",
-      price: `from $35`,
+      price: `from ${formatUSD(35)}`,
       highlights: [
         "Upgraded premium yacht",
         "La Rossa beachclub lunch",
@@ -6699,7 +6699,7 @@ function Compare() {
       name: "Premium Private",
       variant: "premiumPrivate",
       badge: "Ultimate Choice",
-      price: "$1200+",
+      price: `${formatUSD(1200)}+`,
       highlights: [
         "Everything in Premium Private included",
         "Private boat  only your group onboard",
@@ -6715,7 +6715,7 @@ function Compare() {
       name: "Private",
       variant: "private",
       badge: "For families & groups",
-      price: "from $799",
+      price: `from ${formatUSD(799)}`,
       highlights: [
         "Choose your yacht model",
         "Private boat  only your group onboard",
@@ -6795,7 +6795,7 @@ function Compare() {
 
               {isFeatured ? (
                 <div className="mt-8">
-                  <div className="text-3xl font-bold text-white">$1200+</div>
+                  <div className="text-3xl font-bold text-white">{formatUSD(1200)}+</div>
                   <div className="text-sm text-slate-400">/group</div>
                 </div>
               ) : null}
@@ -8661,7 +8661,7 @@ function CheckoutModal({
       isOpen={isOpen}
       onClose={onClose}
       title={step === 1 ? "1. Choose to pay" : step === 2 ? "2. Select payment method" : "3. Contact details"}
-      subtitle={step === 1 ? "Pay now or pay 50% later" : step === 2 ? "We accept Visa, MasterCard, AmEx, PayPal, and PayLater." : "Enter your contact details"}
+      subtitle={step === 1 ? "Pay now or pay 50% later" : step === 2 ? "We accept Visa, MasterCard, AmEx, and more." : "Enter your contact details"}
       maxWidth="max-w-3xl"
     >
       <div className="p-1">
@@ -8744,7 +8744,6 @@ function CheckoutModal({
                 {payMethod === "card" && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
             </button>
-            {/* PayPal временно отключён */}
           </div>
         )}
 

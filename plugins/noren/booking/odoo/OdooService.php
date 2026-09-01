@@ -432,6 +432,7 @@ class OdooService
                 'x_studio_pickup_cars', 'x_studio_drop_off_cars',
                 'x_studio_pickup_address', 'x_studio_drop_off_address',
                 'x_studio_estimated_pickup_time',
+                'x_studio_estimated_distance',
                 'x_studio_passenger_list',
                 'x_studio_kids', 'x_studio_adults', 'x_studio_count_of_people',
                 'x_studio_payment_source',
@@ -598,6 +599,7 @@ class OdooService
                 'x_studio_pickup_cars', 'x_studio_drop_off_cars',
                 'x_studio_pickup_address', 'x_studio_drop_off_address',
                 'x_studio_estimated_pickup_time',
+                'x_studio_estimated_distance',
                 'x_studio_passenger_list',
                 'x_studio_kids', 'x_studio_adults', 'x_studio_count_of_people',
                 'x_studio_payment_source',
@@ -647,8 +649,6 @@ class OdooService
     public static function cancelOrder(int $odooOrderId): void
     {
         static::post('/json/2/sale.order/action_cancel', ['ids' => [$odooOrderId]]);
-
-        Log::info('OdooService::cancelOrder — done', ['odoo_id' => $odooOrderId]);
     }
 
     // ─── Get order collect amount ─────────────────────────────────────────────
@@ -677,9 +677,13 @@ class OdooService
 
     public static function getOrderInfo(int $odooOrderId): array
     {
+        // Search strictly by id — the id/name sequences can diverge (e.g. id=45191
+        // but name='S47019'), so a 'name' == 'S{id}' OR-fallback can match a
+        // completely different order and silently return the wrong collect amount.
+        // Callers always pass a real numeric Odoo id, so no name fallback is needed.
         $result = static::post('/json/2/sale.order/search_read', [
-            'domain' => ['|', ['id', '=', $odooOrderId], ['name', '=', 'S' . $odooOrderId]],
-            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit'],
+            'domain' => [['id', '=', $odooOrderId]],
+            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit', 'x_studio_unique_key'],
             'limit'  => 1,
         ]);
 
@@ -691,35 +695,46 @@ class OdooService
         $row = $result[0];
 
         return [
-            'state'   => $row['state'] ?? '',
-            'collect' => (float) ($row['x_studio_collect'] ?? 0),
+            'state'      => $row['state'] ?? '',
+            'collect'    => (float) ($row['x_studio_collect'] ?? 0),
+            'unique_key' => $row['x_studio_unique_key'] ?? '',
         ];
     }
 
-    public static function registerPayment(int $odooOrderId, float $amount): void
+    public static function registerPayment(int $odooOrderId, float $amount, string $field = 'x_studio_collected_by_xendit', ?string $invoiceNumber = null): void
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['x_studio_collected_by_xendit'],
+            'fields' => [$field, 'x_studio_payment_reference'],
             'limit'  => 1,
         ]);
 
         if (empty($result[0])) return;
 
-        $currentCollected = (float) ($result[0]['x_studio_collected_by_xendit'] ?? 0);
+        $currentCollected = (float) ($result[0][$field] ?? 0);
 
         // x_studio_collect is a readonly field in Odoo computed from amount_total minus
-        // all x_studio_collected_by_* fields, so updating collected_by_xendit alone is
-        // enough to make it recalculate.
+        // all x_studio_collected_by_* fields, so updating one collected_by_* field alone
+        // is enough to make it recalculate.
+        $vals = [
+            $field => $currentCollected + $amount,
+        ];
+
+        if ($invoiceNumber) {
+            $existingRef = trim((string) ($result[0]['x_studio_payment_reference'] ?? ''));
+            $vals['x_studio_payment_reference'] = $existingRef !== ''
+                ? $existingRef . "\n" . $invoiceNumber
+                : $invoiceNumber;
+        }
+
         static::post('/json/2/sale.order/write', [
             'ids'  => [$odooOrderId],
-            'vals' => [
-                'x_studio_collected_by_xendit' => $currentCollected + $amount,
-            ],
+            'vals' => $vals,
         ]);
 
+        $via = $field === 'x_studio_collected_by_doku' ? 'DOKU' : 'Xendit';
         static::addLogNote($odooOrderId,
-            '<p>💳 Weblink payment received: <strong>' . number_format($amount, 0, '.', ',') . ' IDR</strong> via Xendit.</p>'
+            '<p>💳 Weblink payment received: <strong>' . number_format($amount, 0, '.', ',') . ' IDR</strong> via ' . $via . '.</p>'
         );
     }
 
@@ -993,6 +1008,9 @@ class OdooService
             'x_studio_kids'             => $lead['kids'],
             'x_studio_count_of_people'  => $lead['members'],
             'client_order_ref'          => $lead['external_id'],
+            // Same invoice_number sent to the gateway (Xendit/DOKU) for the deposit —
+            // first entry of the payment reference trail, more appended by registerPayment().
+            'x_studio_payment_reference' => $lead['external_id'],
         ];
 
         if (!empty($lead['company_odoo_id'])) {
@@ -1182,7 +1200,7 @@ class OdooService
                     'X-Odoo-Database' => static::db(),
                 ])
                 ->timeout(60)
-                ->connectTimeout(15)
+                ->connectTimeout(30)
                 ->post(static::url() . $endpoint, $body);
 
             if ($response->successful()) {
@@ -1208,16 +1226,6 @@ class OdooService
 
             if ($response->status() === 429 && $attempt < $maxRetries) {
                 $attempt++;
-                Log::warning('OdooService rate limited, retrying', [
-                    'endpoint'    => $endpoint,
-                    'attempt'     => $attempt,
-                    'maxRetries'  => $maxRetries,
-                    'delay'       => $delay,
-                    'retryAfter'  => $response->header('Retry-After'),
-                    'request'     => $body,
-                    'status'      => $response->status(),
-                    'response'    => $response->body(),
-                ]);
                 sleep($delay);
                 $delay = min($delay * 2, 30);
                 continue;

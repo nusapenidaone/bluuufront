@@ -23,10 +23,22 @@ class ChatbotControllerV2 extends Controller
         header('Access-Control-Allow-Headers: *');
     }
 
+    protected static function cfg(): array
+    {
+        static $cfg = null;
+        if ($cfg === null) {
+            $cfg = require(__DIR__ . '/services.config.php');
+            if (!is_array($cfg) || !isset($cfg['api_key'])) {
+                throw new \RuntimeException('Invalid or missing Chatbot config in services.config.php');
+            }
+        }
+        return $cfg;
+    }
+
     protected function authenticate(Request $request): bool
     {
         $apiKey   = $request->header('X-Api-Key') ?? $request->query('api_key');
-        $validKey = env('CHATBOT_API_KEY', 'bluuu-chatbot-2026');
+        $validKey = static::cfg()['api_key'];
 
         return $apiKey && $apiKey === $validKey;
     }
@@ -69,6 +81,26 @@ class ChatbotControllerV2 extends Controller
             ->filter(fn($label) => $label !== null && $label !== '')
             ->values()
             ->toArray();
+    }
+
+    protected function formatChatbotExtra($e): array
+    {
+        return [
+            'id'          => $e->id,
+            'odoo_id'     => $e->odoo_id ? (int) $e->odoo_id : null,
+            'name'        => $e->name,
+            'description' => $e->description,
+            'price'       => $e->price,
+            'currency'    => 'IDR',
+            'qty_type'    => $e->qty_type ?: 'manual',
+            'has_options' => $e->children->isNotEmpty(),
+            'options'     => $e->children->map(fn($c) => [
+                'id'      => $c->id,
+                'odoo_id' => $c->odoo_id ? (int) $c->odoo_id : null,
+                'name'    => $c->name,
+                'price'   => $c->price,
+            ])->values(),
+        ];
     }
 
     protected function formatBoatFeatures(array $bf): array
@@ -156,7 +188,11 @@ class ChatbotControllerV2 extends Controller
             ];
         });
 
-        $routes = Route::with(['ecategories', 'restaurant'])
+        $routes = Route::with([
+            'ecategories' => fn($q) => $q->orderBy('sort_order'),
+            'ecategories.extras' => fn($q) => $q->whereNull('parent_id')->with('children'),
+            'restaurant',
+        ])
             ->where('classes_id', 8)
             ->orderBy('sort_order')
             ->get();
@@ -185,6 +221,11 @@ class ChatbotControllerV2 extends Controller
                 'itinerary'   => $this->buildItinerary($route),
                 'inclusions'  => $this->buildInclusions($route),
                 'notes'       => $route->add_on_note ?: null,
+                'extra_categories' => $route->ecategories->map(fn($cat) => [
+                    'id'     => $cat->id,
+                    'name'   => $cat->name,
+                    'extras' => $cat->extras->map(fn($e) => $this->formatChatbotExtra($e))->values(),
+                ])->values(),
             ];
         });
 
@@ -199,6 +240,7 @@ class ChatbotControllerV2 extends Controller
                 'price'       => $e->price,
                 'currency'    => 'IDR',
                 'category'    => optional($e->ecategories->first())->name,
+                'qty_type'    => $e->qty_type ?: 'manual',
                 'has_options' => $e->children->isNotEmpty(),
                 'options'     => $e->children->map(fn($c) => [
                     'id'      => $c->id,
@@ -365,6 +407,9 @@ class ChatbotControllerV2 extends Controller
 
         $tourId         = $request->input('tour_id');
         $date           = $request->input('date');
+        if ($date && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            $date = null; // e.g. LLM sends "undecided" when the user hasn't picked a date yet
+        }
         $adults         = (int) $request->input('adults', 0);
         $kids           = (int) $request->input('kids', 0);
         $guests         = ($adults + $kids) ?: (int) $request->input('guests', 1);

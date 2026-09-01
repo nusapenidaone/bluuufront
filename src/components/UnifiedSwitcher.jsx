@@ -38,7 +38,7 @@ const LANGUAGES = [
 const RECOMMENDED = ["en", "ru", "id"];
 
 const UnifiedSwitcher = ({ showFloatingButton = true }) => {
-    const { rates, selectedCurrency, setSelectedCurrency, currency } = useCurrency();
+    const { rates, selectedCurrency, setSelectedCurrency } = useCurrency();
     const [isOpen, setIsOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("language");
     const [currentLang, setCurrentLang] = useState("en");
@@ -121,7 +121,7 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
                 >
                     <Globe className="w-4 h-4 text-primary-500" />
                     <span className="text-sm font-semibold text-secondary-700">
-                        {activeLang.name} · {currency?.symbol ?? "$"} {selectedCurrency}
+                        {activeLang.name} · {selectedCurrency}
                     </span>
                 </motion.button>
             )}
@@ -227,7 +227,7 @@ const UnifiedSwitcher = ({ showFloatingButton = true }) => {
                                                                 }`}
                                                             >
                                                                 <div className={`text-sm font-bold leading-tight ${isActive ? "text-primary-700" : "text-secondary-900"}`}>
-                                                                    {r.code} — {r.symbol}
+                                                                    {r.code}
                                                                 </div>
                                                                 <div className="text-xs text-secondary-400 leading-tight mt-0.5">
                                                                     {r.name}

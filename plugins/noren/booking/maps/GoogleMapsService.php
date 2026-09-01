@@ -90,6 +90,7 @@ class GoogleMapsService
             'duration_in_traffic_seconds' => $element['duration_in_traffic']['value'] ?? null,
             'distance_meters'             => $element['distance']['value'],
             'distance_text'               => $element['distance']['text'],
+            'distance_km'                 => round($element['distance']['value'] / 1000, 1),
         ];
     }
 

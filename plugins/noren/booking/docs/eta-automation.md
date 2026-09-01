@@ -57,6 +57,23 @@
 
 ## Odoo automation script
 
+Настройка Automation Rule ("google maps", модель `Sales Order`):
+
+| Поле | Значение |
+|---|---|
+| Trigger | On create and edit |
+| When updating (Trigger Fields) | `Rental Start Date`, `Pickup Address` |
+| Before Update Domain | match all records (не фильтрует) |
+| Apply on | match all records (не фильтрует) |
+| Action | Execute Code |
+
+Все фильтрация — через Trigger Fields: скрипт выполняется только когда
+`rental_start_date` или `x_studio_pickup_address` реально изменились
+(Odoo сам сравнивает старое/новое значение перед запуском). Поэтому в
+самом скрипте **не должно быть** проверки "уже посчитано → пропустить" —
+раз автоматизация запустилась, значит одно из полей-триггеров действительно
+изменилось, и пересчёт нужен всегда.
+
 ```python
 import requests
 
@@ -70,19 +87,22 @@ for rec in records:
     if not address:
         # Нет адреса — не считаем, и сбрасываем возможные старые значения
         # (например, если адрес был, ETA посчитался, а потом адрес очистили)
-        if rec.x_studio_estimated_pickup_time or rec.x_studio_estimated_trip_duration_google:
+        if rec.x_studio_estimated_pickup_time or rec.x_studio_estimated_trip_duration_google or rec.x_studio_estimated_distance:
             rec.write({
                 "x_studio_estimated_pickup_time": False,
                 "x_studio_estimated_trip_duration_google": False,
+                "x_studio_estimated_distance": False,
             })
         continue
 
     if not rec.rental_start_date:
         continue
 
-    # не пересчитываем, если оба поля уже посчитаны
-    if rec.x_studio_estimated_pickup_time and rec.x_studio_estimated_trip_duration_google:
-        continue
+    # Пересчитываем всегда: Trigger Fields автоматизации (rental_start_date,
+    # x_studio_pickup_address) уже гарантируют, что скрипт запускается только
+    # при реальном изменении одного из них — доп. guard "уже посчитано →
+    # пропустить" здесь не нужен и раньше был багом (блокировал пересчёт при
+    # каждом повторном изменении адреса/даты после первого расчёта).
 
     try:
         response = requests.get(
@@ -119,6 +139,10 @@ for rec in records:
     if duration_seconds is not None:
         vals["x_studio_estimated_trip_duration_google"] = round(duration_seconds / 60.0)
 
+    distance_km = data.get("distance_km")
+    if distance_km is not None:
+        vals["x_studio_estimated_distance"] = distance_km
+
     if vals:
         rec.write(vals)
 ```
@@ -127,11 +151,21 @@ for rec in records:
 
 1. `REQUEST_TIMEOUT` поднят с `20` до `40` секунд — старый таймаут был меньше, чем возможное
    время ответа бэкенда в худшем случае (два последовательных запроса к Google по 15с).
-2. Добавлена проверка `if rec.x_studio_estimated_pickup_time and rec.x_studio_estimated_trip_duration_google: continue` —
-   без неё автоматизация при каждом прогоне по всем `records` заново дёргает платные Google API
-   (geocode + distance matrix) для уже обработанных заказов. Если нужно пересчитывать при
-   смене адреса — уберите эту проверку и фильтруйте `records` доменом по изменившимся полям
-   на уровне триггера автоматизации в Odoo.
-3. Пустой `x_studio_pickup_address` теперь явно сбрасывает `x_studio_estimated_pickup_time` и
-   `x_studio_estimated_trip_duration_google` в `False`, а не просто пропускает запись — иначе
-   при очистке адреса на заказе оставались бы старые (уже неактуальные) расчёты ETA.
+2. Пустой `x_studio_pickup_address` явно сбрасывает все три поля (`pickup_time`,
+   `trip_duration_google`, `estimated_distance`) в `False`, а не просто пропускает запись —
+   иначе при очистке адреса на заказе оставались бы старые (уже неактуальные) расчёты ETA.
+3. Добавлено поле `x_studio_estimated_distance` (км) — заполняется из `distance_km` в ответе API.
+4. **Баг (исправлен): смена адреса/даты не пересчитывала ETA.** Раньше в скрипте была проверка
+   `if rec.x_studio_estimated_pickup_time and rec.x_studio_estimated_trip_duration_google and rec.x_studio_estimated_distance: continue`,
+   добавленная по ошибке — как будто скрипт гоняется батчем по всем `records` и её нужно
+   защищать от повторных платных запросов. На самом деле Automation Rule уже
+   field-triggered (Trigger Fields = `rental_start_date`, `x_studio_pickup_address`, см.
+   таблицу выше) — `records` содержит только тот заказ, у которого один из этих полей
+   только что реально изменился. Guard блокировал пересчёт при каждом изменении адреса/даты
+   после первого расчёта (Odoo не сбрасывает старые `x_studio_estimated_*` сам, они молча
+   оставались от первого расчёта). Guard убран — раз скрипт запустился, значит триггер сработал
+   и пересчёт нужен всегда.
+5. На сайте (`CabinetController::update`, `AccountController::updateSimple`) при изменении
+   адреса/даты дополнительно обнуляются `x_studio_estimated_*` в том же PATCH-запросе в Odoo —
+   это больше не требуется для исправления бага (п.4), но осталось как no-op подстраховка:
+   Odoo всё равно пересчитает эти поля сразу после, увидев изменение триггер-полей.

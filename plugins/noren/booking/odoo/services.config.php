@@ -6,6 +6,7 @@ return [
     'api_key'     => '30f271163aac8949eeeabdd8b1810fd1928a8304',
     'admin_token'     => 'adm_bluuu_a3f9c2e1d8b74056af2c93e5',  // Bearer token for /api/admin/* and /api/new/calendar/* routes
     'cron_key'        => 'e4f3b1a9c2d8e7f6a1b2c3d4e5f67890',  // key for cron /api/boats/close
+    'odoo_webhook_key' => 'odoo_wh_38fe18f8b0c0ea819e118e7897b10e6a',  // key for /api/odoo/webhook/product-price (?key=...)
     'restaurant_token_secret' => 'rst_bluuu_7c1f9a2e5b3d8046c9f21ae7',  // HMAC secret for signing /manage/restaurant login tokens
     'admin_passwords' => [
         'manage'  => 'Bluuu2026!',

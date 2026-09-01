@@ -38,8 +38,8 @@ function getCsrfToken() {
 }
 
 function formatIDR(value) {
-  if (!value && value !== 0) return "IDR 0";
-  return "IDR " + Number(value).toLocaleString("id-ID");
+  if (!value && value !== 0) return "0 IDR";
+  return Number(value).toLocaleString("id-ID") + " IDR";
 }
 
 export default function Payment() {
@@ -66,7 +66,6 @@ export default function Payment() {
   const pickupAddressParam = params.get("pickup_address") || "";
   const dropoffAddressParam = params.get("dropoff_address") || "";
   const payMode = params.get("payMode") || "full";            // "full" | "part"
-  const payMethod = params.get("payMethod") || "card";        // "card" | "paypal"
   const name = params.get("name") || "";
   const email = params.get("email") || "";
   const phone = params.get("phone") || "";
@@ -93,7 +92,7 @@ export default function Payment() {
   // ── Derived values ───────────────────────────────────────────────────────
   const totalGuests = adults + kids;
   const deposite = payMode === "part" ? 50 : 100;
-  const method = payMethod === "paypal" ? 2 : 1;             // 1=Xendit, 2=PayPal
+  const method = 3; // 3=DOKU (default). Xendit stays as an emergency fallback in the backend, no URL flag to force it.
 
   // Extract transfer/cover IDs from extras (they use "transfer-{id}", "cover-{id}" prefixes)
   const transferExtra = extras.find((e) => String(e.id).startsWith("transfer-"));
@@ -157,7 +156,7 @@ export default function Payment() {
     window.location.href = startUrl;
   };
 
-  // ── Payment pending guard (came back from Xendit/PayPal) ─────────────────
+  // ── Payment pending guard (came back from Xendit/DOKU) ─────────────────
   const [paymentPending, setPaymentPending] = useState(() => {
     try { return sessionStorage.getItem("bluuu_payment_pending") === "1"; } catch { return false; }
   });
@@ -326,7 +325,7 @@ export default function Payment() {
         }
       }
 
-      // Step 2: get payment URL from Xendit/PayPal (retries are safe — no duplicate orders)
+      // Step 2: get payment URL from Xendit/DOKU (retries are safe — no duplicate orders)
       const payEndpoint = tourType === "shared" ? "order/shared/pay" : "order/private/pay";
       let payUrl;
       let lastPayErr;
@@ -361,7 +360,7 @@ export default function Payment() {
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
-  const methodLabel = method === 2 ? "PayPal" : "Card / Bank transfer";
+  const methodLabel = "Card / Bank transfer";
   const depositLabel = payMode === "part" ? "50% deposit" : "Full payment";
 
   if (ratesLoading && !isIDR) {

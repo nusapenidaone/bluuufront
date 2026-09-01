@@ -7,7 +7,7 @@ import Button from "./components/common/Button";
 import CustomDatePicker from "./components/common/CustomDatePicker";
 import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
 import { apiUrl } from "./api/base";
-import { cn } from "./lib/utils";
+import { cn, getExtraConflict } from "./lib/utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,10 +36,7 @@ import {
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
 import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
-
-function fmt(n) {
-  return Number(n).toLocaleString("en-US");
-}
+import { useCurrency } from "./CurrencyContext";
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -55,6 +52,7 @@ function toISODate(d) {
 
 function computeAutoQty(qtyType, members) {
   if (qtyType === "per_car") return Math.max(1, Math.ceil(members / 5));
+  if (qtyType === "per_14_guests") return Math.max(1, Math.ceil(members / 14));
   if (qtyType === "per_person") return Math.max(1, members);
   if (qtyType === "fixed") return 1;
   return null;
@@ -62,6 +60,7 @@ function computeAutoQty(qtyType, members) {
 
 function autoQtyLabel(qtyType, qty) {
   if (qtyType === "per_car") return `×${qty} car${qty !== 1 ? "s" : ""} (auto)`;
+  if (qtyType === "per_14_guests") return `×${qty} set${qty !== 1 ? "s" : ""} (auto)`;
   if (qtyType === "per_person") return `×${qty} guest${qty !== 1 ? "s" : ""} (auto)`;
   if (qtyType === "fixed") return `×1 (auto)`;
   return null;
@@ -278,13 +277,15 @@ function GuestsField({ adults, kids, onAdultsChange, onKidsChange, open, onToggl
 }
 
 // ─── Extra row (list item matching the site's renderExtraRow style) ──────────
-function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, onChildQty, locked, savedQty, savedExtrasMap }) {
+function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editExtras, allExtrasById, onChildQty, locked, savedQty, savedExtrasMap }) {
+  const { formatPrice } = useCurrency();
   const isAuto = item.qty_type && item.qty_type !== "manual";
   const autoQty = isAuto ? computeAutoQty(item.qty_type, members) : null;
   const isSaved = (savedQty || 0) > 0; // this item was on the order when loaded
   const minusDisabled = isAuto ? isSaved : qty <= (savedQty || 0);
   const hasChildren = Array.isArray(item.children) && item.children.length > 0;
   const [expanded, setExpanded] = useState(false);
+  const conflict = !isSelected && !hasChildren ? getExtraConflict(item, editExtras, allExtrasById) : null;
 
   // Count selected children
   const selectedChildCount = hasChildren
@@ -295,7 +296,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
     <div>
       <div className={cn(
         "flex items-center gap-3 px-4 py-3 transition",
-        isSelected && !hasChildren ? "bg-primary-50/60" : "hover:bg-neutral-50"
+        isSelected && !hasChildren ? "bg-primary-50/60" : "hover:bg-neutral-50",
+        conflict && "opacity-50"
       )}>
         {/* Thumbnail */}
         <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-neutral-100">
@@ -309,8 +311,8 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
           <div className="line-clamp-1 text-sm font-bold text-secondary-900">{item.name}</div>
           <div className="mt-0.5 text-xs text-secondary-500">
             {hasChildren
-              ? `from IDR ${fmt(Math.min(...item.children.map((c) => c.price)))}`
-              : `IDR ${fmt(item.price)}`}
+              ? `from ${formatPrice(Math.min(...item.children.map((c) => c.price)))}`
+              : formatPrice(item.price)}
             {!hasChildren && isAuto && autoQty && <span className="ml-1">{autoQtyLabel(item.qty_type, autoQty)}</span>}
           </div>
         </div>
@@ -342,6 +344,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                 <span className="min-w-[1.75rem] text-center text-sm font-bold tabular-nums">×{autoQty}</span>
                 <div className="h-7 w-7" />
               </div>
+            ) : conflict ? (
+              <button type="button" disabled title={`Conflicts with ${conflict.name}`}
+                className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-4 text-sm font-bold text-secondary-300">
+                Add
+              </button>
             ) : (
               <button type="button" onClick={onToggle}
                 className="inline-flex h-9 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-4 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -360,6 +367,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                 <Plus className="h-3.5 w-3.5" />
               </button>
             </div>
+          ) : conflict ? (
+            <button type="button" disabled title={`Conflicts with ${conflict.name}`}
+              className="inline-flex h-9 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-4 text-sm font-bold text-secondary-300">
+              Add
+            </button>
           ) : (
             <button type="button" onClick={() => onChangeQty(1)}
               className="inline-flex h-9 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-4 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -378,10 +390,12 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
             const childAutoQty = childIsAuto ? computeAutoQty(child.qty_type, members) : null;
             const childSavedQty = savedExtrasMap?.[child.id] || 0;
             const childMinusDisabled = childIsAuto ? childSavedQty > 0 : childQty <= childSavedQty;
+            const childConflict = childQty <= 0 ? getExtraConflict(child, editExtras, allExtrasById) : null;
             return (
               <div key={child.id} className={cn(
                 "flex items-center gap-3 py-2.5 pl-8 pr-4 transition",
-                childQty > 0 ? "bg-primary-50/40" : "hover:bg-neutral-100/80"
+                childQty > 0 ? "bg-primary-50/40" : "hover:bg-neutral-100/80",
+                childConflict && "opacity-50"
               )}>
                 <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-neutral-200">
                   {child.image
@@ -391,7 +405,7 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-semibold text-secondary-900">{child.name}</div>
                   <div className="text-xs text-secondary-500">
-                    IDR {fmt(child.price)}
+                    {formatPrice(child.price)}
                     {childIsAuto && childAutoQty && <span className="ml-1">{autoQtyLabel(child.qty_type, childAutoQty)}</span>}
                   </div>
                 </div>
@@ -410,6 +424,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                         <span className="min-w-[1.5rem] text-center text-sm font-bold tabular-nums">×{childAutoQty}</span>
                         <div className="h-6 w-6" />
                       </div>
+                    ) : childConflict ? (
+                      <button type="button" disabled title={`Conflicts with ${childConflict.name}`}
+                        className="inline-flex h-8 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-3 text-sm font-bold text-secondary-300">
+                        Add
+                      </button>
                     ) : (
                       <button type="button" onClick={() => onChildQty(child, childAutoQty || 1)}
                         className="inline-flex h-8 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-3 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -428,6 +447,11 @@ function ExtraRow({ item, members, isSelected, qty, onToggle, onChangeQty, editE
                         <Plus className="h-3 w-3" />
                       </button>
                     </div>
+                  ) : childConflict ? (
+                    <button type="button" disabled title={`Conflicts with ${childConflict.name}`}
+                      className="inline-flex h-8 cursor-not-allowed items-center justify-center rounded-full border border-neutral-100 bg-neutral-50 px-3 text-sm font-bold text-secondary-300">
+                      Add
+                    </button>
                   ) : (
                     <button type="button" onClick={() => onChildQty(child, 1)}
                       className="inline-flex h-8 items-center justify-center rounded-full border border-neutral-100 bg-neutral-100 px-3 text-sm font-bold text-primary-600 transition hover:bg-white">
@@ -579,6 +603,7 @@ function GuestsInline({ adults, kids, onAdultsChange, onKidsChange, capacity }) 
 
 // ─── Cabinet page ─────────────────────────────────────────────────────────────
 export default function Cabinet({ odooId, uniqueKey }) {
+  const { formatPrice } = useCurrency();
   const contacts = useSiteContacts();
   const params = new URLSearchParams(window.location.search);
   const justPaid  = params.get("paid")  === "1";
@@ -592,6 +617,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [editDate, setEditDate] = useState("");
   const [editPickup, setEditPickup] = useState("");
   const [editDropoff, setEditDropoff] = useState("");
+  const [editPickupConfirmed, setEditPickupConfirmed] = useState(false);
+  const [editDropoffConfirmed, setEditDropoffConfirmed] = useState(false);
   const [editAdults, setEditAdults] = useState(0);
   const [editKids, setEditKids] = useState(0);
   const [editTransfer, setEditTransfer] = useState(null);
@@ -657,6 +684,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
       setEditDate(json.local.travel_date || "");
       setEditPickup(json.local.pickup_address || "");
       setEditDropoff(json.local.dropoff_address || "");
+      setEditPickupConfirmed(Boolean(json.local.pickup_address));
+      setEditDropoffConfirmed(Boolean(json.local.dropoff_address));
       setEditAdults(json.local.adults || 0);
       setEditKids(json.local.kids || 0);
       const initTransfer = json.local.transfer_id ? Number(json.local.transfer_id) : null;
@@ -762,6 +791,19 @@ export default function Cabinet({ odooId, uniqueKey }) {
     return routes.find((r) => String(r.id) === editRoute) || null;
   }, [data, editRoute]);
 
+  // Flat id -> extra map across ALL routes (not just the selected one), so a conflicting
+  // extra from a different route/category can still be resolved by id/name.
+  const allExtrasById = useMemo(() => {
+    const map = {};
+    for (const route of (data?.options?.routes || [])) {
+      for (const e of (route.extras || [])) {
+        map[e.id] = e;
+        for (const child of (e.children || [])) map[child.id] = child;
+      }
+    }
+    return map;
+  }, [data]);
+
   const catalogCategories = selectedRoute?.categories || [];
   const catalogExtrasFlat = selectedRoute?.extras || [];
 
@@ -786,6 +828,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
     const minQty = savedExtrasMap[item.id] || 0;
     const safeQty = Math.max(minQty, qty);
     setEditExtras((prev) => {
+      // Block if a conflicting extra is already selected
+      if (safeQty > 0 && getExtraConflict(item, prev, allExtrasById)) {
+        return prev;
+      }
       const next = { ...prev };
       if (safeQty <= 0) {
         delete next[item.id];
@@ -800,6 +846,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
     // Saved extras can't be removed, only newly added ones can be toggled off
     if (savedExtrasMap[item.id]) return;
     setEditExtras((prev) => {
+      // Block if a conflicting extra is already selected
+      if (!prev[item.id] && getExtraConflict(item, prev, allExtrasById)) {
+        return prev;
+      }
       const next = { ...prev };
       if (next[item.id]) {
         delete next[item.id];
@@ -836,6 +886,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
     setEditDate(local.travel_date || "");
     setEditPickup(local.pickup_address || "");
     setEditDropoff(local.dropoff_address || "");
+    setEditPickupConfirmed(Boolean(local.pickup_address));
+    setEditDropoffConfirmed(Boolean(local.dropoff_address));
     setEditAdults(local.adults || 0);
     setEditKids(local.kids || 0);
     setEditTransfer(local.transfer_id ? Number(local.transfer_id) : null);
@@ -984,7 +1036,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const payCollect = async () => {
     setPaying(true);
     try {
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/pay`), { method: "POST" });
+      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/pay`), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+      });
       const json = await res.json();
       if (json.payment_url) {
         window.location.href = json.payment_url;
@@ -1045,7 +1101,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const waNumber = contacts?.whatsapp?.number || WA.google;
   const waMsg = encodeURIComponent(`Hii Bluuu Tours! I want to ask about one of your tours ${odoo.order_number || odooId}`);
   const waLink = `https://wa.me/${waNumber}?text=${waMsg}`;
-  const depositPaid = odoo.deposit_paid || 0;
 
   // Time-based edit restrictions
   const hoursUntilTour = (() => {
@@ -1115,14 +1170,28 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const liveAddOns  = livePrices?.total || 0;
   const addonsDelta = hasChanges ? liveAddOns - savedAddOns : 0;
 
-  // Tour price delta from guest count change using server pricelist
-  const pricelist = options.price_list || [];
-  const plLookup  = (members) => {
-    const e = pricelist.find((r) => Number(r.members_count) === Number(members));
-    return e ? Number(e.price) : null;
+  // Tour price delta from date/guest count change, resolving the seasonal
+  // package (PricesByDates) per date instead of freezing the pricelist that
+  // was active on the order's original travel_date.
+  const resolvePricelist = (dateStr) => {
+    const pricing = options.pricing;
+    if (!pricing) return options.price_list || [];
+    if (dateStr && pricing.seasonal?.length) {
+      const season = pricing.seasonal.find((p) => dateStr >= p.date_start && dateStr <= p.date_end);
+      if (season?.pricelist?.length) return season.pricelist;
+    }
+    return pricing.default || [];
   };
-  const baseTourPrice = plLookup(local.members);
-  const liveTourPrice = plLookup(editAdults + editKids);
+  const plLookup = (pricelist, members) => {
+    const exact = pricelist.find((r) => Number(r.members_count) === Number(members));
+    if (exact) return Number(exact.price);
+    if (!pricelist.length) return null;
+    const sorted = [...pricelist].sort((a, b) => Number(a.members_count) - Number(b.members_count));
+    const closest = [...sorted].reverse().find((r) => Number(r.members_count) <= Number(members));
+    return Number((closest || sorted[0]).price);
+  };
+  const baseTourPrice = plLookup(resolvePricelist(local.travel_date), local.members);
+  const liveTourPrice = plLookup(resolvePricelist(editDate), editAdults + editKids);
   const tourPriceDelta = hasChanges && baseTourPrice !== null && liveTourPrice !== null
     ? liveTourPrice - baseTourPrice
     : 0;
@@ -1130,7 +1199,16 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const priceDelta  = addonsDelta + tourPriceDelta;
 
   // estNewTotal: swap add-ons + tour portion
-  const odooTotal   = (collect || 0) + (depositPaid || 0);
+  // amount_total comes straight from Odoo's sale.order — the authoritative total.
+  // (collect + deposit_paid is NOT a substitute: x_studio_collect subtracts every
+  // x_studio_collected_by_* field — cash/EDC/Xendit/DOKU — so any payment beyond
+  // the deposit makes that reconstruction undercount the real total.)
+  const odooTotal   = odoo.amount_total || 0;
+  // What's actually been paid so far — NOT the same as deposit_paid once any
+  // top-up payment (Xendit weblink, DOKU, cash, EDC) lands after the deposit.
+  // collect is Odoo's authoritative "still owed" figure, so total-collect is
+  // always the true paid-so-far amount regardless of which channel(s) paid it.
+  const amountPaid  = odooTotal - collect;
   const estNewTotal = lastPrices
     ? (lastPrices.tour_price || 0) + (lastPrices.boat_price || 0) + liveAddOns + tourPriceDelta
     : odooTotal - savedAddOns + liveAddOns + tourPriceDelta;
@@ -1491,6 +1569,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
             setPickupAddress={setEditPickup}
             dropoffAddress={editDropoff}
             setDropoffAddress={setEditDropoff}
+            pickupAddressConfirmed={editPickupConfirmed}
+            setPickupAddressConfirmed={setEditPickupConfirmed}
+            dropoffAddressConfirmed={editDropoffConfirmed}
+            setDropoffAddressConfirmed={setEditDropoffConfirmed}
             totalGuests={editMembers}
             showHeader={false}
           />
@@ -1505,7 +1587,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
             selectedCoverId={editCover}
             onSelectCoverId={handleCoverChange}
             priceLabel={local.is_private ? "per group" : "per person"}
-            formatPrice={(v) => `IDR ${fmt(Number(v))}`}
+            formatPrice={(v) => formatPrice(Number(v))}
             showHeader={false}
             framed
           />
@@ -1565,6 +1647,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                           onToggle={() => toggleAutoExtra(item)}
                           onChangeQty={(v) => setExtraQty(item, v)}
                           editExtras={editExtras}
+                          allExtrasById={allExtrasById}
                           onChildQty={(child, v) => setExtraQty(child, v)}
                           locked={allEditLocked}
                           savedQty={savedExtrasMap[item.id] || 0}
@@ -1588,7 +1671,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                               <div className="min-w-0 flex-1">
                                 <div className="text-sm font-semibold text-secondary-400">{item.name}</div>
                                 <div className="mt-0.5 text-xs text-secondary-300">
-                                  IDR {fmt((effectiveQty || 1) * item.price)}
+                                  {formatPrice((effectiveQty || 1) * item.price)}
                                   {isAuto && autoQty && <span className="ml-1">{autoQtyLabel(item.qty_type, autoQty)}</span>}
                                 </div>
                               </div>
@@ -1721,7 +1804,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               {upgradeChecked && cd?.available && cd.price_diff > 0 && (
                 <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3">
                   <div className="flex-1 text-xs text-amber-700">Extra to pay for upgrade</div>
-                  <div className="text-base font-extrabold text-amber-900">+IDR {fmt(cd.price_diff)}</div>
+                  <div className="text-base font-extrabold text-amber-900">+{formatPrice(cd.price_diff)}</div>
                 </div>
               )}
 
@@ -1742,7 +1825,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
                 >
                   {cd.price_diff > 0
-                    ? `Upgrade · +IDR ${fmt(cd.price_diff)} →`
+                    ? `Upgrade · +${formatPrice(cd.price_diff)} →`
                     : `Upgrade to ${tierLabel} →`}
                 </button>
               ) : null}
@@ -1816,11 +1899,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
             {/* Detailed breakdown when available (after save in session) */}
             {lastPrices ? (
               <>
-                <PriceRow label="Tour" value={`IDR ${fmt(lastPrices.tour_price)}`} />
-                {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={`IDR ${fmt(lastPrices.boat_price)}`} />}
-                {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={`IDR ${fmt(lastPrices.transfer_price)}`} />}
-                {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={`IDR ${fmt(lastPrices.cover_price)}`} />}
-                {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={`IDR ${fmt(lastPrices.extras_total)}`} />}
+                <PriceRow label="Tour" value={formatPrice(lastPrices.tour_price)} />
+                {lastPrices.boat_price > 0 && <PriceRow label="Boat" value={formatPrice(lastPrices.boat_price)} />}
+                {lastPrices.transfer_price > 0 && <PriceRow label="Transfer" value={formatPrice(lastPrices.transfer_price)} />}
+                {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={formatPrice(lastPrices.cover_price)} />}
+                {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={formatPrice(lastPrices.extras_total)} />}
               </>
             ) : null}
 
@@ -1828,22 +1911,22 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className={cn("flex items-center justify-between", lastPrices ? "border-t border-neutral-100 pt-2.5" : "")}>
               <span className="text-sm font-bold text-secondary-900">Total</span>
               <span className={cn("text-sm font-extrabold", hasChanges && priceDelta !== 0 ? "text-secondary-300 line-through" : "text-secondary-900")}>
-                IDR {fmt(lastPrices ? lastPrices.full_price : odooTotal)}
+                {formatPrice(lastPrices ? lastPrices.full_price : odooTotal)}
               </span>
             </div>
-            {depositPaid > 0 && (
+            {amountPaid > 0 && (
               <div className="flex items-center justify-between">
-                <span className="text-sm text-secondary-400">Deposit paid</span>
-                <span className="text-sm font-semibold text-emerald-600">− IDR {fmt(depositPaid)}</span>
+                <span className="text-sm text-secondary-400">Paid</span>
+                <span className="text-sm font-semibold text-emerald-600">− {formatPrice(amountPaid)}</span>
               </div>
             )}
             {collect > 0 && (
               <div className="flex items-center justify-between rounded-xl bg-primary-50 px-3 py-2.5">
                 <span className="text-sm font-semibold text-primary-700">Remaining balance</span>
-                <span className="text-sm font-extrabold text-primary-700">IDR {fmt(collect)}</span>
+                <span className="text-sm font-extrabold text-primary-700">{formatPrice(collect)}</span>
               </div>
             )}
-            {collect === 0 && depositPaid > 0 && (
+            {collect === 0 && amountPaid > 0 && (
               <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2.5">
                 <span className="text-sm font-semibold text-emerald-700">Fully paid</span>
                 <span className="text-sm font-extrabold text-emerald-600">✓</span>
@@ -1862,12 +1945,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   {priceDelta > 0 ? "Extra to pay" : "Price decrease"}
                 </span>
                 <span className={cn("text-base font-extrabold", priceDelta > 0 ? "text-amber-700" : "text-emerald-700")}>
-                  {priceDelta > 0 ? "+" : "−"} IDR {fmt(Math.abs(priceDelta))}
+                  {priceDelta > 0 ? "+" : "−"} {formatPrice(Math.abs(priceDelta))}
                 </span>
               </div>
               <div className={cn("mt-1 text-[11px]", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
                 {priceDelta > 0
-                  ? `New total: IDR ${fmt(estNewTotal)}`
+                  ? `New total: ${formatPrice(estNewTotal)}`
                   : "Refund will be processed through Odoo"}
               </div>
             </div>
@@ -1890,12 +1973,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 {priceDelta > 0 ? (
                   <>
                     <div className="text-xs font-semibold text-white/70">Additional payment required</div>
-                    <div className="mt-0.5 text-base font-extrabold text-white">+IDR {fmt(priceDelta)}</div>
+                    <div className="mt-0.5 text-base font-extrabold text-white">+{formatPrice(priceDelta)}</div>
                   </>
                 ) : (
                   <>
                     <div className="text-xs font-semibold text-white/70">Price difference</div>
-                    <div className="mt-0.5 text-base font-extrabold text-white">−IDR {fmt(Math.abs(priceDelta))}</div>
+                    <div className="mt-0.5 text-base font-extrabold text-white">−{formatPrice(Math.abs(priceDelta))}</div>
                     <div className="mt-1 text-[11px] text-white/60">Refund will be processed through Odoo</div>
                   </>
                 )}
@@ -1928,7 +2011,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
               <div>
                 <div className="text-sm font-bold text-emerald-700">Fully paid — you&apos;re all set!</div>
-                {depositPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: IDR {fmt(depositPaid)}</div>}
+                {amountPaid > 0 && <div className="mt-0.5 text-xs text-emerald-600">Paid: {formatPrice(amountPaid)}</div>}
               </div>
             </div>
             {saved && (
@@ -1942,9 +2025,9 @@ export default function Cabinet({ odooId, uniqueKey }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[10px] font-bold uppercase tracking-widest text-white/50">Remaining balance</div>
-                <div className="mt-1 text-3xl font-extrabold tracking-tight text-white">IDR {fmt(collect)}</div>
-                {depositPaid > 0 && (
-                  <div className="mt-0.5 text-xs text-white/50">Deposit paid: IDR {fmt(depositPaid)}</div>
+                <div className="mt-1 text-3xl font-extrabold tracking-tight text-white">{formatPrice(collect)}</div>
+                {amountPaid > 0 && (
+                  <div className="mt-0.5 text-xs text-white/50">Paid so far: {formatPrice(amountPaid)}</div>
                 )}
               </div>
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
@@ -1961,7 +2044,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               disabled={paying}
               className="btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
             >
-              {paying ? "Redirecting…" : `Pay IDR ${fmt(collect)} →`}
+              {paying ? "Redirecting…" : `Pay ${formatPrice(collect)} →`}
             </button>
           </div>
         )}

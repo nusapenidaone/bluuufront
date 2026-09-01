@@ -7,6 +7,7 @@ import './home.css';
 import Footer from './components/common/Footer';
 import HomeNavbar from './components/common/HomeNavbar';
 import { useSiteContacts } from './hooks/useSiteContacts';
+import { useCurrency } from './CurrencyContext';
 import SEO from './components/SEO';
 import { schemaWebSite, schemaLocalBusiness } from './lib/schemas';
 const MEDIA = 'https://bluuu.tours/storage/app/media/bluuu';
@@ -80,6 +81,8 @@ const AnimatedCounter = ({ target, duration = 2000, formatter }) => {
 };
 
 const Home3 = () => {
+  const { formatPrice } = useCurrency();
+  const formatUSD = (v) => formatPrice(v, { fromCurrency: "USD" });
   const contacts = useSiteContacts();
   const waLink = contacts?.whatsapp?.link || `https://wa.me/${WA.google}`;
   const [formSubmitted, setFormSubmitted] = useState(false);
@@ -311,7 +314,7 @@ const Home3 = () => {
       </p>
 
       <p className="hero-pricing">
-        From <strong>$80</strong>/person&nbsp; ·&nbsp; Private boats from <strong>$750</strong>
+        From <strong>{formatUSD(80)}</strong>/person&nbsp; ·&nbsp; Private boats from <strong>{formatUSD(750)}</strong>
       </p>
 
       <div className="hero-cta-row">
@@ -498,7 +501,7 @@ const Home3 = () => {
               <span>Up to 13 guests</span>
               <span>Fixed departure</span>
             </div>
-            <div className="sku-minimal__price">from <strong>$80</strong> <span>/ person</span></div>
+            <div className="sku-minimal__price">from <strong>{formatUSD(80)}</strong> <span>/ person</span></div>
           </div>
         </div>
       </a>
@@ -517,7 +520,7 @@ const Home3 = () => {
               <span>2-45 guests</span>
               <span>Flexible routing</span>
             </div>
-            <div className="sku-minimal__price">from <strong>$750</strong> <span>/boat</span></div>
+            <div className="sku-minimal__price">from <strong>{formatUSD(750)}</strong> <span>/boat</span></div>
           </div>
         </div>
       </a>

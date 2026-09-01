@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronDown, Minus, Plus, CheckCircle2, Check } from "lucide-react";
+import { Fancybox } from "@fancyapps/ui";
 import Modal from "../common/Modal";
 import Button from "../common/Button";
-import { cn } from "../../lib/utils";
+import PhotoCarousel from "../common/PhotoCarousel";
+import { cn, getExtraConflict } from "../../lib/utils";
 
 const EXTRA_IMAGE_BY_ID = {
   photographer: "https://bluuu.tours/storage/app/uploads/public/68f/9ed/c1a/68f9edc1a9270720998215.jpg",
@@ -25,6 +27,7 @@ const EXTRA_FALLBACK_IMAGE = "https://bluuu.tours/storage/app/uploads/public/68f
 
 function computeAutoQty(qtyType, totalGuests) {
   if (qtyType === 'per_car') return Math.ceil(totalGuests / 5);
+  if (qtyType === 'per_14_guests') return Math.ceil(totalGuests / 14);
   if (qtyType === 'per_person') return totalGuests;
   if (qtyType === 'fixed') return 1;
   return null;
@@ -32,12 +35,13 @@ function computeAutoQty(qtyType, totalGuests) {
 
 function autoQtyLabel(qtyType, qty) {
   if (qtyType === 'per_car') return `×${qty} car${qty !== 1 ? 's' : ''} (auto)`;
+  if (qtyType === 'per_14_guests') return `×${qty} set${qty !== 1 ? 's' : ''} (auto)`;
   if (qtyType === 'per_person') return `×${qty} guest${qty !== 1 ? 's' : ''} (auto)`;
   if (qtyType === 'fixed') return `×1 (auto)`;
   return null;
 }
 
-export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCatalog, selectedExtras, onChangeExtraQty, formatIDR, totalGuests = 1 }) {
+export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCatalog, allExtrasById, selectedExtras, onChangeExtraQty, formatIDR, totalGuests = 1 }) {
   const [selectedChildId, setSelectedChildId] = useState(null);
   const [pickerQty, setPickerQty] = useState(1);
   const [justAddedId, setJustAddedId] = useState(null);
@@ -128,6 +132,12 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
   const isSoldOut = currentItem?.available != null && Number(currentItem.available) <= 0;
   const maxQty = currentItem?.available != null ? Math.max(1, Number(currentItem.available)) : Infinity;
   const singleDraftQty = activeExtra && !hasChildren ? Math.max(0, Number(draftQuantities[currentItem?.id] || 0)) : 0;
+  const alreadySelected = isAutoQty
+    ? Number(selectedExtras[currentItem?.id] || 0) > 0
+    : singleDraftQty > 0;
+  const conflict = !hasChildren && !alreadySelected
+    ? getExtraConflict(currentItem, selectedExtras, allExtrasById)
+    : null;
   const effectiveQty = isAutoQty ? (autoQty ?? 1) : singleDraftQty;
   const cartTotal = hasChildren
     ? activeExtra.children.reduce((sum, c) => sum + Math.max(0, Number(draftQuantities[c.id] || 0)) * Number(c.price || 0), 0)
@@ -139,6 +149,29 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
       EXTRA_IMAGE_BY_ID[activeExtra.name?.toLowerCase().replace(/\s+/g, "-")] ||
       EXTRA_FALLBACK_IMAGE
     : EXTRA_FALLBACK_IMAGE;
+  const galleryImages = useMemo(() => {
+    if (!activeExtra) return [];
+    const source = (hasChildren && currentItem?.images_with_thumbs?.length)
+      ? currentItem.images_with_thumbs
+      : activeExtra.images_with_thumbs?.length
+        ? activeExtra.images_with_thumbs
+        : null;
+    if (source?.length) {
+      return source.map((img) => ({
+        thumb: img.thumb1 || img.thumb || img.original,
+        thumb_small: img.thumb1_small || img.thumb_small,
+        path: img.original || img.thumb1 || img.thumb,
+      }));
+    }
+    return [{ thumb: imgSrc, path: imgSrc }];
+  }, [activeExtra, hasChildren, currentItem, imgSrc]);
+  const openExtraGallery = useCallback((idx) => {
+    if (!galleryImages.length) return;
+    Fancybox.show(
+      galleryImages.map((img) => ({ src: img.path, type: "image" })),
+      { startIndex: idx || 0 }
+    );
+  }, [galleryImages]);
   const addedItems = hasChildren ? activeExtra.children.filter((c) => Number(draftQuantities[c.id] || 0) > 0) : [];
   const selectedSoldOut = hasChildren && currentItem?.available != null && Number(currentItem.available) <= 0;
   const selectedMaxQty = hasChildren
@@ -176,24 +209,23 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
       {activeExtra ? (
         <div className="flex w-full flex-col overflow-hidden bg-white flex-1 min-h-0">
 
-          {/* Mobile: hero image with title overlay */}
+          {/* Mobile: hero image slider with title overlay */}
           <div className="relative shrink-0 md:hidden">
-            <img
-              src={imgSrc}
-              srcSet={activeExtra?.images_with_thumbs?.[0]?.thumb_small
-                ? `${activeExtra.images_with_thumbs[0].thumb_small} 200w, ${imgSrc} 400w`
-                : undefined}
-              sizes="100vw"
+            <PhotoCarousel
+              images={galleryImages}
               alt={hasChildren ? (currentItem?.name || activeExtra.name) : activeExtra.name}
-              className="h-48 w-full object-cover"
+              className="h-48 !rounded-none"
+              alwaysShowControls
+              maximizeLeft
+              onOpenGallery={openExtraGallery}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
-            <div className="absolute bottom-0 left-0 right-0 px-5 pb-4">
+            <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/60 via-black/20 to-black/10" />
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 px-5 pb-4">
               <h2 className="text-lg font-bold text-white leading-tight drop-shadow-sm">{activeExtra.name}</h2>
             </div>
             <button
               onClick={() => setActiveExtraId(null)}
-              className="absolute top-3 right-4 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm text-white transition hover:bg-black/50"
+              className="absolute top-3 right-4 z-20 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm text-white transition hover:bg-black/50"
               type="button"
             >
               <X className="h-4 w-4" />
@@ -217,14 +249,12 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
 
             {/* Desktop Image */}
             <div className="hidden md:flex shrink-0 bg-neutral-50 md:w-52 md:items-start md:justify-center p-4 md:sticky md:top-0 md:self-start">
-              <img
-                src={imgSrc}
-                srcSet={activeExtra?.images_with_thumbs?.[0]?.thumb_small
-                  ? `${activeExtra.images_with_thumbs[0].thumb_small} 200w, ${imgSrc} 400w`
-                  : undefined}
-                sizes="208px"
+              <PhotoCarousel
+                images={galleryImages}
                 alt={hasChildren ? (currentItem?.name || activeExtra.name) : activeExtra.name}
-                className="w-full rounded-xl object-contain"
+                className="h-48 rounded-xl"
+                alwaysShowControls
+                onOpenGallery={openExtraGallery}
               />
             </div>
 
@@ -444,6 +474,10 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                     <div className="space-y-3">
                       {isSoldOut ? (
                         <div className="rounded-xl border border-neutral-200 px-4 py-3 text-sm text-secondary-400 opacity-50">Sold out</div>
+                      ) : conflict ? (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                          Not available together with <strong>{conflict.name}</strong> — remove it first.
+                        </div>
                       ) : isAutoQty ? (
                         <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
                           <div className="flex-1">
@@ -558,7 +592,7 @@ export default function ExtraPopup({ activeExtraId, setActiveExtraId, extrasCata
                     ) : (
                       <Button
                         onClick={confirmHandler}
-                        disabled={!hasChanged}
+                        disabled={!hasChanged || !!conflict}
                         className="h-11 px-6"
                       >
                         {isAutoQty ? "Add" : "Confirm"}

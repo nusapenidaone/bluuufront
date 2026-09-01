@@ -250,7 +250,7 @@ function buildVisibleSteps(ord) {
     });
     steps.push('passengers');
     if (ord.has_lunch) steps.push('menu');
-    if (ord.collect > 0) { steps.push('balance'); steps.push('payment'); }
+    if (ord.collect > 0) steps.push('balance');
     return steps;
 }
 
@@ -383,7 +383,7 @@ function fmtDate(d) {
     return `${parseInt(day)} ${months[parseInt(m)-1]} ${y}`;
 }
 
-const COUNTRIES = ["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Belarus","Belgium","Brazil","Bulgaria","Cambodia","Canada","Chile","China","Colombia","Croatia","Czech Republic","Denmark","Egypt","Estonia","Finland","France","Georgia","Germany","Ghana","Greece","Hong Kong","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Japan","Jordan","Kazakhstan","Kenya","Korea, Republic of","Kuwait","Latvia","Lebanon","Lithuania","Malaysia","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Norway","Pakistan","Philippines","Poland","Portugal","Qatar","Romania","Russian Federation","Saudi Arabia","Serbia","Singapore","Slovakia","Slovenia","South Africa","Spain","Sri Lanka","Sweden","Switzerland","Taiwan","Thailand","Turkey","Ukraine","United Arab Emirates","United Kingdom","United States","Uzbekistan","Viet Nam"];
+const COUNTRIES = ["Afghanistan","Albania","Algeria","Argentina","Armenia","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Belarus","Belgium","Brazil","Bulgaria","Cambodia","Canada","Chile","China","Colombia","Croatia","Czech Republic","Denmark","Egypt","Estonia","Finland","France","Georgia","Germany","Ghana","Greece","Hong Kong","Hungary","India","Indonesia","Iran","Iraq","Ireland","Israel","Italy","Japan","Jordan","Kazakhstan","Kenya","Korea, Republic of","Kuwait","Latvia","Lebanon","Lithuania","Macau","Malaysia","Mexico","Morocco","Netherlands","New Zealand","Nigeria","Norway","Pakistan","Philippines","Poland","Portugal","Qatar","Romania","Russian Federation","Saudi Arabia","Serbia","Singapore","Slovakia","Slovenia","South Africa","Spain","Sri Lanka","Sweden","Switzerland","Taiwan","Thailand","Turkey","Ukraine","United Arab Emirates","United Kingdom","United States","Uzbekistan","Viet Nam"];
 
 // ─── Step: Overview ───────────────────────────────────────────────────────────
 
@@ -859,8 +859,9 @@ function StepMenu({ order, setOrder, goBack, nextStep, go }) {
 
 // ─── Step: Balance (pay now / pay later) ──────────────────────────────────────
 
-function StepPay({ order, setOrder, goBack, goNext }) {
+function StepPay({ order, setOrder, goBack }) {
     const [loading, setLoading] = useState(false);
+    const [status,  setStatus]  = useState('Processing');
 
     function finish() {
         setLoading(true);
@@ -871,6 +872,23 @@ function StepPay({ order, setOrder, goBack, goNext }) {
         })
         .then(() => { window.location.href = '/checkin/' + order.odoo_id + '/qr'; })
         .catch(() => { setLoading(false); alert('Something went wrong. Please try again.'); });
+    }
+
+    function payOnline() {
+        setLoading(true); setStatus('Saving');
+        axios.post('/api/new/checkin/' + order.odoo_id + '/save', {
+            passengers: order.passengers,
+            email: order.email,
+            menu: order.menu || null,
+        })
+        .then(() => {
+            setStatus('Redirecting');
+            return axios.post('/api/new/checkin/' + order.odoo_id + '/pay', {
+                method: order.method, email: order.email,
+            });
+        })
+        .then(res => { window.location.href = res.data.payment_url; })
+        .catch(() => { setLoading(false); alert('Payment error. Please try again.'); });
     }
 
     return (
@@ -890,51 +908,11 @@ function StepPay({ order, setOrder, goBack, goNext }) {
                 <div style={{ marginTop:24 }}>
                     {!loading ? (
                         <>
-                            {order.pay === true  && <PrimaryBtn onClick={goNext}>Continue &nbsp;<ArrowR /></PrimaryBtn>}
+                            {order.pay === true  && <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} &nbsp;<ArrowR /></PrimaryBtn>}
                             {order.pay === false && <PrimaryBtn onClick={finish}>Complete Check-In &nbsp;<ArrowR /></PrimaryBtn>}
                             {order.pay === null  && <div style={{ textAlign:'center', fontSize:13, color:MUTED, padding:'10px 0' }}>← Please select an option above</div>}
                         </>
-                    ) : <LoadingBtn />}
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─── Step: Payment method ─────────────────────────────────────────────────────
-
-function StepMethod({ order, goBack }) {
-    const [loading, setLoading] = useState(false);
-    const [status,  setStatus]  = useState('Processing');
-
-    function pay() {
-        setLoading(true); setStatus('Saving');
-        axios.post('/api/new/checkin/' + order.odoo_id + '/save', {
-            passengers: order.passengers,
-            email: order.email,
-            menu: order.menu || null,
-        })
-        .then(() => {
-            setStatus('Redirecting');
-            return axios.post('/api/new/checkin/' + order.odoo_id + '/pay', {
-                method: order.method, email: order.email,
-            });
-        })
-        .then(res => { window.location.href = res.data.payment_url; })
-        .catch(() => { setLoading(false); alert('Payment error. Please try again.'); });
-    }
-
-    return (
-        <div className="fade-up" style={cardStyle}>
-            <CardHeader title="Payment Method" sub={`Amount to pay: ${fmtIDR(order.collect)}`} onBack={goBack} />
-            <div style={{ padding:'20px 28px 28px' }}>
-                <RadioOpt label="Card / Bank Transfer" sub="Processed in IDR · 3% merchant fee"
-                    checked={order.method === 1} onClick={() => {}} last />
-                <div style={{ marginTop:24 }}>
-                    {!loading
-                        ? <PrimaryBtn onClick={pay}>Pay {fmtIDR(order.collect)} &nbsp;<ArrowR /></PrimaryBtn>
-                        : <LoadingBtn text={status} />
-                    }
+                    ) : <LoadingBtn text={status} />}
                 </div>
             </div>
         </div>
@@ -949,7 +927,7 @@ function App() {
         ...INIT,
         passengers: [],
         pay:    INIT.collect > 0 ? null : false,
-        method: 1,
+        method: 3, // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
         menu:   null,
     });
 
@@ -990,7 +968,6 @@ function App() {
             {step === 'passengers' && <StepPassengers {...props} />}
             {step === 'menu'       && <StepMenu       {...props} />}
             {step === 'balance'    && <StepPay        {...props} />}
-            {step === 'payment'    && <StepMethod     {...props} />}
         </>
     );
 }

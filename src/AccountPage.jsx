@@ -1,12 +1,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
+import { useCurrency } from "./CurrencyContext";
 
 const API = "/api/new/account/";
-
-function fmt(n) {
-  return Number(n).toLocaleString("en-US");
-}
 
 function fmtDate(iso) {
   if (!iso) return "—";
@@ -66,6 +63,7 @@ function Btn({ children, onClick, disabled, variant = "primary", small = false }
 }
 
 export default function AccountPage() {
+  const { formatPrice } = useCurrency();
   const contacts = useSiteContacts();
   const waLink = contacts?.whatsapp?.link || `https://wa.me/${WA.google}`;
   const params = new URLSearchParams(window.location.search);
@@ -159,7 +157,11 @@ export default function AccountPage() {
   const payCollect = async () => {
     setSavingPay(true);
     try {
-      const res = await fetch(API + key + "/pay", { method: "POST" });
+      const res = await fetch(API + key + "/pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+      });
       const json = await res.json();
       if (json.payment_url) {
         window.location.href = json.payment_url;
@@ -228,19 +230,19 @@ export default function AccountPage() {
 
         {/* Pricing */}
         <Card title="Pricing">
-          <Row label="Deposit paid" value={`IDR ${fmt(depositPaid)}`} />
+          <Row label="Deposit paid" value={formatPrice(depositPaid)} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", marginTop: 4 }}>
             <span style={{ color: collect > 0 ? "#ef4444" : "#22c55e", fontWeight: 700, fontSize: 15 }}>
               {collect > 0 ? "Remaining to pay" : "Fully paid"}
             </span>
             {collect > 0 && (
-              <span style={{ fontWeight: 800, fontSize: 18, color: "#ef4444" }}>IDR {fmt(collect)}</span>
+              <span style={{ fontWeight: 800, fontSize: 18, color: "#ef4444" }}>{formatPrice(collect)}</span>
             )}
           </div>
           {collect > 0 && (
             <div style={{ marginTop: 12 }}>
               <Btn onClick={payCollect} disabled={savingPay}>
-                {savingPay ? "Redirecting…" : `Pay remaining IDR ${fmt(collect)}`}
+                {savingPay ? "Redirecting…" : `Pay remaining ${formatPrice(collect)}`}
               </Btn>
             </div>
           )}
@@ -307,7 +309,7 @@ export default function AccountPage() {
           <select value={editTransfer} onChange={e => setEditTransfer(e.target.value)} style={inputStyle}>
             <option value="">No transfer</option>
             {(options.transfers || []).map(t => (
-              <option key={t.id} value={t.id}>{t.name} — IDR {fmt(t.price)}</option>
+              <option key={t.id} value={t.id}>{t.name} — {formatPrice(t.price)}</option>
             ))}
           </select>
 
@@ -315,7 +317,7 @@ export default function AccountPage() {
           <select value={editCover} onChange={e => setEditCover(e.target.value)} style={inputStyle}>
             <option value="">No insurance</option>
             {(options.covers || []).map(c => (
-              <option key={c.id} value={c.id}>{c.name} — IDR {fmt(c.price)}</option>
+              <option key={c.id} value={c.id}>{c.name} — {formatPrice(c.price)}</option>
             ))}
           </select>
 

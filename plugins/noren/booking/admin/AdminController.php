@@ -532,9 +532,10 @@ class AdminController extends Controller
 
     // ─── GET /api/admin/restaurant/leads ───────────────────────────────────────
     // Odoo orders for a date range, scoped to the authenticated restaurant's
-    // lunch bookings only (Management sees all). No product lines / partner
-    // enrichment — restaurants only need boat grouping, pax, guides, passengers,
-    // special requests.
+    // lunch bookings only (Management sees all). No partner enrichment —
+    // restaurants only need boat grouping, pax, guides, passengers, special
+    // requests. Product lines ARE included (lightweight) so the frontend can
+    // flag upsells like "First Class Menu" by product id.
 
     public function restaurantLeads(Request $request)
     {
@@ -568,6 +569,13 @@ class AdminController extends Controller
                 }
                 return false;
             }));
+
+            $orderIds = array_column($orders, 'id');
+            $linesMap = OdooService::getLinesForOrders($orderIds);
+            foreach ($orders as &$order) {
+                $order['lines'] = $linesMap[$order['id']] ?? [];
+            }
+            unset($order);
 
             return response()->json([
                 'date_from'     => $from->toDateString(),

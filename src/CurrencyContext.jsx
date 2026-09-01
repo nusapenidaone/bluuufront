@@ -8,10 +8,10 @@ export const useCurrency = () => useContext(CurrencyContext) ?? DEFAULT_CONTEXT;
 
 const DEFAULT_RATES = [
     { code: "IDR", name: "Indonesian rupiah", rate: "1.00000000", symbol: "Rp" },
-    { code: "USD", name: "United States dollar", rate: "0.00005957", symbol: "$" },
-    { code: "AUD", name: "Australian dollar", rate: "0.00008453", symbol: "$" },
+    { code: "USD", name: "United States dollar", rate: "0.00005957", symbol: "US$" },
+    { code: "AUD", name: "Australian dollar", rate: "0.00008453", symbol: "A$" },
     { code: "EUR", name: "Euro", rate: "0.00004978", symbol: "€" },
-    { code: "SGD", name: "Singapore dollar", rate: "0.00007530", symbol: "$" },
+    { code: "SGD", name: "Singapore dollar", rate: "0.00007530", symbol: "S$" },
     { code: "MYR", name: "Malaysian ringgit", rate: "0.00023398", symbol: "RM" },
     { code: "THB", name: "Thai baht", rate: "0.00186149", symbol: "฿" },
     { code: "VND", name: "Vietnamese dong", rate: "1.54637944", symbol: "₫" },
@@ -22,7 +22,7 @@ const DEFAULT_RATES = [
 ];
 
 const SYMBOLS = {
-    IDR: "Rp", USD: "$", AUD: "$", EUR: "€", SGD: "$", MYR: "RM",
+    IDR: "Rp", USD: "US$", AUD: "A$", EUR: "€", SGD: "S$", MYR: "RM",
     THB: "฿", VND: "₫", CNY: "¥", KRW: "₩", JPY: "¥", INR: "₹"
 };
 
@@ -108,7 +108,7 @@ export const CurrencyProvider = ({ children }) => {
 
         if (short && selectedCurrency === "IDR" && value >= 1000000) {
             const shortValue = (value / 1000000).toFixed(2).replace(/\.00$/, "");
-            return includeSymbol ? `Rp ${shortValue}M` : `${shortValue}M`;
+            return includeSymbol ? `${shortValue}M ${currency.code}` : `${shortValue}M`;
         }
 
         let formatted = new Intl.NumberFormat('en-US', {
@@ -117,10 +117,7 @@ export const CurrencyProvider = ({ children }) => {
         }).format(value);
 
         if (includeSymbol) {
-            const symbol = currency.symbol;
-            return selectedCurrency === "IDR"
-                ? `${symbol} ${formatted}`
-                : `${symbol}${formatted}`;
+            return `${formatted} ${currency.code}`;
         }
         return formatted;
     };

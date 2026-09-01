@@ -82,6 +82,7 @@ function shareCard(o) {
     const time      = fmtTime(o.rental_start_date) || '—';
     const pickup    = strVal(o.x_studio_pickup_address);
     const eta       = fmtFloatTime(o.x_studio_estimated_pickup_time);
+    const distance  = strVal(o.x_studio_estimated_distance);
     const dropoff   = strVal(o.x_studio_drop_off_address);
     const pickupCars  = numVal(o.x_studio_pickup_cars);
     const dropoffCars = numVal(o.x_studio_drop_off_cars);
@@ -90,10 +91,11 @@ function shareCard(o) {
     const client    = partnerName(o);
     const phone     = o.odoo_phone || '';
 
+    const pickupMeta = [eta ? `ETA ${eta}` : null, distance ? `${distance} km` : null].filter(Boolean).join(', ');
     const lines = [
         `${carType} — ${boat} — ${total} persons`,
         `Departure: ${time}`,
-        pickup  ? `Pick Up (${pickupCars}): ${pickup}${eta ? ' — ETA ' + eta : ''}` : null,
+        pickup  ? `Pick Up (${pickupCars}): ${pickup}${pickupMeta ? ' — ' + pickupMeta : ''}` : null,
         dropoff ? `Drop Off (${dropoffCars}): ${dropoff}` : null,
         comments ? `Comments: ${comments}` : null,
         `${client}${phone ? ' ' + phone : ''}`,
@@ -111,6 +113,7 @@ function DriverCard({ o }) {
     const time        = fmtTime(o.rental_start_date);
     const pickup      = strVal(o.x_studio_pickup_address);
     const eta         = fmtFloatTime(o.x_studio_estimated_pickup_time);
+    const distance    = strVal(o.x_studio_estimated_distance);
     const dropoff     = strVal(o.x_studio_drop_off_address);
     const pickupCars  = numVal(o.x_studio_pickup_cars);
     const dropoffCars = numVal(o.x_studio_drop_off_cars);
@@ -173,7 +176,13 @@ function DriverCard({ o }) {
                 <div className="border-b border-white/70 pb-2">
                     <span className="font-semibold text-slate-700">Pick Up: ({pickupCars})</span>
                     <div className="text-slate-600">{pickup || '—'}</div>
-                    {eta && <div className="text-xs font-semibold text-slate-500 mt-0.5">ETA: {eta}</div>}
+                    {(eta || distance) && (
+                        <div className="text-xs font-semibold text-slate-500 mt-0.5">
+                            {eta && <span>ETA: {eta}</span>}
+                            {eta && distance && <span> · </span>}
+                            {distance && <span>{distance} km</span>}
+                        </div>
+                    )}
                 </div>
 
                 {/* Drop Off */}

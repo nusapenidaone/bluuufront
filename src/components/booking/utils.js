@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { apiUrl } from "../../api/base";
 
 // Global formatter bridge
-let _globalFormatPrice = (val, opts) => `IDR ${Number(val).toLocaleString()}`;
+let _globalFormatPrice = (val, opts) => `${Number(val).toLocaleString()} IDR`;
 
 export const setGlobalFormatPrice = (fn) => {
     _globalFormatPrice = fn;
@@ -14,7 +14,7 @@ export function formatIDR(value) {
 
 export function formatIDRShort(value) {
     const number = Number(value);
-    if (!Number.isFinite(number)) return `IDR ${value}`;
+    if (!Number.isFinite(number)) return `${value} IDR`;
     return _globalFormatPrice(number, { fromCurrency: "IDR", short: true });
 }
 

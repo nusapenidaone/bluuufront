@@ -8,7 +8,6 @@ use Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 
-use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\OrderPaymentService;
 use Noren\Booking\Odoo\OdooService;
 
@@ -49,7 +48,7 @@ class VerifyController extends Controller
 	    	if ($statusValue === 'PAID') {
 	    		$odooOrderId = (int) str_replace('odoo_', '', $external_id);
 	    		$amount      = (float) $request->input('amount');
-	    		OdooService::registerPayment($odooOrderId, $amount);
+	    		OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_xendit', $external_id);
 	    	}
 
 	    } else {
@@ -66,60 +65,6 @@ class VerifyController extends Controller
 
     }
 
-    public function VerifyPayPal(Request $request)
-    {
-        //6CW82812HE6002701 webhook id
-        $event = $request->input('event_type');
-        $resource = $request->input('resource');
-
-        if (!$resource || !isset($resource['id'])) {
-            Log::warning('Invalid PayPal webhook payload');
-            return Response::make('Invalid Payload', 400);
-        }
-
-        $orderId = $resource['id'];
-        $referenceId = $resource['purchase_units'][0]['reference_id'] ?? null;
-
-        if (!$referenceId) {
-            Log::warning('Missing reference_id in PayPal webhook');
-            return Response::make('Missing reference_id', 400);
-        }
-
-
-        if ($event !== 'CHECKOUT.ORDER.APPROVED') {
-            Log::info("Event $event — not approved, skipping.");
-            // (new OrderPaymentService)->handle(2,$referenceId, 2, $request->getContent());
-            return Response::make('OK', 200);
-        }
-
-        // Попытка захвата средств
-        $captureResponse = PayPalService::capturePayment($orderId);
-        
-        $combinedData = [
-            'webhook' => json_decode($request->getContent(), true),
-            'capture' => $captureResponse,
-        ];
-
-        if (isset($captureResponse['status']) && $captureResponse['status'] === 'COMPLETED') {
-        	
-        	if(str_starts_with($referenceId, 'bluuu')){
-            	(new OrderPaymentService)->handle(2,$referenceId, 1, $combinedData); //$request->getContent()
-        	}else{
-        		$amount = $resource['purchase_units'][0]['amount']['value'] ?? '';
-        		$description=$resource['purchase_units'][0]['description'] ?? '';
-        		$lead_id=$referenceId;
-        		self::SendPayNote($lead_id, $amount, $description);
-        	}
-        } else {
-            Log::warning("PayPal capture failed: " . json_encode($captureResponse));
-            // if(str_starts_with($referenceId, 'bluuu')){
-            // 	(new OrderPaymentService)->handle(2,$referenceId, 2, $combinedData);
-            // }
-        }
-
-        return Response::make('OK', 200);
-    }
-    
     private function SendPayNote($lead_id, $amount, $description){
         // Kommo removed
     }

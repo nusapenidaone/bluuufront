@@ -17,6 +17,7 @@ columns:
         options:
             1: Xendit
             2: Paypal
+            3: DOKU
     order[email]:
         label: Email
         type: number

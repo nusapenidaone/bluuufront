@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\PaymentMethod;
+use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
@@ -191,6 +193,7 @@ class CabinetController extends Controller
                     'ecategories'                  => fn($q) => $q->orderBy('sort_order'),
                     'ecategories.extras'           => fn($q) => $q->whereNull('parent_id')->orderBy('sort_order'),
                     'ecategories.extras.children'  => fn($q) => $q->orderBy('sort_order'),
+                    'ecategories.extras.conflicts',
                 ])
                 ->where('classes_id', $classesId)
                 ->orderBy('sort_order')
@@ -238,17 +241,19 @@ class CabinetController extends Controller
             }
 
             $mapExtra = fn($e) => [
-                'id'       => $e->id,
-                'name'     => $e->name,
-                'price'    => (int) $e->price,
-                'qty_type' => $e->qty_type ?? 'manual',
-                'image'    => $e->images_with_thumbs[0]['thumb_small'] ?? null,
-                'children' => ($e->children ?? collect())->sortBy('sort_order')->map(fn($c) => [
-                    'id'       => $c->id,
-                    'name'     => $c->name,
-                    'price'    => (int) $c->price,
-                    'qty_type' => $c->qty_type ?? 'manual',
-                    'image'    => $c->images_with_thumbs[0]['thumb_small'] ?? null,
+                'id'           => $e->id,
+                'name'         => $e->name,
+                'price'        => (int) $e->price,
+                'qty_type'     => $e->qty_type ?? 'manual',
+                'image'        => $e->images_with_thumbs[0]['thumb_small'] ?? null,
+                'conflict_ids' => $e->conflict_ids ?? [],
+                'children'     => ($e->children ?? collect())->sortBy('sort_order')->map(fn($c) => [
+                    'id'           => $c->id,
+                    'name'         => $c->name,
+                    'price'        => (int) $c->price,
+                    'qty_type'     => $c->qty_type ?? 'manual',
+                    'image'        => $c->images_with_thumbs[0]['thumb_small'] ?? null,
+                    'conflict_ids' => $c->conflict_ids ?? [],
                 ])->values(),
             ];
 
@@ -339,6 +344,7 @@ class CabinetController extends Controller
                 'rental_return_date' => $odooOrder['rental_return_date']  ?? null,
                 'deposit_paid'       => (float) ($odooOrder['x_studio_deposit'] ?? 0),
                 'collect'            => (float) ($odooOrder['x_studio_collect']  ?? 0),
+                'amount_total'       => (float) ($odooOrder['amount_total']      ?? 0),
                 'partner_name'       => $partnerName,
                 'lines'              => $odooOrder['lines'] ?? [],
                 'online_checked_in'  => !empty($odooOrder['x_studio_online_check_in_complete']),
@@ -348,6 +354,7 @@ class CabinetController extends Controller
                 'covers'        => $covers,
                 'routes'        => $routes,
                 'price_list'    => $this->buildPricelist($tour ?? null, $travelDate),
+                'pricing'       => $this->buildPricing($tour ?? null),
                 'upgrade_tour'  => $this->buildUpgradeTour(
                     isset($tour) ? $tour : null,
                     $isPrivate,
@@ -393,8 +400,17 @@ class CabinetController extends Controller
         $newKids   = $kids   ?? $curKids;
         $members   = $newAdults + $newKids;
 
-        $dateChanged    = $date !== null;
-        $membersChanged = $adults !== null || $kids !== null;
+        // cabinet.jsx always sends date/adults/kids in the PATCH body even when the
+        // user only touched transfer/cover/extras — so "was the key present" is not
+        // "did it change". Compare against the order's actual current values instead,
+        // otherwise the tour-price recalc (and transfer/cover/restaurant qty recalcs)
+        // below fire on every save.
+        $currentTravelDate = !empty($odooOrder['rental_start_date'])
+            ? Carbon::parse($odooOrder['rental_start_date'], 'UTC')->setTimezone('Asia/Makassar')->format('Y-m-d')
+            : null;
+
+        $dateChanged    = $date !== null && $date !== $currentTravelDate;
+        $membersChanged = ($adults !== null && $adults !== $curAdults) || ($kids !== null && $kids !== $curKids);
 
         // ── Header fields ──────────────────────────────────────────────────────
         $fields = [];
@@ -412,6 +428,19 @@ class CabinetController extends Controller
 
         if ($pickupAddress  !== null) $fields['x_studio_pickup_address']   = $pickupAddress;
         if ($dropoffAddress !== null) $fields['x_studio_drop_off_address'] = $dropoffAddress;
+
+        // Pickup address/time drive the ETA/km Odoo automation — it only recomputes when
+        // these fields are empty, so a real change must invalidate the stale values here,
+        // otherwise the automation skips them forever (see docs/eta-automation.md).
+        $pickupAddressChanged = $pickupAddress !== null
+            && trim($pickupAddress) !== trim((string) ($odooOrder['x_studio_pickup_address'] ?? ''));
+        if ($pickupAddressChanged || $dateChanged) {
+            $fields['x_studio_estimated_pickup_time'] = false;
+            $fields['x_studio_estimated_trip_duration_google'] = false;
+        }
+        if ($pickupAddressChanged) {
+            $fields['x_studio_estimated_distance'] = false;
+        }
 
         // ── Parse current order lines → match to local models ─────────────────
         $allTransfers    = Transfer::orderBy('id')->get();
@@ -522,7 +551,7 @@ class CabinetController extends Controller
                         }
                     }
                 }
-            } elseif ($adults !== null || $kids !== null) {
+            } elseif ($membersChanged) {
                 if ($existingTransferLine && in_array($existingTransferLine['local_id'], [1, 2])) {
                     $cars = max(1, (int) ceil($members / 5));
                     OdooService::writeOrderLine($existingTransferLine['id'], ['product_uom_qty' => $cars]);
@@ -560,7 +589,7 @@ class CabinetController extends Controller
                         }
                     }
                 }
-            } elseif (($adults !== null || $kids !== null) && $existingCoverLine) {
+            } elseif ($membersChanged && $existingCoverLine) {
                 $covObj = $allCovers->firstWhere('id', $existingCoverLine['local_id']);
                 if ($covObj && !$covObj->per_boat) {
                     OdooService::writeOrderLine($existingCoverLine['id'], ['product_uom_qty' => max(1, $members)]);
@@ -568,7 +597,7 @@ class CabinetController extends Controller
             }
 
             // ── Restaurant qty (follows members count) ────────────────────────
-            if (($adults !== null || $kids !== null) && $existingRestaurantLine) {
+            if ($membersChanged && $existingRestaurantLine) {
                 if ($existingRestaurantLine['qty'] !== $members) {
                     OdooService::writeOrderLine($existingRestaurantLine['id'], ['product_uom_qty' => max(1, $members)]);
                 }
@@ -689,18 +718,20 @@ class CabinetController extends Controller
                 }
             }
 
-            // ── Auto-extras qty recalculation (per_car / per_person / fixed) ──
+            // ── Auto-extras qty recalculation (per_car / per_14_guests / per_person / fixed) ──
             if ($membersChanged) {
                 $autoCars = max(1, (int) ceil($members / 5));
+                $auto14Guests = max(1, (int) ceil($members / 14));
                 foreach ($existingExtrasLines as $productOdooId => $info) {
                     if ($info['qty'] <= 0) continue;
                     $extra = $allExtrasById->first(fn($e) => (int) ($e->odoo_id ?? 0) === $productOdooId);
                     if (!$extra) continue;
                     $newQty = match ($extra->qty_type ?? 'manual') {
-                        'per_person' => max(1, $members),
-                        'per_car'    => $autoCars,
-                        'fixed'      => 1,
-                        default      => null,
+                        'per_person'    => max(1, $members),
+                        'per_car'       => $autoCars,
+                        'per_14_guests' => $auto14Guests,
+                        'fixed'         => 1,
+                        default         => null,
                     };
                     if ($newQty !== null && $info['qty'] !== $newQty) {
                         OdooService::writeOrderLine($info['id'], ['product_uom_qty' => $newQty]);
@@ -764,9 +795,20 @@ class CabinetController extends Controller
         $baseUrl      = url("/cabinet/{$odooId}/{$key}");
         $collectExtId = 'odoo_' . $odooId;
 
-        $payUrl = XenditService::createPaymentLink(
-            $collectExtId, $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
-        );
+        $method = PaymentMethod::default();
+
+        if ($method === 3) {
+            // Unique per attempt — DOKU rejects a re-used invoice_number, and the
+            // odoo_{id} prefix (needed by the webhook) still parses fine since
+            // (int) casting stops at the first non-digit character.
+            $payUrl = DokuService::createPaymentLink(
+                $collectExtId . '_' . time(), $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+            );
+        } else {
+            $payUrl = XenditService::createPaymentLink(
+                $collectExtId, $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+            );
+        }
 
         return response()->json(['payment_url' => $payUrl]);
     }
@@ -876,6 +918,28 @@ class CabinetController extends Controller
             'members_count' => (int) ($e['members_count'] ?? 0),
             'price'         => (int) ($e['price'] ?? 0),
         ], $pricelist));
+    }
+
+    // ─── Helper: raw default + seasonal pricelists so the frontend can resolve
+    // the correct package for ANY date (e.g. when previewing a date change),
+    // not just the order's current travel_date. Mirrors PricesByDates lookup
+    // used in update() and buildPricelist().
+    private function buildPricing(?object $tour): ?array
+    {
+        if (!$tour) return null;
+        $mapEntries = fn($list) => array_values(array_map(fn($e) => [
+            'members_count' => (int) ($e['members_count'] ?? 0),
+            'price'         => (int) ($e['price'] ?? 0),
+        ], $list ?? []));
+
+        return [
+            'default'  => $mapEntries($tour->packages?->pricelist ?? []),
+            'seasonal' => $tour->pricesbydates->map(fn($p) => [
+                'date_start' => $p->date_start,
+                'date_end'   => $p->date_end,
+                'pricelist'  => $mapEntries($p->packages?->pricelist ?? []),
+            ])->values(),
+        ];
     }
 
     // ─── Helper: build upgrade_tour option for shared tiers ──────────────────────

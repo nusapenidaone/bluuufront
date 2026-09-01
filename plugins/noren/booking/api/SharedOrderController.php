@@ -7,13 +7,13 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Session;
 
 use Noren\Booking\Models\Order;
-use Noren\Booking\Models\Rates;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Route;
 
 use Noren\Booking\Classes\XenditService;
-use Noren\Booking\Classes\PayPalService;
+use Noren\Booking\Classes\PaymentMethod;
+use Noren\Booking\Doku\DokuService;
 
 use Log;
 
@@ -109,7 +109,7 @@ class SharedOrderController extends Controller
             // ── Deposit & payment method ──────────────────────────────────
             $order->deposite = $data['deposite'] ?? 0;
             if ($order->deposite > 0) {
-                $order->method_id = $data['method'];
+                $order->method_id = PaymentMethod::default();
                 $order->deposite_summ = $order->full_price * $order->deposite / 100;
             }
 
@@ -147,7 +147,7 @@ class SharedOrderController extends Controller
     /**
      * POST /api/new/order/shared/pay
      *
-     * Accepts {external_id}, loads the saved order, calls Xendit or PayPal,
+     * Accepts {external_id}, loads the saved order, calls Xendit or DOKU,
      * and returns the payment URL. Safe to retry — order already exists.
      */
     public function createPaymentLink(Request $request)
@@ -185,9 +185,10 @@ class SharedOrderController extends Controller
             // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
 
-            if ($order->method_id == 1) {
-                $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
-                $url = XenditService::createPaymentLink(
+            $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+
+            if ($order->method_id == 3) {
+                $url = DokuService::createPaymentLink(
                     $order->external_id,
                     $chargeAmount,
                     $order->email,
@@ -196,12 +197,9 @@ class SharedOrderController extends Controller
                     $order->tours->name ?? 'Shared Tour'
                 );
             } else {
-                $usd_rate = Rates::find(2)->rate;
-                $usd_summ = $usd_rate * $chargeAmount;
-                $successUrl = $successBase . '&amount=' . round($usd_summ, 2) . '&currency=USD';
-                $url = PayPalService::createPaymentLink(
+                $url = XenditService::createPaymentLink(
                     $order->external_id,
-                    $usd_summ,
+                    $chargeAmount,
                     $order->email,
                     $successUrl,
                     url('/error'),

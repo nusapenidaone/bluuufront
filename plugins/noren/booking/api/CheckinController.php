@@ -6,9 +6,9 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
-use Noren\Booking\Classes\PayPalService;
 use Noren\Booking\Classes\XenditService;
-use Noren\Booking\Models\Rates;
+use Noren\Booking\Classes\PaymentMethod;
+use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Odoo\OdooService;
 
 class CheckinController extends Controller
@@ -104,7 +104,7 @@ class CheckinController extends Controller
     {
         $this->cors();
 
-        $method = (int) $request->input('method', 1);
+        $method = PaymentMethod::default();
         $email  = (string) $request->input('email', '');
 
         try {
@@ -122,10 +122,11 @@ class CheckinController extends Controller
         $successUrl = url('/checkin/' . $odoo_id) . '?paid=1';
         $desc       = 'Bluuu Tour #' . $odoo_id;
 
-        if ($method === 2) {
-            $rate   = Rates::where('code', 'USD')->orderBy('id', 'desc')->first();
-            $usdAmt = $rate ? round((float) $rate->rate * $collectAmount, 2) : 0;
-            $payUrl = PayPalService::createPaymentLink($extId, $usdAmt, $email, $successUrl, $cancelUrl, $desc);
+        if ($method === 3) {
+            // Unique per attempt — DOKU rejects a re-used invoice_number, and the
+            // odoo_{id} prefix (needed by the webhook) still parses fine since
+            // (int) casting stops at the first non-digit character.
+            $payUrl = DokuService::createPaymentLink($extId . '_' . time(), $collectAmount, $email, $successUrl, $cancelUrl, $desc);
         } else {
             $payUrl = XenditService::createPaymentLink($extId, $collectAmount, $email, $successUrl, $cancelUrl, $desc);
         }
