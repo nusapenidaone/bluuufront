@@ -21,6 +21,31 @@ use Noren\Bluuu\Models\Settings;
 
 class FullController extends Controller
 {
+    // GET /api/new/order/status/{external_id}
+    // Used by the /new/success page to confirm the payment actually landed
+    // (status_id=2) before showing "Booking confirmed" — the redirect back
+    // from the payment gateway happens regardless of real payment outcome,
+    // the webhook is the only source of truth.
+    public function getOrderStatus($externalId)
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
+        $order = Order::where('external_id', $externalId)->first();
+
+        if (!$order) {
+            return response()->json(['found' => false], 404);
+        }
+
+        return response()->json([
+            'found' => true,
+            'confirmed' => (int) $order->status_id === 2,
+            'failed' => in_array((int) $order->status_id, [3, 5]),
+            'status_id' => $order->status_id,
+        ]);
+    }
+
     public function getRestaurants()
     {
         header('Access-Control-Allow-Origin: *');

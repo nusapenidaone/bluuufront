@@ -186,6 +186,7 @@ class SharedOrderController extends Controller
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
 
             $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+            $cancelUrl = url('/new/success') . '?type=failed';
 
             if ($order->method_id == 3) {
                 $url = DokuService::createPaymentLink(
@@ -193,7 +194,7 @@ class SharedOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Shared Tour'
                 );
             } else {
@@ -202,7 +203,7 @@ class SharedOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Shared Tour'
                 );
             }

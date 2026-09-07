@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { trackPurchase, trackPixelPurchase } from "./lib/analytics";
+import { apiUrl } from "./api/base";
 
 function formatAmount(amount, currency) {
   if (!amount) return null;
@@ -45,7 +46,34 @@ const SCENARIOS = {
     gradient: BLUE_GRADIENT,
     shadow: BLUE_SHADOW,
   },
+  checking: {
+    kicker: "CONFIRMING PAYMENT",
+    title: "Just a moment…",
+    subtitle: "We're confirming your payment with the payment provider. This usually takes a few seconds.",
+    steps: [],
+    gradient: BLUE_GRADIENT,
+    shadow: BLUE_SHADOW,
+  },
+  pending: {
+    kicker: "PAYMENT PENDING",
+    title: "We haven't received your payment yet",
+    subtitle: "Your booking isn't confirmed until payment is received. If you completed the payment, it may still be processing — check your email shortly. If you closed the payment page without paying, please try booking again.",
+    steps: [],
+    gradient: BLUE_GRADIENT,
+    shadow: BLUE_SHADOW,
+  },
+  failed: {
+    kicker: "PAYMENT NOT COMPLETED",
+    title: "Your payment didn't go through",
+    subtitle: "No charge was made and your booking wasn't confirmed. Please try booking again, or contact us on WhatsApp if you were charged.",
+    steps: [],
+    gradient: BLUE_GRADIENT,
+    shadow: BLUE_SHADOW,
+  },
 };
+
+const POLL_INTERVAL_MS = 2500;
+const POLL_MAX_TRIES = 12; // ~30s
 
 export default function SuccessPage() {
   const params = new URLSearchParams(window.location.search);
@@ -56,30 +84,80 @@ export default function SuccessPage() {
   const numItems = parseInt(params.get("num_items") || "1", 10);
   const contentIds = params.get("content_ids") || null;
 
-  const scene = SCENARIOS[type] || SCENARIOS.default;
-  const amountLabel = type !== "request" && amount > 0 ? formatAmount(amount, currency) : null;
+  // The DOKU redirect back to this page happens on the browser landing back
+  // at the merchant site, regardless of whether the payment actually went
+  // through — the webhook (which flips the order's status_id) is the only
+  // real source of truth. So for a real paid booking we poll the backend
+  // for that status before claiming "Booking confirmed".
+  const needsVerification = (type === "private" || type === "shared") && !!orderId;
+  const [verifyState, setVerifyState] = useState(needsVerification ? "checking" : "skip");
 
   useEffect(() => {
-    if (type !== "request" && amount > 0) {
-      const itemId = contentIds || (type === "private" ? "private-tour-nusa-penida" : "shared-tour-nusa-penida");
-      const itemName = type === "private" ? "Private Nusa Penida Tour" : type === "shared" ? "Shared Nusa Penida Tour" : "Nusa Penida Tour";
-      const itemCategory = type === "private" ? "Private Tour" : "Shared Tour";
-      trackPurchase({
-        value: amount,
-        currency,
-        numItems,
-        transactionId: orderId,
-        items: [{ item_id: itemId, item_name: itemName, item_category: itemCategory, quantity: numItems, price: amount }],
-      });
-      trackPixelPurchase({
-        contentIds: itemId,
-        value: amount,
-        currency,
-        orderId,
-        numItems,
-      });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!needsVerification) return undefined;
+    let cancelled = false;
+    let tries = 0;
+
+    const poll = async () => {
+      try {
+        const res = await fetch(apiUrl(`order/status/${encodeURIComponent(orderId)}`));
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.confirmed) {
+          setVerifyState("confirmed");
+          return;
+        }
+        if (data.failed) {
+          setVerifyState("failed");
+          return;
+        }
+      } catch (e) {
+        // network hiccup — keep polling rather than failing the page over it
+      }
+      if (cancelled) return;
+      tries += 1;
+      if (tries >= POLL_MAX_TRIES) {
+        setVerifyState("pending");
+        return;
+      }
+      setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
+    poll();
+    return () => { cancelled = true; };
+  }, [needsVerification, orderId]);
+
+  const paymentConfirmed = !needsVerification || verifyState === "confirmed";
+
+  const scene = !needsVerification
+    ? (SCENARIOS[type] || SCENARIOS.default)
+    : SCENARIOS[verifyState === "confirmed" ? type : verifyState] || SCENARIOS.checking;
+
+  const displayKind = !needsVerification
+    ? (type === "request" ? "request" : "success")
+    : { checking: "checking", confirmed: "success", pending: "pending", failed: "failed" }[verifyState];
+
+  const amountLabel = paymentConfirmed && type !== "request" && amount > 0 ? formatAmount(amount, currency) : null;
+
+  useEffect(() => {
+    if (!paymentConfirmed || type === "request" || !(amount > 0)) return;
+    const itemId = contentIds || (type === "private" ? "private-tour-nusa-penida" : "shared-tour-nusa-penida");
+    const itemName = type === "private" ? "Private Nusa Penida Tour" : type === "shared" ? "Shared Nusa Penida Tour" : "Nusa Penida Tour";
+    const itemCategory = type === "private" ? "Private Tour" : "Shared Tour";
+    trackPurchase({
+      value: amount,
+      currency,
+      numItems,
+      transactionId: orderId,
+      items: [{ item_id: itemId, item_name: itemName, item_category: itemCategory, quantity: numItems, price: amount }],
+    });
+    trackPixelPurchase({
+      contentIds: itemId,
+      value: amount,
+      currency,
+      orderId,
+      numItems,
+    });
+  }, [paymentConfirmed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div style={{
@@ -104,10 +182,20 @@ export default function SuccessPage() {
         marginBottom: 28,
         flexShrink: 0,
       }}>
-        {type === "request" ? (
+        {displayKind === "request" ? (
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
             <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        ) : displayKind === "checking" || displayKind === "pending" ? (
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <polyline points="12 7 12 12 15.5 14" />
+          </svg>
+        ) : displayKind === "failed" ? (
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
           </svg>
         ) : (
           <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -154,6 +242,7 @@ export default function SuccessPage() {
         )}
 
         {/* Steps */}
+        {scene.steps.length > 0 && (
         <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: 24, marginBottom: 28, textAlign: "left" }}>
           {scene.steps.map((step, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: i < scene.steps.length - 1 ? 14 : 0 }}>
@@ -169,6 +258,7 @@ export default function SuccessPage() {
             </div>
           ))}
         </div>
+        )}
 
         <a
           href="/"

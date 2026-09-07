@@ -207,6 +207,7 @@ class PrivateOrderController extends Controller
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
 
             $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+            $cancelUrl = url('/new/success') . '?type=failed';
 
             if ($order->method_id == 3) {
                 $url = DokuService::createPaymentLink(
@@ -214,7 +215,7 @@ class PrivateOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Private Tour'
                 );
             } else {
@@ -223,7 +224,7 @@ class PrivateOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Private Tour'
                 );
             }

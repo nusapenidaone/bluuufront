@@ -21,6 +21,9 @@ Route::get('api/new/availability/shared/{id}',  [FullController::class, 'getShar
 // Marketing leads
 Route::post('api/new/marketing/lead', [MarketingController::class, 'lead']);
 
+// Order status (polled by the success page to confirm real payment)
+Route::get('api/new/order/status/{external_id}', [FullController::class, 'getOrderStatus']);
+
 // Orders
 Route::options('api/new/order/{any}', function (\Illuminate\Http\Request $request) {
     $origin = $request->header('Origin', '');
