@@ -279,6 +279,7 @@ class OdooService
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_special_requests' => $lead['special_requests'],
             'x_studio_deposit'          => max($odooDeposit, $localDeposit),
+            'x_studio_extra_processing_fee' => $lead['extra_processing_fee'],
             'x_studio_donation_to_orphanage' => $lead['donation_amount'],
             'x_studio_pickup_cars'      => in_array($transferId, [1, 2]) ? (int) $lead['cars'] : 0,
             'x_studio_drop_off_cars'    => $transferId === 2 ? (int) $lead['cars'] : 0,
@@ -842,6 +843,11 @@ class OdooService
             'route_end'        => optional($order->route)->end   ?? '18:00:00',
             'restaurant_name'  => optional($order->restaurant)->odoo_name ?? '',
             'deposite_summ'    => (float)($order->deposite_summ ?? 0),
+            // 2.5% gateway surcharge charged only on full payment — informational for Odoo,
+            // never folded into x_studio_deposit itself. Mirrors *OrderController::createPaymentLink.
+            'extra_processing_fee' => $order->deposite == 100
+                ? round((float)($order->deposite_summ ?? 0) * 0.025)
+                : 0,
             'donation_amount'  => (float)($order->donation_amount ?? 0),
             'total_price'      => (float)($order->total_price   ?? 0),
             'name'             => $order->name,
@@ -1000,6 +1006,7 @@ class OdooService
             'rental_return_date' => $rentalEnd,
 
             'x_studio_deposit'          => $lead['deposite_summ'],
+            'x_studio_extra_processing_fee' => $lead['extra_processing_fee'],
             'x_studio_donation_to_orphanage' => $lead['donation_amount'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_drop_off_address' => $lead['dropoff_address'],

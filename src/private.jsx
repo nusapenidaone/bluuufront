@@ -5424,7 +5424,7 @@ function StepFive({
     ? "Select date to continue"
     : !isBoatSelected
       ? "Select tour to continue"
-      : "Reserve Now";
+      : "RESERVE WITH 30%";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -5740,8 +5740,17 @@ function StepFive({
               )}
               <div className="h-px w-full bg-neutral-50" />
               <div className="flex items-center justify-between text-base font-semibold text-secondary-900">
-                <span>Total</span>
-                <span>{formatIDR(basePrice + guestFeeTotal + extrasSubtotalIDR)}</span>
+                <span>Pay today (30%)</span>
+                <span>{formatIDR(Math.round((basePrice + guestFeeTotal + extrasSubtotalIDR) * 0.3))}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Pay at check-in (70%)</span>
+                <span className="font-semibold text-secondary-900">{formatIDR((basePrice + guestFeeTotal + extrasSubtotalIDR) - Math.round((basePrice + guestFeeTotal + extrasSubtotalIDR) * 0.3))}</span>
+              </div>
+              <div className="h-px w-full bg-neutral-50" />
+              <div className="flex items-center justify-between">
+                <span>Total price</span>
+                <span className="font-semibold text-secondary-900">{formatIDR(basePrice + guestFeeTotal + extrasSubtotalIDR)}</span>
               </div>
               <div className="text-sm text-secondary-500">
                 Secure checkout - {selectedBoat?.isPartner ? "On Request" : "Instant confirmation"}
@@ -5752,7 +5761,7 @@ function StepFive({
                 {reserveLabel} {isReserveEnabled ? <ArrowRight className="h-4 w-4" /> : null}
               </Button>
               <div className="text-center text-sm text-secondary-500">
-                You'll see the full total before confirming.
+                Only 30% today · Remaining balance at check-in
               </div>
             </div>
             <div className="mt-4 space-y-3">
@@ -8138,7 +8147,7 @@ export default function Premium_Private_With_Vibe() {
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1);
-  const [payMode, setPayMode] = useState("full");
+  const [payMode, setPayMode] = useState("part");
   const [payMethod, setPayMethod] = useState("card");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -8622,7 +8631,7 @@ export default function Premium_Private_With_Vibe() {
   }, [dateMode, exactDate, rangeStart, rangeEnd, totalGuests, yachtOptions, isDateAvailable, getAvailableDates, isFetchingAvailability]);
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
-  const partPrice = Math.round(totalPrice * 0.5);
+  const partPrice = Math.round(totalPrice * 0.3);
   const handleOpenCheckout = () => {
     const analyticsItem = buildTourAnalyticsItem({
       itemId: selectedYacht?.tourId ?? selectedYacht?.id,
@@ -9334,7 +9343,9 @@ function StepCheckout({
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-secondary-900 sm:text-3xl">Complete your booking</h2>
-            <p className="mt-1 text-sm text-secondary-500 sm:text-base">Secure your spot in just a few steps.</p>
+            <p className="mt-1 text-sm text-secondary-500 sm:text-base">
+              {step === 1 ? "Secure your booking by paying only 30% today." : "Secure your spot in just a few steps."}
+            </p>
           </div>
 
           <div className="mb-7 flex items-start justify-center">
@@ -9376,40 +9387,11 @@ function StepCheckout({
 
           <div className="rounded-2xl border border-neutral-200 bg-white p-4 shadow-lg shadow-neutral-100/40 sm:p-6">
             <h3 className="mb-4 text-lg font-bold text-secondary-900 sm:mb-5 sm:text-xl">
-              {step === 1 ? "How would you like to pay?" : "Contact details"}
+              {step === 1 ? "Choose how you'd like to pay" : "Contact details"}
             </h3>
 
             {step === 1 && (
               <div className="space-y-2.5">
-                <button
-                  onClick={() => onSetPayMode("full")}
-                  className={cn(
-                    "relative flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-all duration-200",
-                    payMode === "full"
-                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
-                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
-                  )}
-                >
-                  <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all", payMode === "full" ? "border-primary-600 bg-primary-600" : "border-neutral-300 bg-transparent")}>
-                    {payMode === "full" && <Check className="h-3.5 w-3.5 text-white" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                      <span className="font-bold text-secondary-900">Pay in full</span>
-                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice)}</span>
-                    </div>
-                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      Secure your boat immediately with a single seamless payment.
-                    </div>
-                    {payMode === "full" && (
-                      <div className="mt-2 flex items-center gap-2 text-xs font-bold text-primary-700">
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Most popular choice</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-
                 <button
                   onClick={() => onSetPayMode("part")}
                   className={cn(
@@ -9425,13 +9407,39 @@ function StepCheckout({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-secondary-900">Pay 50% deposit</span>
-                        <span className="rounded-md bg-neutral-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-secondary-500">Flexible</span>
+                        <span className="font-bold text-secondary-900">Reserve with 30% today</span>
+                        <span className="rounded-md bg-primary-600 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">Recommended</span>
                       </div>
                       <span className="font-bold text-secondary-900">{formatIDR(partPrice)}</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      Pay {formatIDR(partPrice)} now, and the rest ({formatIDR(totalPrice - partPrice)}) on the day.
+                      Pay {formatIDR(partPrice)} now to confirm your booking.
+                    </div>
+                    <div className="mt-0.5 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                      Pay the remaining {formatIDR(totalPrice - partPrice)} at check-in before departure.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => onSetPayMode("full")}
+                  className={cn(
+                    "relative flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left transition-all duration-200",
+                    payMode === "full"
+                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
+                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+                  )}
+                >
+                  <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all", payMode === "full" ? "border-primary-600 bg-primary-600" : "border-neutral-300 bg-transparent")}>
+                    {payMode === "full" && <Check className="h-3.5 w-3.5 text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                      <span className="font-bold text-secondary-900">Pay in full</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice)} + 2.5% Xendit fee</span>
+                    </div>
+                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                      Pay the full amount now and have nothing left to pay on the day.
                     </div>
                   </div>
                 </button>
@@ -9565,7 +9573,7 @@ function StepCheckout({
                 disabled={step === 2 && (!agreedTerms || !agreedLiability)}
                 className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
-                {step < 2 ? "Continue" : "Complete booking"}
+                {step < 2 ? (payMode === "part" ? "CONTINUE WITH 30%" : "CONTINUE WITH FULL PAYMENT") : "Complete booking"}
               </Button>
             </div>
           </div>

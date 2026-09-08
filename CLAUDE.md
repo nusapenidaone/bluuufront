@@ -119,7 +119,8 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 
 ## Payment flow
 
-- Депозит (`deposite_summ`) = 50% или 100% от суммы — платится онлайн (Xendit / DOKU, за `?m=test`)
+- Депозит (`deposite_summ`) = 30% или 100% от суммы — платится онлайн (Xendit / DOKU, за `?m=test`)
+- При 100% (полной оплате) с клиента реально списывается +2.5% ("Xendit fee") сверху — наценка идёт в сумму инвойса платёжного шлюза (см. `PrivateOrderController::createPaymentLink` / `SharedOrderController::createPaymentLink`) и отдельно пишется в Odoo как `x_studio_extra_processing_fee`; `deposite_summ`/`x_studio_deposit` наценку не включают — это чистая стоимость тура
 - Остаток (`x_studio_collect`) = `total_price - deposite_summ` — оплачивается позже
 - **Личный кабинет** (в разработке): клиент заходит по ссылке из письма (по `key` / `external_id`), без логина
 - Данные берутся из **Odoo** (не локальной БД) — чтобы работало для всех источников (сайт, Viator, ручные заказы)
@@ -319,6 +320,7 @@ currency_id           — [11, "IDR"]
 | `x_studio_tour_type` | selection | — | ✓ | Тип тура из `Tours.odoo_type` |
 | `x_studio_lunch` | selection | — | ✓ | Ресторан/обед. **Единственное актуальное поле.** `x_studio_lunch_resto` и `x_studio_lunch_restaurant` **удалены из Odoo** |
 | `x_studio_special_requests` | char | — | — | Спец. пожелания клиента |
+| `x_studio_extra_processing_fee` | monetary | — | ✓ | 2.5% наценка платёжного шлюза при 100% оплате (0 при депозите). Информационное поле — не входит в `x_studio_deposit`/`x_studio_collect` |
 | `x_studio_respondio_id` | char | — | — | ID в respond.io (для партнёрских лодок — TODO) |
 | `x_studio_respondio_weblink` | char | — | — | Weblink для respond.io |
 | `x_studio_weblink` | char | **readonly** | — | Ссылка на портал Odoo (вычисляется автоматически) |

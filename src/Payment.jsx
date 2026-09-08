@@ -65,7 +65,7 @@ export default function Payment() {
   const styleId = params.get("style") || "";                  // route/program ID
   const pickupAddressParam = params.get("pickup_address") || "";
   const dropoffAddressParam = params.get("dropoff_address") || "";
-  const payMode = params.get("payMode") || "full";            // "full" | "part"
+  const payMode = params.get("payMode") || "part";             // "full" | "part"
   const name = params.get("name") || "";
   const email = params.get("email") || "";
   const phone = params.get("phone") || "";
@@ -91,7 +91,7 @@ export default function Payment() {
 
   // ── Derived values ───────────────────────────────────────────────────────
   const totalGuests = adults + kids;
-  const deposite = payMode === "part" ? 50 : 100;
+  const deposite = payMode === "part" ? 30 : 100;
   const method = 3; // 3=DOKU (default). Xendit stays as an emergency fallback in the backend, no URL flag to force it.
 
   // Extract transfer/cover IDs from extras (they use "transfer-{id}", "cover-{id}" prefixes)
@@ -113,9 +113,12 @@ export default function Payment() {
   // Total without discount = all price components summed
   const fullTotal = totalBoatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
   const depositAmount = Math.round((fullTotal * deposite) / 100);
+  // Full payment carries a 2.5% gateway surcharge, charged to the customer but never
+  // folded into depositAmount/Odoo — mirrors the backend in *OrderController::createPaymentLink.
+  const xenditFee = deposite === 100 ? Math.round(fullTotal * 0.025) : 0;
   // Donation is added on top of whatever is charged now, but never folded into the
   // deposit amount itself — the deposit field in Odoo must stay donation-free.
-  const chargeAmount = depositAmount + donationAmount;
+  const chargeAmount = depositAmount + donationAmount + xenditFee;
   const analyticsCurrency = params.get("analyticsCurrency") || "IDR";
   const analyticsTotal = parseFloat(params.get("analyticsTotal") || String(fullTotal));
   const analyticsItemId = params.get("tourId") || boatId || `${tourType}-tour`;
@@ -361,7 +364,7 @@ export default function Payment() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   const methodLabel = "Card / Bank transfer";
-  const depositLabel = payMode === "part" ? "50% deposit" : "Full payment";
+  const depositLabel = payMode === "part" ? "30% deposit" : "Full payment";
 
   if (ratesLoading && !isIDR) {
     return (
@@ -627,6 +630,11 @@ export default function Payment() {
                 {donationAmount > 0 && (
                   <div className="mt-0.5 text-xs text-secondary-500">
                     Includes {fmt(donationAmount)} donation
+                  </div>
+                )}
+                {xenditFee > 0 && (
+                  <div className="mt-0.5 text-xs text-secondary-500">
+                    Includes {fmt(xenditFee)} Xendit fee (2.5%)
                   </div>
                 )}
               </div>

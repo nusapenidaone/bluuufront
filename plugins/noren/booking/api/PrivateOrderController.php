@@ -205,6 +205,11 @@ class PrivateOrderController extends Controller
             // Charge includes the donation on top of the deposit/full payment,
             // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
+            // Full payment carries a 2.5% gateway surcharge, charged to the customer but
+            // never reflected in deposite_summ/Odoo — that stays the clean tour price.
+            if ($order->deposite == 100) {
+                $chargeAmount = round($order->deposite_summ * 1.025) + ($order->donation_amount ?? 0);
+            }
 
             $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
             $cancelUrl = url('/new/success') . '?type=failed';

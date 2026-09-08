@@ -151,7 +151,7 @@ tabs:
             span: row
             options:
                 0: '0'
-                50: '50'
+                30: '30'
                 100: '100'
             showSearch: true
             spanClass: col-lg-2
