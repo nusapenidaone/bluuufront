@@ -23,6 +23,7 @@ tabs:
             label: Name
             span: auto
             type: text
+            required: true
             tab: Main
 
         status:
@@ -48,6 +49,7 @@ tabs:
             label: Capacity
             span: auto
             type: number
+            required: true
             tab: Main
         size:
             label: 'Boat Size'
@@ -60,6 +62,7 @@ tabs:
             label: Default Route (only for shared)
             span: auto
             type: relation
+            required: true
             tab: Main
             nameFrom: title
             emptyOption: --
@@ -68,16 +71,19 @@ tabs:
             label: Type
             span: auto
             type: relation
+            required: true
             tab: Main
         classes:
             label: Class
             span: auto
             type: relation
+            required: true
             tab: Main
         odoo_id:
             label: Odoo ID
             span: auto
             type: number
+            required: true
             tab: Main
         odoo_type:
             type: dropdown
@@ -98,6 +104,7 @@ tabs:
             label: Source
             span: auto
             type: relation
+            required: true
             tab: Main
             nameFrom: name
             emptyOption: '--'
@@ -131,6 +138,9 @@ tabs:
             type: relation
             span: auto
             tab: Main
+            context:
+                - update
+                - preview
 
         description:
             label: Description
@@ -292,6 +302,10 @@ tabs:
         boat:
             label: Boats
             span: full
+            required: true
+            context:
+                - update
+                - preview
             type: relation
             tab: Boats
             nameFrom: name

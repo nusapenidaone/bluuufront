@@ -793,20 +793,28 @@ class CabinetController extends Controller
 
         $description  = $odooOrder['x_studio_route_new'] ?? $odooOrder['x_studio_boat_name'] ?? 'Bluuu Tour';
         $baseUrl      = url("/cabinet/{$odooId}/{$key}");
-        $collectExtId = 'odoo_' . $odooId;
+
+        // Online remainder payment carries the same 2.5% gateway surcharge as full
+        // payment at booking — charged to the customer, recorded separately in Odoo
+        // as x_studio_extra_processing_fee (never folded into x_studio_collect).
+        $feeAmount    = (int) round($collectAmount * 0.025);
+        $chargeAmount = $collectAmount + $feeAmount;
+        // Fee travels to the webhook via the external_id itself — the "_f{fee}" segment
+        // is parsed back out there (see DokuWebhookController / VerifyController).
+        $collectExtId = 'odoo_' . $odooId . '_f' . $feeAmount;
 
         $method = PaymentMethod::default();
 
         if ($method === 3) {
             // Unique per attempt — DOKU rejects a re-used invoice_number, and the
-            // odoo_{id} prefix (needed by the webhook) still parses fine since
-            // (int) casting stops at the first non-digit character.
+            // odoo_{id} prefix (needed by the webhook) still parses fine since the
+            // regex there stops at the first non-digit/non-"_f<digits>" segment.
             $payUrl = DokuService::createPaymentLink(
-                $collectExtId . '_' . time(), $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+                $collectExtId . '_' . time(), $chargeAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
             );
         } else {
             $payUrl = XenditService::createPaymentLink(
-                $collectExtId, $collectAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+                $collectExtId, $chargeAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
             );
         }
 

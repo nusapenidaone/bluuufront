@@ -702,11 +702,11 @@ class OdooService
         ];
     }
 
-    public static function registerPayment(int $odooOrderId, float $amount, string $field = 'x_studio_collected_by_xendit', ?string $invoiceNumber = null): void
+    public static function registerPayment(int $odooOrderId, float $amount, string $field = 'x_studio_collected_by_xendit', ?string $invoiceNumber = null, float $feeAmount = 0): void
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => [$field, 'x_studio_payment_reference'],
+            'fields' => [$field, 'x_studio_payment_reference', 'x_studio_extra_processing_fee'],
             'limit'  => 1,
         ]);
 
@@ -720,6 +720,13 @@ class OdooService
         $vals = [
             $field => $currentCollected + $amount,
         ];
+
+        // Online-payment surcharge (2.5%) on a remainder payment — accumulates on top
+        // of whatever fee was already recorded at booking time, never replaces it.
+        if ($feeAmount > 0) {
+            $currentFee = (float) ($result[0]['x_studio_extra_processing_fee'] ?? 0);
+            $vals['x_studio_extra_processing_fee'] = $currentFee + $feeAmount;
+        }
 
         if ($invoiceNumber) {
             $existingRef = trim((string) ($result[0]['x_studio_payment_reference'] ?? ''));

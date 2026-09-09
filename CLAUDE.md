@@ -126,6 +126,7 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - Данные берутся из **Odoo** (не локальной БД) — чтобы работало для всех источников (сайт, Viator, ручные заказы)
 - Клиент может менять детали заказа и оплатить collect онлайн — всё сохраняется в Odoo
 - **Check-in** (в разработке): оплата на месте
+- Доплата остатка (`x_studio_collect`) онлайн — в личном кабинете (`CabinetController::createPayment`) и на check-in (`CheckinController::pay`) — тоже несёт +2.5% наценку; оплата "в офисе" (check-in) или "at the office" (кабинет) — без наценки, это чисто информационная альтернатива без похода в платёжный шлюз. Наценка кодируется в `external_id`/`invoice_number` вида `odoo_{id}_f{fee}`, вебхуки (`DokuWebhookController`, `VerifyController`) парсят её обратно и **добавляют** (не перезаписывают) к уже имеющемуся `x_studio_extra_processing_fee` через `OdooService::registerPayment()`
 
 ## Pricing
 

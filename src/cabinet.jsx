@@ -1039,7 +1039,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
       const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/pay`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+        body: JSON.stringify({ method: 3 }), // Sent for API-shape compatibility only — the backend ignores it
+        // and always picks the gateway via PaymentMethod::default() (payment_method.config.php).
       });
       const json = await res.json();
       if (json.payment_url) {
@@ -2039,12 +2040,18 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
               </div>
             )}
+            <div className="mt-3 flex items-start gap-2.5 rounded-xl bg-white px-4 py-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <div className="text-xs leading-snug text-secondary-700">
+                <span className="font-bold text-secondary-900">No rush.</span> You can pay the remaining {formatPrice(collect)} at check-in, in the office — no commission.
+              </div>
+            </div>
             <button
               onClick={payCollect}
               disabled={paying}
-              className="btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+              className="mt-2.5 w-full text-center text-xs font-semibold text-white/70 underline underline-offset-2 transition hover:text-white disabled:opacity-60"
             >
-              {paying ? "Redirecting…" : `Pay ${formatPrice(collect)} →`}
+              {paying ? "Redirecting…" : `or pay online now — ${formatPrice(collect)} + 2.5% Xendit fee`}
             </button>
           </div>
         )}

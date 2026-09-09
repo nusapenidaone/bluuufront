@@ -92,7 +92,8 @@ export default function Payment() {
   // ── Derived values ───────────────────────────────────────────────────────
   const totalGuests = adults + kids;
   const deposite = payMode === "part" ? 30 : 100;
-  const method = 3; // 3=DOKU (default). Xendit stays as an emergency fallback in the backend, no URL flag to force it.
+  const method = 3; // Sent for API-shape compatibility only — the backend ignores it and always
+  // picks the gateway via PaymentMethod::default() (plugins/noren/booking/payment_method.config.php).
 
   // Extract transfer/cover IDs from extras (they use "transfer-{id}", "cover-{id}" prefixes)
   const transferExtra = extras.find((e) => String(e.id).startsWith("transfer-"));

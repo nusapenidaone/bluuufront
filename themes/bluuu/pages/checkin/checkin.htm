@@ -901,14 +901,14 @@ function StepPay({ order, setOrder, goBack }) {
                         {fmtIDR(order.collect)}
                     </div>
                 </div>
-                <RadioOpt label="Pay Online Now" sub="Skip the morning queue · Secure online payment"
+                <RadioOpt label="Pay Online Now" sub={`Skip the morning queue · ${fmtIDR(order.collect)} + 2.5% Xendit fee`}
                     checked={order.pay === true} onClick={() => setOrder(o => ({ ...o, pay: true }))} />
-                <RadioOpt label="Pay at the Office" sub="Cash or card on arrival at Serangan Harbor"
+                <RadioOpt label="Pay at the Office" sub="Cash or card on arrival at Serangan Harbor · No extra fee"
                     checked={order.pay === false} onClick={() => setOrder(o => ({ ...o, pay: false }))} last />
                 <div style={{ marginTop:24 }}>
                     {!loading ? (
                         <>
-                            {order.pay === true  && <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} &nbsp;<ArrowR /></PrimaryBtn>}
+                            {order.pay === true  && <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} + 2.5% Xendit fee &nbsp;<ArrowR /></PrimaryBtn>}
                             {order.pay === false && <PrimaryBtn onClick={finish}>Complete Check-In &nbsp;<ArrowR /></PrimaryBtn>}
                             {order.pay === null  && <div style={{ textAlign:'center', fontSize:13, color:MUTED, padding:'10px 0' }}>← Please select an option above</div>}
                         </>
@@ -927,7 +927,8 @@ function App() {
         ...INIT,
         passengers: [],
         pay:    INIT.collect > 0 ? null : false,
-        method: 3, // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+        method: 3, // Sent for API-shape compatibility only — the backend ignores it and always
+        // picks the gateway via PaymentMethod::default() (payment_method.config.php).
         menu:   null,
     });
 
