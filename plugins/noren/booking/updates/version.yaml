@@ -778,3 +778,6 @@ v1.0.259:
 v1.0.260:
     - 'Created table noren_booking_extras_conflicts'
     - builder_table_create_noren_booking_extras_conflicts.php
+v1.0.261:
+    - 'Updated table noren_booking_transfer: add long_distance_price'
+    - builder_table_update_noren_booking_transfer_9.php

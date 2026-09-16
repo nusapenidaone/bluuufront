@@ -742,6 +742,7 @@ class FullController extends Controller
             'id'                => $t->id,
             'name'              => $t->name,
             'price'             => $t->price,
+            'long_distance_price' => $t->long_distance_price,
             'bus_price'         => $t->bus_price,
             'classes_id'        => $t->classes_id,
             'description'       => $t->description,

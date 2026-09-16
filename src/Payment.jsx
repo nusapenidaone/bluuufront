@@ -65,6 +65,8 @@ export default function Payment() {
   const styleId = params.get("style") || "";                  // route/program ID
   const pickupAddressParam = params.get("pickup_address") || "";
   const dropoffAddressParam = params.get("dropoff_address") || "";
+  const pickupLatParam = params.get("pickup_lat") || "";
+  const pickupLngParam = params.get("pickup_lng") || "";
   const payMode = params.get("payMode") || "part";             // "full" | "part"
   const name = params.get("name") || "";
   const email = params.get("email") || "";
@@ -269,6 +271,8 @@ export default function Payment() {
       requests: requests.trim() || null,
       pickupAddress: pickupAddressParam || null,
       dropoffAddress: dropoffAddressParam || null,
+      pickupLat: pickupLatParam ? parseFloat(pickupLatParam) : null,
+      pickupLng: pickupLngParam ? parseFloat(pickupLngParam) : null,
 
       ga_client_id: getGaClientId(),
       utm: getUtmParams(),

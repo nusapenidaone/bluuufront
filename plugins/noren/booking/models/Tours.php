@@ -23,7 +23,7 @@ class Tours extends Model
         'name' => 'required',
         'types_id' => 'required',
         'classes_id' => 'required',
-        'route_id' => 'required',
+        //'route_id' => 'required',
         'source_id' => 'required',
         'capacity' => 'required',
         'odoo_id' => 'required',

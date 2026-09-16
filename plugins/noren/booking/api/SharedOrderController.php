@@ -8,8 +8,11 @@ use Illuminate\Support\Facades\Session;
 
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Transfer;
 use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Route;
+
+use Noren\Booking\Maps\GoogleMapsService;
 
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PaymentMethod;
@@ -88,6 +91,40 @@ class SharedOrderController extends Controller
             $order->restaurant_id = optional($route)->restaurant_id ?? ($data['selectedRestaurantId'] ?? null);
             $order->cars = $data['cars'] ?? ($order->transfer_id ? (int) ceil($order->members / 5) : 0);
 
+            // ── Pickup distance (transfer_id 1/2 require a resolved location) ──────
+            // Server-authoritative, same rule as PrivateOrderController: never trust
+            // the client for the pickup transfer price.
+            $transferNeedsPickup = in_array((string) $order->transfer_id, ['1', '2'], true);
+            $serverTransferPrice = null;
+            if ($transferNeedsPickup) {
+                $pickupLat = $data['pickupLat'] ?? null;
+                $pickupLng = $data['pickupLng'] ?? null;
+
+                // Временная совместимость: пока старый фронтенд ещё не заменён на новый,
+                // он не шлёт pickupLat/pickupLng — для таких запросов пропускаем
+                // серверную валидацию/пересчёт дистанции полностью (доверяем клиенту,
+                // как было раньше). Как только весь трафик перейдёт на новый фронт
+                // (он всегда шлёт координаты), эта ветка станет фактически недостижима.
+                if (is_numeric($pickupLat) && is_numeric($pickupLng)) {
+                    try {
+                        $eta  = GoogleMapsService::estimateDrivingTime((float) $pickupLat, (float) $pickupLng);
+                        $tier = GoogleMapsService::classifyDistance($eta['distance_km']);
+                    } catch (\Exception $e) {
+                        return response()->json(['error' => 'Could not verify pickup distance, please try again.'], 422);
+                    }
+
+                    if ($tier === 'blocked') {
+                        return response()->json(['error' => 'Pickup transfer is not available for addresses more than 45 km from our pier.'], 422);
+                    }
+
+                    $transferModel = Transfer::find($order->transfer_id);
+                    $unitPrice = $tier === 'long'
+                        ? (int) ($transferModel->long_distance_price ?? 0)
+                        : (int) ($transferModel->price ?? 0);
+                    $serverTransferPrice = $unitPrice * (int) $order->cars;
+                }
+            }
+
             // ── Pricing ───────────────────────────────────────────────────
             $order->boat_price = 0;   // shared tours price per person, not per boat
             $order->tour_price = $data['tourPrice'] ?? 0;
@@ -100,6 +137,14 @@ class SharedOrderController extends Controller
             $order->full_price = $data['fullPrice'] ?? 0;
             $order->discount_price = $data['discountPrice'] ?? 0;
             $order->discount = $data['discount'] ?? 0;
+
+            // ── Apply server-authoritative pickup transfer price ────────────
+            if ($serverTransferPrice !== null && $serverTransferPrice !== (int) $order->transfer_price) {
+                $delta = $serverTransferPrice - (int) $order->transfer_price;
+                $order->transfer_price = $serverTransferPrice;
+                $order->total_price   += $delta;
+                $order->full_price    += $delta;
+            }
 
             // ── Promo / agent ─────────────────────────────────────────────
             $order->promocode = $data['promocode'] ?? null;

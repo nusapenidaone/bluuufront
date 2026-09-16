@@ -58,7 +58,8 @@ import ScheduleModal from "./components/tour/ScheduleModal";
 import RestaurantCard from "./components/tour/RestaurantCard";
 import TourDetailsCard from "./components/tour/TourDetailsCard";
 import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
-import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
+import TransferPickerModal, { resolveTransferUnitPrice } from "./components/booking/TransferPickerModal";
+import CoverPickerModal, { resolveCoverQuantity } from "./components/booking/CoverPickerModal";
 import InfoDetailModal from "./components/booking/InfoDetailModal";
 import Section from "./components/common/Section";
 import { PremiumSection, PremiumContainer } from "./components/booking/ui/Section";
@@ -3779,266 +3780,6 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
 }
 
 
-function StepTransfers({
-  transfers,
-  selectedTransferId,
-  onSelectTransferId,
-  covers,
-  selectedCoverId,
-  onSelectCoverId,
-  totalGuests,
-  onContinue,
-  embedded = false,
-  showContinue = true,
-  showCovers = true,
-  showHeader = true,
-  framed = true,
-  pickupAddress = "",
-  onSetPickupAddress,
-  dropoffAddress = "",
-  onSetDropoffAddress,
-}) {
-  const selectedTransfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
-  const [activeTransferDetails, setActiveTransferDetails] = useState(null);
-  const [sameAddress, setSameAddress] = useState(false);
-  const [skipAddress, setSkipAddress] = useState(false);
-
-  const handleSkipAddressChange = (checked) => {
-    setSkipAddress(checked);
-    if (checked && onSetPickupAddress) onSetPickupAddress("");
-  };
-
-  const handleSameAddressChange = (checked) => {
-    setSameAddress(checked);
-    if (checked && onSetDropoffAddress) onSetDropoffAddress(pickupAddress);
-  };
-
-  const handlePickupChange = (val) => {
-    if (val) setSkipAddress(false);
-    if (onSetPickupAddress) onSetPickupAddress(val);
-    if (sameAddress && onSetDropoffAddress) onSetDropoffAddress(val);
-  };
-  const transferOptions = (
-    <div className="flex flex-col divide-y divide-neutral-100">
-      {/* Option: No thanks */}
-      <label className={cn(
-        "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
-        !selectedTransferId ? "bg-primary-50/30" : "hover:bg-neutral-50"
-      )}>
-        <input
-          type="radio"
-          name="transfer-selection-step"
-          className="hidden"
-          checked={!selectedTransferId}
-          onChange={() => onSelectTransferId(null)}
-        />
-        <div className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-            <MapPin className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", !selectedTransferId ? "text-primary-600" : "text-secondary-400")} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-bold text-secondary-900 sm:text-base">No, thanks. We'll meet you there.</div>
-            <div className="mt-1 text-sm font-medium text-secondary-500">Self-arrival at the meeting point</div>
-          </div>
-        </div>
-        <div className="flex shrink-0 items-center justify-center">
-          <div className={cn(
-            "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-            !selectedTransferId
-              ? "border-primary-600 bg-primary-600"
-              : "border-neutral-200 bg-white"
-          )}>
-            {!selectedTransferId && <Check className="h-3 w-3 text-white" />}
-          </div>
-        </div>
-      </label>
-      {/* Transfer Options */}
-      {transfers && transfers.map((transfer) => {
-        const unitPrice = Number(transfer.price || 0);
-        const cars = unitPrice > 0 ? Math.ceil(totalGuests / 5) : 0;
-        const totalTransferPrice = unitPrice * (cars || 1);
-        const isSelected = String(selectedTransferId) === String(transfer.id);
-        const finalName = transfer.name;
-        const transferName = String(transfer.name || "").toLowerCase();
-        const isPickupDropoffTransfer = /pick[\s-]?up|drop[\s-]?off/.test(transferName);
-        const transferCapacityHint = isPickupDropoffTransfer && cars > 1
-          ? `${cars} cars for ${totalGuests} guests`
-          : "";
-        const transferDetails = buildOptionDetails(transfer, {
-          extraDescription: transferCapacityHint,
-          fallbackDescription: "Transfer details will be confirmed after booking.",
-          fallbackImage: TRANSFER_DETAILS_FALLBACK_IMAGE,
-        });
-        const hasTransferDetails = Boolean(transferDetails.description || transferDetails.image);
-        const needsPickup = isSelected && (String(transfer.id) === "1" || String(transfer.id) === "2");
-        const needsDropoff = isSelected && String(transfer.id) === "2";
-        return (
-          <div key={transfer.id}>
-            <label className={cn(
-              "group flex items-center gap-4 px-5 py-4 cursor-pointer transition-all",
-              isSelected ? "bg-primary-50/30" : "hover:bg-neutral-50"
-            )}>
-              <input
-                type="radio"
-                name="transfer-selection-step"
-                className="hidden"
-                checked={isSelected}
-                onChange={() => onSelectTransferId(transfer.id)}
-              />
-              <div className="flex min-w-0 flex-1 items-center gap-4">
-                <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 overflow-hidden rounded-full bg-neutral-100 flex items-center justify-center">
-                  <Car className={cn("h-5 w-5 sm:h-6 sm:w-6 transition-colors", isSelected ? "text-primary-600" : "text-secondary-400")} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-secondary-900 sm:text-base">{finalName}</div>
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-sm font-semibold text-secondary-900 tabular-nums sm:text-base">
-                      {formatIDR(totalTransferPrice)}
-                    </span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-secondary-600">group price</span>
-                  </div>
-                  {hasTransferDetails && (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        setActiveTransferDetails({
-                          title: finalName,
-                          description: transfer.description || transfer.short_description || transferDetails.description,
-                          image: transferDetails.image,
-                        });
-                      }}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100"
-                      aria-label={`See transfer details for ${finalName}`}
-                    >
-                      <Info className="h-3.5 w-3.5" />
-                      <span>See full description</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-              <div className="flex shrink-0 items-center justify-center">
-                <div className={cn(
-                  "h-6 w-6 rounded-full border-2 flex items-center justify-center transition-all",
-                  isSelected
-                    ? "border-primary-600 bg-primary-600"
-                    : "border-neutral-200 bg-white"
-                )}>
-                  {isSelected && <Check className="h-3 w-3 text-white" />}
-                </div>
-              </div>
-            </label>
-            {needsPickup && (
-              <div className="border-t border-neutral-100 px-5 pb-4 pt-3 space-y-3 sm:pl-22 sm:pr-5">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</label>
-                  <AddressAutocomplete
-                    value={pickupAddress}
-                    onChange={(val) => handlePickupChange(val)}
-                    placeholder="Enter your hotel or villa address"
-                    className={cn("mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none", skipAddress && "hidden")}
-                  />
-                  <label className="mt-2 flex cursor-pointer items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={skipAddress}
-                      onChange={(e) => handleSkipAddressChange(e.target.checked)}
-                      className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
-                    />
-                    <span className="text-xs text-secondary-400">Skip for now — add address in your account later</span>
-                  </label>
-                </div>
-                {needsDropoff && !skipAddress && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</label>
-                    {!sameAddress && (
-                      <AddressAutocomplete
-                        value={dropoffAddress}
-                        onChange={(val) => onSetDropoffAddress && onSetDropoffAddress(val)}
-                        placeholder="Enter your dropoff address"
-                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600 outline-none"
-                      />
-                    )}
-                    <label className="mt-2 flex cursor-pointer items-center gap-2">
-                      <input
-                        id="transfer-same-address"
-                        type="checkbox"
-                        checked={sameAddress}
-                        onChange={(e) => handleSameAddressChange(e.target.checked)}
-                        className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
-                      />
-                      <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
-                    </label>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-  const content = (
-    <div className="flex flex-col gap-4">
-      <div className={cn(framed && "overflow-hidden rounded-xl border border-neutral-200 bg-white/90 backdrop-blur-md")}>
-        {showHeader && (
-          <div className="flex items-center justify-between px-6 py-5">
-            <div>
-              <div className="text-base sm:text-xl font-semibold text-secondary-900">Transfer</div>
-              <div className="text-sm text-secondary-500">
-                {selectedTransfer ? selectedTransfer.name : "Optional add pickup"}
-              </div>
-            </div>
-          </div>
-        )}
-        <div className={cn(showHeader && framed && "border-t border-neutral-200")}>
-          {transferOptions}
-        </div>
-      </div>
-      <InfoDetailModal
-        data={activeTransferDetails ? { ...activeTransferDetails, subtitle: "Pickup and route information" } : null}
-        onClose={() => setActiveTransferDetails(null)}
-      />
-      {showCovers && (
-        <CoversCompact
-          covers={covers}
-          selectedCoverId={selectedCoverId}
-          onSelectCoverId={onSelectCoverId}
-          formatPrice={formatIDR}
-          showHeader={showHeader}
-          framed={framed}
-        />
-      )}
-      {
-        showContinue && (
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={onContinue}
-              className="btn-primary inline-flex items-center justify-center rounded-full bg-primary-600 px-8 py-3 text-sm font-bold text-white shadow-lg"
-            >
-              Review your booking <ArrowRight className="ml-2 h-4 w-4" />
-            </button>
-          </div>
-        )
-      }
-    </div >
-  );
-
-  if (embedded) return content;
-
-  return (
-    <Section
-      id="step-4"
-      title="How will you get there?"
-      subtitle="We can arrange a private car or minivan to pick you up."
-      kicker="STEP 3 OF 4"
-      backgroundClassName={SECTION_BACKGROUNDS.mist}
-    >
-      {content}
-    </Section>
-  );
-}
 function StepExtras({
   selectedStyleId,
   selectedStyleTitle,
@@ -4067,6 +3808,8 @@ function StepExtras({
   onSetPickupAddress,
   dropoffAddress = "",
   onSetDropoffAddress,
+  onSetPickupLocation,
+  transferDistance = { status: "idle", km: null, tier: null },
 }) {
   const { categories, sharedRoutes: privateRoutes } = useExtras();
   const contacts = useSiteContacts();
@@ -4382,7 +4125,8 @@ function StepExtras({
     if (!selectedTransferId) return null;
     const transfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
     if (!transfer) return null;
-    const price = Number(transfer.price || 0);
+    const resolvedTier = transferDistance.status === "ready" && transferDistance.tier !== "blocked" ? transferDistance.tier : null;
+    const price = resolveTransferUnitPrice(transfer, resolvedTier);
     const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
     return {
       id: `transfer-${transfer.id}`,
@@ -4392,7 +4136,7 @@ function StepExtras({
       pricingType: "per_booking",
       quantity,
     };
-  }, [selectedTransferId, transfers, totalGuests]);
+  }, [selectedTransferId, transfers, totalGuests, transferDistance]);
   const selectedCoverItem = useMemo(() => {
     if (!selectedCoverId) return null;
     const cover = covers?.find((c) => String(c.id) === String(selectedCoverId));
@@ -4402,8 +4146,8 @@ function StepExtras({
       kind: "cover",
       name: cover.name,
       price: Number(cover.price || 0),
-      pricingType: "per_person",
-      quantity: totalGuests,
+      pricingType: cover.per_boat ? "per_boat" : "per_person",
+      quantity: resolveCoverQuantity(cover, totalGuests),
     };
   }, [selectedCoverId, covers, totalGuests]);
   const selectedAddonsList = useMemo(() => {
@@ -4591,72 +4335,68 @@ function StepExtras({
                 <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                   <button
                     type="button"
-                    onClick={() => setIsTransferOpen((prev) => !prev)}
+                    onClick={() => setIsTransferOpen(true)}
                     className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
-                    aria-expanded={isTransferOpen}
-                    aria-controls={`${sectionId}-transfer-panel`}
                   >
                     <div className="min-w-0">
                       <div className="text-base sm:text-xl font-semibold text-secondary-900">Transfer</div>
-                      <div className="mt-1 text-sm text-secondary-500">{transferSummary}</div>
-                    </div>
-                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
-                      {isTransferOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                    </span>
-                  </button>
-                  <div id={`${sectionId}-transfer-panel`} style={{ display: "grid", gridTemplateRows: isTransferOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.2s ease-out" }}>
-                    <div style={{ overflow: "hidden" }}>{isTransferOpen && (
-                      <div className="border-t border-neutral-200">
-                        <StepTransfers
-                          embedded
-                          showContinue={false}
-                          showCovers={false}
-                          showHeader={false}
-                          framed={false}
-                          transfers={transfers}
-                          selectedTransferId={selectedTransferId}
-                          onSelectTransferId={onSelectTransferId}
-                          covers={covers}
-                          selectedCoverId={selectedCoverId}
-                          onSelectCoverId={onSelectCoverId}
-                          totalGuests={totalGuests}
-                          pickupAddress={pickupAddress}
-                          onSetPickupAddress={onSetPickupAddress}
-                          dropoffAddress={dropoffAddress}
-                          onSetDropoffAddress={onSetDropoffAddress}
-                        />
+                      <div className="mt-1 text-sm text-secondary-500">
+                        {transferSummary}
+                        {selectedTransferItem && (
+                          <span className="ml-1.5 font-semibold text-primary-600">
+                            {selectedTransferItem.price ? formatIDR(selectedTransferItem.price * selectedTransferItem.quantity) : "Free"}
+                          </span>
+                        )}
                       </div>
-                    )}</div></div>
+                      {(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && pickupAddress && (
+                        <div className="mt-0.5 truncate text-xs text-secondary-400">{pickupAddress}</div>
+                      )}
+                    </div>
+                    <span className="text-sm font-semibold text-primary-600 shrink-0">{selectedTransferId ? "Change" : "Select"}</span>
+                  </button>
+                  <TransferPickerModal
+                    open={isTransferOpen}
+                    onClose={() => setIsTransferOpen(false)}
+                    transfers={transfers}
+                    totalGuests={totalGuests}
+                    selectedTransferId={selectedTransferId}
+                    pickupAddress={pickupAddress}
+                    dropoffAddress={dropoffAddress}
+                    onConfirm={({ transferId, pickupAddress: confirmedPickup, dropoffAddress: confirmedDropoff, pickupLocation: confirmedLocation }) => {
+                      onSelectTransferId(transferId);
+                      onSetPickupAddress?.(confirmedPickup);
+                      onSetDropoffAddress?.(confirmedDropoff);
+                      onSetPickupLocation?.(confirmedLocation);
+                    }}
+                  />
                 </div>
                 <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
                   <button
                     type="button"
-                    onClick={() => setIsInsuranceOpen((prev) => !prev)}
+                    onClick={() => setIsInsuranceOpen(true)}
                     className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
-                    aria-expanded={isInsuranceOpen}
-                    aria-controls={`${sectionId}-insurance-panel`}
                   >
                     <div className="min-w-0">
                       <div className="text-base sm:text-xl font-semibold text-secondary-900">Flexible Ticket</div>
-                      <div className="mt-1 text-sm text-secondary-500">{insuranceSummary}</div>
-                    </div>
-                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
-                      {isInsuranceOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                    </span>
-                  </button>
-                  <div id={`${sectionId}-insurance-panel`} style={{ display: "grid", gridTemplateRows: isInsuranceOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.2s ease-out" }}>
-                    <div style={{ overflow: "hidden" }}>{isInsuranceOpen && (
-                      <div className="border-t border-neutral-200">
-                        <CoversCompact
-                          covers={covers}
-                          selectedCoverId={selectedCoverId}
-                          onSelectCoverId={onSelectCoverId}
-                          formatPrice={formatIDR}
-                          showHeader={false}
-                          framed={false}
-                        />
+                      <div className="mt-1 text-sm text-secondary-500">
+                        {insuranceSummary}
+                        {selectedCoverItem && (
+                          <span className="ml-1.5 font-semibold text-primary-600">
+                            {selectedCoverItem.price ? formatIDR(selectedCoverItem.price * selectedCoverItem.quantity) : "Free"}
+                          </span>
+                        )}
                       </div>
-                    )}</div></div>
+                    </div>
+                    <span className="text-sm font-semibold text-primary-600 shrink-0">{selectedCoverId ? "Change" : "Select"}</span>
+                  </button>
+                  <CoverPickerModal
+                    open={isInsuranceOpen}
+                    onClose={() => setIsInsuranceOpen(false)}
+                    covers={covers}
+                    totalGuests={totalGuests}
+                    selectedCoverId={selectedCoverId}
+                    onConfirm={({ coverId }) => onSelectCoverId(coverId)}
+                  />
                 </div>
                 <TourInfoInline />
                 {onReview && (
@@ -5049,8 +4789,23 @@ function StepFive({
   calendarAvailMap,
   onCalendarMonthChange,
   selectedBoatId,
+  transfers,
+  selectedTransferId,
+  onSelectTransferId,
+  covers,
+  selectedCoverId,
+  onSelectCoverId,
+  pickupAddress,
+  onSetPickupAddress,
+  dropoffAddress,
+  onSetDropoffAddress,
+  totalGuests,
+  onSetPickupLocation,
+  transferDistance = { status: "idle", km: null, tier: null },
 }) {
   const [activeEditor, setActiveEditor] = useState(null);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isInsuranceOpen, setIsInsuranceOpen] = useState(false);
   const contacts = useSiteContacts();
   const isDateSelected = dateLabel && dateLabel !== "Date not selected";
   const isBoatSelected = Boolean(selectedBoat);
@@ -5125,14 +4880,18 @@ function StepFive({
     ? true
     : boatSeatsEntry.available_seats >= groupSize;
   const boatFitsGroup = !selectedBoat || groupSize <= selectedBoat.people;
-  const isReserveEnabled = isDateSelected && isBoatSelected && boatFitsGroup && boatHasEnoughSeats;
+  const pickupBlocking = (String(selectedTransferId) === "1" || String(selectedTransferId) === "2")
+    && !(transferDistance?.status === "ready" && transferDistance?.tier !== "blocked");
+  const isReserveEnabled = isDateSelected && isBoatSelected && boatFitsGroup && boatHasEnoughSeats && !pickupBlocking;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
       ? "Select option to continue"
       : (!boatFitsGroup || !boatHasEnoughSeats)
         ? "Not enough seats — change option"
-        : "RESERVE WITH 30%";
+        : pickupBlocking
+          ? "Confirm pickup address to continue"
+          : "RESERVE WITH 30%";
   const guestLabel = `${groupSize} guest${groupSize === 1 ? "" : "s"}`;
   const summaryRows = [
     {
@@ -5168,10 +4927,7 @@ function StepFive({
       icon: Car,
       value: selectedExtrasSummary?.find(e => e.id.toString().startsWith('transfer-'))?.name || "Not selected",
       action: "Change",
-      onClick: () => {
-        const target = document.getElementById("step-4");
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-      },
+      onClick: () => setIsTransferOpen(true),
     },
     {
       id: "insurance",
@@ -5179,10 +4935,7 @@ function StepFive({
       icon: ShieldCheck,
       value: selectedExtrasSummary?.find(e => e.id.toString().startsWith('cover-'))?.name || "Not selected",
       action: "Change",
-      onClick: () => {
-        const target = document.getElementById("step-4");
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-      },
+      onClick: () => setIsInsuranceOpen(true),
     },
   ];
   const handleRowClick = (row) => {
@@ -5399,6 +5152,31 @@ function StepFive({
               </div>
 
             </div>
+
+            <TransferPickerModal
+              open={isTransferOpen}
+              onClose={() => setIsTransferOpen(false)}
+              transfers={transfers}
+              totalGuests={totalGuests}
+              selectedTransferId={selectedTransferId}
+              pickupAddress={pickupAddress}
+              dropoffAddress={dropoffAddress}
+              onConfirm={({ transferId, pickupAddress: confirmedPickup, dropoffAddress: confirmedDropoff, pickupLocation: confirmedLocation }) => {
+                onSelectTransferId(transferId);
+                onSetPickupAddress?.(confirmedPickup);
+                onSetDropoffAddress?.(confirmedDropoff);
+                onSetPickupLocation?.(confirmedLocation);
+              }}
+            />
+
+            <CoverPickerModal
+              open={isInsuranceOpen}
+              onClose={() => setIsInsuranceOpen(false)}
+              covers={covers}
+              totalGuests={totalGuests}
+              selectedCoverId={selectedCoverId}
+              onConfirm={({ coverId }) => onSelectCoverId(coverId)}
+            />
           </div>
           <div className="sticky top-6 self-start space-y-3">
           <div className="rounded-xl border border-neutral-200 bg-white p-5">
@@ -7082,6 +6860,42 @@ export default function Shared_tour_01() {
   const [datePricing, setDatePricing] = useState(null);
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
+  const [pickupLocation, setPickupLocation] = useState(null); // {lat, lng} | null — резолвится из AddressAutocomplete
+  const [transferDistance, setTransferDistance] = useState({ status: "idle", km: null, tier: null });
+  const [transferBlockedNotice, setTransferBlockedNotice] = useState(null);
+
+  const pickupRequiresDistance = String(selectedTransferId) === "1" || String(selectedTransferId) === "2";
+
+  // Пересчитываем дистанцию/тариф pickup-адреса при выборе точки на карте/подсказке.
+  // >45км — трансфер автоматически снимается с выбора (нельзя оставить выбранным).
+  useEffect(() => {
+    if (!pickupRequiresDistance || !pickupLocation) {
+      setTransferDistance({ status: "idle", km: null, tier: null });
+      return;
+    }
+    let cancelled = false;
+    setTransferDistance({ status: "loading", km: null, tier: null });
+    setTransferBlockedNotice(null);
+    fetch(apiUrl(`transfer/distance?lat=${pickupLocation.lat}&lng=${pickupLocation.lng}`))
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.success) {
+          setTransferDistance({ status: "error", km: null, tier: null });
+          return;
+        }
+        setTransferDistance({ status: "ready", km: data.distance_km, tier: data.tier });
+        if (data.tier === "blocked") {
+          setTransferBlockedNotice(`This address is ${data.distance_km} km away — more than 45 km, so this transfer isn't available here. Please choose a different address or "No, thanks".`);
+          setSelectedTransferId(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setTransferDistance({ status: "error", km: null, tier: null });
+      });
+    return () => { cancelled = true; };
+  }, [pickupLocation, pickupRequiresDistance]);
+
   const [inlineRouteSchedule, setInlineRouteSchedule] = useState(null);
   const [isFetchingInlineRoute, setIsFetchingInlineRoute] = useState(false);
   const [inlineRestaurantPopup, setInlineRestaurantPopup] = useState(null);
@@ -7519,11 +7333,13 @@ export default function Shared_tour_01() {
       if (!extra) return acc;
       return acc + quantity * Number(extra.price || 0);
     }, 0);
-    // Add selected transfer
-    if (selectedTransferId) {
+    // Add selected transfer — skipped while a pickup-requiring transfer's distance
+    // isn't resolved yet (or is blocked), so it can't be paid for in that state.
+    if (selectedTransferId && (!pickupRequiresDistance || (transferDistance.status === "ready" && transferDistance.tier !== "blocked"))) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const price = Number(transfer.price || 0);
+        const resolvedTier = pickupRequiresDistance ? transferDistance.tier : null;
+        const price = resolveTransferUnitPrice(transfer, resolvedTier);
         const cars = price > 0 ? Math.ceil(totalGuests / 5) : 1;
         sum += price * cars;
       }
@@ -7532,11 +7348,11 @@ export default function Shared_tour_01() {
     if (selectedCoverId) {
       const cover = covers?.find(c => String(c.id) === String(selectedCoverId));
       if (cover) {
-        sum += Number(cover.price || 0) * totalGuests;
+        sum += Number(cover.price || 0) * resolveCoverQuantity(cover, totalGuests);
       }
     }
     return sum;
-  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests]);
+  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests, pickupRequiresDistance, transferDistance]);
   const selectedExtrasSummary = useMemo(() => {
     const summary = Object.entries(selectedExtras)
       .map(([id, qty]) => {
@@ -7547,11 +7363,13 @@ export default function Shared_tour_01() {
         return { ...extra, quantity };
       })
       .filter(Boolean);
-    // Add transfer to summary
-    if (selectedTransferId) {
+    // Add transfer to summary — same "skip until resolved" rule as extrasSubtotalIDR,
+    // since this list feeds the checkout payload.
+    if (selectedTransferId && (!pickupRequiresDistance || (transferDistance.status === "ready" && transferDistance.tier !== "blocked"))) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const price = Number(transfer.price || 0);
+        const resolvedTier = pickupRequiresDistance ? transferDistance.tier : null;
+        const price = resolveTransferUnitPrice(transfer, resolvedTier);
         const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
         summary.push({
           id: `transfer-${transfer.id}`,
@@ -7570,13 +7388,13 @@ export default function Shared_tour_01() {
           id: `cover-${cover.id}`,
           name: cover.name,
           price: Number(cover.price || 0),
-          pricingType: "per_person",
-          quantity: totalGuests
+          pricingType: cover.per_boat ? "per_boat" : "per_person",
+          quantity: resolveCoverQuantity(cover, totalGuests),
         });
       }
     }
     return summary;
-  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests]);
+  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests, pickupRequiresDistance, transferDistance]);
   const hasDateCriteria = dateMode === "exact" ? !!exactDate : !!(rangeStart && rangeEnd);
   const canProceedFromStepOne = hasDateCriteria && totalGuests > 0;
   const boatAvailability = useMemo(() => {
@@ -7663,6 +7481,8 @@ export default function Shared_tour_01() {
       requests: specialRequests,
       pickup_address: pickupAddress,
       dropoff_address: dropoffAddress,
+      pickup_lat: pickupLocation?.lat != null ? String(pickupLocation.lat) : "",
+      pickup_lng: pickupLocation?.lng != null ? String(pickupLocation.lng) : "",
       boatPrice: "0",
       totalBoatPrice: String(mainBasePrice ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
@@ -8156,6 +7976,8 @@ export default function Shared_tour_01() {
               onSetPickupAddress={setPickupAddress}
               dropoffAddress={dropoffAddress}
               onSetDropoffAddress={setDropoffAddress}
+              onSetPickupLocation={setPickupLocation}
+              transferDistance={transferDistance}
               onReview={() => {
                 const target = document.getElementById("step-review");
                 if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -8213,6 +8035,19 @@ export default function Shared_tour_01() {
               selectedBoatId={selectedBoatId}
               onOpenManageExtras={() => setIsManageExtrasOpen(true)}
               onReserve={handleOpenCheckout}
+              transfers={transfers}
+              selectedTransferId={selectedTransferId}
+              onSelectTransferId={setSelectedTransferId}
+              covers={covers}
+              selectedCoverId={selectedCoverId}
+              onSelectCoverId={setSelectedCoverId}
+              pickupAddress={pickupAddress}
+              onSetPickupAddress={setPickupAddress}
+              dropoffAddress={dropoffAddress}
+              onSetDropoffAddress={setDropoffAddress}
+              onSetPickupLocation={setPickupLocation}
+              transferDistance={transferDistance}
+              totalGuests={totalGuests}
             />
             <div style={{ display: "grid", gridTemplateRows: isCheckoutOpen ? "1fr" : "0fr", transition: "grid-template-rows 0.22s ease-out" }}>
               <div style={{ overflow: "hidden" }}>{isCheckoutOpen && (
@@ -8245,6 +8080,7 @@ export default function Shared_tour_01() {
                     dropoffAddress={dropoffAddress}
                     onSetDropoffAddress={setDropoffAddress}
                     onFinalize={handleApplyCheckout}
+                    pickupBlocking={(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && !(transferDistance.status === "ready" && transferDistance.tier !== "blocked")}
                     onCancel={() => {
                       setIsCheckoutOpen(false);
                       setTimeout(() => document.getElementById("step-review")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -8297,21 +8133,11 @@ function StepCheckout({
   onSetDropoffAddress,
   onFinalize,
   onCancel,
+  pickupBlocking = false,
 }) {
   const isLastStep = step === 2;
-  const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
+  const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability && !pickupBlocking) : true;
   const [errors, setErrors] = useState({});
-  const [sameAddress, setSameAddress] = useState(false);
-
-  const handleSameAddressChange = (checked) => {
-    setSameAddress(checked);
-    if (checked) onSetDropoffAddress(pickupAddress);
-  };
-
-  const handlePickupChange = (val) => {
-    onSetPickupAddress(val);
-    if (sameAddress) onSetDropoffAddress(val);
-  };
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).toLowerCase());
@@ -8323,6 +8149,7 @@ function StepCheckout({
   };
 
   const handleFinalize = () => {
+    if (pickupBlocking) return;
     const newErrors = {};
     if (!contactName?.trim()) newErrors.contactName = "Name is required";
     if (!contactEmail?.trim()) {
@@ -8513,37 +8340,16 @@ function StepCheckout({
                   </div>
                 </div>
                 {(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address*</label>
-                    <AddressAutocomplete
-                      value={pickupAddress}
-                      onChange={(val) => handlePickupChange(val)}
-                      placeholder="Enter your hotel or villa address"
-                      className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
-                    />
-                  </div>
-                )}
-                {String(selectedTransferId) === "2" && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address*</label>
-                    {!sameAddress && (
-                      <AddressAutocomplete
-                        value={dropoffAddress}
-                        onChange={(val) => onSetDropoffAddress(val)}
-                        placeholder="Enter your dropoff address"
-                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
-                      />
+                  <div className="sm:col-span-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-secondary-700">
+                    <div className="text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</div>
+                    <div className="mt-0.5">{pickupAddress || "—"}</div>
+                    {String(selectedTransferId) === "2" && (
+                      <>
+                        <div className="mt-2 text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</div>
+                        <div className="mt-0.5">{dropoffAddress || "—"}</div>
+                      </>
                     )}
-                    <label className="mt-2 flex cursor-pointer items-center gap-2">
-                      <input
-                        id="same-address"
-                        type="checkbox"
-                        checked={sameAddress}
-                        onChange={(e) => handleSameAddressChange(e.target.checked)}
-                        className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
-                      />
-                      <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
-                    </label>
+                    <div className="mt-1.5 text-xs text-secondary-400">To change it, go back and edit the Transfer selection above.</div>
                   </div>
                 )}
                 <div>
@@ -8622,12 +8428,17 @@ function StepCheckout({
               )}
               <Button
                 onClick={() => step < 2 ? onSetStep(step + 1) : handleFinalize()}
-                disabled={step === 2 && (!agreedTerms || !agreedLiability)}
+                disabled={step === 2 && (!agreedTerms || !agreedLiability || pickupBlocking)}
                 className="h-10 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
                 {step < 2 ? (payMode === "part" ? "CONTINUE WITH 30%" : "CONTINUE WITH FULL PAYMENT") : "Complete booking"}
               </Button>
             </div>
+            {step === 2 && pickupBlocking && (
+              <div className="mt-3 text-right text-xs font-semibold text-red-600">
+                Please confirm your pickup address to continue.
+              </div>
+            )}
           </div>
         </div>
       </Section>

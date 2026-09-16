@@ -5,7 +5,8 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
 import Button from "./components/common/Button";
 import CustomDatePicker from "./components/common/CustomDatePicker";
-import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
+import TransferPickerModal, { resolveTransferUnitPrice } from "./components/booking/TransferPickerModal";
+import CoverPickerModal, { resolveCoverQuantity } from "./components/booking/CoverPickerModal";
 import { apiUrl } from "./api/base";
 import { cn, getExtraConflict } from "./lib/utils";
 import {
@@ -617,8 +618,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [editDate, setEditDate] = useState("");
   const [editPickup, setEditPickup] = useState("");
   const [editDropoff, setEditDropoff] = useState("");
-  const [editPickupConfirmed, setEditPickupConfirmed] = useState(false);
-  const [editDropoffConfirmed, setEditDropoffConfirmed] = useState(false);
+  // {lat, lng, tier} once the pickup address has been resolved via Google in
+  // TransferPickerModal — null until the customer (re-)confirms it there.
+  const [editPickupLocation, setEditPickupLocation] = useState(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
   const [editAdults, setEditAdults] = useState(0);
   const [editKids, setEditKids] = useState(0);
   const [editTransfer, setEditTransfer] = useState(null);
@@ -684,8 +688,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
       setEditDate(json.local.travel_date || "");
       setEditPickup(json.local.pickup_address || "");
       setEditDropoff(json.local.dropoff_address || "");
-      setEditPickupConfirmed(Boolean(json.local.pickup_address));
-      setEditDropoffConfirmed(Boolean(json.local.dropoff_address));
+      setEditPickupLocation(null);
       setEditAdults(json.local.adults || 0);
       setEditKids(json.local.kids || 0);
       const initTransfer = json.local.transfer_id ? Number(json.local.transfer_id) : null;
@@ -886,8 +889,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     setEditDate(local.travel_date || "");
     setEditPickup(local.pickup_address || "");
     setEditDropoff(local.dropoff_address || "");
-    setEditPickupConfirmed(Boolean(local.pickup_address));
-    setEditDropoffConfirmed(Boolean(local.dropoff_address));
+    setEditPickupLocation(null);
     setEditAdults(local.adults || 0);
     setEditKids(local.kids || 0);
     setEditTransfer(local.transfer_id ? Number(local.transfer_id) : null);
@@ -911,14 +913,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
   // Live add-ons price estimate (instant, no server round-trip)
   const livePrices = useMemo(() => {
     if (!data) return null;
-    const isPrivate = !!data.local.is_private;
 
     let transferPrice = 0;
     if (editTransfer) {
       const t = (data.options.transfers || []).find((t) => Number(t.id) === Number(editTransfer));
       if (t) {
         const cars = [1, 2].includes(Number(editTransfer)) ? Math.max(1, Math.ceil(editMembers / 5)) : 0;
-        const unitPrice = editMembers > 5 && t.bus_price ? t.bus_price : t.price;
+        const unitPrice = resolveTransferUnitPrice(t, editPickupLocation?.tier ?? null);
         transferPrice = unitPrice * Math.max(1, cars);
       }
     }
@@ -926,7 +927,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     let coverPrice = 0;
     if (editCover) {
       const c = (data.options.covers || []).find((c) => Number(c.id) === Number(editCover));
-      if (c) coverPrice = c.price * (isPrivate ? 1 : Math.max(1, editMembers));
+      if (c) coverPrice = Number(c.price || 0) * resolveCoverQuantity(c, editMembers);
     }
 
     let extrasTotal = 0;
@@ -937,7 +938,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     }
 
     return { transferPrice, coverPrice, extrasTotal, total: transferPrice + coverPrice + extrasTotal };
-  }, [data, editAdults, editKids, editTransfer, editCover, editExtras]);
+  }, [data, editAdults, editKids, editTransfer, editCover, editExtras, editPickupLocation]);
 
   // Capture the initial add-ons total once after data first loads
   useEffect(() => {
@@ -993,6 +994,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
         date: editDate,
         pickup_address: editPickup,
         dropoff_address: editDropoff,
+        pickup_lat: editPickupLocation?.lat ?? null,
+        pickup_lng: editPickupLocation?.lng ?? null,
         adults: editAdults,
         kids: editKids,
         transfer_id: editTransfer || null,
@@ -1003,7 +1006,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
         }),
       };
 
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}`), {
+      const res = await fetch(apiUrl(`cabinet/v2/${odooId}/${uniqueKey}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1560,39 +1563,35 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
         {/* Transfer */}
         <EditableRow icon={Car} label="Transfer" value={transferSummary}
-          isEditing={editingField === "transfer"} onEdit={() => toggleEdit("transfer")}
-          disabled={allEditLocked}>
-          <TransfersCompact
-            transfers={options.transfers || []}
-            selectedTransferId={editTransfer}
-            onSelectTransferId={handleTransferChange}
-            pickupAddress={editPickup}
-            setPickupAddress={setEditPickup}
-            dropoffAddress={editDropoff}
-            setDropoffAddress={setEditDropoff}
-            pickupAddressConfirmed={editPickupConfirmed}
-            setPickupAddressConfirmed={setEditPickupConfirmed}
-            dropoffAddressConfirmed={editDropoffConfirmed}
-            setDropoffAddressConfirmed={setEditDropoffConfirmed}
-            totalGuests={editMembers}
-            showHeader={false}
-          />
-        </EditableRow>
+          isEditing={false} onEdit={() => setIsTransferModalOpen(true)}
+          disabled={allEditLocked} />
+        <TransferPickerModal
+          open={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          transfers={options.transfers || []}
+          totalGuests={editMembers}
+          selectedTransferId={editTransfer}
+          pickupAddress={editPickup}
+          onConfirm={({ transferId, pickupAddress, dropoffAddress, pickupLocation, tier }) => {
+            handleTransferChange(transferId);
+            setEditPickup(pickupAddress);
+            setEditDropoff(dropoffAddress);
+            setEditPickupLocation(pickupLocation ? { ...pickupLocation, tier } : null);
+          }}
+        />
 
         {/* Insurance */}
         <EditableRow icon={ShieldCheck} label="Insurance" value={coverSummary}
-          isEditing={editingField === "cover"} onEdit={() => toggleEdit("cover")}
-          disabled={allEditLocked}>
-          <CoversCompact
-            covers={options.covers || []}
-            selectedCoverId={editCover}
-            onSelectCoverId={handleCoverChange}
-            priceLabel={local.is_private ? "per group" : "per person"}
-            formatPrice={(v) => formatPrice(Number(v))}
-            showHeader={false}
-            framed
-          />
-        </EditableRow>
+          isEditing={false} onEdit={() => setIsCoverModalOpen(true)}
+          disabled={allEditLocked} />
+        <CoverPickerModal
+          open={isCoverModalOpen}
+          onClose={() => setIsCoverModalOpen(false)}
+          covers={options.covers || []}
+          totalGuests={editMembers}
+          selectedCoverId={editCover}
+          onConfirm={({ coverId }) => handleCoverChange(coverId)}
+        />
 
         {/* Extras (private only) */}
         {local.is_private && (

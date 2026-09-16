@@ -1,4 +1,4 @@
-url = "/checkin/:odoo_id|^\d+$"
+url = "/checkin/:odoo_id|^[0-9]+$"
 title = "Check-in — Bluuu Tours"
 is_hidden = 0
 ==
@@ -908,9 +908,9 @@ function StepPay({ order, setOrder, goBack }) {
                 <div style={{ marginTop:24 }}>
                     {!loading ? (
                         <>
-                            {order.pay === true  && <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} + 2.5% Xendit fee &nbsp;<ArrowR /></PrimaryBtn>}
-                            {order.pay === false && <PrimaryBtn onClick={finish}>Complete Check-In &nbsp;<ArrowR /></PrimaryBtn>}
-                            {order.pay === null  && <div style={{ textAlign:'center', fontSize:13, color:MUTED, padding:'10px 0' }}>← Please select an option above</div>}
+                            {order.pay === true
+                                ? <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} + 2.5% Xendit fee &nbsp;<ArrowR /></PrimaryBtn>
+                                : <PrimaryBtn onClick={finish}>Complete Check-In &nbsp;<ArrowR /></PrimaryBtn>}
                         </>
                     ) : <LoadingBtn text={status} />}
                 </div>
@@ -926,7 +926,7 @@ function App() {
     const [order, setOrder]  = useState({
         ...INIT,
         passengers: [],
-        pay:    INIT.collect > 0 ? null : false,
+        pay:    false,
         method: 3, // Sent for API-shape compatibility only — the backend ignores it and always
         // picks the gateway via PaymentMethod::default() (payment_method.config.php).
         menu:   null,

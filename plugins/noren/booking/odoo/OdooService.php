@@ -869,6 +869,11 @@ class OdooService
         ];
 
         // ── Products ──────────────────────────────────────────────────────────
+        // NOTE: this $lines array (and the 'lines' key in this method's return value)
+        // is currently DEAD CODE — createSaleOrder() only reads $data['lead'] from
+        // buildOrderData()'s return value, and the real order lines sent to Odoo are
+        // built independently by addOrderLines() below in this file. If order-line
+        // pricing ever needs fixing, that's the function to change, not this one.
         $lines = [];
 
         // 1. Boat — qty 1, price 0
@@ -891,13 +896,14 @@ class OdooService
             ];
         }
 
-        // 3. Transfer
+        // 3. Transfer (unused — see dead-code note above; not kept in sync with the
+        // real pricing logic in addOrderLines())
         if ($order->transfer_id && $order->transfer && $order->transfer->odoo_id) {
             $lines[] = [
                 'label'      => 'transfer',
                 'product_id' => (int) $order->transfer->odoo_id,
                 'qty'        => 1,
-                'price'      => (float)($order->transfer_price ?? $order->transfer->price ?? 0),
+                'price'      => (float) ($order->transfer_price ?? 0),
             ];
         }
 
@@ -1124,12 +1130,21 @@ class OdooService
                 'price_unit'      => 0.0,
             ];
         } else {
+            // $order->transfer->price is the flat BASE product price — it ignores the
+            // long-distance tier that PrivateOrderController/SharedOrderController may
+            // already have applied server-side into $order->transfer_price (the real,
+            // authoritative total actually charged). Deriving price_unit from
+            // transfer_price / qty instead keeps qty*price_unit equal to that total
+            // regardless of tier, so a long-distance booking doesn't silently send the
+            // standard rate to Odoo.
+            $transferQty   = max(1, $cars);
+            $transferTotal = (float) ($order->transfer_price ?? 0);
             $vals[] = [
                 'order_id'        => $odooOrderId,
                 'name'            => $order->transfer->name ?? 'Transfer',
                 'product_id'      => (int) $order->transfer->odoo_id,
-                'product_uom_qty' => max(1, $cars),
-                'price_unit'      => (float)($order->transfer->price ?? 0),
+                'product_uom_qty' => $transferQty,
+                'price_unit'      => $transferTotal / $transferQty,
             ];
         }
 

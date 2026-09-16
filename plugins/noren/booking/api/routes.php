@@ -9,6 +9,7 @@ use Noren\Booking\Api\MarketingController;
 use Noren\Booking\Api\PrivateOrderController;
 use Noren\Booking\Api\QrController;
 use Noren\Booking\Api\SharedOrderController;
+use Noren\Booking\Api\TransferDistanceController;
 // Tours
 Route::get('api/new/tours/private', [FullController::class, 'getPrivateTours']);
 Route::get('api/new/tours/shared',  [FullController::class, 'getSharedTours']);
@@ -108,6 +109,9 @@ Route::patch ('api/new/cabinet/{odooId}/{key}/upgrade', [CabinetController::clas
 Route::post  ('api/new/cabinet/{odooId}/{key}/pay',     [CabinetController::class, 'createPayment'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 Route::get   ('api/new/cabinet/{odooId}/{key}',         [CabinetController::class, 'show'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 Route::patch ('api/new/cabinet/{odooId}/{key}',         [CabinetController::class, 'update'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
+// v2: same as above but requires a Google-resolved pickup location for transfer/address
+// changes (see CabinetController::performUpdate) — only the updated cabinet.jsx calls this.
+Route::patch ('api/new/cabinet/v2/{odooId}/{key}',      [CabinetController::class, 'updateV2'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 
 // Check-in
 Route::options('api/new/checkin/{any}', function () {
@@ -122,6 +126,10 @@ Route::post('api/new/checkin/{odoo_id}/pay',  [CheckinController::class, 'pay'])
 
 // ETA (время в пути до пункта назначения) — вызывается из Odoo automation
 Route::get('api/new/eta', [EtaController::class, 'estimate']);
+
+// Дистанция pickup-адреса до офиса (км + тариф short/long/blocked) — вызывается
+// прямо с сайта из виджета выбора трансфера, до отправки заказа.
+Route::get('api/new/transfer/distance', [TransferDistanceController::class, 'check'])->middleware('throttle:20,1');
 
 // QR-код заказа (PNG) по odoo_id + x_studio_unique_key
 Route::get('api/new/qr/{odoo_id}/{key}', [QrController::class, 'generate'])

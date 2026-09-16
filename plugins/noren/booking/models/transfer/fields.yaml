@@ -26,6 +26,10 @@ fields:
         label: Price
         span: auto
         type: number
+    long_distance_price:
+        label: 'Long-distance Price (28–45 km)'
+        span: auto
+        type: number
     bus_price:
         label: Bus Price
         span: auto

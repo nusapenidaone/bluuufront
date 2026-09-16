@@ -16,6 +16,10 @@ columns:
         label: Price
         type: number
         select: "format(price, 0, 'de_DE')"
+    long_distance_price:
+        label: 'Long Dist. Price'
+        type: number
+        select: "format(long_distance_price, 0, 'de_DE')"
     bus_price:
         label: Bus Price
         type: number

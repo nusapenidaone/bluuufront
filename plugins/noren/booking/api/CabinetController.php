@@ -16,6 +16,7 @@ use Noren\Booking\Models\Restaurant;
 use Noren\Booking\Models\Route;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Transfer;
+use Noren\Booking\Maps\GoogleMapsService;
 use Noren\Booking\Odoo\OdooService;
 
 class CabinetController extends Controller
@@ -168,19 +169,24 @@ class CabinetController extends Controller
         $transfers = $allTransferModels
             ->filter(fn($t) => !$t->types_id || (int) $t->types_id === $toursTypeId)
             ->map(fn($t) => [
-                'id'        => $t->id,
-                'name'      => $t->name,
-                'price'     => (int) $t->price,
-                'bus_price' => $t->bus_price ? (int) $t->bus_price : null,
+                'id'                  => $t->id,
+                'name'                => $t->name,
+                'price'               => (int) $t->price,
+                'long_distance_price' => $t->long_distance_price !== null ? (int) $t->long_distance_price : null,
+                'bus_price'           => $t->bus_price ? (int) $t->bus_price : null,
+                'description'         => $t->description,
+                'short_description'   => $t->short_description,
             ])->values();
 
         $covers = $allCoverModels
             ->filter(fn($c) => !$c->types_id || (int) $c->types_id === $toursTypeId)
             ->map(fn($c) => [
-                'id'       => $c->id,
-                'name'     => $c->name,
-                'price'    => (int) $c->price,
-                'per_boat' => (bool) $c->per_boat,
+                'id'                => $c->id,
+                'name'              => $c->name,
+                'price'             => (int) $c->price,
+                'per_boat'          => (bool) $c->per_boat,
+                'description'       => $c->description,
+                'short_description' => $c->short_description,
             ])->values();
 
         $routes        = [];
@@ -379,7 +385,11 @@ class CabinetController extends Controller
     // Updates Odoo order: header fields (date, guests, addresses) + order lines
     // (transfer, cover, extras). No price recalculation for tour itself.
 
-    public function update(Request $request, int $odooId, string $key)
+    // update() (old route, no distance check — kept for any client still on a build that
+    // doesn't send pickup_lat/pickup_lng) and updateV2() (new route, enforces the Google
+    // distance/tier validation) both delegate to this shared implementation so the ~400
+    // lines of order-line logic aren't duplicated between the two entry points.
+    private function performUpdate(Request $request, int $odooId, string $key, bool $requireDistanceCheck)
     {
         $this->cors();
 
@@ -487,6 +497,38 @@ class CabinetController extends Controller
             }
         }
 
+        // ── Transfer request fields + server-authoritative pickup distance check ──
+        // Same rule as order creation (PrivateOrderController/SharedOrderController):
+        // a pickup transfer (id 1/2) can't be saved without a Google-resolved location.
+        // Only re-checked when the type or address actually changed (so unrelated edits
+        // like the date don't force the client to re-resolve an already-valid address
+        // every time). Deliberately placed BEFORE the cancel/draft block below — a
+        // rejected request must not leave the Odoo order stuck in draft state.
+        $requestHasTransfer = $request->has('transfer_id');
+        $requestedTransferId = $requestHasTransfer
+            ? ($request->input('transfer_id') ? (int) $request->input('transfer_id') : null)
+            : null;
+        $needsPickupTransfer = $requestedTransferId !== null && in_array($requestedTransferId, [1, 2], true);
+        $transferTypeChanged = $requestHasTransfer
+            && (!$existingTransferLine || $existingTransferLine['local_id'] !== $requestedTransferId);
+        $tier = null;
+        if ($requireDistanceCheck && $needsPickupTransfer && ($transferTypeChanged || $pickupAddressChanged)) {
+            $pickupLat = $request->input('pickup_lat');
+            $pickupLng = $request->input('pickup_lng');
+            if (!is_numeric($pickupLat) || !is_numeric($pickupLng)) {
+                return response()->json(['success' => false, 'error' => 'A resolved pickup location is required for this transfer.'], 422);
+            }
+            try {
+                $eta  = GoogleMapsService::estimateDrivingTime((float) $pickupLat, (float) $pickupLng);
+                $tier = GoogleMapsService::classifyDistance($eta['distance_km']);
+            } catch (\Exception $e) {
+                return response()->json(['success' => false, 'error' => 'Could not verify pickup distance, please try again.'], 422);
+            }
+            if ($tier === 'blocked') {
+                return response()->json(['success' => false, 'error' => 'Pickup transfer is not available for addresses more than 45 km from our pier.'], 422);
+            }
+        }
+
         // ── Cancel → draft before any changes ────────────────────────────────
         $wasSale = ($odooOrder['state'] ?? '') === 'sale';
         if ($wasSale) {
@@ -501,11 +543,6 @@ class CabinetController extends Controller
 
         try {
             // ── Transfer line ──────────────────────────────────────────────────
-            $requestHasTransfer = $request->has('transfer_id');
-            $requestedTransferId = $requestHasTransfer
-                ? ($request->input('transfer_id') ? (int) $request->input('transfer_id') : null)
-                : null;
-
             if ($requestHasTransfer) {
                 if ($requestedTransferId === null) {
                     // No transfer — replace line with "No transfer" product (id=23, price=0)
@@ -523,8 +560,23 @@ class CabinetController extends Controller
                 } else {
                     $newTransfer = $allTransfers->firstWhere('id', $requestedTransferId);
                     if ($newTransfer && $newTransfer->odoo_id) {
-                        $cars      = in_array((int) $newTransfer->id, [1, 2]) ? max(1, (int) ceil($members / 5)) : 1;
-                        $unitPrice = (float) $newTransfer->price;
+                        $cars = in_array((int) $newTransfer->id, [1, 2]) ? max(1, (int) ceil($members / 5)) : 1;
+                        if ($requireDistanceCheck && $needsPickupTransfer && $tier === null && !$transferTypeChanged
+                            && $existingTransferLine && $existingTransferLine['local_id'] === $requestedTransferId) {
+                            // Distance gate was skipped because nothing relevant changed —
+                            // keep the already-saved effective price (may already reflect a
+                            // long-distance tier) instead of recomputing from scratch, which
+                            // would silently reset it back to the base rate on every
+                            // unrelated save (e.g. changing just the date).
+                            $unitPrice = $existingTransferLine['price'];
+                        } elseif ($requireDistanceCheck && $needsPickupTransfer && $tier === 'long') {
+                            $unitPrice = (float) ($newTransfer->long_distance_price ?? 0);
+                        } else {
+                            // Old route ($requireDistanceCheck = false) always lands here —
+                            // identical to this method's behavior before the v2 distance check
+                            // was added, so it stays a safe no-op for any client still calling it.
+                            $unitPrice = (float) $newTransfer->price;
+                        }
                         $fields['x_studio_pickup_cars']   = in_array((int) $newTransfer->id, [1, 2]) ? $cars : 0;
                         $fields['x_studio_drop_off_cars'] = (int) $newTransfer->id === 2 ? $cars : 0;
                         $fields['x_studio_car_type']      = $newTransfer->odoo_name ?: false;
@@ -762,6 +814,23 @@ class CabinetController extends Controller
         }
 
         return response()->json(['success' => true]);
+    }
+
+    // ─── PATCH /api/new/cabinet/{odooId}/{key} — old route, kept unchanged ────
+    // No pickup distance validation — this is what every client called before the
+    // v2 route existed, and old cached frontend builds never send pickup_lat/lng.
+    public function update(Request $request, int $odooId, string $key)
+    {
+        return $this->performUpdate($request, $odooId, $key, false);
+    }
+
+    // ─── PATCH /api/new/cabinet/v2/{odooId}/{key} — new route ─────────────────
+    // Same as update(), but requires a Google-resolved pickup location (and applies
+    // the long_distance_price tier) whenever the transfer type or pickup address
+    // actually changed. Only the updated cabinet.jsx frontend calls this.
+    public function updateV2(Request $request, int $odooId, string $key)
+    {
+        return $this->performUpdate($request, $odooId, $key, true);
     }
 
     // ─── POST /api/new/cabinet/{odooId}/{key}/pay ─────────────────────────────
