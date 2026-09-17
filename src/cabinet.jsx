@@ -37,6 +37,7 @@ import {
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
 import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
+import SeeYouAgain from "./components/common/SeeYouAgain";
 import { useCurrency } from "./CurrencyContext";
 
 function fmtDate(iso) {
@@ -644,12 +645,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [lastPrices, setLastPrices] = useState(null);
   const [initialAddOns, setInitialAddOns] = useState(null);
   const [paying, setPaying] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
-  const [upgradeError, setUpgradeError] = useState(null);
-  const [upgradeChecked, setUpgradeChecked] = useState(false);
-  const [upgradeChecking, setUpgradeChecking] = useState(false);
-  const [upgradeCheckData, setUpgradeCheckData] = useState(null);
-  const [upgradeCheckError, setUpgradeCheckError] = useState(null);
 
   // Tour details tab (Itinerary / What's included)
   const [detailTab, setDetailTab] = useState("itinerary");
@@ -664,8 +659,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
   const [showRouteContactModal, setShowRouteContactModal] = useState(false);
   const [showSharedEditModal, setShowSharedEditModal] = useState(false);
-  const [showUpgradeContactModal, setShowUpgradeContactModal] = useState(false);
-  const [upgradeContactTier, setUpgradeContactTier] = useState("");
 
   // Active category tab in the extras panel
   const [extrasActiveCat, setExtrasActiveCat] = useState(null);
@@ -743,9 +736,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
   useEffect(() => {
     setAvailChecked(false);
     setAvailResult(null);
-    setUpgradeChecked(false);
-    setUpgradeCheckData(null);
-    setUpgradeCheckError(null);
     if (!data || !editDate || editAdults + editKids <= 0) return;
     const origDate    = data.local?.travel_date || "";
     const origAdults  = data.local?.adults || 0;
@@ -947,44 +937,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
     }
   }, [data, livePrices, initialAddOns]);
 
-  const checkUpgradeLive = async () => {
-    setUpgradeChecking(true);
-    setUpgradeCheckError(null);
-    setUpgradeCheckData(null);
-    try {
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/upgrade`));
-      const json = await res.json();
-      setUpgradeCheckData(json);
-      setUpgradeChecked(true);
-    } catch {
-      setUpgradeCheckError("Could not check availability");
-    } finally {
-      setUpgradeChecking(false);
-    }
-  };
-
-  const doUpgrade = async (toursId) => {
-    setUpgrading(true);
-    setUpgradeError(null);
-    try {
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/upgrade`), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tours_id: toursId }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        await fetchOrder();
-      } else {
-        setUpgradeError(json.error || "Upgrade failed");
-      }
-    } catch (e) {
-      setUpgradeError("Network error");
-    } finally {
-      setUpgrading(false);
-    }
-  };
-
   const saveAll = async () => {
     setSaving(true);
     setSaved(false);
@@ -1085,6 +1037,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
     <div className="rounded-2xl border border-neutral-200 bg-white px-6 py-14 text-center">
       <h1 className="text-xl font-bold text-secondary-900">Order not found</h1>
       <p className="mt-2 text-sm text-secondary-500">Please check the link from your confirmation email.</p>
+    </div>
+  );
+
+  if (data.expired) return renderShell(
+    <div className="flex justify-center">
+      <SeeYouAgain name={data.local?.name} ctaHref="/private-tour-to-nusa-penida" ctaLabel="Book your next trip" />
     </div>
   );
 
@@ -1770,70 +1728,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
       })()}
 
 
-      {/* ── Upgrade banner (shared only) ─────────────────────────────────── */}
-      {!local.is_private && options.upgrade_tour && !allEditLocked && sourceIsOurs && (() => {
-        const up = options.upgrade_tour;
-        const tierLabels = { "Premium Shared": "Premium", "First Class Shared": "First Class" };
-        const tierLabel  = tierLabels[up.odoo_type] || up.name;
-        const cd = upgradeCheckData;
-        return (
-          <div className="mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
-            <div className="px-5 py-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-amber-900">Upgrade to {tierLabel}</div>
-                  <div className="mt-0.5 text-xs text-amber-700">
-                    {!upgradeChecked
-                      ? "More comfort, better experience"
-                      : cd?.available
-                        ? `${(cd.available_seats > 10 ? "10+" : cd.available_seats)} seats available on your date`
-                        : "Not available on your date"}
-                  </div>
-                  {upgradeChecked && cd?.available && cd.boat_name && (
-                    <div className="mt-0.5 text-xs text-amber-700">
-                      Boat: <span className="font-semibold">&ldquo;{cd.boat_name}&rdquo;</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Price difference badge */}
-              {upgradeChecked && cd?.available && cd.price_diff > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3">
-                  <div className="flex-1 text-xs text-amber-700">Extra to pay for upgrade</div>
-                  <div className="text-base font-extrabold text-amber-900">+{formatPrice(cd.price_diff)}</div>
-                </div>
-              )}
-
-              {upgradeCheckError && <p className="mt-2 text-xs text-red-500">{upgradeCheckError}</p>}
-              {!upgradeChecked ? (
-                <button
-                  type="button"
-                  onClick={checkUpgradeLive}
-                  disabled={upgradeChecking}
-                  className="mt-3 w-full rounded-full border border-amber-400 bg-white py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-[0.98] disabled:opacity-60"
-                >
-                  {upgradeChecking ? "Checking…" : "Check availability →"}
-                </button>
-              ) : cd?.available ? (
-                <button
-                  type="button"
-                  onClick={() => { setUpgradeContactTier(tierLabel); setShowUpgradeContactModal(true); }}
-                  className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
-                >
-                  {cd.price_diff > 0
-                    ? `Upgrade · +${formatPrice(cd.price_diff)} →`
-                    : `Upgrade to ${tierLabel} →`}
-                </button>
-              ) : null}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* ── What's included ─────────────────────────────────────────────── */}
       {(tourIncluded.length > 0 || tourIncludes.length > 0) && (
         <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
@@ -2113,62 +2007,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   </a>
                   <a
                     href={`mailto:info@bluuu.tours?subject=Booking update ${odoo.order_number || odooId}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
-                  >
-                    <Mail className="h-4 w-4" />
-                    Email us
-                  </a>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Upgrade: contact-support modal ───────────────────────────────────── */}
-      <AnimatePresence>
-        {showUpgradeContactModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowUpgradeContactModal(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.97 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              className="fixed inset-x-4 bottom-0 z-[101] mx-auto max-w-sm overflow-hidden rounded-t-3xl bg-white pb-safe-bottom sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-            >
-              <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-                <span className="text-sm font-bold text-secondary-900">Upgrade to {upgradeContactTier}</span>
-                <button type="button" onClick={() => setShowUpgradeContactModal(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-secondary-500 hover:bg-neutral-200">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="px-6 py-5">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <h3 className="text-base font-bold text-secondary-900">Want to upgrade your booking?</h3>
-                <p className="mt-1.5 text-sm text-secondary-500">
-                  Upgrades are processed by our team. Contact us and we&apos;ll take care of it for you right away.
-                </p>
-                <div className="mt-5 space-y-3">
-                  <a
-                    href={waLink}
-                    target="_blank" rel="noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                    </svg>
-                    WhatsApp us
-                  </a>
-                  <a
-                    href={`mailto:info@bluuu.tours?subject=Upgrade request ${odoo.order_number || odooId} to ${upgradeContactTier}`}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
                   >
                     <Mail className="h-4 w-4" />

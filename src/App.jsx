@@ -17,6 +17,8 @@ const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
 const AccountPage = lazy(() => import("./AccountPage.jsx"));
 const Cabinet = lazy(() => import("./cabinet.jsx"));
+const Checkin1 = lazy(() => import("./checkin1.jsx"));
+const Checkin1Qr = lazy(() => import("./checkin1qr.jsx"));
 const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImagePreloader.jsx"));
 
 function NotFound() {
@@ -239,6 +241,16 @@ export default function App() {
     const cabinetMatch = path.match(/^\/cabinet\/(\d+)\/(.+)$/);
     if (cabinetMatch) {
       return <Cabinet odooId={cabinetMatch[1]} uniqueKey={cabinetMatch[2]} />;
+    }
+
+    const checkin1QrMatch = path.match(/^\/checkin1\/(\d+)\/([^/]+)\/qr$/);
+    if (checkin1QrMatch) {
+      return <Checkin1Qr odooId={checkin1QrMatch[1]} uniqueKey={checkin1QrMatch[2]} />;
+    }
+
+    const checkin1Match = path.match(/^\/checkin1\/(\d+)\/([^/]+)$/);
+    if (checkin1Match) {
+      return <Checkin1 odooId={checkin1Match[1]} uniqueKey={checkin1Match[2]} />;
     }
 
     if (path === "/reviews") {

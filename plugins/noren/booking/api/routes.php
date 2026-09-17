@@ -3,6 +3,7 @@
 use Noren\Booking\Api\AccountController;
 use Noren\Booking\Api\CabinetController;
 use Noren\Booking\Api\CheckinController;
+use Noren\Booking\Api\Checkin1Controller;
 use Noren\Booking\Api\EtaController;
 use Noren\Booking\Api\FullController;
 use Noren\Booking\Api\MarketingController;
@@ -104,8 +105,6 @@ Route::options('api/new/cabinet/{any}', function () {
         ->header('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS')
         ->header('Access-Control-Allow-Headers', '*');
 })->where('any', '.*');
-Route::get   ('api/new/cabinet/{odooId}/{key}/upgrade', [CabinetController::class, 'checkUpgrade'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
-Route::patch ('api/new/cabinet/{odooId}/{key}/upgrade', [CabinetController::class, 'upgrade'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 Route::post  ('api/new/cabinet/{odooId}/{key}/pay',     [CabinetController::class, 'createPayment'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 Route::get   ('api/new/cabinet/{odooId}/{key}',         [CabinetController::class, 'show'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
 Route::patch ('api/new/cabinet/{odooId}/{key}',         [CabinetController::class, 'update'])->where('odooId', '[0-9]+')->where('key', '[^/]+');
@@ -123,6 +122,19 @@ Route::options('api/new/checkin/{any}', function () {
 Route::get ('api/new/checkin/{odoo_id}',      [CheckinController::class, 'show']);
 Route::post('api/new/checkin/{odoo_id}/save', [CheckinController::class, 'save']);
 Route::post('api/new/checkin/{odoo_id}/pay',  [CheckinController::class, 'pay']);
+
+// Check-in v2 (React, trial page at /checkin1) — fully separate controller/routes,
+// does not touch the check-in flow above.
+Route::options('api/new/checkin1/{any}', function () {
+    return response('', 200)
+        ->header('Access-Control-Allow-Origin', '*')
+        ->header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        ->header('Access-Control-Allow-Headers', '*');
+})->where('any', '.*');
+Route::get ('api/new/checkin1/{odoo_id}/{key}',      [Checkin1Controller::class, 'show'])->where('odoo_id', '[0-9]+')->where('key', '[^/]+');
+Route::post('api/new/checkin1/{odoo_id}/{key}/save', [Checkin1Controller::class, 'save'])->where('odoo_id', '[0-9]+')->where('key', '[^/]+');
+Route::post('api/new/checkin1/{odoo_id}/{key}/pay',  [Checkin1Controller::class, 'pay'])->where('odoo_id', '[0-9]+')->where('key', '[^/]+');
+Route::get ('api/new/checkin1/{odoo_id}/{key}/qr',   [Checkin1Controller::class, 'qr'])->where('odoo_id', '[0-9]+')->where('key', '[^/]+');
 
 // ETA (время в пути до пункта назначения) — вызывается из Odoo automation
 Route::get('api/new/eta', [EtaController::class, 'estimate']);

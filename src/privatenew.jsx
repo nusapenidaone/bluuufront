@@ -2042,8 +2042,11 @@ function Hero({ children }) {
             Private tour to <span className="italic" style={{ color: 'var(--primary-300)' }}>Nusa Penida</span>
           </h2>
           <p className="mt-4 max-w-xl text-sm font-normal text-white/70 sm:text-base">
-            Choose your boat and your pace. Private crew,<br className="sm:hidden" /> safety-first routing, pure comfort.
+            Your boat, your route, your pace. Private crew, total comfort.
           </p>
+          <div className="mt-4">
+            <RatingPill />
+          </div>
           <p className="mt-3 text-xs font-normal text-white/60 sm:text-sm">
             From <span className="font-bold text-white">{formatUSD(750)}</span> / boat
             <span className="mx-1.5 text-white/30">·</span>
@@ -4959,7 +4962,7 @@ function DayStyleCarousel({ images, activeIndex, onChange, onOpenGallery }) {
     </div>
   );
 }
-function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHighlightExtra, onOpenTourInfo, vibes = [], styles = [], extrasCatalog = [], allExtrasCatalog = [], hasDateCriteria = false, selectedBoatId = null, onFocusStepOne, priceDisplay = null, dateDisplay = null, guestsDisplay = null, capacityLabel = null, selectedExtras = {}, onExtraQtyChange, onShowExtras, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, onSetPickupLocation, transferDistance = { status: "idle", km: null, tier: null }, formatIDR: formatPrice, onOpenExtra, totalGuests = 1 }) {
+function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHighlightExtra, onOpenTourInfo, vibes = [], styles = [], extrasCatalog = [], allExtrasCatalog = [], hasDateCriteria = false, selectedBoatId = null, onFocusStepOne, priceDisplay = null, priceSubDisplay = null, dateDisplay = null, guestsDisplay = null, capacityLabel = null, selectedExtras = {}, onExtraQtyChange, onShowExtras, transfers, selectedTransferId, onSelectTransferId, pickupAddress, onSetPickupAddress, dropoffAddress, onSetDropoffAddress, onSetPickupLocation, transferDistance = { status: "idle", km: null, tier: null }, formatIDR: formatPrice, onOpenExtra, totalGuests = 1 }) {
   const { categories, loading: extrasLoading } = useExtras();
   const [ctaPulse, setCtaPulse] = useState(false);
   const [pickupModalOpen, setPickupModalOpen] = useState(false);
@@ -5737,6 +5740,7 @@ function StepThree({ selectedStyleId, onSelectStyleId, onContinue, onSkip, onHig
                   onShowExtras?.();
                 }}
                 priceDisplay={priceDisplay}
+                priceSubDisplay={priceSubDisplay}
                 dateDisplay={dateDisplay}
                 guestsDisplay={guestsDisplay}
                 extrasCatalog={extrasCatalog}
@@ -11201,6 +11205,7 @@ export default function Premium_Private_With_Vibe() {
           allExtrasCatalog={rawExtrasCatalog}
           totalGuests={totalGuests}
           priceDisplay={selectedYacht ? formatIDR((() => { const dateForPrice = dateMode === "exact" ? exactDate : selectedFlexDate; let base; if (dateForPrice && selectedYacht.tourId) { const p = calculateBoatPrice(selectedYacht.tourId, dateForPrice, totalGuests, privateTours); base = p !== null ? p : selectedYacht.priceValue; } else { base = selectedYacht.priceValue; } return base + (extrasSubtotalIDR || 0); })()) : null}
+          priceSubDisplay={selectedYacht ? `${formatIDR((() => { const dateForPrice = dateMode === "exact" ? exactDate : selectedFlexDate; let base; if (dateForPrice && selectedYacht.tourId) { const p = calculateBoatPrice(selectedYacht.tourId, dateForPrice, totalGuests, privateTours); base = p !== null ? p : selectedYacht.priceValue; } else { base = selectedYacht.priceValue; } return (base + (extrasSubtotalIDR || 0)) / Math.max(1, totalGuests); })())} / person` : null}
           dateDisplay={dateMode === "exact" ? (exactDate ? new Date(exactDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null) : (selectedFlexDate ? new Date(selectedFlexDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : rangeStart && rangeEnd ? `${new Date(rangeStart + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(rangeEnd + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : null)}
           guestsDisplay={`${adults} adult${adults !== 1 ? "s" : ""}${kids > 0 ? `, ${kids} kid${kids !== 1 ? "s" : ""}` : ""}`}
           capacityLabel={selectedYacht ? `Up to ${selectedYacht.people}` : null}
@@ -11353,6 +11358,13 @@ export default function Premium_Private_With_Vibe() {
             />
         </div>
         {showReview && (
+        <PremiumSection id="why-book-now-section" className="pt-8 sm:pt-10 pb-0" backgroundClassName={SECTION_BACKGROUNDS.mist}>
+          <PremiumContainer>
+            <WhyBookNow />
+          </PremiumContainer>
+        </PremiumSection>
+        )}
+        {showReview && (
         <div className="relative">
             <StepFive
               dateLabel={reviewDateLabel}
@@ -11458,6 +11470,7 @@ export default function Premium_Private_With_Vibe() {
             </AnimatePresence>
         </div>
         )}
+        <FAQ />
         <ReviewsSection />
         <Footer />
       </div>

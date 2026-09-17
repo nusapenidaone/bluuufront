@@ -768,7 +768,7 @@ export default function TourDetailsCard({
   prevLabel, nextLabel, onPrev, onNext,
   infoTabs, infoContent, includedChips,
   isUnavailable, unavailableReason, onChangeParams, onReserve,
-  priceDisplay, dateDisplay, guestsDisplay,
+  priceDisplay, priceSubDisplay, dateDisplay, guestsDisplay,
   capacityLabel, scheduleExtrasSlot, reserveLabel,
   extrasCatalog, allExtrasCatalog, selectedExtras, onChangeExtraQty, formatPrice, onOpenExtra,
   hideTierBadges, totalGuests = 1, withTimeline = false, schedulePhotos,
@@ -827,6 +827,9 @@ export default function TourDetailsCard({
                 </div>
                 <div className="shrink-0 flex flex-col items-end gap-1.5">
                   <span className={cn("text-2xl font-black tracking-tight", isUnavailable ? "text-primary-500/50" : "text-primary-500")}>{_renderPrice(priceDisplay)}</span>
+                  {priceSubDisplay && !isUnavailable && (
+                    <span className="-mt-1.5 text-xs font-medium text-white/40">{priceSubDisplay}</span>
+                  )}
                   {isUnavailable ? (
                     <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5">
                       <p className="text-xs font-semibold text-red-400">Not available on selected date</p>
@@ -872,8 +875,11 @@ export default function TourDetailsCard({
                     </div>
                   )}
                 </div>
-                <div className="flex items-baseline gap-1 shrink-0">
+                <div className="flex flex-col items-end shrink-0">
                   <span className={cn("text-lg font-black tracking-tight", isUnavailable ? "text-primary-500/50" : "text-primary-500")}>{_renderPrice(priceDisplay)}</span>
+                  {priceSubDisplay && !isUnavailable && (
+                    <span className="text-2xs font-medium text-white/40">{priceSubDisplay}</span>
+                  )}
                 </div>
               </div>
               {note && <div className="mt-1 inline-flex items-center rounded-lg border border-primary-200 bg-neutral-100 px-3 py-1.5 text-xs font-semibold text-primary-600 leading-snug">{note}</div>}

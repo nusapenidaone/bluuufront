@@ -141,6 +141,20 @@ class OdooService
         static::post('/json/2/sale.order/action_draft', ['ids' => [$odooOrderId]]);
     }
 
+    // Directly writes state=draft, bypassing action_cancel/action_draft — avoids
+    // transiting through 'cancel' (Odoo automations fire customer emails on both
+    // 'cancel' and 'confirm'; the site→Odoo webhook also treats 'cancel' as
+    // "delete closeddates"). action_draft() only accepts orders already in
+    // cancel/sent state, so this is the only way to reach draft from a confirmed
+    // 'sale' order without a real cancellation.
+    public static function forceDraft(int $odooOrderId): void
+    {
+        static::post('/json/2/sale.order/write', [
+            'ids'  => [$odooOrderId],
+            'vals' => ['state' => 'draft'],
+        ]);
+    }
+
     // ─── Update Odoo order header fields only (no order lines touched) ──────────
     // ─── Order line helpers (cabinet) ────────────────────────────────────────
 
@@ -589,7 +603,7 @@ class OdooService
             // record exists and opens fine directly by URL in the Odoo UI.
             'context' => ['active_test' => false],
             'fields' => [
-                'id', 'name', 'state', 'partner_id',
+                'id', 'name', 'state', 'locked', 'partner_id',
                 'rental_start_date',
                 'x_studio_source',
                 'x_studio_boat_name',

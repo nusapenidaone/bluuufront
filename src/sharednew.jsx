@@ -1888,8 +1888,11 @@ function Hero({ children }) {
             Shared tour to <span className="italic" style={{ color: 'var(--primary-300)' }}>Nusa Penida</span>
           </h2>
           <p className="mt-4 max-w-xl text-sm font-normal text-white/70 sm:text-base">
-            Comfort boat + snorkeling + mantas + Kelingking.<br className="sm:hidden" /> All-inclusive.
+            A full day on the yacht + snorkeling with mantas + Kelingking Cliff.
           </p>
+          <div className="mt-4">
+            <RatingPill />
+          </div>
           <p className="mt-3 text-xs font-normal text-white/60 sm:text-sm">
             From <span className="font-bold text-white">{formatUSD(80)}</span> / person
             <span className="mx-1.5 text-white/30">·</span>
@@ -2679,7 +2682,10 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
       ? backendChips
       : [...extraChips, ...baseChips.map((item) => ({ icon: item.icon, label: item.label }))];
     const mainChips = allRawChips.filter((item) => !MINOR_LABELS.includes(item.label || item.name)).sort((a, b) => (a.label||a.name||"").length - (b.label||b.name||"").length);
-    const minorItems = backendChips ? [] : [...baseChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label), ...extraChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label)];
+    // Core inclusions (snorkeling gear, water, towels, …) rendered as pills — same
+    // style as mainChips, not a plain-text footnote — with "Snorkeling equipment" leading.
+    const minorItems = backendChips ? [] : [...baseChips.filter((item) => MINOR_LABELS.includes(item.label)), ...extraChips.filter((item) => MINOR_LABELS.includes(item.label))]
+      .sort((a, b) => (a.label === "Snorkeling equipment" ? -1 : b.label === "Snorkeling equipment" ? 1 : 0));
     const tierColors = {
       0: { card: "border border-primary-200/50 bg-primary-50/50 hover:bg-primary-50/70", iconBg: "bg-primary-500/10", iconText: "text-primary-600", chip: "border border-primary-200 bg-transparent", chipIcon: "text-primary-600" },
       1: { card: "border border-indigo-200/50 bg-indigo-50/50 hover:bg-indigo-50/70", iconBg: "bg-indigo-500/10", iconText: "text-indigo-600", chip: "border border-primary-200 bg-transparent", chipIcon: "text-primary-600" },
@@ -2707,9 +2713,9 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
           );
         })}
       </div>
-      {/* Included chips */}
+      {/* Included chips — core inclusions (minorItems) lead, then the rest */}
       <div className="flex flex-wrap gap-2">
-        {mainChips.map((item) => {
+        {[...minorItems, ...mainChips].map((item) => {
           const Icon = item.icon;
           const label = item.label || item.name;
           return (
@@ -2722,10 +2728,6 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
           );
         })}
       </div>
-      {/* Minor items as text */}
-      {minorItems.length > 0 && (
-        <p className="text-xs sm:text-sm text-secondary-400">{minorItems.join(" · ")}</p>
-      )}
     </div>
   );
   }
@@ -3675,6 +3677,7 @@ function StepTwo({
                 <div className="flex items-center gap-2.5"><Sparkles className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">Drone footage</strong> + next-day delivery</span></div>
                 <div className="flex items-center gap-2.5"><Ship className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">New yacht</strong> + senior guides only</span></div>
               </>) : null}
+              <div className="flex items-center gap-2.5"><Users className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">{boat.people}</strong> guests max</span></div>
             </div>
 
             {/* Bottom section */}
@@ -3699,7 +3702,6 @@ function StepTwo({
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={cn("inline-flex items-center gap-1 text-sm font-medium text-secondary-400 whitespace-nowrap", !isUnavailable && lowSeats && "hidden")}><Users className="h-3.5 w-3.5" />{boat.people}</span>
                     {!isUnavailable && lowSeats && (
                       <span className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2 sm:px-2.5 py-0.5 sm:py-1 text-2xs sm:text-xs font-bold text-amber-700 whitespace-nowrap">
                         <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 shrink-0 rounded-full bg-amber-500 animate-pulse" />
@@ -10040,6 +10042,11 @@ export default function Shared_tour_01() {
 
         {/* StepExtras removed — transfer & insurance moved to review */}
         {showReview && <>
+        <PremiumSection id="why-book-now-section" className="pt-8 sm:pt-10 pb-0" backgroundClassName={SECTION_BACKGROUNDS.mist}>
+          <PremiumContainer>
+            <WhyBookNow />
+          </PremiumContainer>
+        </PremiumSection>
         <div className="relative">
         <div className="relative">
           <div className={cn(stepFiveLocked && "pointer-events-none select-none opacity-45")}>
@@ -10154,6 +10161,7 @@ export default function Shared_tour_01() {
         </div>
         </>}
         </div>{/* end step 4 wrapper */}
+        <FAQ />
         <ReviewsSection />
         <Footer />
       </div>

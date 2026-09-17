@@ -123,6 +123,9 @@ class CabinetController extends Controller
                 ->setTimezone('Asia/Makassar')
                 ->format('Y-m-d');
         }
+        // Trip already happened (Bali calendar day) — frontend shows a "see you
+        // again" screen instead of the (stale) edit/pay UI once this is true.
+        $expired = $travelDate && $travelDate < Carbon::now('Asia/Makassar')->format('Y-m-d');
 
         $partnerName = is_array($odooOrder['partner_id'] ?? null)
             ? ($odooOrder['partner_id'][1] ?? '')
@@ -315,6 +318,7 @@ class CabinetController extends Controller
         }
 
         return response()->json([
+            'expired' => $expired,
             'local' => [
                 'odoo_id'         => $odooId,
                 'is_private'      => $isPrivate,
@@ -361,12 +365,6 @@ class CabinetController extends Controller
                 'routes'        => $routes,
                 'price_list'    => $this->buildPricelist($tour ?? null, $travelDate),
                 'pricing'       => $this->buildPricing($tour ?? null),
-                'upgrade_tour'  => $this->buildUpgradeTour(
-                    isset($tour) ? $tour : null,
-                    $isPrivate,
-                    $travelDate,
-                    (int) ($odooOrder['x_studio_count_of_people'] ?? 0)
-                ),
                 'route_schedule' => $isPrivate ? null : $sharedRouteSchedule,
                 'tour_included'  => isset($tour) ? $tour->included->map(fn($i) => [
                     'name'        => $i->name,
@@ -396,6 +394,10 @@ class CabinetController extends Controller
         $odooOrder = $this->fetchOdooOrder($odooId, $key);
         if (!$odooOrder) {
             return response()->json(['success' => false, 'error' => 'Order not found'], 404);
+        }
+
+        if (!empty($odooOrder['locked'])) {
+            return response()->json(['success' => false, 'error' => 'This order is locked and cannot be edited.'], 409);
         }
 
         $date           = $request->input('date');
@@ -529,14 +531,13 @@ class CabinetController extends Controller
             }
         }
 
-        // ── Cancel → draft before any changes ────────────────────────────────
+        // ── Draft before any changes (never transits through 'cancel' — see OdooService::forceDraft) ──
         $wasSale = ($odooOrder['state'] ?? '') === 'sale';
         if ($wasSale) {
             try {
-                OdooService::cancelOrder($odooId);
-                OdooService::draftOrder($odooId);
+                OdooService::forceDraft($odooId);
             } catch (\Exception $e) {
-                Log::error('CabinetController::update cancel/draft — ' . $e->getMessage());
+                Log::error('CabinetController::update draft — ' . $e->getMessage());
                 return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
             }
         }
@@ -890,94 +891,6 @@ class CabinetController extends Controller
         return response()->json(['payment_url' => $payUrl]);
     }
 
-    // ─── GET /api/new/cabinet/{odooId}/{key}/upgrade ──────────────────────────
-    // Live availability check for the next upgrade tier.
-    public function checkUpgrade(Request $request, int $odooId, string $key)
-    {
-        $this->cors();
-
-        $odooOrder = $this->fetchOdooOrder($odooId, $key);
-        if (!$odooOrder) {
-            return response()->json(['error' => 'Order not found'], 404);
-        }
-
-        $members    = (int) ($odooOrder['x_studio_count_of_people'] ?? 0);
-        $travelDate = null;
-        if (!empty($odooOrder['rental_start_date'])) {
-            $travelDate = Carbon::parse($odooOrder['rental_start_date'], 'UTC')
-                ->setTimezone('Asia/Makassar')->format('Y-m-d');
-        }
-
-        // Detect current tour
-        $productIds = array_filter(array_map(
-            fn($l) => is_array($l['product_id'] ?? null) ? $l['product_id'][0] : ($l['product_id'] ?? null),
-            $odooOrder['lines'] ?? []
-        ));
-        $currentTour = !empty($productIds)
-            ? Tours::whereIn('odoo_id', array_values($productIds))->first()
-            : null;
-
-        $tierMap     = ['Standard Shared' => 'Premium Shared', 'Premium Shared' => 'First Class Shared'];
-        $upgradeType = $tierMap[$currentTour->odoo_type ?? ''] ?? null;
-
-        if (!$upgradeType) {
-            return response()->json(['available' => false]);
-        }
-
-        $upgradeTour = Tours::with(['boat', 'boat.closeddates', 'packages', 'pricesbydates.packages'])
-            ->where('classes_id', 9)
-            ->where('odoo_type', $upgradeType)
-            ->first();
-
-        if (!$upgradeTour) {
-            return response()->json(['available' => false]);
-        }
-
-        // Check availability per boat + pick assigned boat
-        $boatIndex      = SharedAvailability::buildBoatIndex($upgradeTour, $travelDate ? [$travelDate] : []);
-        $avail          = $travelDate ? SharedAvailability::calcDate($upgradeTour, $boatIndex, $travelDate, $members) : ['available' => false, 'available_seats' => 0, 'assigned_boat' => null];
-        $available      = $avail['available'];
-        $availableSeats = $avail['available_seats'];
-        $assignedBoat   = $avail['assigned_boat'];
-
-        // Upgrade price
-        $pricelist = $upgradeTour->packages?->pricelist ?? [];
-        if ($travelDate && $upgradeTour->pricesbydates->isNotEmpty()) {
-            $s = $upgradeTour->pricesbydates->first(fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end);
-            if ($s?->packages?->pricelist) $pricelist = $s->packages->pricelist;
-        }
-        $upgradePrice = 0;
-        if (!empty($pricelist)) {
-            $sorted       = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry        = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $upgradePrice = (int) ($entry['price'] ?? 0);
-        }
-
-        // Current price (for diff)
-        $currentTour?->loadMissing(['packages', 'pricesbydates.packages']);
-        $curPricelist = $currentTour?->packages?->pricelist ?? [];
-        if ($travelDate && $currentTour?->pricesbydates?->isNotEmpty()) {
-            $s = $currentTour->pricesbydates->first(fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end);
-            if ($s?->packages?->pricelist) $curPricelist = $s->packages->pricelist;
-        }
-        $currentPrice = 0;
-        if (!empty($curPricelist)) {
-            $sorted       = collect($curPricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry        = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $currentPrice = (int) ($entry['price'] ?? 0);
-        }
-
-        return response()->json([
-            'available'       => $available,
-            'available_seats' => $availableSeats,
-            'upgrade_tour_id' => (int) $upgradeTour->id,
-            'upgrade_type'    => $upgradeType,
-            'price'           => $upgradePrice,
-            'price_diff'      => $upgradePrice - $currentPrice,
-            'boat_name'       => $assignedBoat?->name,
-        ]);
-    }
-
     // ─── Helper: active pricelist for the current tour + date ────────────────────
     private function buildPricelist(?object $tour, ?string $travelDate): array
     {
@@ -1019,183 +932,4 @@ class CabinetController extends Controller
         ];
     }
 
-    // ─── Helper: build upgrade_tour option for shared tiers ──────────────────────
-    private function buildUpgradeTour(?object $currentTour, bool $isPrivate, ?string $travelDate, int $members): ?array
-    {
-        if ($isPrivate || !$currentTour) return null;
-
-        $tierMap = [
-            'Standard Shared'   => 'Premium Shared',
-            'Premium Shared'    => 'First Class Shared',
-        ];
-        $currentType = $currentTour->odoo_type ?? null;
-        $upgradeType = $tierMap[$currentType] ?? null;
-        if (!$upgradeType) return null;
-
-        $upgradeTour = Tours::with(['boat.closeddates', 'packages', 'pricesbydates.packages'])
-            ->where('classes_id', 9)
-            ->where('odoo_type', $upgradeType)
-            ->first();
-        if (!$upgradeTour) return null;
-
-        // Calculate upgrade tour price for same members count
-        $pricelist = $upgradeTour->packages?->pricelist ?? [];
-        if ($travelDate && $upgradeTour->pricesbydates->isNotEmpty()) {
-            $seasonal = $upgradeTour->pricesbydates->first(
-                fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end
-            );
-            if ($seasonal?->packages?->pricelist) {
-                $pricelist = $seasonal->packages->pricelist;
-            }
-        }
-        $upgradePrice = 0;
-        if (!empty($pricelist)) {
-            $sorted = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry  = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $upgradePrice = (int) ($entry['price'] ?? 0);
-        }
-
-        // Calculate current tour price for same members (for diff)
-        $currentTour->loadMissing(['packages', 'pricesbydates.packages']);
-        $currentPricelist = $currentTour->packages?->pricelist ?? [];
-        if ($travelDate && $currentTour->pricesbydates->isNotEmpty()) {
-            $seasonal = $currentTour->pricesbydates->first(
-                fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end
-            );
-            if ($seasonal?->packages?->pricelist) {
-                $currentPricelist = $seasonal->packages->pricelist;
-            }
-        }
-        $currentPrice = 0;
-        if (!empty($currentPricelist)) {
-            $sorted = collect($currentPricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry  = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $currentPrice = (int) ($entry['price'] ?? 0);
-        }
-
-        // Check availability on travel_date (mirrors FullController logic)
-        $upgradeBoatIndex = SharedAvailability::buildBoatIndex($upgradeTour, $travelDate ? [$travelDate] : []);
-        $avail            = $travelDate ? SharedAvailability::calcDate($upgradeTour, $upgradeBoatIndex, $travelDate, $members) : ['available' => false, 'available_seats' => 0, 'assigned_boat' => null];
-        $availableSeats = $avail['available_seats'];
-
-        return [
-            'id'              => (int) $upgradeTour->id,
-            'name'            => $upgradeTour->name,
-            'odoo_type'       => $upgradeType,
-            'price'           => $upgradePrice,
-            'price_diff'      => $upgradePrice - $currentPrice,
-            'available_seats' => $availableSeats,
-            'available'       => $avail['available'],
-        ];
-    }
-
-    // ─── PATCH /api/new/cabinet/{odooId}/{key}/upgrade ────────────────────────
-    public function upgrade(Request $request, int $odooId, string $key)
-    {
-        $this->cors();
-
-        $odooOrder = $this->fetchOdooOrder($odooId, $key);
-        if (!$odooOrder) {
-            return response()->json(['success' => false, 'error' => 'Order not found'], 404);
-        }
-
-        $upgradeToursId = (int) $request->input('tours_id');
-        if (!$upgradeToursId) {
-            return response()->json(['success' => false, 'error' => 'tours_id required'], 422);
-        }
-
-        $upgradeTour = Tours::with(['packages', 'pricesbydates.packages', 'boat.closeddates', 'route.restaurant'])->find($upgradeToursId);
-        if (!$upgradeTour) {
-            return response()->json(['success' => false, 'error' => 'Upgrade tour not found'], 404);
-        }
-
-        $members    = (int) ($odooOrder['x_studio_adults'] ?? 0) + (int) ($odooOrder['x_studio_kids'] ?? 0);
-        $travelDate = !empty($odooOrder['rental_start_date'])
-            ? Carbon::parse($odooOrder['rental_start_date'], 'UTC')->setTimezone('Asia/Makassar')->format('Y-m-d')
-            : null;
-
-        // Re-check availability at upgrade time (same logic as FullController)
-        if ($travelDate) {
-            $upgradeIndex = SharedAvailability::buildBoatIndex($upgradeTour, [$travelDate]);
-            $avail        = SharedAvailability::calcDate($upgradeTour, $upgradeIndex, $travelDate, $members);
-            if (!$avail['available']) {
-                return response()->json(['success' => false, 'error' => 'Not enough seats available for upgrade'], 409);
-            }
-        }
-
-        // Recalculate price for upgrade tour
-        $pricelist = $upgradeTour->packages?->pricelist ?? [];
-        if ($travelDate && $upgradeTour->pricesbydates->isNotEmpty()) {
-            $seasonal = $upgradeTour->pricesbydates->first(
-                fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end
-            );
-            if ($seasonal?->packages?->pricelist) $pricelist = $seasonal->packages->pricelist;
-        }
-        $newTourPrice = 0;
-        if (!empty($pricelist)) {
-            $sorted       = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry        = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $newTourPrice = (int) ($entry['price'] ?? 0);
-        }
-
-        $newRoute      = $upgradeTour->route;
-        $newRestaurant = $newRoute?->restaurant;
-
-        // Update existing Odoo order (no recreate)
-        $wasSale = ($odooOrder['state'] ?? '') === 'sale';
-        try {
-            if ($wasSale) {
-                OdooService::cancelOrder($odooId);
-                OdooService::draftOrder($odooId);
-            }
-
-            // Find and remove old tour line, then create new one with upgrade product
-            $allTourOdooIds = Tours::whereNotNull('odoo_id')->pluck('odoo_id')->map(fn($v) => (int) $v)->toArray();
-            $tourLineId     = null;
-            foreach ($odooOrder['lines'] ?? [] as $line) {
-                $pid = $line['product_id'] ?? null;
-                if (is_array($pid)) $pid = (int) $pid[0];
-                if ($pid && in_array($pid, $allTourOdooIds)) {
-                    $tourLineId = $line['id'];
-                    break;
-                }
-            }
-
-            if ($tourLineId) {
-                OdooService::unlinkOrderLines([$tourLineId]);
-            }
-
-            if ($upgradeTour->odoo_id) {
-                OdooService::addOrderLine(
-                    $odooId,
-                    (int) $upgradeTour->odoo_id,
-                    1.0,
-                    (float) $newTourPrice,
-                    $upgradeTour->name
-                );
-            }
-
-            // Update header: tour type, route, restaurant
-            try {
-                $headerFields = ['x_studio_tour_type' => $upgradeTour->odoo_type ?? ''];
-                if ($newRoute)      $headerFields['x_studio_route_new'] = $newRoute->odoo_name      ?? $newRoute->title ?? '';
-                if ($newRestaurant) $headerFields['x_studio_lunch']     = $newRestaurant->odoo_name ?? $newRestaurant->name ?? '';
-                OdooService::updateOrderHeaderFields($odooId, $headerFields);
-            } catch (\Exception $e) {
-                Log::warning('CabinetController::upgrade header fields — ' . $e->getMessage());
-            }
-
-            if ($wasSale) {
-                OdooService::confirmOrder($odooId);
-            }
-        } catch (\Exception $e) {
-            Log::error('CabinetController::upgrade — ' . $e->getMessage());
-            if ($wasSale) {
-                try { OdooService::confirmOrder($odooId); } catch (\Exception $ignored) {}
-            }
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-
-        return response()->json(['success' => true]);
-    }
 }
