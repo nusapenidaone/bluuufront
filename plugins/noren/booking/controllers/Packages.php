@@ -7,6 +7,7 @@ use Noren\Booking\Models\Packages as Pack;
 
 class Packages extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_packages'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class,

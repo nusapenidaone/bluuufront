@@ -35,7 +35,7 @@ export const schemaLocalBusiness = {
   ],
 };
 
-export function schemaArticle(post, slug) {
+export function schemaArticle(post, slug, { wordCount, readTime } = {}) {
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -58,5 +58,32 @@ export function schemaArticle(post, slug) {
       },
     },
     "mainEntityOfPage": `${BASE_URL}/blog/${slug}`,
+    ...(wordCount ? { wordCount } : {}),
+    ...(readTime ? { timeRequired: `PT${readTime}M` } : {}),
+  };
+}
+
+export function schemaBreadcrumb(post, slug) {
+  const items = [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE_URL },
+    { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${BASE_URL}/blog` },
+  ];
+  if (post?.category) {
+    items.push({
+      "@type": "ListItem",
+      "position": items.length + 1,
+      "name": post.category,
+    });
+  }
+  items.push({
+    "@type": "ListItem",
+    "position": items.length + 1,
+    "name": post?.title || "",
+    "item": `${BASE_URL}/blog/${slug}`,
+  });
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": items,
   };
 }

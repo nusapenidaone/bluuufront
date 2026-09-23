@@ -22,7 +22,7 @@ Wrong key → `401 { "error": "Unauthorized" }`
 
 ## GET /api/v2/chatbot/boats/private
 
-Returns all active private charter tours (classes_id = 8).
+Returns all active private charter tours (`types_id = 2`, `source_id = 1` — website tours only, not Viator/other OTAs).
 
 ```
 GET https://bluuu.tours/api/v2/chatbot/boats/private
@@ -55,6 +55,7 @@ X-Api-Key: bluuu-chatbot-2026
   "capacity": 13,
   "currency": "IDR",
   "status": "ready",
+  "partner": false,
   "categories": [],
   "features": {
     "shade": "Partial shade",
@@ -65,6 +66,15 @@ X-Api-Key: bluuu-chatbot-2026
   },
   "best_for": "budget-friendly groups",
   "boat_type": "Speedboat",
+  "perks": [
+    { "text": "Free cancellation up to 24h before", "icon": "check-icon-green" }
+  ],
+  "included": [
+    { "id": 3, "name": "Snorkeling gear", "description": "<p>Mask, fins and snorkel for the whole trip.</p>", "icon_svg": "<svg>...</svg>" }
+  ],
+  "includes": [
+    { "id": 7, "name": "Lunch", "icon_svg": "<svg>...</svg>" }
+  ],
   "pricing": {
     "type": "per_boat",
     "boat_price": 2250000,
@@ -117,10 +127,14 @@ X-Api-Key: bluuu-chatbot-2026
 | `id` | int | Tour ID |
 | `odoo_id` | int\|null | Odoo product ID of the tour |
 | `status` | string | `ready` / `busy` / `maintenance` |
+| `partner` | bool | `true` — a partner boat, booked "on request" (the site shows "On Request" instead of "Instant confirmation"). See CLAUDE.md "Партнёрские лодки" — when `true`, the actual booking goes through respond.io (TODO, not finished yet) |
+| `perks` | array | Short checklist shown on the tour card — `{ text, icon }`, `icon` is one of `check-icon-green` / `none-icon-red` / `plus-icon-green` / `minis-icon-red` |
 | `pricing.type` | string | Always `per_boat` for private |
 | `pricing.boat_price` | int | Base boat surcharge (IDR) |
 | `pricing.packages` | array | Default pricelist — group price by guest count |
 | `pricing.seasonal_prices` | array | Seasonal overrides (future dates only) |
+| `included` | array | Detailed "what's included" cards (with description and icon) — same as shown on the tour detail page |
+| `includes` | array | Short "what's included" chips (name + icon only, no description) — shown on the tour card |
 | `boats` | array | Physical boats with `odoo_id` and `company.odoo_id` |
 
 **Pricing logic:** the entry with `members_count == guests` is taken from `packages[0].pricelist`. If the date falls within a `seasonal_prices` range, that pricelist is used instead. `total = tier_price + boat_price`.
@@ -139,7 +153,16 @@ X-Api-Key: bluuu-chatbot-2026
     "id": 1,
     "odoo_id": 65,
     "name": "Amarta Penida",
-    "menu": "<div>...</div>"
+    "description": "<p>Cliffside restaurant with ocean views.</p>",
+    "menu": "<div>...</div>",
+    "menu_sections": [
+      { "title": "Main Course", "items": [ { "name": "Grilled fish", "description": "Fresh catch of the day" } ] }
+    ],
+    "menu_note": "Should you desire cocktails, wine or other selections, please ask for the restaurant's general menu...",
+    "image": "https://bluuu.tours/storage/app/uploads/public/.../restaurant.jpg",
+    "images_with_thumbs": [
+      { "original": "https://.../original.webp", "hero": "https://.../hero.webp", "thumb": "https://.../thumb.webp", "thumb_small": "https://.../thumb_small.webp" }
+    ]
   },
   "itinerary": [
     { "time": "08:00", "title": "Meeting point" },
@@ -153,15 +176,28 @@ X-Api-Key: bluuu-chatbot-2026
     "Swim with mantas",
     "4 snorkeling spots"
   ],
-  "notes": "Diving license required"
+  "notes": "Diving license required",
+  "extra_categories": [
+    {
+      "id": 4,
+      "name": "Tour Add-ons",
+      "extras": [
+        { "id": 52, "odoo_id": 571, "name": "Beginner Diver 1-Pax Pack", "price": "2420000.00", "qty_type": "manual", "conflict_ids": [], "has_options": false, "options": [] }
+      ]
+    }
+  ]
 }
 ```
 
 | Field | Type | Description |
 |------|-----|----------|
+| `restaurant.menu_sections` | array | Structured menu by category — `[{ title, items: [{ name, description }] }]`. `[]` if not filled in the admin — fall back to `restaurant.menu` (HTML) |
+| `restaurant.menu_note` | string\|null | Note shown below the menu (e.g. about drinks/extra items on request) |
+| `restaurant.image` / `restaurant.images_with_thumbs` | string / array | Restaurant photos. `image` is a single fallback URL, `images_with_thumbs` is an array of `{ original, hero, thumb, thumb_small }` |
 | `itinerary` | array | Timeline for the day — merges the route's `schedule_before_lunch` + `schedule_after_lunch` (same data shown in the route popup on the site). Each step is `{ time, title }`. "Or" separators between alternative activities are excluded from the timeline |
 | `inclusions` | array | Route highlight chips (`route.highlights[].label`) — the same items shown as chips on the route card/popup |
 | `notes` | string\|null | Extra note for the route (e.g. "Diving license required"), `null` if not set |
+| `extra_categories` | array | Extras categories available specifically for this route (`route.ecategories`, each with its own `extras`, same shape as top-level `extras[]`, including `qty_type` and `conflict_ids`). **Use this field, not the top-level `extras[]`**, once the customer has picked a route — the categories and extras inside them change when the route changes (see CLAUDE.md "Extras & Ecategories") |
 
 ### extras[]
 
@@ -174,25 +210,36 @@ X-Api-Key: bluuu-chatbot-2026
   "price": "2420000.00",
   "currency": "IDR",
   "category": "Tour Add-ons",
+  "qty_type": "manual",
+  "conflict_ids": [],
   "has_options": false,
   "options": []
 }
 ```
 
-With options (`has_options: true`):
+With options (`has_options: true`) and a conflict with another extra:
 
 ```json
 {
   "id": 10,
   "odoo_id": 870,
   "name": "Snorkeling Equipment",
+  "qty_type": "manual",
+  "conflict_ids": [52],
   "has_options": true,
   "options": [
-    { "id": 11, "odoo_id": 871, "name": "Adult set", "price": "150000.00" },
-    { "id": 12, "odoo_id": 872, "name": "Kids set",  "price": "100000.00" }
+    { "id": 11, "odoo_id": 871, "name": "Adult set", "price": "150000.00", "conflict_ids": [] },
+    { "id": 12, "odoo_id": 872, "name": "Kids set",  "price": "100000.00", "conflict_ids": [] }
   ]
 }
 ```
+
+| Field | Description |
+|------|----------|
+| `qty_type` | How quantity would be computed if this extra were booked (see the qty_type table in CLAUDE.md): `manual` (customer enters it), `per_car` (`ceil(guests/5)`), `per_14_guests` (`ceil(guests/14)`), `per_person` (`= guests`), `fixed` (always `1`). **Neither this endpoint nor `/quote` accepts or prices extras** — see the note under `routes[]` and under `POST /quote` |
+| `conflict_ids` | IDs of other extras that **cannot be selected together with this one** (in the admin, the field is "Conflicts with (cannot be selected together)" on the Extras model). Symmetric — it doesn't matter which side the conflict was configured on in the DB, `conflict_ids` shows it both ways. `options[]` (variants) have their own too. **Enforced client-side only** — the website blocks adding a second conflicting extra to the cart, but the backend doesn't validate it. Since this endpoint is just a catalog (no booking), use this field so the bot never recommends two extras to a customer when one is in the other's `conflict_ids` |
+
+**Note:** this is the site's full extras catalog, not filtered by route. It is **not** scoped to any particular route — use `routes[].extra_categories` for that (see above). `/quote` does not support extras (see the note in that section).
 
 ### transfers[]
 
@@ -230,7 +277,7 @@ With options (`has_options: true`):
 
 ## GET /api/v2/chatbot/boats/shared
 
-Returns all active shared tours (classes_id = 9).
+Returns all active shared tours (`types_id = 1`, `source_id = 1` — website tours only, not Viator/other OTAs).
 
 ```
 GET https://bluuu.tours/api/v2/chatbot/boats/shared
@@ -261,6 +308,9 @@ X-Api-Key: bluuu-chatbot-2026
   "capacity": 14,
   "currency": "IDR",
   "status": "ready",
+  "badge_name": "Best value",
+  "badge_color": "#22c55e",
+  "headline": "The classic Nusa Penida day trip",
   "categories": [],
   "features": {
     "shade": "Partial shade",
@@ -269,8 +319,18 @@ X-Api-Key: bluuu-chatbot-2026
     "sound": null,
     "toilet": false
   },
+  "perks": [
+    { "text": "Free cancellation up to 24h before", "icon": "check-icon-green" }
+  ],
+  "included": [
+    { "id": 3, "name": "Snorkeling gear", "description": "<p>Mask, fins and snorkel for the whole trip.</p>", "icon_svg": "<svg>...</svg>" }
+  ],
+  "includes": [
+    { "id": 7, "name": "Lunch", "icon_svg": "<svg>...</svg>" }
+  ],
   "pricing": {
     "type": "per_guest",
+    "default_price": 1390000,
     "packages": [
       {
         "name": "Standard Shared Default Prices",
@@ -307,7 +367,16 @@ X-Api-Key: bluuu-chatbot-2026
     "id": 1,
     "odoo_id": 65,
     "name": "Amarta Penida",
-    "menu": "<div>...</div>"
+    "description": "<p>Cliffside restaurant with ocean views.</p>",
+    "menu": "<div>...</div>",
+    "menu_sections": [
+      { "title": "Main Course", "items": [ { "name": "Grilled fish", "description": "Fresh catch of the day" } ] }
+    ],
+    "menu_note": "Should you desire cocktails, wine or other selections, please ask for the restaurant's general menu...",
+    "image": "https://bluuu.tours/storage/app/uploads/public/.../restaurant.jpg",
+    "images_with_thumbs": [
+      { "original": "https://.../original.webp", "hero": "https://.../hero.webp", "thumb": "https://.../thumb.webp", "thumb_small": "https://.../thumb_small.webp" }
+    ]
   },
   "itinerary": [
     { "time": "08:00", "title": "Meeting point" },
@@ -338,7 +407,66 @@ X-Api-Key: bluuu-chatbot-2026
 
 `itinerary`, `inclusions`, `notes` — same fields and logic as `routes[]` in the private endpoint (see table above), sourced from the route attached to this shared tour (`tour.route`). Shared tours have a single fixed route the customer doesn't pick, so these fields live directly on `boats[]` instead of a separate `routes[]` list.
 
-**Pricing logic:** `pricing.type = per_guest`. The entry with `members_count == guests` is taken from `pricelist`. If the date falls within a `seasonal_prices` range, that pricelist is used instead. `total = tier_price` (no boat_price).
+`included`/`includes` — same fields and logic as the private endpoint (see table above): `included` is the detailed "what's included" cards with a description, `includes` is the short chip list. Don't confuse with `inclusions`, which is about the route, not the tour.
+
+`perks` — same shape as the private endpoint (see table above).
+
+`badge_name`/`badge_color` — promo ribbon on the tour card (e.g. "Best value"), `null` if no badge is set. Shared tours only — the site doesn't currently use this for private.
+
+`headline` — short subtitle under the tour name, `""` if not set.
+
+**Pricing logic:** `pricing.type = per_guest`. The entry with `members_count == guests` is taken from `pricelist`. If the date falls within a `seasonal_prices` range, that pricelist is used instead. `total = tier_price` (no boat_price). `pricing.default_price` is the "default" per-guest price shown on the tour card **before** a date/guest count is picked (`show_price` → `gross_price` → `price`, first non-zero); use `/quote` or `pricing.packages` for the actual calculation, not `default_price`.
+
+---
+
+## GET /api/v2/chatbot/policies
+
+Site-wide policies (not tied to a specific tour) — the same texts shown in the policy popups on the site (`FullController::getRules()`, `src/contexts/RulesContext.jsx`).
+
+```
+GET https://bluuu.tours/api/v2/chatbot/policies
+X-Api-Key: bluuu-chatbot-2026
+```
+
+### Example response
+
+```json
+{
+  "payment": {
+    "title": "Payment",
+    "text": "<p>Enjoy hassle-free bookings with trusted cloud-based payments...</p>"
+  },
+  "cancellation": {
+    "title": "Cancelation policy",
+    "text": "<ul><li>It is possible to cancel a reservation and receive a full refund...</li></ul>"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "text": "<p>...</p>"
+  },
+  "health": {
+    "title": "Health, Safety & Sustainability",
+    "text": "<p>...</p>"
+  },
+  "liability": {
+    "title": "Release from Liability",
+    "text": "<p>...</p>"
+  },
+  "updated_at": "2026-04-06T07:12:00.000000Z"
+}
+```
+
+### Fields
+
+| Field | Description |
+|------|----------|
+| `payment` | Payment terms (deposit/collect, payment methods) |
+| `cancellation` | Cancellation and refund policy. The DB field is named `return` — renamed here for clarity |
+| `privacy` | Privacy policy |
+| `health` | Health/safety standards |
+| `liability` | Liability waiver / guest acknowledgment. The DB field is named `release` — renamed here |
+
+Each policy is `{ title, text }`, where `text` is HTML (same as the richeditor fields elsewhere in this API). These are **site-wide** policies — not tour/route-specific; for a specific route's notes, see `routes[].notes`.
 
 ---
 
@@ -367,12 +495,12 @@ Content-Type: application/json
 | `boat_id` | int | — | Physical boat ID (from `boats[].boats[].id`). Auto-selected if not passed |
 | `pickup_address` | string | — | Pickup address |
 | `dropoff_address` | string | — | Drop-off address |
-| `cars` | int | — | Number of cars |
 | `name` | string | — | Customer name |
 | `email` | string | — | Customer email |
 | `whatsapp` | string | — | Customer WhatsApp |
 | `external_id` | string | — | External ID (CRM lead reference) |
-| `extras` | array | — | `[{ "extra_id": int, "quantity": int }]` |
+
+**This endpoint does not support extras.** Extras can only be added on the site itself (the customer adds them after following `booking_url`) — don't send `extras`/`cars`, they don't affect the calculation and are silently dropped.
 
 ### Example request
 
@@ -388,14 +516,10 @@ Content-Type: application/json
   "boat_id": 15,
   "pickup_address": "Seminyak",
   "dropoff_address": "",
-  "cars": 1,
   "name": "John Doe",
   "email": "john@example.com",
   "whatsapp": "+1234567890",
-  "external_id": "",
-  "extras": [
-    { "extra_id": 52, "quantity": 1 }
-  ]
+  "external_id": ""
 }
 ```
 
@@ -404,7 +528,7 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "booking_url": "https://bluuu.tours/new/private?date=2026-05-20&adults=4&tour=54&route=3&transfer=1&cover=2",
+  "booking_url": "https://bluuu.tours/private-tour-to-nusa-penida?date=2026-05-20&adults=4&tour=54&route=3&transfer=1&cover=2",
   "odoo_data": {
     "order": {
       "is_rental_order": true,
@@ -421,6 +545,8 @@ Content-Type: application/json
       "x_studio_drop_off_address": "",
       "x_studio_pickup_cars": 1,
       "x_studio_drop_off_cars": 1,
+      "x_studio_car_type": "Private Car",
+      "x_studio_tour_type": "Standard Private",
       "x_studio_deposit": 0,
       "client_order_ref": "",
       "partner_name": "John Doe",
@@ -428,44 +554,32 @@ Content-Type: application/json
       "partner_phone": "+1234567890"
     },
     "lines": [
-      { "label": "boat",                            "product_id": 71,   "qty": 1, "price": 0 },
-      { "label": "tour",                            "product_id": 1935, "qty": 1, "price": 16732000 },
-      { "label": "transfer",                        "product_id": 22,   "qty": 1, "price": 300000 },
-      { "label": "cover",                           "product_id": 1523, "qty": 1, "price": 1000000 },
-      { "label": "extra:Beginner Diver 1-Pax Pack", "product_id": 571,  "qty": 1, "price": 2420000 }
+      { "label": "boat",       "product_id": 71,   "qty": 1, "price": 0 },
+      { "label": "tour",       "product_id": 1935, "qty": 1, "price": 16732000 },
+      { "label": "transfer",   "product_id": 22,   "qty": 1, "price": 300000 },
+      { "label": "cover",      "product_id": 1523, "qty": 1, "price": 1000000 },
+      { "label": "restaurant", "product_id": 65,   "qty": 4, "price": 0 }
     ]
   },
   "currency_idr": {
-    "total_price": 20452000,
-    "price_per_pax": 5113000,
+    "total_price": 18032000,
+    "price_per_pax": 4508000,
     "breakdown": {
       "boat_base_price": 16732000,
       "transfer": 300000,
       "insurance": 1000000,
-      "extras_total": 2420000,
-      "extras": [
-        {
-          "extra_id": 52,
-          "odoo_id": 571,
-          "name": "Beginner Diver 1-Pax Pack",
-          "qty": 1,
-          "unit_price_idr": 2420000,
-          "subtotal_idr": 2420000
-        }
-      ],
-      "final_total": 20452000
+      "final_total": 18032000
     }
   },
   "currency_usd": {
     "rate": 0.00005878,
-    "total_price": 1202,
-    "price_per_pax": 301,
+    "total_price": 1060,
+    "price_per_pax": 265,
     "breakdown": {
       "boat_base_price": 984,
       "transfer": 18,
       "insurance": 59,
-      "extras_total": 142,
-      "final_total": 1202
+      "final_total": 1060
     }
   },
   "meta": {
@@ -500,8 +614,10 @@ Ready-to-use fields for `sale.order/create` in Odoo — passed directly to OdooS
 | `x_studio_lunch` | string | Restaurant / meal for the route (`restaurant.odoo_name`) |
 | `x_studio_pickup_address` | string | Pickup address |
 | `x_studio_drop_off_address` | string | Drop-off address |
-| `x_studio_pickup_cars` | int | Cars for pickup |
-| `x_studio_drop_off_cars` | int | Cars for drop-off (`0` if transfer type = `pickup`) |
+| `x_studio_pickup_cars` | int | `1` if `transfer` is 1 or 2, else `0`. The car count from the request is not used — this is an "is there a pickup" flag, not a quantity |
+| `x_studio_drop_off_cars` | int | `1` only if `transfer` = 2 (Private Pick up & Drop off), else `0` |
+| `x_studio_car_type` | string\|false | `"Private Car"` (`transfer` 1/2, `guests` ≤ 5) / `"Private Hi-Ace"` (`transfer` 1/2, `guests` > 5) / `"Free Shuttle Bus"` (`transfer` = 3) / `false` (no transfer) |
+| `x_studio_tour_type` | string | `tour.odoo_type` |
 | `x_studio_deposit` | float | Deposit — always `0` (filled in at payment time) |
 | `client_order_ref` | string | External ID (CRM lead) |
 | `partner_name` | string | Customer name (for `res.partner`) |
@@ -512,26 +628,24 @@ Ready-to-use fields for `sale.order/create` in Odoo — passed directly to OdooS
 
 #### odoo_data.lines
 
-Order lines — ready for `sale.order.line/create`.
+Order lines — ready for `sale.order.line/create`. Extras are **not** included here (see the note under request parameters above).
 
 | Field | Type | Description |
 |------|-----|----------|
-| `label` | string | `boat` / `tour` / `transfer` / `cover` / `extra:<name>` |
+| `label` | string | `boat` / `tour` / `transfer` / `cover` / `restaurant`. `restaurant` is always added when the route has a restaurant with an `odoo_id` |
 | `product_id` | int | Odoo product ID |
-| `qty` | int | Quantity. For cover: `1` if `per_boat`, otherwise = guest count. For a shared tour: guest count |
-| `price` | float | Price in IDR. Always `0` for `boat` |
+| `qty` | int | Quantity. For cover: `1` if `per_boat`, otherwise = guest count. For a shared tour and for restaurant: guest count |
+| `price` | float | Price in IDR. Always `0` for `boat` and `restaurant` |
 
 #### currency_idr / currency_usd
 
 | Field | Description |
 |------|----------|
-| `total_price` | Grand total |
+| `total_price` | Grand total (boat + transfer + insurance, no extras — see note above) |
 | `price_per_pax` | Price per guest |
 | `breakdown.boat_base_price` | Tour cost (tier_price + boat_price for private) |
 | `breakdown.transfer` | Transfer cost. >5 guests → `bus_price` |
 | `breakdown.insurance` | Cover cost |
-| `breakdown.extras_total` | Sum of all extras |
-| `breakdown.extras[].odoo_id` | Odoo ID of each extra |
 | `currency_usd` | `null` if no USD rate is set in the database |
 
 #### meta

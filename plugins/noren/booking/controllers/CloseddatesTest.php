@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class CloseddatesTest extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_closeddatestest'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class,

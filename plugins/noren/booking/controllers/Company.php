@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Company extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_company'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

@@ -50,11 +50,34 @@ class CabinetController extends Controller
         return $order;
     }
 
-    // Detect private/shared and local toursId from Odoo order lines → local Tours.types_id.
+    // Detect private/shared and local toursId purely from the Odoo order — the cabinet
+    // must work the same way regardless of order source (site, Viator, manual), so it
+    // never touches the local Order (booking) table.
     // Returns [$isPrivate, $classesId, $toursId] or null if tour not found in local DB.
     private function detectTourType(array $odooOrder): ?array
     {
-        $lines      = $odooOrder['lines'] ?? [];
+        $lines = $odooOrder['lines'] ?? [];
+
+        // Exact match on (product_id, name): OdooService::addOrderLines() always writes
+        // the booked tour's name (as of booking time) into the line's "name" text, so
+        // this disambiguates private tours that all share Odoo's generic "Private Tour -
+        // Base Price" product_id (e.g. 1935 is reused by ~50 local Tours rows).
+        foreach ($lines as $line) {
+            $pid  = $line['product_id'] ?? null;
+            $pid  = is_array($pid) ? (int) $pid[0] : ($pid ? (int) $pid : null);
+            $name = trim((string) ($line['name'] ?? ''));
+            if (!$pid || $name === '') continue;
+
+            $tour = Tours::where('odoo_id', $pid)->where('name', $name)->first();
+            if ($tour && $tour->types_id) {
+                $isPrivate = (int) $tour->types_id === 2;
+                $classesId = $isPrivate ? 8 : 9;
+                return [$isPrivate, $classesId, (int) $tour->id];
+            }
+        }
+
+        // Fallback: product_id only — ambiguous for private tours sharing one generic
+        // product_id, but better than nothing (e.g. tour renamed locally since booking).
         $productIds = array_filter(array_map(function ($line) {
             $pid = $line['product_id'] ?? null;
             return is_array($pid) ? (int) $pid[0] : ($pid ? (int) $pid : null);
@@ -89,22 +112,16 @@ class CabinetController extends Controller
         }
         [$isPrivate, $classesId, $toursId] = $tourType;
 
-        // Tour image via local Tours lookup by product odoo_id from order lines
+        // Reuse the same tour resolved above (do NOT re-derive it from Odoo
+        // product_id here — that was the bug: it could disagree with detectTourType
+        // and pick an unrelated tour, since many local Tours rows share one odoo_id).
+        $tour = Tours::with(['included', 'includes', 'packages', 'pricesbydates.packages'])->find($toursId);
+        $tourName  = $tour->name ?? null;
         $tourImage = null;
-        $productIds = array_filter(array_map(
-            fn($l) => is_array($l['product_id'] ?? null) ? $l['product_id'][0] : ($l['product_id'] ?? null),
-            $odooOrder['lines'] ?? []
-        ));
-        $tourName = null;
-        if (!empty($productIds)) {
-            $tour = Tours::with(['included', 'includes', 'packages', 'pricesbydates.packages'])
-                ->whereIn('odoo_id', array_values($productIds))->first();
-            if ($tour) {
-                $tourName = $tour->name;
-                $imgs = $tour->images_with_thumbs ?? [];
-                if (!empty($imgs)) {
-                    $tourImage = $imgs[0]['thumb2'] ?? $imgs[0]['thumb1'] ?? $imgs[0]['original'] ?? null;
-                }
+        if ($tour) {
+            $imgs = $tour->images_with_thumbs ?? [];
+            if (!empty($imgs)) {
+                $tourImage = $imgs[0]['thumb2'] ?? $imgs[0]['thumb1'] ?? $imgs[0]['original'] ?? null;
             }
         }
 

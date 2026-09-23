@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Transfer extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_transfer'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

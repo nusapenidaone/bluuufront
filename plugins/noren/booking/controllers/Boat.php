@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Boat extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_boat'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

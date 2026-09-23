@@ -12,6 +12,7 @@ use Noren\Booking\Models\Rates;
 use Noren\Booking\Models\Transfer;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Closeddates;
+use Noren\Bluuu\Models\Rules;
 use System\Models\File as SystemFile;
 
 class ChatbotControllerV2 extends Controller
@@ -93,12 +94,14 @@ class ChatbotControllerV2 extends Controller
             'price'       => $e->price,
             'currency'    => 'IDR',
             'qty_type'    => $e->qty_type ?: 'manual',
+            'conflict_ids' => $e->conflict_ids,
             'has_options' => $e->children->isNotEmpty(),
             'options'     => $e->children->map(fn($c) => [
                 'id'      => $c->id,
                 'odoo_id' => $c->odoo_id ? (int) $c->odoo_id : null,
                 'name'    => $c->name,
                 'price'   => $c->price,
+                'conflict_ids' => $c->conflict_ids,
             ])->values(),
         ];
     }
@@ -116,6 +119,74 @@ class ChatbotControllerV2 extends Controller
         ];
     }
 
+    // `included`/`includes` are two separate M2M lists on Tours (mirrors
+    // FullController::getPrivateTours()): `included` = detailed "what's
+    // included" cards (with description + icon), `includes` = short
+    // inclusion chips (name + icon only, no description).
+    protected function formatIncluded($tour): array
+    {
+        return $tour->included->map(fn($i) => [
+            'id'          => $i->id,
+            'name'        => $i->name,
+            'description' => $i->description,
+            'icon_svg'    => $i->icon_svg,
+        ])->values()->toArray();
+    }
+
+    protected function formatIncludes($tour): array
+    {
+        return $tour->includes->map(fn($i) => [
+            'id'       => $i->id,
+            'name'     => $i->name,
+            'icon_svg' => $i->icon_svg,
+        ])->values()->toArray();
+    }
+
+    // Tours.list is a repeater of {icon, test} (site card "perks" checklist —
+    // 'test' is the actual site's field name for the text, not a typo here).
+    // Some legacy tours have the same shape nested under Tours.json.list
+    // instead — mirrors the fallback in src/private(new).jsx / shared(new).jsx.
+    protected function formatPerks($tour): array
+    {
+        $json = is_array($tour->json) ? $tour->json : [];
+        $raw  = is_array($tour->list) && !empty($tour->list)
+            ? $tour->list
+            : (is_array($json['list'] ?? null) ? $json['list'] : []);
+
+        return collect($raw)->map(function ($item) {
+            if (is_string($item)) {
+                $text = trim($item);
+                return $text !== '' ? ['text' => $text, 'icon' => 'check-icon-green'] : null;
+            }
+            if (is_array($item)) {
+                $text = trim((string) ($item['text'] ?? $item['test'] ?? $item['title'] ?? ''));
+                return $text !== '' ? ['text' => $text, 'icon' => $item['icon'] ?? 'check-icon-green'] : null;
+            }
+            return null;
+        })->filter()->values()->toArray();
+    }
+
+    // Mirrors the richer restaurant shape already used by FullController
+    // (getRouteById/getSharedTours/getRestaurant) — chatbot previously only
+    // sent id/odoo_id/name/menu, missing description/menu_sections/menu_note
+    // that the on-site restaurant card actually renders.
+    protected function formatRestaurant($restaurant): ?array
+    {
+        if (!$restaurant) return null;
+
+        return [
+            'id'                 => $restaurant->id,
+            'odoo_id'            => $restaurant->odoo_id ? (int) $restaurant->odoo_id : null,
+            'name'               => $restaurant->name,
+            'description'        => $restaurant->description,
+            'menu'               => $restaurant->menu,
+            'menu_sections'      => $restaurant->menu_sections ?: [],
+            'menu_note'          => $restaurant->menu_note,
+            'image'              => $restaurant->image,
+            'images_with_thumbs' => $restaurant->images_with_thumbs,
+        ];
+    }
+
     // ─── GET /api/v2/chatbot/boats/private ───────────────────────────────────
 
     public function getPrivateBoats(Request $request)
@@ -123,8 +194,9 @@ class ChatbotControllerV2 extends Controller
         $this->corsHeaders();
         if (!$this->authenticate($request)) return $this->unauthorized();
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'boat.company'])
-            ->whereIn('classes_id', [8])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'boat.company', 'included', 'includes'])
+            ->where('types_id', 2)
+            ->where('source_id', 1)
             ->where('status', '!=', 'disabled')
             ->orderBy('sort_order')
             ->get();
@@ -158,10 +230,14 @@ class ChatbotControllerV2 extends Controller
                 'capacity'    => $tour->capacity,
                 'currency'    => 'IDR',
                 'status'      => $tour->status ?: 'ready',
+                'partner'     => (bool) $tour->partner,
                 'categories'  => $tour->category->map(fn($c) => $c->name)->values(),
                 'features'    => $this->formatBoatFeatures($bf),
                 'best_for'    => $bf['best_for']  ?? null,
                 'boat_type'   => $bf['boat_type'] ?? null,
+                'perks'       => $this->formatPerks($tour),
+                'included'    => $this->formatIncluded($tour),
+                'includes'    => $this->formatIncludes($tour),
                 'pricing'     => [
                     'type'            => 'per_boat',
                     'boat_price'      => $boatPrice,
@@ -190,8 +266,8 @@ class ChatbotControllerV2 extends Controller
 
         $routes = Route::with([
             'ecategories' => fn($q) => $q->orderBy('sort_order'),
-            'ecategories.extras' => fn($q) => $q->whereNull('parent_id')->with('children'),
-            'restaurant',
+            'ecategories.extras' => fn($q) => $q->whereNull('parent_id')->with(['children.conflicts', 'conflicts']),
+            'restaurant.images',
         ])
             ->where('classes_id', 8)
             ->orderBy('sort_order')
@@ -212,12 +288,7 @@ class ChatbotControllerV2 extends Controller
                 'slug'        => $route->slug,
                 'description' => $route->description,
                 'map'         => optional($maps->get($route->id))->getPath(),
-                'restaurant'  => $route->restaurant ? [
-                    'id'      => $route->restaurant->id,
-                    'odoo_id' => $route->restaurant->odoo_id ? (int) $route->restaurant->odoo_id : null,
-                    'name'    => $route->restaurant->name,
-                    'menu'    => $route->restaurant->menu,
-                ] : null,
+                'restaurant'  => $this->formatRestaurant($route->restaurant),
                 'itinerary'   => $this->buildItinerary($route),
                 'inclusions'  => $this->buildInclusions($route),
                 'notes'       => $route->add_on_note ?: null,
@@ -229,7 +300,7 @@ class ChatbotControllerV2 extends Controller
             ];
         });
 
-        $extras = Extras::with(['ecategories', 'images', 'children'])
+        $extras = Extras::with(['ecategories', 'images', 'children.conflicts', 'conflicts'])
             ->whereNull('parent_id')
             ->get()
             ->map(fn($e) => [
@@ -241,17 +312,19 @@ class ChatbotControllerV2 extends Controller
                 'currency'    => 'IDR',
                 'category'    => optional($e->ecategories->first())->name,
                 'qty_type'    => $e->qty_type ?: 'manual',
+                'conflict_ids' => $e->conflict_ids,
                 'has_options' => $e->children->isNotEmpty(),
                 'options'     => $e->children->map(fn($c) => [
                     'id'      => $c->id,
                     'odoo_id' => $c->odoo_id ? (int) $c->odoo_id : null,
                     'name'    => $c->name,
                     'price'   => $c->price,
+                    'conflict_ids' => $c->conflict_ids,
                 ])->values(),
             ]);
 
         $transfers = Transfer::orderBy('id')->get()
-            ->filter(fn($t) => !$t->classes_id || (int) $t->classes_id === 8)
+            ->filter(fn($t) => !$t->types_id || (int) $t->types_id === 2)
             ->map(fn($t) => [
                 'id'          => $t->id,
                 'odoo_id'     => $t->odoo_id ? (int) $t->odoo_id : null,
@@ -263,7 +336,7 @@ class ChatbotControllerV2 extends Controller
             ])->values();
 
         $covers = Cover::orderBy('id')->get()
-            ->filter(fn($c) => (bool) $c->per_boat && (!$c->classes_id || (int) $c->classes_id === 8))
+            ->filter(fn($c) => (bool) $c->per_boat && (!$c->types_id || (int) $c->types_id === 2))
             ->map(fn($c) => [
                 'id'          => $c->id,
                 'odoo_id'     => $c->odoo_id ? (int) $c->odoo_id : null,
@@ -290,8 +363,9 @@ class ChatbotControllerV2 extends Controller
         $this->corsHeaders();
         if (!$this->authenticate($request)) return $this->unauthorized();
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'route', 'route.restaurant', 'boat.company'])
-            ->whereIn('classes_id', [9])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'route', 'route.restaurant.images', 'boat.company', 'included', 'includes', 'badge'])
+            ->where('types_id', 1)
+            ->where('source_id', 1)
             ->where('status', '!=', 'disabled')
             ->orderBy('sort_order')
             ->get();
@@ -325,10 +399,17 @@ class ChatbotControllerV2 extends Controller
                 'capacity'    => $tour->capacity,
                 'currency'    => 'IDR',
                 'status'      => $tour->status ?: 'ready',
+                'badge_name'  => $tour->badge?->name ?: null,
+                'badge_color' => $tour->badge?->color ?: null,
+                'headline'    => is_array($tour->json) ? ($tour->json['subtitle'] ?? $tour->json['headline'] ?? null) : null,
                 'categories'  => $tour->category->map(fn($c) => $c->name)->values(),
                 'features'    => $this->formatBoatFeatures($bf),
+                'perks'       => $this->formatPerks($tour),
+                'included'    => $this->formatIncluded($tour),
+                'includes'    => $this->formatIncludes($tour),
                 'pricing'     => [
                     'type'            => 'per_guest',
+                    'default_price'   => (int) ($tour->show_price ?: ($tour->gross_price ?: ($tour->price ?: 0))),
                     'packages'        => $tour->packages ? [[
                         'name'      => $tour->packages->name,
                         'pricelist' => $tour->packages->pricelist ?? [],
@@ -341,12 +422,7 @@ class ChatbotControllerV2 extends Controller
                     'title'   => $route->title,
                     'slug'    => $route->slug,
                 ] : null,
-                'restaurant'  => $route?->restaurant ? [
-                    'id'      => $route->restaurant->id,
-                    'odoo_id' => $route->restaurant->odoo_id ? (int) $route->restaurant->odoo_id : null,
-                    'name'    => $route->restaurant->name,
-                    'menu'    => $route->restaurant->menu,
-                ] : null,
+                'restaurant'  => $this->formatRestaurant($route?->restaurant),
                 'itinerary'   => $this->buildItinerary($route),
                 'inclusions'  => $this->buildInclusions($route),
                 'notes'       => $route?->add_on_note ?: null,
@@ -368,7 +444,7 @@ class ChatbotControllerV2 extends Controller
         });
 
         $transfers = Transfer::orderBy('id')->get()
-            ->filter(fn($t) => !$t->classes_id || (int) $t->classes_id === 9)
+            ->filter(fn($t) => !$t->types_id || (int) $t->types_id === 1)
             ->map(fn($t) => [
                 'id'          => $t->id,
                 'odoo_id'     => $t->odoo_id ? (int) $t->odoo_id : null,
@@ -380,7 +456,7 @@ class ChatbotControllerV2 extends Controller
             ])->values();
 
         $covers = Cover::orderBy('id')->get()
-            ->filter(fn($c) => !(bool) $c->per_boat && (!$c->classes_id || (int) $c->classes_id === 9))
+            ->filter(fn($c) => !(bool) $c->per_boat && (!$c->types_id || (int) $c->types_id === 1))
             ->map(fn($c) => [
                 'id'          => $c->id,
                 'odoo_id'     => $c->odoo_id ? (int) $c->odoo_id : null,
@@ -442,7 +518,7 @@ class ChatbotControllerV2 extends Controller
             return response()->json(['success' => false, 'error' => 'Tour not found'], 404);
         }
 
-        $isShared = in_array((int) $tour->classes_id, [9, 10]);
+        $isShared = (int) $tour->types_id === 1;
 
         // ── Boat price ───────────────────────────────────────────────────
         $pricelist      = $tour->packages?->pricelist ?? [];
@@ -574,6 +650,30 @@ class ChatbotControllerV2 extends Controller
         ]);
     }
 
+    // ─── GET /api/v2/chatbot/policies ────────────────────────────────────────
+    // Site-wide policy texts (not per-tour) — same source as the on-site
+    // policy popups (FullController::getRules(), src/contexts/RulesContext.jsx).
+    // 'return'/'release' are the raw settings field names; renamed here to
+    // 'cancellation'/'liability' since the API is a fresh contract, not a
+    // passthrough of legacy field names.
+
+    public function getPolicies(Request $request)
+    {
+        $this->corsHeaders();
+        if (!$this->authenticate($request)) return $this->unauthorized();
+
+        $rules = Rules::instance();
+
+        return response()->json([
+            'payment'      => $rules->payment,
+            'cancellation' => $rules->{'return'},
+            'privacy'      => $rules->privacy,
+            'health'       => $rules->health,
+            'liability'    => $rules->release,
+            'updated_at'   => Carbon::now()->toISOString(),
+        ]);
+    }
+
     // ─── GET /api/v2/chatbot/availability ────────────────────────────────────
     // Tour-level free/booked snapshot for a date, read from Closeddates (kept
     // in sync with Odoo via OdooWebhookController), so it never reports a tour
@@ -624,7 +724,8 @@ class ChatbotControllerV2 extends Controller
                 ->orderBy('noren_booking_tours_boat.sort_order')
                 ->orderBy('noren_booking_boat.sort_order')
                 ->orderBy('noren_booking_boat.id')])
-            ->whereIn('classes_id', [8])
+            ->where('types_id', 2)
+            ->where('source_id', 1)
             ->where('status', '!=', 'disabled')
             ->when($tourId, fn($q) => $q->where('id', $tourId))
             ->orderBy('sort_order')
@@ -698,7 +799,8 @@ class ChatbotControllerV2 extends Controller
                 ->orderBy('noren_booking_tours_boat.sort_order')
                 ->orderBy('noren_booking_boat.sort_order')
                 ->orderBy('noren_booking_boat.id')])
-            ->whereIn('classes_id', [9])
+            ->where('types_id', 1)
+            ->where('source_id', 1)
             ->where('status', '!=', 'disabled')
             ->when($tourId, fn($q) => $q->where('id', $tourId))
             ->orderBy('sort_order')
@@ -877,7 +979,7 @@ class ChatbotControllerV2 extends Controller
         float $boatBasePrice, float $transferPrice, float $coverPrice
     ): array {
         $company      = $boat?->company;
-        $isShared     = in_array((int) $tour->classes_id, [9, 10]);
+        $isShared     = (int) $tour->types_id === 1;
         // x_studio_route_new / x_studio_lunch are Odoo "selection" fields — the value
         // must match the option exactly, hence odoo_name (not name/title) as in
         // OdooService::buildOrderData().

@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Agent extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_agent'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class,

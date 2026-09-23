@@ -835,6 +835,7 @@ class FullController extends Controller
                 'title'             => $p->title,
                 'description'       => $p->description,
                 'slug'              => $p->slug,
+                'category'          => $p->category,
                 'created_at'        => $p->created_at,
                 'cover'             => $cover,
                 'cover_thumb'       => $coverThumb,

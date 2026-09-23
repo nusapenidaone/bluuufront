@@ -1,6 +1,6 @@
 # План: перевод фильтрации туров/трансферов/каверов с classes_id на types_id (+source_id)
 
-> Статус: НЕ реализовано (план на будущее). Составлен 2026-07-23.
+> Статус: частично реализовано. Составлен 2026-07-23. **2026-09-21: пункт 4 (ChatbotControllerV2.php) реализован** — остальные 6 файлов ещё на classes_id.
 
 ## Суть
 
@@ -47,11 +47,11 @@
 - :54, :185 `isPrivate = in_array(classes_id,[8])` → `(int)$order->tours?->types_id === 2` — правило 2
 - :58, :67 — фильтры transfers/covers: правило 3 (коллекция-вариант); переменную `$classesId` перенаправить на types-значение (private→2, shared→1)
 
-### 4. plugins/noren/booking/chatbot/ChatbotControllerV2.php
-- :60, :125 — выборки private туров: правило 1 (types_id=2, source_id=1)
-- :214 — выборка shared туров: правило 1 (types_id=1, source_id=1)
-- :174, :186 — фильтры transfers/covers (private, 8→2): правило 3
-- :288 — фильтр (shared, 9→1): правило 3
+### 4. plugins/noren/booking/chatbot/ChatbotControllerV2.php — ✅ РЕАЛИЗОВАНО (2026-09-21)
+- `getPrivateBoats()`/`getSharedBoats()` листинги туров, `privateTourAvailability()`/`sharedTourAvailability()` (эндпоинт `/availability`, появился после написания плана) — правило 1 (types_id 2|1, source_id=1)
+- Transfer/Cover фильтры в обоих листингах — правило 3 (types_id 2|1)
+- `getQuote()` и `buildOdooData()` — ветвление `$isShared` на `$tour->types_id === 1` вместо `in_array(classes_id, [9, 10])` (правило 2; заодно чинит то, что classes_id=10 туры раньше не попадали ни в один листинг, хотя `getQuote()` их уже считал shared)
+- Route-запрос (`->where('classes_id', 8)` в `getPrivateBoats()`) НЕ трогали — у Route нет types_id, по правилу "не трогать"
 
 ### 5. plugins/noren/booking/viator/ViatorController.php
 - :82, :129 `$tour->classes_id == 9` → `$tour->types_id == 1` — правило 2
@@ -68,7 +68,7 @@
 - Route-фильтрация (FullController:578, CabinetController:195)
 - Фронтенд (src/*) — целиком
 - `controllers/tours/config_filter.yaml` (админ-фильтр по classes_id можно оставить)
-- Доки `chatbot/API.md` — при желании обновить упоминания classes_id (2 строки)
+- Доки `chatbot/API.md`/`API.en.md` — упоминания classes_id обновлены на types_id/source_id вместе с реализацией пункта 4
 
 ## Prerequisite (данные, вне кода)
 

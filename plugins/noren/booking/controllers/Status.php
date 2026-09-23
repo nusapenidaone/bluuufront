@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Status extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_status'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

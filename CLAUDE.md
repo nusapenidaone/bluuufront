@@ -147,6 +147,14 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - **Private**: клиент выбирает лодку сам на сайте
 - **Shared**: система автоматически подбирает лодку при бронировании по доступности и приоритету (`sort_order` на модели `Boat` — чем меньше, тем выше приоритет). Несколько shared заказов могут попасть на одну лодку до заполнения вместимости
 
+**Прочие поля `Tours`, реально используемые на сайте:**
+- `Tours.badge` (belongsTo `Badge`: `name`, `color`) — промо-плашка на карточке тура ("Best value" и т.п.). Используется **только для shared** (`getSharedTours()`/сайт), для private сейчас не отображается
+- `Tours.partner` (bool) — **только private**: `true` → лодка "по запросу" (On Request, через respond.io — TODO), `false` → Instant confirmation
+- `Tours.list` (repeater `{icon, test}`, поле `test` — это опечатка автора формы, реально хранится текст перка; иногда лежит fallback-ом в `Tours.json.list`) — короткий чек-лист/перки на карточке
+- `Tours.json` (jsonable, не редактируется в текущей админ-форме — легаси) — иногда содержит `subtitle`/`headline` (подзаголовок тура, только shared)
+- `Tours.show_price` / `gross_price` / `price` — цена "по умолчанию" за гостя на карточке shared-тура **до** выбора даты/кол-ва людей (первое ненулевое в этом порядке); реальный расчёт — через `packages`/`pricesbydates`, не эти поля
+- Отношения `cancelation`, `meeting`, `additional`, `overview`, `program`, `why`, `restaurant` (M2M), `reviews`, `faq` на `Tours` — **legacy, закомментированы в админ-форме** (`models/tours/fields.yaml`), не редактируются и не читаются фронтендом. Не путать с сайт-wide политиками (`Noren\Bluuu\Models\Rules`, см. ниже) и с `Route->restaurant` (belongsTo, другая, активная связь)
+
 ## Transfer
 
 - Трансфер = из отеля/дома до офиса (где лодки) и обратно
@@ -159,6 +167,10 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - `classes_id = 8` → только для private
 - `classes_id = 9` → только для shared
 - `classes_id = null` (или `false`) → отображается на **обоих** типах туров
+
+**Миграция classes_id → types_id + source_id** (`plugins/noren/booking/docs/types_id-migration-plan.md`): `classes_id` — старый способ различать private/shared у Tours/Transfer/Cover; `types_id` — его "родитель" (у `Classes` есть `belongsTo Types`), значения `types_id=2` → private, `types_id=1` → shared, обобщает сразу несколько classes_id (например classes_id 9 и 10 оба относятся к types_id=1). `source_id` на Tours = канал (`1` = сайт, другое = Viator/OTA) — нужен только при выборке **списков** туров, не при работе с уже загруженным туром. Статус миграции по файлам:
+  - `ChatbotControllerV2.php` — **мигрирован** (2026-09-21): листинги туров на `types_id`+`source_id`, transfer/cover фильтры на `types_id`, ветвление private/shared на `types_id`. Route не трогали — у него нет `types_id`
+  - `FullController.php`, `CabinetController.php`, `AccountController.php`, `ViatorController.php`, `OdooService.php`, `OdooWebhookController.php` — **ещё на classes_id**, не мигрированы
 
 ## Extras & Ecategories
 
@@ -181,10 +193,17 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 |----------|--------------|----------------|
 | `manual` (default) | вводит клиент вручную | клиент |
 | `per_car` | `ceil(members / 5)` — по числу машин | авто |
+| `per_14_guests` | `ceil(members / 14)` | авто |
 | `per_person` | `= members` (adults + kids) | авто |
 | `fixed` | всегда `1` | авто |
 
-- При изменении `members` на существующем ордере (`CabinetController`) qty у extras с `qty_type = per_person/per_car/fixed` **пересчитывается автоматически**; `manual` не трогается
+- При изменении `members` на существующем ордере (`CabinetController`) qty у extras с `qty_type = per_person/per_car/per_14_guests/fixed` **пересчитывается автоматически**; `manual` не трогается
+
+**Конфликтующие extras (`Extras.conflicts`):**
+- Self-relation many-to-many через pivot `noren_booking_extras_conflicts` (`extras_id` ↔ `conflict_extras_id`). В админке — поле "Conflicts with (cannot be selected together)" на модели Extras
+- Вычисляемый атрибут `conflict_ids` (`Extras::getConflictIdsAttribute()`) — симметричный, объединяет обе стороны связи независимо от того, с какой стороны настроен конфликт в БД
+- У `children` (вариантов extras) — свои собственные `conflicts`/`conflict_ids`
+- **Проверка только на фронтенде** (`src/lib/utils.js: getExtraConflict`, используется в `private.jsx`, `cabinet.jsx`, `ExtraPopup.jsx`, `TourDetailsCard.jsx` и т.д.) — блокирует добавление второго конфликтующего extra в корзину. Бэкенд это не валидирует ни при создании, ни при редактировании заказа
 
 ## Cover (страховка)
 
@@ -350,6 +369,12 @@ currency_id           — [11, "IDR"]
 - ~~`x_studio_route`~~ → заменено на `x_studio_route_new`
 - ~~`x_studio_lunch_restaurant`~~ → заменено на `x_studio_lunch`
 - ~~`x_studio_lunch_resto`~~ → заменено на `x_studio_lunch`
+
+## Site-wide policies
+
+- Общие политики сайта (payment, cancellation/return, privacy, health, release/liability) — НЕ на модели `Tours`, а отдельный settings-singleton `Noren\Bluuu\Models\Rules` (`plugins/noren/bluuu/models/Rules.php`), поля `{title, text}` (richeditor HTML)
+- Отдаётся через `GET /api/new/rules` (`FullController::getRules()`) и чат-бот `GET /api/v2/chatbot/policies`
+- На фронтенде — `src/contexts/RulesContext.jsx`, всплывающие окна политик
 
 ## Important notes
 

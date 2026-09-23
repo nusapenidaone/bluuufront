@@ -10,184 +10,405 @@ navigation:
         url: noren/booking/tours
         icon: icon-ship
         permissions:
-            - admin
+            - noren.booking.access_tours
+            - noren.booking.access_types
+            - noren.booking.access_category
+            - noren.booking.access_classes
+            - noren.booking.access_packages
+            - noren.booking.access_badge
+            - noren.booking.access_included
+            - noren.booking.access_includes
+            - noren.booking.access_route
+            - noren.booking.access_extras
+            - noren.booking.access_ecategories
+            - noren.booking.access_restaurant
+            - noren.booking.access_transfer
+            - noren.booking.access_cover
+            - noren.booking.access_rates
+            - noren.booking.access_program
+            - noren.booking.access_cancelation
+            - noren.booking.access_meeting
+            - noren.booking.access_additional
+            - noren.booking.access_overview
+            - noren.booking.access_why
         order: '2'
         sideMenu:
             side-menu-item3:
                 label: Tours
                 url: noren/booking/tours
                 icon: icon-ticket
+                permissions:
+                    - noren.booking.access_tours
             side-menu-item:
                 label: 'Tour Types'
                 url: noren/booking/types
                 icon: icon-sliders
+                permissions:
+                    - noren.booking.access_types
             side-menu-item20:
                 label: 'Tour Category'
                 url: noren/booking/category
                 icon: icon-filter
+                permissions:
+                    - noren.booking.access_category
             side-menu-item2:
                 label: 'Tour Classes'
                 url: noren/booking/classes
                 icon: icon-sitemap
+                permissions:
+                    - noren.booking.access_classes
             side-menu-item4:
                 label: 'Price Packages'
                 url: noren/booking/packages
                 icon: icon-money
+                permissions:
+                    - noren.booking.access_packages
             side-menu-item14:
                 label: Badge
                 url: noren/booking/badge
                 icon: icon-tag
+                permissions:
+                    - noren.booking.access_badge
             side-menu-item19:
                 label: Included
                 url: noren/booking/included
                 icon: icon-list
+                permissions:
+                    - noren.booking.access_included
             side-menu-item5:
                 label: 'What include'
                 url: noren/booking/includes
                 icon: icon-check
+                permissions:
+                    - noren.booking.access_includes
             side-menu-item21:
                 label: Routes
                 url: noren/booking/route
                 icon: icon-subway
+                permissions:
+                    - noren.booking.access_route
             side-menu-item6:
                 label: Extras
                 url: noren/booking/extras
                 icon: icon-th-large
+                permissions:
+                    - noren.booking.access_extras
             side-menu-item7:
                 label: 'Extras Catergories'
                 url: noren/booking/ecategories
                 icon: icon-sitemap
+                permissions:
+                    - noren.booking.access_ecategories
             side-menu-item9:
                 label: Restaurants
                 url: noren/booking/restaurant
                 icon: icon-cutlery
+                permissions:
+                    - noren.booking.access_restaurant
             side-menu-item11:
                 label: Transfer
                 url: noren/booking/transfer
                 icon: icon-car
+                permissions:
+                    - noren.booking.access_transfer
             side-menu-item12:
                 label: Cover
                 url: noren/booking/cover
                 icon: icon-street-view
+                permissions:
+                    - noren.booking.access_cover
             side-menu-item13:
                 label: Rates
                 url: noren/booking/rates
                 icon: icon-usd
+                permissions:
+                    - noren.booking.access_rates
             side-menu-item8:
                 label: 'Tour Program'
                 url: noren/booking/program
                 icon: icon-map-marker
+                permissions:
+                    - noren.booking.access_program
             side-menu-item15:
                 label: Cancelation
                 url: noren/booking/cancelation
                 icon: icon-file
+                permissions:
+                    - noren.booking.access_cancelation
             side-menu-item16:
                 label: 'Meeting Point'
                 url: noren/booking/meeting
                 icon: icon-file
+                permissions:
+                    - noren.booking.access_meeting
             side-menu-item17:
                 label: Additional
                 url: noren/booking/additional
                 icon: icon-info
+                permissions:
+                    - noren.booking.access_additional
             side-menu-item18:
                 label: Overview
                 url: noren/booking/overview
                 icon: icon-sort-amount-asc
+                permissions:
+                    - noren.booking.access_overview
             side-menu-item10:
                 label: Why
                 url: noren/booking/why
                 icon: icon-tasks
+                permissions:
+                    - noren.booking.access_why
     main-menu-item2:
         label: Orders
         url: noren/booking/order
         icon: icon-list-ul
         permissions:
-            - admin
+            - noren.booking.access_order
+            - noren.booking.access_ordertype
+            - noren.booking.access_method
+            - noren.booking.access_payment
+            - noren.booking.access_status
+            - noren.booking.access_paymentstatus
+            - noren.booking.access_confirmationstatus
+            - noren.booking.access_lead
+            - noren.booking.access_source
         order: '3'
         sideMenu:
             side-menu-item4:
                 label: Orders
                 url: noren/booking/order
                 icon: icon-reorder
+                permissions:
+                    - noren.booking.access_order
             side-menu-item6:
                 label: 'Order Type'
                 url: noren/booking/ordertype
                 icon: icon-server
+                permissions:
+                    - noren.booking.access_ordertype
             side-menu-item8:
                 label: Method
                 url: noren/booking/method
                 icon: icon-table
+                permissions:
+                    - noren.booking.access_method
             side-menu-item5:
                 label: Payment
                 url: noren/booking/payment
                 icon: icon-money
+                permissions:
+                    - noren.booking.access_payment
             side-menu-item:
                 label: Status
                 url: noren/booking/status
                 icon: icon-check
+                permissions:
+                    - noren.booking.access_status
             side-menu-item3:
                 label: 'Payment Status'
                 url: noren/booking/paymentstatus
                 icon: icon-check
+                permissions:
+                    - noren.booking.access_paymentstatus
             side-menu-item2:
                 label: 'Confirmation Status'
                 url: noren/booking/confirmationstatus
                 icon: icon-check
+                permissions:
+                    - noren.booking.access_confirmationstatus
             side-menu-item7:
                 label: Leads
                 url: noren/booking/lead
                 icon: icon-tasks
+                permissions:
+                    - noren.booking.access_lead
             side-menu-item9:
                 label: Source
                 url: noren/booking/source
                 icon: icon-compass
+                permissions:
+                    - noren.booking.access_source
     main-menu-item3:
         label: Agents
         url: noren/booking/agent
         icon: icon-users
         permissions:
-            - admin
+            - noren.booking.access_agent
+            - noren.booking.access_promocode
         order: '4'
         sideMenu:
             side-menu-item:
                 label: Agents
                 url: noren/booking/agent
                 icon: icon-users
+                permissions:
+                    - noren.booking.access_agent
             side-menu-item2:
                 label: Promocodes
                 url: noren/booking/promocode
                 icon: icon-ticket
+                permissions:
+                    - noren.booking.access_promocode
     main-menu-item4:
         label: Calendar
         url: noren/booking/calendar
         icon: icon-calendar
         permissions:
-            - admin
+            - noren.booking.access_calendar
+            - noren.booking.access_company
+            - noren.booking.access_boat
+            - noren.booking.access_closeddates
+            - noren.booking.access_closeddatestest
         sideMenu:
             side-menu-item4:
                 label: Company
                 url: noren/booking/company
                 icon: icon-copyright
+                permissions:
+                    - noren.booking.access_company
             side-menu-item:
                 label: Boats
                 url: noren/booking/boat
                 icon: icon-ship
+                permissions:
+                    - noren.booking.access_boat
             side-menu-item2:
                 label: Closed
                 url: noren/booking/closeddates
                 icon: icon-calendar
+                permissions:
+                    - noren.booking.access_closeddates
             side-menu-item3:
                 label: Calendar
                 url: noren/booking/calendar
                 icon: icon-calendar
+                permissions:
+                    - noren.booking.access_calendar
             side-menu-item5:
                 label: Closed (Test)
                 url: noren/booking/closeddatestest
                 icon: icon-flask
+                permissions:
+                    - noren.booking.access_closeddatestest
 permissions:
-    admin:
-        tab: Booking
-        label: Admin
-    editor:
-        tab: Booking
-        label: Editor
+    access_tours:
+        tab: 'Booking: Tours'
+        label: Tours
+    access_types:
+        tab: 'Booking: Tours'
+        label: 'Tour Types'
+    access_category:
+        tab: 'Booking: Tours'
+        label: 'Tour Category'
+    access_classes:
+        tab: 'Booking: Tours'
+        label: 'Tour Classes'
+    access_packages:
+        tab: 'Booking: Tours'
+        label: 'Price Packages'
+    access_pricesbydates:
+        tab: 'Booking: Tours'
+        label: 'Price Packages by Dates'
+    access_badge:
+        tab: 'Booking: Tours'
+        label: Badge
+    access_included:
+        tab: 'Booking: Tours'
+        label: Included
+    access_includes:
+        tab: 'Booking: Tours'
+        label: 'What Include'
+    access_route:
+        tab: 'Booking: Tours'
+        label: Routes
+    access_extras:
+        tab: 'Booking: Tours'
+        label: Extras
+    access_ecategories:
+        tab: 'Booking: Tours'
+        label: 'Extras Categories'
+    access_restaurant:
+        tab: 'Booking: Tours'
+        label: Restaurants
+    access_transfer:
+        tab: 'Booking: Tours'
+        label: Transfer
+    access_cover:
+        tab: 'Booking: Tours'
+        label: Cover
+    access_rates:
+        tab: 'Booking: Tours'
+        label: Rates
+    access_program:
+        tab: 'Booking: Tours'
+        label: 'Tour Program'
+    access_cancelation:
+        tab: 'Booking: Tours'
+        label: Cancelation
+    access_meeting:
+        tab: 'Booking: Tours'
+        label: 'Meeting Point'
+    access_additional:
+        tab: 'Booking: Tours'
+        label: Additional
+    access_overview:
+        tab: 'Booking: Tours'
+        label: Overview
+    access_why:
+        tab: 'Booking: Tours'
+        label: Why
+    access_order:
+        tab: 'Booking: Orders'
+        label: Orders
+    access_ordertype:
+        tab: 'Booking: Orders'
+        label: 'Order Type'
+    access_method:
+        tab: 'Booking: Orders'
+        label: Method
+    access_payment:
+        tab: 'Booking: Orders'
+        label: Payment
+    access_status:
+        tab: 'Booking: Orders'
+        label: Status
+    access_paymentstatus:
+        tab: 'Booking: Orders'
+        label: 'Payment Status'
+    access_confirmationstatus:
+        tab: 'Booking: Orders'
+        label: 'Confirmation Status'
+    access_lead:
+        tab: 'Booking: Orders'
+        label: Leads
+    access_source:
+        tab: 'Booking: Orders'
+        label: Source
+    access_emailststus:
+        tab: 'Booking: Orders'
+        label: 'Email Status'
+    access_agent:
+        tab: 'Booking: Agents'
+        label: Agents
+    access_promocode:
+        tab: 'Booking: Agents'
+        label: Promocodes
+    access_calendar:
+        tab: 'Booking: Calendar'
+        label: Calendar
+    access_company:
+        tab: 'Booking: Calendar'
+        label: Company
+    access_boat:
+        tab: 'Booking: Calendar'
+        label: Boats
+    access_closeddates:
+        tab: 'Booking: Calendar'
+        label: Closed
+    access_closeddatestest:
+        tab: 'Booking: Calendar'
+        label: 'Closed (Test)'
+    access_calendartest:
+        tab: 'Booking: Calendar'
+        label: 'Calendar (Test)'
