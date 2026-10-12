@@ -133,6 +133,8 @@ X-Api-Key: bluuu-chatbot-2026
 | `pricing.boat_price` | int | Base boat surcharge (IDR) |
 | `pricing.packages` | array | Default pricelist — group price by guest count |
 | `pricing.seasonal_prices` | array | Seasonal overrides (future dates only) |
+| `pricing.low_seasons` | array | Tour's low season discounts `[{id, name, date_start, date_end, percent}]` — active and not yet ended only. See "Low season" below |
+| `low_season_max_percent` | int | Highest % among `pricing.low_seasons` (`0` if none) |
 | `included` | array | Detailed "what's included" cards (with description and icon) — same as shown on the tour detail page |
 | `includes` | array | Short "what's included" chips (name + icon only, no description) — shown on the tour card |
 | `boats` | array | Physical boats with `odoo_id` and `company.odoo_id` |
@@ -417,6 +419,8 @@ X-Api-Key: bluuu-chatbot-2026
 
 **Pricing logic:** `pricing.type = per_guest`. The entry with `members_count == guests` is taken from `pricelist`. If the date falls within a `seasonal_prices` range, that pricelist is used instead. `total = tier_price` (no boat_price). `pricing.default_price` is the "default" per-guest price shown on the tour card **before** a date/guest count is picked (`show_price` → `gross_price` → `price`, first non-zero); use `/quote` or `pricing.packages` for the actual calculation, not `default_price`.
 
+Low season (shared): `pricing.low_seasons` and `low_season_max_percent` — same as private. Additionally `pricing.default_price_discounted` = `default_price` minus `low_season_max_percent` (the "from" price with the best upcoming discount; equals `default_price` when there are no discounts).
+
 ---
 
 ## GET /api/v2/chatbot/policies
@@ -635,7 +639,8 @@ Order lines — ready for `sale.order.line/create`. Extras are **not** included 
 | `label` | string | `boat` / `tour` / `transfer` / `cover` / `restaurant`. `restaurant` is always added when the route has a restaurant with an `odoo_id` |
 | `product_id` | int | Odoo product ID |
 | `qty` | int | Quantity. For cover: `1` if `per_boat`, otherwise = guest count. For a shared tour and for restaurant: guest count |
-| `price` | float | Price in IDR. Always `0` for `boat` and `restaurant` |
+| `price` | float | Price in IDR. Always `0` for `boat` and `restaurant`. For `tour` — the price **after** the low season discount (as sent to Odoo) |
+| `discount` | float | `tour` only: always `0` — the low season discount is already included in `price` |
 
 #### currency_idr / currency_usd
 
@@ -643,7 +648,10 @@ Order lines — ready for `sale.order.line/create`. Extras are **not** included 
 |------|----------|
 | `total_price` | Grand total (boat + transfer + insurance, no extras — see note above) |
 | `price_per_pax` | Price per guest |
-| `breakdown.boat_base_price` | Tour cost (tier_price + boat_price for private) |
+| `breakdown.original_boat_base_price` | Tour cost **before** the low season discount (tier_price + boat_price for private) |
+| `breakdown.low_season_percent` | Low season discount % for this date (`0` if none) |
+| `breakdown.low_season_discount` | Discount amount (`0` if none) |
+| `breakdown.boat_base_price` | Tour cost **after** the discount = `original_boat_base_price - low_season_discount` |
 | `breakdown.transfer` | Transfer cost. >5 guests → `bus_price` |
 | `breakdown.insurance` | Cover cost |
 | `currency_usd` | `null` if no USD rate is set in the database |
@@ -656,6 +664,7 @@ Order lines — ready for `sale.order.line/create`. Extras are **not** included 
 | `adults` | Adults from the request |
 | `kids` | Kids from the request |
 | `guests` | Total (adults + kids) |
+| `low_season` | `{id, name, date_start, date_end, percent}` if a low season discount applies on this date, otherwise `null` |
 
 ---
 
@@ -703,6 +712,7 @@ X-Api-Key: bluuu-chatbot-2026
 | `type` | both lists | `private` or `shared` — determines which URL param (`tour`) and which page (`/private-tour-to-nusa-penida` or `/shared-tour-to-nusa-penida`) to send the customer to when booking |
 | `capacity` | `available[]` | Sum of `capacity` across all physical boats assigned to the tour, capped at the tour's officially registered `tour.capacity` (if the sum is higher, `tour.capacity` is shown instead; if lower, the sum is shown). **Not** the same as the static `capacity` field in `boats/private` / `boats/shared` |
 | `slots_left` | `available[]` | **Private**: how many physical boats for this tour are still free on the date (a boat is chartered whole by one client). **Shared**: seats on the **largest still-open boat** — a group always travels on a single boat, so this is not a sum across boats but "the biggest chunk" that can actually be sold to one group |
+| `low_season_percent` | `available[]` | The tour's low season discount % on this date, `0` if none |
 | `reason` | `unavailable[]` | `fully_booked` — the tour is sold out by real orders (or the `guests` group doesn't fit on any boat). `blackout` — the date is closed manually by a manager, by the cron closure (21:30 daily, closing the next day), or the boat is taken by another type of booking (private / a different shared tour) |
 
 ### How `guests` affects the result
@@ -714,6 +724,48 @@ X-Api-Key: bluuu-chatbot-2026
 
 - If a tour has no boats at all, or all of them are disabled (`disabled`), the tour won't appear in the response (use `boats/private` and `boats/shared` to get the full tour list regardless of date).
 - `tour_id` comes from `boats[].id` in the `boats/private` / `boats/shared` responses — it's the tour ID, not a physical boat ID.
+
+---
+
+## GET /api/v2/chatbot/low-season
+
+Active and upcoming low season discounts (a seasonal percentage discount on selected tours within a date range). Use it to answer "are there any discounts now / when is it cheaper?".
+
+```
+GET https://bluuu.tours/api/v2/chatbot/low-season
+X-Api-Key: bluuu-chatbot-2026
+```
+
+### Example response
+
+```json
+{
+  "success": true,
+  "low_seasons": [
+    {
+      "name": "Low season January",
+      "date_start": "2027-01-10",
+      "date_end": "2027-03-15",
+      "percent": 20,
+      "tours": [
+        { "tour_id": 54, "name": "Classic Boat", "type": "private" },
+        { "tour_id": 57, "name": "Classic Shared Tour", "type": "shared" }
+      ]
+    }
+  ],
+  "note": "Discount applies to the tour price only (tour + boat for private). Transfer, insurance and extras are full price.",
+  "updated_at": "2026-10-05T07:12:00.000000Z"
+}
+```
+
+### Low season rules
+
+- The discount applies when the tour date falls within `[date_start, date_end]` (inclusive) of an active rule linked to the tour.
+- It applies to the tour cost only (`tier_price` + `boat_price` for private). Transfer, cover (insurance) and extras are full price.
+- Discount amount = `round((tier_price + boat_price) × percent / 100)`.
+- If several rules cover the date, the highest `percent` wins.
+- `/quote` already returns the discounted price (`breakdown.boat_base_price`, `total_price`). The website applies the same discount itself via `booking_url`.
+- Only website tours are listed (`source_id = 1`, not `disabled`); rules without such tours are omitted.
 
 ---
 

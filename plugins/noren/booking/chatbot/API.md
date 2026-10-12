@@ -133,6 +133,8 @@ X-Api-Key: bluuu-chatbot-2026
 | `pricing.boat_price` | int | Базовая доплата за лодку (IDR) |
 | `pricing.packages` | array | Основной прайслист — цена за группу по кол-ву гостей |
 | `pricing.seasonal_prices` | array | Сезонные переопределения (только будущие даты) |
+| `pricing.low_seasons` | array | Low season скидки тура `[{id, name, date_start, date_end, percent}]` — только активные и не закончившиеся. См. раздел «Low season» ниже |
+| `low_season_max_percent` | int | Максимальный % среди `pricing.low_seasons` (`0` если скидок нет) |
 | `included` | array | Развёрнутый список "что включено" (карточки с описанием и иконкой) — то же самое, что показывается на детальной странице тура |
 | `includes` | array | Короткий список "что включено" (только название + иконка, без описания) — чипы на карточке тура |
 | `boats` | array | Физические лодки с `odoo_id` и `company.odoo_id` |
@@ -417,6 +419,8 @@ X-Api-Key: bluuu-chatbot-2026
 
 **Логика прайса:** `pricing.type = per_guest`. Из `pricelist` берётся запись с `members_count == guests`. Если дата в `seasonal_prices` — берётся тот прайслист. `total = tier_price` (без boat_price). `pricing.default_price` — цена "по умолчанию" за 1 гостя, которая показывается на карточке тура **до** выбора даты/кол-ва людей (`show_price` → `gross_price` → `price`, первое ненулевое); для реального расчёта используйте `/quote` или `pricing.packages`, не `default_price`.
 
+Low season (shared): `pricing.low_seasons`, `low_season_max_percent` — как у private. Дополнительно `pricing.default_price_discounted` = `default_price` минус `low_season_max_percent` (цена «от» с максимальной будущей скидкой; равна `default_price`, если скидок нет).
+
 ---
 
 ## GET /api/v2/chatbot/policies
@@ -635,7 +639,8 @@ Content-Type: application/json
 | `label` | string | `boat` / `tour` / `transfer` / `cover` / `restaurant`. `restaurant` добавляется всегда, если у route есть ресторан с `odoo_id` |
 | `product_id` | int | Odoo product ID |
 | `qty` | int | Количество. Для cover: `1` если `per_boat`, иначе = кол-во гостей. Для shared tour и restaurant: кол-во гостей |
-| `price` | float | Цена в IDR. Для `boat` и `restaurant` всегда `0` |
+| `price` | float | Цена в IDR. Для `boat` и `restaurant` всегда `0`. Для `tour` — цена **со** скидкой low season (как уходит в Odoo) |
+| `discount` | float | Только у `tour`: всегда `0` — скидка low season уже учтена в `price` |
 
 #### currency_idr / currency_usd
 
@@ -643,7 +648,10 @@ Content-Type: application/json
 |------|----------|
 | `total_price` | Итоговая сумма (boat + transfer + insurance, без extras — см. примечание выше) |
 | `price_per_pax` | Цена на 1 гостя |
-| `breakdown.boat_base_price` | Стоимость тура (tier_price + boat_price для private) |
+| `breakdown.original_boat_base_price` | Стоимость тура **без** low season скидки (tier_price + boat_price для private) |
+| `breakdown.low_season_percent` | % low season скидки на эту дату (`0` если нет) |
+| `breakdown.low_season_discount` | Сумма скидки (`0` если нет) |
+| `breakdown.boat_base_price` | Стоимость тура **со** скидкой = `original_boat_base_price - low_season_discount` |
 | `breakdown.transfer` | Стоимость трансфера. >5 гостей → `bus_price` |
 | `breakdown.insurance` | Стоимость cover |
 | `currency_usd` | `null` если курс USD не задан в БД |
@@ -656,6 +664,7 @@ Content-Type: application/json
 | `adults` | Взрослые из запроса |
 | `kids` | Дети из запроса |
 | `guests` | Итого (adults + kids) |
+| `low_season` | `{id, name, date_start, date_end, percent}` если на дату действует low season скидка, иначе `null` |
 
 ---
 
@@ -703,6 +712,7 @@ X-Api-Key: bluuu-chatbot-2026
 | `type` | оба списка | `private` или `shared` — влияет на то, какой параметр (`tour`) и на какую страницу (`/private-tour-to-nusa-penida` или `/shared-tour-to-nusa-penida`) вести клиента при бронировании |
 | `capacity` | `available[]` | Суммарная вместимость всех лодок тура (сумма `capacity` физических лодок), но не больше официально зарегистрированного `tour.capacity` (если сумма больше — показывается `tour.capacity`, если меньше — сумма). **Не то же самое**, что статичное поле `capacity` в `boats/private` / `boats/shared` |
 | `slots_left` | `available[]` | **Private**: сколько ещё физических лодок этого тура свободно на дату (лодка сдаётся целиком одному клиенту). **Shared**: сколько мест на **самой вместительной из ещё не занятых лодок** — группа всегда едет на одной лодке, поэтому это не сумма по всем лодкам, а "самый большой кусок", который реально можно продать одной группе |
+| `low_season_percent` | `available[]` | % low season скидки тура на эту дату, `0` если нет |
 | `reason` | `unavailable[]` | `fully_booked` — тур раскуплен реальными заказами (или группа `guests` не помещается ни на одну лодку). `blackout` — дата закрыта вручную менеджером, cron-закрытием (21:30 каждый день на завтра) или лодка занята другим типом заказа (private/другой shared-тур) |
 
 ### Как влияет `guests`
@@ -714,6 +724,48 @@ X-Api-Key: bluuu-chatbot-2026
 
 - Если у тура вообще нет лодок или все они выключены (`disabled`), тур не попадёт в ответ (используйте `boats/private` и `boats/shared`, чтобы получить полный список туров независимо от даты).
 - `tour_id` берётся из `boats[].id` в ответах `boats/private` / `boats/shared` — это ID тура, а не физической лодки.
+
+---
+
+## GET /api/v2/chatbot/low-season
+
+Активные и будущие low season скидки (сезонная процентная скидка на выбранные туры в интервале дат). Для ответа на «есть ли сейчас скидки / когда дешевле?».
+
+```
+GET https://bluuu.tours/api/v2/chatbot/low-season
+X-Api-Key: bluuu-chatbot-2026
+```
+
+### Пример ответа
+
+```json
+{
+  "success": true,
+  "low_seasons": [
+    {
+      "name": "Low season January",
+      "date_start": "2027-01-10",
+      "date_end": "2027-03-15",
+      "percent": 20,
+      "tours": [
+        { "tour_id": 54, "name": "Classic Boat", "type": "private" },
+        { "tour_id": 57, "name": "Classic Shared Tour", "type": "shared" }
+      ]
+    }
+  ],
+  "note": "Discount applies to the tour price only (tour + boat for private). Transfer, insurance and extras are full price.",
+  "updated_at": "2026-10-05T07:12:00.000000Z"
+}
+```
+
+### Правила low season
+
+- Скидка действует, если дата тура попадает в `[date_start, date_end]` (включительно) активного правила, привязанного к туру.
+- Скидка только на стоимость тура (`tier_price` + `boat_price` для private). Трансфер, cover (insurance) и extras — по полной цене.
+- Сумма скидки = `round((tier_price + boat_price) × percent / 100)`.
+- Если на дату попадает несколько правил — берётся максимальный `percent`.
+- `/quote` уже возвращает цену со скидкой (`breakdown.boat_base_price`, `total_price`). Сайт по `booking_url` применит ту же скидку сам.
+- В списке только туры сайта (`source_id = 1`, не `disabled`); правила без таких туров не показываются.
 
 ---
 

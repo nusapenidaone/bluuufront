@@ -75,6 +75,11 @@ export default function Payment() {
   const boatPrice = parseFloat(params.get("boatPrice") || "0");       // raw boat_price surcharge
   const totalBoatPrice = parseFloat(params.get("totalBoatPrice") || String(boatPrice)); // pricelist + surcharge
   const guestFeeTotal = parseFloat(params.get("guestFeeTotal") || "0");
+  // Low season: totalBoatPrice already has the discount applied; these are for display only
+  const lsPercent = parseInt(params.get("lsPercent") || "0", 10) || 0;
+  const lsDiscount = parseFloat(params.get("lsDiscount") || "0") || 0;
+  const lsOriginal = parseFloat(params.get("lsOriginal") || "0") || 0;
+  const hasLowSeason = lsPercent > 0 && lsDiscount > 0 && lsOriginal > 0;
   const extrasTotal = parseFloat(params.get("extrasTotal") || "0");
   const donationAmount = parseFloat(params.get("donationAmount") || "0");
   const restaurantId = params.get("restaurantId")
@@ -564,7 +569,13 @@ export default function Payment() {
               {totalBoatPrice > 0 && (
                 <div className="flex justify-between">
                   <span className="text-secondary-500">{tourType === "shared" ? "Shared tour" : "Private tour"}</span>
-                  <span className="font-semibold text-secondary-900">{fmt(totalBoatPrice)}</span>
+                  <span className="font-semibold text-secondary-900">{fmt(hasLowSeason ? lsOriginal : totalBoatPrice)}</span>
+                </div>
+              )}
+              {totalBoatPrice > 0 && hasLowSeason && (
+                <div className="flex justify-between">
+                  <span className="text-emerald-700">Low season −{lsPercent}%</span>
+                  <span className="font-semibold text-emerald-700">−{fmt(lsDiscount)}</span>
                 </div>
               )}
               {extras.map((e, i) => (

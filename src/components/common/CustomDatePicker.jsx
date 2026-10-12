@@ -4,6 +4,14 @@ import "react-datepicker/dist/react-datepicker.css";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "../../lib/utils";
 
+// "YYYY-MM-DD" strings are parsed by `new Date()` as UTC midnight, which shows
+// the previous day in timezones behind UTC — parse them as local midnight instead.
+function toLocalDate(value) {
+  if (value instanceof Date) return value;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(value + "T00:00:00");
+  return new Date(value);
+}
+
 /**
  * Premium Custom Date Picker using react-datepicker
  * Dropdown style with luxury Bluuu aesthetic.
@@ -79,15 +87,15 @@ export default function CustomDatePicker({
   if (isRange) {
     // Range mode: selected is { from: Date|string, to: Date|string }
     if (selected?.from) {
-      selectedDate = selected.from instanceof Date ? selected.from : new Date(selected.from);
+      selectedDate = toLocalDate(selected.from);
     }
     if (selected?.to) {
-      endDate = selected.to instanceof Date ? selected.to : new Date(selected.to);
+      endDate = toLocalDate(selected.to);
     }
   } else {
     // Single mode: selected is Date|string
     if (selected) {
-      selectedDate = selected instanceof Date ? selected : new Date(selected);
+      selectedDate = toLocalDate(selected);
     }
   }
 

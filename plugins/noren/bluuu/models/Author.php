@@ -10,6 +10,10 @@ class Author extends Model
 
     public $rules = [];
 
+    public $attachOne = [
+        'photo' => \System\Models\File::class,
+    ];
+
     public $hasMany = [
         'posts' => [Blog::class, 'key' => 'author_id'],
     ];

@@ -15,6 +15,7 @@ use Noren\Booking\Models\Route;
 use Noren\Booking\Maps\GoogleMapsService;
 
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 
@@ -137,6 +138,24 @@ class SharedOrderController extends Controller
             $order->full_price = $data['fullPrice'] ?? 0;
             $order->discount_price = $data['discountPrice'] ?? 0;
             $order->discount = $data['discount'] ?? 0;
+
+            // ── Low season (server-authoritative only while a discount is active) ──
+            // Без активной скидки цену, присланную фронтом, не трогаем (как раньше).
+            $order->lowseason_percent  = 0;
+            $order->lowseason_discount = 0;
+            $tourForPricing = Tours::find($data['tourId']);
+            $members        = (int) $order->members;
+            if ($tourForPricing && $members > 0) {
+                $quote = TourPricing::quote($tourForPricing, $order->travel_date, $members, false);
+                if ($quote['has_pricelist'] && $quote['percent'] > 0) {
+                    $delta = $quote['total'] - (int) $order->tour_price;
+                    $order->tour_price         = $quote['tour_price'];
+                    $order->total_price        = (int) $order->total_price + $delta;
+                    $order->full_price         = (int) $order->full_price + $delta;
+                    $order->lowseason_percent  = $quote['percent'];
+                    $order->lowseason_discount = $quote['discount'];
+                }
+            }
 
             // ── Apply server-authoritative pickup transfer price ────────────
             if ($serverTransferPrice !== null && $serverTransferPrice !== (int) $order->transfer_price) {

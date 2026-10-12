@@ -51,9 +51,27 @@
 
 - Если ни один ID-кандидат не совпал ни с одной `Extras.odoo_id` — запись попадает
   в `skipped`, остальные элементы батча всё равно обрабатываются
-- Пропущенные элементы логируются (`Log::warning`), успешные — тоже (`Log::info`),
-  весь сырой payload от Odoo пишется в лог отдельно ещё до обработки
-  (`OdooWebhookController::handleProductPrice`)
+- В `updated` есть `old_price` и `price` (новая)
+
+### Логирование
+
+Отдельный файл `storage/logs/odoo-product-price.log` — по одной JSON-строке на запись
+(время Asia/Makassar):
+- `request` — **до** проверки ключа: IP, URL, User-Agent, Content-Type, сырое тело
+  (`raw_body`) и распарсенный input (без `key`)
+- `unauthorized` — неверный/отсутствующий ключ
+- на каждый item: модель, ключ цены и значение, ID-кандидаты, найденный extra
+  (`extra_id`, `extra_name`, `odoo_id`), `old_price` → `new_price`, решение
+  (`updated` / `skip: ...`)
+- warning-записи дублируются в стандартный системный лог
+
+### Защита
+
+- **`zero_price_guard`** — если пришла цена `<= 0`, а у extra сейчас цена `> 0`,
+  ничего не пишется (только warning в лог). Причина: Automation Rule на ptav срабатывает
+  на любое изменение записи, и часто прилетает `price_extra: 0.0`. Если extra
+  действительно должен стать бесплатным — менять цену вручную в админке
+- **`unchanged`** — цена совпадает с текущей → не сохраняется
 
 ### Важно: какой ID отправлять
 
@@ -79,20 +97,19 @@ Extras в Odoo смоделированы как **значения атрибу
 }
 ```
 
-Бэкенд (`extractCandidateOdooIds`) пробует найти `Extras` по нескольким ID-кандидатам
-**в порядке приоритета**, использует первое совпадение:
+Бэкенд (`extractCandidateOdooIds`) ищет `Extras` по ID-кандидатам, первое совпадение
+выигрывает. Набор кандидатов зависит от модели:
 
-1. `ptav_product_variant_ids` — ID варианта(ов) `product.product`, к которым относится
-   это значение атрибута. **Основной, ожидаемый вариант** — именно такой ID используется
-   в строках заказа при создании ордера в Odoo
-2. `product_tmpl_id` — ID `product.template`, на случай если `Extras.odoo_id` в БД
-   на самом деле был проставлен по шаблону, а не по варианту
-3. `id` / `product_id` / `odoo_id` — сырой `id` верхнего уровня (покрывает случай, когда
-   вебхук настроен прямо на `product.product`, без атрибутов)
+- **ptav** (`_model = product.template.attribute.value`, либо в item есть
+  `ptav_product_variant_ids` / `price_extra`): **только** `ptav_product_variant_ids` —
+  ID вариантов `product.product`, тот же ID, что в строках заказа. Цена — только `price_extra`
+- **прочее** (вебхук прямо на `product.product`): `id` / `product_id` / `odoo_id`, затем
+  `product_tmpl_id`. Цена — `lst_price` → `list_price` → `price` (`price` последним: в Odoo
+  он вычисляется по контексту прайслиста и без него обычно 0)
 
-Собственный `id` записи `product.template.attribute.value` (`428` в примере) **не
-участвует** в поиске — он не имеет отношения ни к одной из ID-схем, которые
-могут быть в `Extras.odoo_id`.
+Собственный `id` записи ptav (`428` в примере) и `product_tmpl_id` для ptav **не
+участвуют** в поиске — это другие ID-пространства, они могут случайно совпасть с
+`Extras.odoo_id` чужого extra и перезаписать ему цену (так раньше и обнулялись цены).
 
 ## Odoo automation — встроенный Webhook action
 
@@ -102,10 +119,9 @@ Extras в Odoo смоделированы как **значения атрибу
 1. **Automation Rule**
    - Model: **Attribute Value** (`product.template.attribute.value`)
    - Trigger: **On Update**
-   - "When updating" (Trigger Field(s)) — можно указать `Extra Price` (`price_extra`,
-     это обычное хранимое поле, в отличие от `lst_price` на варианте товара, так что
-     должно быть в списке выбора), либо оставить пустым (сработает на любое изменение
-     записи — безопасно, т.к. синхронизация идемпотентна, см. примечания ниже)
+   - "When updating" (Trigger Field(s)) — **указать `Extra Price` (`price_extra`)**.
+     Пустое значение = срабатывание на любое изменение записи (пересортировка, правка
+     атрибутов шаблона, пересоздание вариантов), часто с `price_extra: 0.0`
 2. **Create Actions → Send Webhook Notification**
    - Type: `Send Webhook Notification`
    - URL: `https://bluuu.tours/api/odoo/webhook/product-price?key=odoo_wh_38fe18f8b0c0ea819e118e7897b10e6a`

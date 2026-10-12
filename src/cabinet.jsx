@@ -9,6 +9,7 @@ import TransferPickerModal, { resolveTransferUnitPrice } from "./components/book
 import CoverPickerModal, { resolveCoverQuantity } from "./components/booking/CoverPickerModal";
 import { apiUrl } from "./api/base";
 import { cn, getExtraConflict } from "./lib/utils";
+import { applyLowSeason, getLowSeasonForDate } from "./components/booking/utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -42,7 +43,7 @@ import { useCurrency } from "./CurrencyContext";
 
 function fmtDate(iso) {
   if (!iso) return "—";
-  const d = new Date(iso);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + "T00:00:00") : new Date(iso);
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -1152,8 +1153,42 @@ export default function Cabinet({ odooId, uniqueKey }) {
     const closest = [...sorted].reverse().find((r) => Number(r.members_count) <= Number(members));
     return Number((closest || sorted[0]).price);
   };
-  const baseTourPrice = plLookup(resolvePricelist(local.travel_date), local.members);
-  const liveTourPrice = plLookup(resolvePricelist(editDate), editAdults + editKids);
+  // Low season: the order's current discount lives on the Odoo tour line (`discount` %).
+  // Same rules as CabinetController::performUpdate + TourPricing::quote.
+  const tourLine = (() => {
+    const lines = Array.isArray(odoo.lines) ? odoo.lines : [];
+    const tourOdooId = Number(local.tour_odoo_id) || 0;
+    if (tourOdooId) {
+      return lines.find((l) => {
+        const pid = Array.isArray(l.product_id) ? Number(l.product_id[0]) : Number(l.product_id);
+        return pid === tourOdooId && Number(l.product_uom_qty) > 0;
+      }) || null;
+    }
+    return lines.find((l) => Number(l.discount) > 0) || null;
+  })();
+  // Odoo price_unit is already discounted (discount = 0); the % comes from the local order.
+  // Fallback: legacy orders that carried the % in the line's `discount` field.
+  const legacyLinePct = Number(tourLine?.discount) || 0;
+  const currentLsPct = Number(local.lowseason_percent) || legacyLinePct;
+  const lsBoatPrice = Number(options.pricing?.boat_price) || 0;
+  const tourDateChanged = (editDate || "") !== (local.travel_date || "");
+  const tourMembersChanged = (editAdults + editKids) !== Number(local.members);
+  const dateLsPct = Number(getLowSeasonForDate({ low_seasons: options.pricing?.low_seasons }, editDate)?.percent) || 0;
+  const liveLsPct = !(tourDateChanged || tourMembersChanged)
+    ? currentLsPct
+    : dateLsPct > 0
+      ? dateLsPct
+      : (tourDateChanged ? 0 : currentLsPct);
+
+  const baseTier = plLookup(resolvePricelist(local.travel_date), local.members);
+  const liveTier = plLookup(resolvePricelist(editDate), editAdults + editKids);
+  const baseTourPrice = baseTier !== null ? applyLowSeason(baseTier, lsBoatPrice, currentLsPct).total : null;
+  const currentLsAmount = currentLsPct <= 0
+    ? 0
+    : legacyLinePct > 0 && tourLine
+      ? Math.round(Number(tourLine.price_unit || 0) * Number(tourLine.product_uom_qty || 0) - Number(tourLine.price_subtotal ?? 0))
+      : (baseTier !== null ? applyLowSeason(baseTier, lsBoatPrice, currentLsPct).discount : 0);
+  const liveTourPrice = liveTier !== null ? applyLowSeason(liveTier, lsBoatPrice, liveLsPct).total : null;
   const tourPriceDelta = hasChanges && baseTourPrice !== null && liveTourPrice !== null
     ? liveTourPrice - baseTourPrice
     : 0;
@@ -1801,6 +1836,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
               </>
             ) : null}
 
+            {currentLsAmount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-emerald-700">Low season −{currentLsPct}%</span>
+                <span className="text-sm font-semibold text-emerald-700">− {formatPrice(currentLsAmount)}</span>
+              </div>
+            )}
+
             {/* Always show totals */}
             <div className={cn("flex items-center justify-between", lastPrices ? "border-t border-neutral-100 pt-2.5" : "")}>
               <span className="text-sm font-bold text-secondary-900">Total</span>
@@ -1847,6 +1889,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   ? `New total: ${formatPrice(estNewTotal)}`
                   : "Refund will be processed through Odoo"}
               </div>
+              {(tourDateChanged || tourMembersChanged) && liveLsPct > 0 && (
+                <div className="mt-1 text-[11px] font-semibold text-emerald-600">
+                  Includes low season −{liveLsPct}% on the tour price
+                </div>
+              )}
             </div>
           )}
         </div>

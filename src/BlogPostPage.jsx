@@ -313,7 +313,7 @@ function ShareBlock({ title }) {
 
 function Breadcrumbs({ post, slug }) {
   return (
-    <nav aria-label="Breadcrumb" className="mx-auto flex max-w-5xl flex-wrap items-center gap-1.5 px-5 pt-6 text-xs text-secondary-400 lg:px-8">
+    <nav aria-label="Breadcrumb" className="mx-auto flex max-w-5xl flex-wrap items-center justify-center gap-1.5 px-5 pt-6 text-center text-xs text-secondary-400 lg:px-8">
       <a href="/" className="font-semibold hover:text-primary-600">Home</a>
       <span className="text-secondary-300">/</span>
       <a href="/blog" className="font-semibold hover:text-primary-600">Blog</a>
@@ -326,6 +326,34 @@ function Breadcrumbs({ post, slug }) {
       <span className="text-secondary-300">/</span>
       <span className="max-w-[220px] truncate font-semibold text-secondary-700 sm:max-w-none">{post?.title}</span>
     </nav>
+  );
+}
+
+function AuthorCard({ author }) {
+  if (!author?.name) return null;
+  const initials = author.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  return (
+    <section aria-label="About the author"
+      className="flex flex-col items-start gap-6 rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm md:flex-row md:items-center md:p-10">
+      {author.avatar ? (
+        <img src={author.avatar} alt={author.name} loading="lazy"
+          className="h-24 w-24 shrink-0 rounded-full object-cover" />
+      ) : (
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-primary-50 text-2xl font-bold text-primary-600">
+          {initials}
+        </div>
+      )}
+      <div className="flex-1">
+        <p className="mb-2 text-2xs font-black uppercase tracking-widest text-primary-600">Written by</p>
+        <h2 className="mb-1 text-2xl font-bold tracking-tight text-secondary-900">{author.name}</h2>
+        {author.title && <p className="mb-3 text-sm text-secondary-500">{author.title}</p>}
+        {author.bio && <p className="mb-4 text-[15px] leading-relaxed text-secondary-600">{author.bio}</p>}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] font-semibold text-primary-600">
+          <a href="/blog" className="hover:underline">All articles →</a>
+          <a href="/private-tour-to-nusa-penida" className="hover:underline">Book a tour →</a>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -464,6 +492,17 @@ export default function BlogPostPage({ slug }) {
               </p>
             )}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-sm text-secondary-400">
+              {post.author?.name && (
+                <>
+                  <span className="inline-flex items-center gap-2">
+                    {post.author.avatar && (
+                      <img src={post.author.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
+                    )}
+                    <span className="font-semibold text-secondary-900">{post.author.name}</span>
+                  </span>
+                  <span className="text-secondary-300">·</span>
+                </>
+              )}
               {post.created_at && <span>{formatDate(post.created_at)}</span>}
               {readTime > 0 && (
                 <>
@@ -536,41 +575,43 @@ export default function BlogPostPage({ slug }) {
               ) : (
                 images.length > 1 && <PhotoGallery images={images.slice(1)} />
               )}
-
-              {/* Related articles */}
-              {related.length > 0 && (
-                <div className="mt-16">
-                  <div className="mb-5 flex items-center gap-3">
-                    <div className="h-px flex-1 bg-neutral-200" />
-                    <span className="text-xs font-black uppercase tracking-widest text-secondary-400">More articles</span>
-                    <div className="h-px flex-1 bg-neutral-200" />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    {related.map((p) => <RelatedCard key={p.id} post={p} />)}
-                  </div>
-                </div>
-              )}
-
-              {/* CTA */}
-              <div className="mt-16 overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-center text-white shadow-xl">
-                <div className="mb-1 text-xs font-black uppercase tracking-widest text-primary-200">Ready to explore?</div>
-                <h2 className="mb-2 text-2xl font-bold">Book your Nusa Penida tour</h2>
-                <p className="mb-6 text-sm text-primary-100">
-                  Join thousands of happy guests who've experienced Nusa Penida with Bluuu.
-                </p>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <a href="/shared-tour-to-nusa-penida"
-                    className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
-                    Shared tours
-                  </a>
-                  <a href="/private-tour-to-nusa-penida"
-                    className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-white/10">
-                    Private charter
-                  </a>
-                </div>
-              </div>
             </article>
           </main>
+
+          <div className="mx-auto max-w-5xl space-y-16 px-5 pb-16 lg:px-8">
+            <AuthorCard author={post.author} />
+
+            {related.length > 0 && (
+              <div>
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-neutral-200" />
+                  <span className="text-xs font-black uppercase tracking-widest text-secondary-400">More articles</span>
+                  <div className="h-px flex-1 bg-neutral-200" />
+                </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  {related.map((p) => <RelatedCard key={p.id} post={p} />)}
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 p-8 text-center text-white shadow-xl">
+              <div className="mb-1 text-xs font-black uppercase tracking-widest text-primary-200">Ready to explore?</div>
+              <h2 className="mb-2 text-2xl font-bold">Book your Nusa Penida tour</h2>
+              <p className="mb-6 text-sm text-primary-100">
+                Join thousands of happy guests who've experienced Nusa Penida with Bluuu.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                <a href="/shared-tour-to-nusa-penida"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-bold text-primary-700 transition hover:bg-primary-50">
+                  Shared tours
+                </a>
+                <a href="/private-tour-to-nusa-penida"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-2.5 text-sm font-bold text-white transition hover:bg-white/10">
+                  Private charter
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

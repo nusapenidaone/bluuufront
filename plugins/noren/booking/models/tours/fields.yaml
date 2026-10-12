@@ -276,6 +276,14 @@ tabs:
                 - preview
             type: relation
             tab: Price
+        lowseasons:
+            label: 'Low season discounts'
+            span: full
+            context:
+                - update
+                - preview
+            type: relation
+            tab: Price
         _section2:
             type: section
             label: Old

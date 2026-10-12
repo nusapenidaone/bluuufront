@@ -20,8 +20,19 @@ fields:
         span: full
         size: large
         type: textarea
+    photo:
+        label: Photo
+        mode: image
+        imageWidth: '150'
+        imageHeight: '150'
+        useCaption: 0
+        thumbOptions:
+            mode: crop
+            extension: auto
+        span: full
+        type: fileupload
     avatar:
-        label: Avatar URL
+        label: Avatar URL (fallback)
         span: full
         type: text
-        comment: Full URL to the author photo (https://…)
+        comment: Used only when no photo is uploaded above (https://…)

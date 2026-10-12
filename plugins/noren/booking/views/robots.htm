@@ -1,3 +1,24 @@
-User-agent: *
+# You are our main priority
+User-agent: Googlebot
+User-agent: Bingbot
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: PerplexityBot
+User-agent: Google-Extended
+Allow: /
 Disallow: /feedback
+
+# Everyone else is welcome
+User-agent: *
+Allow: /
+Disallow: /feedback
+
+# You are not allowed to visit
+User-agent: CCBot
+User-agent: Amazonbot
+Disallow: /
+
 Sitemap: https://bluuu.tours/sitemap.xml

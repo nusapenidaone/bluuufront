@@ -137,6 +137,19 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
   3. У каждого количества людей своя цена (price per pax)
   4. Каждый тур имеет свой прайс-лист
 - В Odoo уходит: `tour_price + boat_price` как цена строки тура
+- **Единый расчёт цены** — `classes/TourPricing.php` (`pricelistFor`, `tierPrice`, `quote`). Новые места расчёта цены тура — только через него (Viator пока на своей копии)
+
+## Low season (сезонная скидка)
+
+Полное описание, статус деплоя и план фронта — `plugins/noren/booking/docs/low-season.md`
+
+- Модель `LowSeason` (`noren_booking_lowseason`: `name`, `date_start`, `date_end`, `percent` 1–90, `is_active`) ↔ `Tours` через pivot `noren_booking_lowseason_tours` (`Tours.lowseasons`). Админка: Tours → Low Season, а также вкладка Price в форме тура. Permission `noren.booking.access_lowseason`
+- Действует, если дата тура ∈ `[date_start, date_end]` активного правила тура. Пересечение правил → max %
+- Скидка **только на тур**: `tier_price` (+ `boat_price` для private). Transfer/cover/extras — полная цена. `discount = round((tier + boat) × % / 100)`, делится: `boat_discount = round(boat × %)`, остаток — с tier
+- На ордере: `tour_price`/`boat_price` уже **со** скидкой, `lowseason_percent`, `lowseason_discount` (отдельно от legacy `discount`/`discount_price` — те не трогаем). `total_price`/`full_price`/`deposite_summ` — со скидкой
+- Создание заказа (`Private/SharedOrderController`): сервер перезаписывает цену тура **только если скидка активна** на дату; без скидки — цена от фронта как раньше
+- Odoo: строка тура `price_unit` = цена **уже со скидкой**, `discount` строки = 0 (решение пользователя 2026-10-08; было: полная цена + `discount` = %). Так же в `CabinetController::performUpdate`, `OdooService::syncOrderLineQuantities` и `odoo_data` чатбота. Сама скидка видна только в лог-ноте ордера ("Low season −X% (−сумма)"). Кабинет берёт % из локального `Order.lowseason_percent` (`local.lowseason_percent` в GET); при смене только людей без скидки на дату — сохраняется % заказа
+- API: `low_seasons[]` в `tours/private`, `tours/shared`, `tour/{slug}`, кабинет `options.pricing.low_seasons`; чатбот — см. `chatbot/API.md` (в т.ч. `GET /api/v2/chatbot/low-season`)
 
 ## Tours & Boats
 

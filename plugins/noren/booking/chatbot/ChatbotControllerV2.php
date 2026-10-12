@@ -12,6 +12,8 @@ use Noren\Booking\Models\Rates;
 use Noren\Booking\Models\Transfer;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Closeddates;
+use Noren\Booking\Models\LowSeason;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Bluuu\Models\Rules;
 use System\Models\File as SystemFile;
 
@@ -194,7 +196,7 @@ class ChatbotControllerV2 extends Controller
         $this->corsHeaders();
         if (!$this->authenticate($request)) return $this->unauthorized();
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'boat.company', 'included', 'includes'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'boat.company', 'included', 'includes', 'lowseasons'])
             ->where('types_id', 2)
             ->where('source_id', 1)
             ->where('status', '!=', 'disabled')
@@ -246,7 +248,9 @@ class ChatbotControllerV2 extends Controller
                         'pricelist' => $tour->packages->pricelist ?? [],
                     ]] : [],
                     'seasonal_prices' => $seasonalPrices,
+                    'low_seasons'     => TourPricing::lowSeasonsFor($tour),
                 ],
+                'low_season_max_percent' => TourPricing::maxUpcomingPercent($tour),
                 'boats'       => $tour->boat->map(fn($b) => [
                     'id'         => $b->id,
                     'odoo_id'    => $b->odoo_id ? (int) $b->odoo_id : null,
@@ -363,7 +367,7 @@ class ChatbotControllerV2 extends Controller
         $this->corsHeaders();
         if (!$this->authenticate($request)) return $this->unauthorized();
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'route', 'route.restaurant.images', 'boat.company', 'included', 'includes', 'badge'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'images', 'route', 'route.restaurant.images', 'boat.company', 'included', 'includes', 'badge', 'lowseasons'])
             ->where('types_id', 1)
             ->where('source_id', 1)
             ->where('status', '!=', 'disabled')
@@ -375,6 +379,9 @@ class ChatbotControllerV2 extends Controller
         $boats = $tours->map(function ($tour) use ($today) {
             $bf    = $tour->props ?? [];
             $route = $tour->route;
+
+            $defaultPrice = (int) ($tour->show_price ?: ($tour->gross_price ?: ($tour->price ?: 0)));
+            $maxLowSeason = TourPricing::maxUpcomingPercent($tour);
 
             $seasonalPrices = $tour->pricesbydates
                 ->filter(fn($pbd) => $pbd->date_end && Carbon::parse($pbd->date_end)->gte($today))
@@ -409,13 +416,16 @@ class ChatbotControllerV2 extends Controller
                 'includes'    => $this->formatIncludes($tour),
                 'pricing'     => [
                     'type'            => 'per_guest',
-                    'default_price'   => (int) ($tour->show_price ?: ($tour->gross_price ?: ($tour->price ?: 0))),
+                    'default_price'   => $defaultPrice,
+                    'default_price_discounted' => $defaultPrice - TourPricing::discountAmount($defaultPrice, $maxLowSeason),
                     'packages'        => $tour->packages ? [[
                         'name'      => $tour->packages->name,
                         'pricelist' => $tour->packages->pricelist ?? [],
                     ]] : [],
                     'seasonal_prices' => $seasonalPrices,
+                    'low_seasons'     => TourPricing::lowSeasonsFor($tour),
                 ],
+                'low_season_max_percent' => $maxLowSeason,
                 'route'       => $route ? [
                     'id'      => $route->id,
                     'odoo_id' => $route->odoo_id ? (int) $route->odoo_id : null,
@@ -520,27 +530,13 @@ class ChatbotControllerV2 extends Controller
 
         $isShared = (int) $tour->types_id === 1;
 
-        // ── Boat price ───────────────────────────────────────────────────
-        $pricelist      = $tour->packages?->pricelist ?? [];
-        $boatPriceToAdd = (int) $tour->boat_price;
-
-        if ($date && $tour->pricesbydates->isNotEmpty()) {
-            $seasonal = $tour->pricesbydates->first(function ($pbd) use ($date) {
-                return $date >= $pbd->date_start && $date <= $pbd->date_end;
-            });
-            if ($seasonal && $seasonal->packages?->pricelist) {
-                $pricelist = $seasonal->packages->pricelist;
-            }
-        }
-
-        $boatBasePrice = 0;
-        if (!empty($pricelist)) {
-            $sorted = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry  = $sorted->last(fn($p) => (int) $p['members_count'] <= $guests)
-                   ?? $sorted->first();
-            $tierPrice     = (int) ($entry['price'] ?? 0);
-            $boatBasePrice = $isShared ? $tierPrice : $tierPrice + $boatPriceToAdd;
-        }
+        // ── Boat price (+ low season) ────────────────────────────────────
+        // $boatBasePrice — уже со скидкой; $originalBasePrice — без неё.
+        $priceQuote        = TourPricing::quote($tour, $date, $guests, !$isShared);
+        $originalBasePrice = $priceQuote['has_pricelist'] ? $priceQuote['original'] : 0;
+        $lowSeasonPercent  = $priceQuote['has_pricelist'] ? $priceQuote['percent'] : 0;
+        $lowSeasonDiscount = $priceQuote['has_pricelist'] ? $priceQuote['discount'] : 0;
+        $boatBasePrice     = $originalBasePrice - $lowSeasonDiscount;
 
         // ── Available boats + selection ──────────────────────────────────
         $availableBoats = $this->getAvailableBoats($tour, $date, $guests, $isShared);
@@ -615,12 +611,15 @@ class ChatbotControllerV2 extends Controller
                 $adults, $kids, $guests, $date,
                 $pickupAddress, $dropoffAddress, $cars,
                 $customerName, $customerEmail, $customerPhone, $externalId,
-                $boatBasePrice, $transferPrice, $coverPrice
+                $originalBasePrice, $transferPrice, $coverPrice, $lowSeasonPercent
             ),
             'currency_idr' => [
                 'total_price'   => $finalTotalIDR,
                 'price_per_pax' => $perPaxIDR,
                 'breakdown'     => [
+                    'original_boat_base_price' => $originalBasePrice,
+                    'low_season_percent'       => $lowSeasonPercent,
+                    'low_season_discount'      => $lowSeasonDiscount,
                     'boat_base_price' => $boatBasePrice,
                     'transfer'        => $transferPrice,
                     'insurance'       => $coverPrice,
@@ -632,6 +631,9 @@ class ChatbotControllerV2 extends Controller
                 'total_price'   => $finalTotalUSD,
                 'price_per_pax' => $perPaxUSD,
                 'breakdown'     => [
+                    'original_boat_base_price' => round($originalBasePrice * $usdRate),
+                    'low_season_percent'       => $lowSeasonPercent,
+                    'low_season_discount'      => round($lowSeasonDiscount * $usdRate),
                     'boat_base_price' => round($boatBasePrice * $usdRate),
                     'transfer'        => round($transferPrice  * $usdRate),
                     'insurance'       => round($coverPrice     * $usdRate),
@@ -646,6 +648,7 @@ class ChatbotControllerV2 extends Controller
                 'adults'    => $adults,
                 'kids'      => $kids,
                 'guests'    => $guests,
+                'low_season' => $lowSeasonPercent > 0 ? $priceQuote['low_season'] : null,
             ],
         ]);
     }
@@ -694,12 +697,14 @@ class ChatbotControllerV2 extends Controller
 
         $available   = [];
         $unavailable = [];
+        $lowSeasonByTour = $this->lowSeasonPercentsOn($date);
 
         foreach ([
             ...$this->privateTourAvailability($date, $tourId, $guests),
             ...$this->sharedTourAvailability($date, $tourId, $guests),
         ] as $row) {
             if ($row['available']) {
+                $row['data']['low_season_percent'] = $lowSeasonByTour[(int) $row['data']['tour_id']] ?? 0;
                 $available[] = $row['data'];
             } else {
                 $unavailable[] = $row['data'];
@@ -711,6 +716,58 @@ class ChatbotControllerV2 extends Controller
             'date'        => $date,
             'available'   => $available,
             'unavailable' => $unavailable,
+            'updated_at'  => Carbon::now()->toISOString(),
+        ]);
+    }
+
+    // [tour_id => max low season %] для активных правил на дату
+    private function lowSeasonPercentsOn(string $date): array
+    {
+        $map = [];
+        $rules = LowSeason::with('tours')->activeOn($date)->where('percent', '>', 0)->get();
+        foreach ($rules as $rule) {
+            foreach ($rule->tours as $t) {
+                $map[(int) $t->id] = max($map[(int) $t->id] ?? 0, min(90, (int) $rule->percent));
+            }
+        }
+        return $map;
+    }
+
+    // ─── GET /api/v2/chatbot/low-season ──────────────────────────────────────
+    // Активные и будущие low season скидки (date_end >= сегодня, Bali time) с турами
+    // сайта (source_id=1, не disabled). Для ответа на "есть ли сейчас скидки?".
+
+    public function getLowSeasons(Request $request)
+    {
+        $this->corsHeaders();
+        if (!$this->authenticate($request)) return $this->unauthorized();
+
+        $today = Carbon::now('Asia/Makassar')->format('Y-m-d');
+
+        $rules = LowSeason::with('tours')
+            ->upcoming($today)
+            ->where('percent', '>', 0)
+            ->orderBy('date_start')
+            ->get();
+
+        $items = $rules->map(fn($rule) => [
+            'name'       => $rule->name,
+            'date_start' => TourPricing::day($rule->date_start),
+            'date_end'   => TourPricing::day($rule->date_end),
+            'percent'    => min(90, (int) $rule->percent),
+            'tours'      => $rule->tours
+                ->filter(fn($t) => (int) $t->source_id === 1 && $t->status !== 'disabled')
+                ->map(fn($t) => [
+                    'tour_id' => $t->id,
+                    'name'    => $t->name,
+                    'type'    => (int) $t->types_id === 2 ? 'private' : 'shared',
+                ])->values(),
+        ])->filter(fn($i) => $i['tours']->isNotEmpty())->values();
+
+        return response()->json([
+            'success'     => true,
+            'low_seasons' => $items,
+            'note'        => 'Discount applies to the tour price only (tour + boat for private). Transfer, insurance and extras are full price.',
             'updated_at'  => Carbon::now()->toISOString(),
         ]);
     }
@@ -976,8 +1033,11 @@ class ChatbotControllerV2 extends Controller
         int $adults, int $kids, int $guests, ?string $date,
         string $pickupAddress, string $dropoffAddress, int $cars,
         string $customerName, string $customerEmail, string $customerPhone, string $externalId,
-        float $boatBasePrice, float $transferPrice, float $coverPrice
+        float $boatBasePrice, float $transferPrice, float $coverPrice, int $lowSeasonPercent = 0
     ): array {
+        // $boatBasePrice здесь — полная цена (без low season); в price строки тура уходит цена
+        // УЖЕ со скидкой, discount = 0 (как в OdooService::addOrderLines)
+        $tourLinePrice = $boatBasePrice - TourPricing::discountAmount((int) round($boatBasePrice), $lowSeasonPercent);
         $company      = $boat?->company;
         $isShared     = (int) $tour->types_id === 1;
         // x_studio_route_new / x_studio_lunch are Odoo "selection" fields — the value
@@ -1043,16 +1103,17 @@ class ChatbotControllerV2 extends Controller
         if ($tour->odoo_id) {
             if ($isShared) {
                 $qty   = $guests;
-                $price = $guests > 0 ? round($boatBasePrice / $guests, 2) : 0.0;
+                $price = $guests > 0 ? round($tourLinePrice / $guests, 2) : 0.0;
             } else {
                 $qty   = 1;
-                $price = (float) $boatBasePrice;
+                $price = (float) $tourLinePrice;
             }
             $lines[] = [
                 'label'      => 'tour',
                 'product_id' => (int) $tour->odoo_id,
                 'qty'        => $qty,
                 'price'      => $price,
+                'discount'   => 0.0,
             ];
         }
 

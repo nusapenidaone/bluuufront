@@ -65,7 +65,13 @@ class Tours extends Model
             'pivotModel' => ToursBoatPivot::class
         ],
         'category' => [Category::class, 'table' => 'noren_booking_tours_category'],
-        
+        'lowseasons' => [
+            LowSeason::class,
+            'table'    => 'noren_booking_lowseason_tours',
+            'key'      => 'tours_id',
+            'otherKey' => 'lowseason_id',
+        ],
+
         'similar' => [
             Tours::class,
             'table'    => 'noren_booking_tours_similar',

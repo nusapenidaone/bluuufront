@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Cover;
@@ -196,27 +197,10 @@ class AccountController extends Controller
         $isPrivate = in_array((int) $order->tours?->classes_id, [8]);
 
         // ── Recalculate tour price ────────────────────────────────────────────
-        $tour = $order->tours;
-        $tour->loadMissing(['packages', 'pricesbydates.packages']);
-        $pricelist = $tour->packages?->pricelist ?? [];
-
-        if ($order->travel_date && $tour->pricesbydates->isNotEmpty()) {
-            $seasonal = $tour->pricesbydates->first(
-                fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
-            );
-            if ($seasonal?->packages?->pricelist) {
-                $pricelist = $seasonal->packages->pricelist;
-            }
-        }
-
-        $tierPrice = 0;
-        if (!empty($pricelist)) {
-            $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-            $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-            $tierPrice = (int) ($entry['price'] ?? 0);
-        }
-
-        $boatPrice = $isPrivate ? (int) ($tour->boat_price ?? 0) : 0;
+        // tour_price / boat_price — уже с low season скидкой (если активна на дату тура)
+        $quote     = TourPricing::quote($order->tours, $order->travel_date, $members, $isPrivate);
+        $tierPrice = $quote['tour_price'];
+        $boatPrice = $quote['boat_price_final'];
 
         // ── Transfer ──────────────────────────────────────────────────────────
         $transfer      = null;
@@ -265,6 +249,8 @@ class AccountController extends Controller
         $order->extras_total   = $extrasTotal;
         $order->total_price    = $fullPrice;
         $order->full_price     = $fullPrice;
+        $order->lowseason_percent  = $quote['percent'];
+        $order->lowseason_discount = $quote['discount'];
         $order->saveQuietly();
 
         // ── Recreate Odoo order ───────────────────────────────────────────────
@@ -287,6 +273,8 @@ class AccountController extends Controller
                 'cover_price'    => $coverPrice,
                 'extras_total'   => $extrasTotal,
                 'full_price'     => $fullPrice,
+                'lowseason_percent'  => $quote['percent'],
+                'lowseason_discount' => $quote['discount'],
             ],
         ]);
     }

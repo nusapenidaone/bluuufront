@@ -15,6 +15,7 @@ use Noren\Booking\Models\Route;
 use Noren\Booking\Maps\GoogleMapsService;
 
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 
@@ -133,33 +134,25 @@ class PrivateOrderController extends Controller
         $order->discount_price = $data['discountPrice'] ?? 0;
         $order->discount       = $data['discount']      ?? 0;
 
+        $tourForPricing = Tours::find($data['tourId']);
+        $members        = (int) ($order->members ?? 0);
+        $quote          = ($tourForPricing && $members > 0)
+            ? TourPricing::quote($tourForPricing, $order->travel_date, $members, true)
+            : null;
+
         // Partner boat request (deposite=0): frontend sends 0 prices — calculate server-side
-        if ($order->status_id == 4 && $order->tour_price == 0) {
-            $tourForPricing = Tours::with(['packages', 'pricesbydates.packages'])->find($data['tourId']);
-            if ($tourForPricing) {
-                $pricelist = $tourForPricing->packages?->pricelist ?? [];
-                if ($order->travel_date && $tourForPricing->pricesbydates->isNotEmpty()) {
-                    $seasonal = $tourForPricing->pricesbydates->first(
-                        fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
-                    );
-                    if ($seasonal?->packages?->pricelist) {
-                        $pricelist = $seasonal->packages->pricelist;
-                    }
-                }
-                $members = (int) ($order->members ?? 0);
-                $tierPrice = 0;
-                if (!empty($pricelist) && $members > 0) {
-                    $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-                    $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-                    $tierPrice = (int) ($entry['price'] ?? 0);
-                }
-                $boatPrice = (int) ($tourForPricing->boat_price ?? 0);
-                $order->tour_price  = $tierPrice;
-                $order->boat_price  = $boatPrice;
-                $order->total_price = $tierPrice + $boatPrice;
-                $order->full_price  = $tierPrice + $boatPrice;
-            }
+        if ($order->status_id == 4 && $order->tour_price == 0 && $tourForPricing) {
+            $tierPrice = $quote['tier_price'] ?? 0;
+            $boatPrice = (int) ($tourForPricing->boat_price ?? 0);
+            $order->tour_price  = $tierPrice;
+            $order->boat_price  = $boatPrice;
+            $order->total_price = $tierPrice + $boatPrice;
+            $order->full_price  = $tierPrice + $boatPrice;
         }
+
+        // ── Low season (server-authoritative only while a discount is active) ──
+        // Без активной скидки цену, присланную фронтом, не трогаем (как раньше).
+        $this->applyLowSeason($order, $quote);
 
         // ── Apply server-authoritative pickup transfer price ────────────
         if ($serverTransferPrice !== null && $serverTransferPrice !== (int) $order->transfer_price) {
@@ -209,6 +202,31 @@ class PrivateOrderController extends Controller
             \Log::error('PrivateOrderController error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Low season: если на дату тура есть активная скидка — сервер сам выставляет
+     * tour_price/boat_price со скидкой и переносит разницу в total_price/full_price.
+     * Transfer/cover/extras не затрагиваются.
+     */
+    private function applyLowSeason(Order $order, ?array $quote): void
+    {
+        $order->lowseason_percent  = 0;
+        $order->lowseason_discount = 0;
+
+        if (!$quote || !$quote['has_pricelist'] || $quote['percent'] <= 0) {
+            return;
+        }
+
+        $clientTourBoat = (int) $order->tour_price + (int) $order->boat_price;
+        $delta          = $quote['total'] - $clientTourBoat;
+
+        $order->tour_price         = $quote['tour_price'];
+        $order->boat_price         = $quote['boat_price_final'];
+        $order->total_price        = (int) $order->total_price + $delta;
+        $order->full_price         = (int) $order->full_price + $delta;
+        $order->lowseason_percent  = $quote['percent'];
+        $order->lowseason_discount = $quote['discount'];
     }
 
     /**

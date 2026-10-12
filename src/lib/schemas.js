@@ -44,11 +44,19 @@ export function schemaArticle(post, slug, { wordCount, readTime } = {}) {
     "image": post.cover || "https://bluuu.tours/storage/app/media/poster.webp",
     "datePublished": post.created_at || "",
     "dateModified": post.updated_at || post.created_at || "",
-    "author": {
-      "@type": "Organization",
-      "name": "Bluuu Tours",
-      "url": BASE_URL,
-    },
+    "author": post.author?.name
+      ? {
+          "@type": "Person",
+          "name": post.author.name,
+          ...(post.author.title ? { "jobTitle": post.author.title } : {}),
+          ...(post.author.avatar ? { "image": post.author.avatar } : {}),
+          "worksFor": { "@type": "Organization", "name": "Bluuu Tours" },
+        }
+      : {
+          "@type": "Organization",
+          "name": "Bluuu Tours",
+          "url": BASE_URL,
+        },
     "publisher": {
       "@type": "Organization",
       "name": "Bluuu Tours",

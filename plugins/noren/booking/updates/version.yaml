@@ -781,3 +781,12 @@ v1.0.260:
 v1.0.261:
     - 'Updated table noren_booking_transfer: add long_distance_price'
     - builder_table_update_noren_booking_transfer_9.php
+v1.0.262:
+    - 'Created table noren_booking_lowseason'
+    - builder_table_create_noren_booking_lowseason.php
+v1.0.263:
+    - 'Created table noren_booking_lowseason_tours'
+    - builder_table_create_noren_booking_lowseason_tours.php
+v1.0.264:
+    - 'Updated table noren_booking_order: add lowseason_percent, lowseason_discount'
+    - builder_table_update_noren_booking_order_31.php

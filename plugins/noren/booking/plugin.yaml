@@ -15,6 +15,7 @@ navigation:
             - noren.booking.access_category
             - noren.booking.access_classes
             - noren.booking.access_packages
+            - noren.booking.access_lowseason
             - noren.booking.access_badge
             - noren.booking.access_included
             - noren.booking.access_includes
@@ -63,6 +64,12 @@ navigation:
                 icon: icon-money
                 permissions:
                     - noren.booking.access_packages
+            side-menu-item22:
+                label: 'Low Season'
+                url: noren/booking/lowseason
+                icon: icon-percent
+                permissions:
+                    - noren.booking.access_lowseason
             side-menu-item14:
                 label: Badge
                 url: noren/booking/badge
@@ -310,6 +317,9 @@ permissions:
     access_pricesbydates:
         tab: 'Booking: Tours'
         label: 'Price Packages by Dates'
+    access_lowseason:
+        tab: 'Booking: Tours'
+        label: 'Low Season discounts'
     access_badge:
         tab: 'Booking: Tours'
         label: Badge

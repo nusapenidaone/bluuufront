@@ -7,11 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Log;
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
+use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Restaurant;
 use Noren\Booking\Models\Route;
 use Noren\Booking\Models\Tours;
@@ -115,7 +117,7 @@ class CabinetController extends Controller
         // Reuse the same tour resolved above (do NOT re-derive it from Odoo
         // product_id here — that was the bug: it could disagree with detectTourType
         // and pick an unrelated tour, since many local Tours rows share one odoo_id).
-        $tour = Tours::with(['included', 'includes', 'packages', 'pricesbydates.packages'])->find($toursId);
+        $tour = Tours::with(['included', 'includes', 'packages', 'pricesbydates.packages', 'lowseasons'])->find($toursId);
         $tourName  = $tour->name ?? null;
         $tourImage = null;
         if ($tour) {
@@ -359,6 +361,10 @@ class CabinetController extends Controller
                     : ($odooOrder['x_studio_route_new'] ?? null),
                 'extras'          => $currentExtras,
                 'tour_odoo_type'  => isset($tour) ? ($tour->odoo_type ?? null) : null,
+                // Odoo product id of the tour line — lets the cabinet find the tour line (low season discount)
+                'tour_odoo_id'    => isset($tour) && $tour->odoo_id ? (int) $tour->odoo_id : null,
+                // Low season % зафиксированный на заказе (price_unit строки тура в Odoo уже со скидкой)
+                'lowseason_percent' => (int) (Order::where('odoo_id', $odooId)->value('lowseason_percent') ?? 0),
                 'source_id'       => isset($tour) ? (int) $tour->source_id : null,
             ],
             'odoo' => [
@@ -677,14 +683,16 @@ class CabinetController extends Controller
             if ($dateChanged || $membersChanged) {
                 $allTourOdooIds = Tours::whereNotNull('odoo_id')
                     ->pluck('odoo_id')->map(fn($v) => (int) $v)->toArray();
-                $tourLineId     = null;
-                $tourLineOdooId = null;
+                $tourLineId       = null;
+                $tourLineOdooId   = null;
+                $tourLineDiscount = 0.0;
                 foreach ($odooOrder['lines'] ?? [] as $line) {
                     $lpid = $line['product_id'] ?? null;
                     if (is_array($lpid)) $lpid = (int) $lpid[0];
                     if ($lpid && in_array($lpid, $allTourOdooIds) && (int) ($line['product_uom_qty'] ?? 0) > 0) {
-                        $tourLineId     = $line['id'];
-                        $tourLineOdooId = $lpid;
+                        $tourLineId       = $line['id'];
+                        $tourLineOdooId   = $lpid;
+                        $tourLineDiscount = (float) ($line['discount'] ?? 0);
                         break;
                     }
                 }
@@ -701,41 +709,50 @@ class CabinetController extends Controller
                                 : null
                         );
 
-                        $pricelist = $localTour->packages?->pricelist ?? [];
-                        if ($newTravelDate && $localTour->pricesbydates->isNotEmpty()) {
-                            $seasonal = $localTour->pricesbydates->first(
-                                fn($p) => $newTravelDate >= $p->date_start && $newTravelDate <= $p->date_end
-                            );
-                            if ($seasonal?->packages?->pricelist) {
-                                $pricelist = $seasonal->packages->pricelist;
-                            }
-                        }
+                        $isPrivateTour = (int) $localTour->types_id === 2;
+                        $quote = TourPricing::quote($localTour, $newTravelDate, $members, $isPrivateTour);
 
-                        $tourPrice = null;
-                        if (!empty($pricelist)) {
-                            $entry = collect($pricelist)->sortByDesc('members_count')
-                                ->first(fn($e) => $members >= (int) ($e['members_count'] ?? 0));
-                            if (!$entry) {
-                                $entry = collect($pricelist)->sortBy('members_count')->first();
+                        if ($quote['has_pricelist']) {
+                            // Low season % для новой цены:
+                            //  - на дату есть активная скидка → она;
+                            //  - перенос даты без скидки → 0;
+                            //  - смена только людей без скидки на дату → % зафиксированный на заказе
+                            //    (заказ мог быть сделан, пока правило действовало).
+                            $localOrder = Order::where('odoo_id', $odooId)->first();
+                            if ($quote['percent'] > 0) {
+                                $lsPercent = (int) $quote['percent'];
+                            } elseif ($dateChanged) {
+                                $lsPercent = 0;
+                            } else {
+                                $lsPercent = (int) ($localOrder->lowseason_percent ?? 0) ?: (int) round($tourLineDiscount);
                             }
-                            $tourPrice = isset($entry) ? (int) ($entry['price'] ?? 0) : null;
-                        }
+                            $lsDiscount = TourPricing::discountAmount((int) $quote['original'], $lsPercent);
+                            $tourTotal  = $quote['original'] - $lsDiscount;
 
-                        if ($tourPrice !== null) {
-                            if ((int) $localTour->types_id === 2) {
+                            // price_unit — цена УЖЕ со скидкой; discount строки всегда 0
+                            if ($isPrivateTour) {
                                 // private: qty=1, price = tour_price + boat_price
-                                $boatPrice = (int) ($localTour->boat_price ?? 0);
-                                OdooService::writeOrderLine($tourLineId, [
+                                $lineVals = [
                                     'product_uom_qty' => 1,
-                                    'price_unit'      => (float) ($tourPrice + $boatPrice),
-                                ]);
+                                    'price_unit'      => (float) $tourTotal,
+                                    'discount'        => 0.0,
+                                ];
                             } else {
                                 // shared: qty=members, price per person
-                                $pricePerPerson = $members > 0 ? $tourPrice / $members : 0;
-                                OdooService::writeOrderLine($tourLineId, [
+                                $pricePerPerson = $members > 0 ? $tourTotal / $members : 0;
+                                $lineVals = [
                                     'product_uom_qty' => max(1, $members),
                                     'price_unit'      => round((float) $pricePerPerson, 2),
-                                ]);
+                                    'discount'        => 0.0,
+                                ];
+                            }
+
+                            OdooService::writeOrderLine($tourLineId, $lineVals);
+
+                            if ($localOrder && ((int) $localOrder->lowseason_percent !== $lsPercent || (int) $localOrder->lowseason_discount !== $lsDiscount)) {
+                                $localOrder->lowseason_percent  = $lsPercent;
+                                $localOrder->lowseason_discount = $lsDiscount;
+                                $localOrder->saveQuietly();
                             }
                         }
                     }
@@ -912,15 +929,7 @@ class CabinetController extends Controller
     private function buildPricelist(?object $tour, ?string $travelDate): array
     {
         if (!$tour) return [];
-        $pricelist = $tour->packages?->pricelist ?? [];
-        if ($travelDate && $tour->pricesbydates->isNotEmpty()) {
-            $seasonal = $tour->pricesbydates->first(
-                fn($p) => $travelDate >= $p->date_start && $travelDate <= $p->date_end
-            );
-            if ($seasonal?->packages?->pricelist) {
-                $pricelist = $seasonal->packages->pricelist;
-            }
-        }
+        $pricelist = TourPricing::pricelistFor($tour, $travelDate);
         return array_values(array_map(fn($e) => [
             'members_count' => (int) ($e['members_count'] ?? 0),
             'price'         => (int) ($e['price'] ?? 0),
@@ -946,6 +955,10 @@ class CabinetController extends Controller
                 'date_end'   => $p->date_end,
                 'pricelist'  => $mapEntries($p->packages?->pricelist ?? []),
             ])->values(),
+            // Low season: pricelist выше — БЕЗ скидки. Скидка (%) применяется к tier price
+            // (+ boat_price для private) если дата попадает в интервал; при пересечении — max %.
+            'boat_price'  => (int) $tour->types_id === 2 ? (int) ($tour->boat_price ?? 0) : 0,
+            'low_seasons' => TourPricing::lowSeasonsFor($tour),
         ];
     }
 

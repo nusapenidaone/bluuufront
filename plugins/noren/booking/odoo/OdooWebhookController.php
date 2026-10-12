@@ -118,29 +118,52 @@ class OdooWebhookController extends Controller
 
     public function handleProductPrice(Request $request)
     {
+        // Raw request is logged before anything else (incl. auth) — so we always see what Odoo sent
+        $this->priceLog('info', 'request', [
+            'ip'           => $request->ip(),
+            'method'       => $request->method(),
+            'url'          => $request->url(),
+            'user_agent'   => $request->header('User-Agent'),
+            'content_type' => $request->header('Content-Type'),
+            'raw_body'     => $request->getContent(),
+            'input'        => array_diff_key(Input::all(), ['key' => true]),
+        ]);
+
         $cfg = require __DIR__ . '/services.config.php';
         $key = $cfg['odoo_webhook_key'] ?? null;
         if (!$key || $request->get('key') !== $key) {
+            $this->priceLog('warning', 'unauthorized', ['ip' => $request->ip()]);
             return response()->json(['ok' => false, 'error' => 'Unauthorized'], 401);
         }
 
-        $payload = Input::all();
+        $payload = array_diff_key(Input::all(), ['key' => true]);
         $items   = $this->normalizeProductPayload($payload);
 
         $updated = [];
         $skipped = [];
 
         foreach ($items as $item) {
-            $price = $item['price'] ?? $item['lst_price'] ?? $item['list_price'] ?? $item['price_extra'] ?? null;
+            $isPtav = $this->isPtavItem($item);
+            [$priceKey, $price] = $this->extractPrice($item, $isPtav);
+
+            $ctx = [
+                'model'     => $item['_model'] ?? null,
+                'item_id'   => $item['id'] ?? $item['_id'] ?? null,
+                'price_key' => $priceKey,
+                'price'     => $price,
+            ];
 
             if ($price === null || !is_numeric($price)) {
-                $skipped[] = $item;
+                $skipped[] = ['item_id' => $ctx['item_id'], 'reason' => 'no price'];
+                $this->priceLog('warning', 'skip: no price', $ctx + ['item' => $item]);
                 continue;
             }
 
-            $candidateIds = $this->extractCandidateOdooIds($item);
+            $candidateIds = $this->extractCandidateOdooIds($item, $isPtav);
+            $ctx['candidates'] = $candidateIds;
             if (!$candidateIds) {
-                $skipped[] = $item;
+                $skipped[] = ['item_id' => $ctx['item_id'], 'reason' => 'no candidate ids'];
+                $this->priceLog('warning', 'skip: no candidate ids', $ctx + ['item' => $item]);
                 continue;
             }
 
@@ -154,41 +177,101 @@ class OdooWebhookController extends Controller
 
             if (!$extra) {
                 $skipped[] = ['candidates' => $candidateIds, 'reason' => 'extra not found'];
+                $this->priceLog('info', 'skip: extra not found', $ctx);
                 continue;
             }
 
-            $extra->price = (float) $price;
+            $oldPrice = (float) $extra->price;
+            $newPrice = (float) $price;
+            $ctx += [
+                'extra_id'   => $extra->id,
+                'extra_name' => $extra->name,
+                'odoo_id'    => $extra->odoo_id,
+                'old_price'  => $oldPrice,
+                'new_price'  => $newPrice,
+            ];
+
+            // Never wipe a real price with 0 — Odoo fires this on any ptav write, often with price_extra=0.0
+            if ($newPrice <= 0 && $oldPrice > 0) {
+                $skipped[] = ['extra_id' => $extra->id, 'odoo_id' => $extra->odoo_id, 'reason' => 'zero_price_guard'];
+                $this->priceLog('warning', 'skip: zero_price_guard', $ctx);
+                continue;
+            }
+
+            if ($newPrice == $oldPrice) {
+                $skipped[] = ['extra_id' => $extra->id, 'odoo_id' => $extra->odoo_id, 'reason' => 'unchanged'];
+                $this->priceLog('info', 'skip: unchanged', $ctx);
+                continue;
+            }
+
+            $extra->price = $newPrice;
             $extra->saveQuietly();
 
-            $updated[] = ['odoo_id' => $extra->odoo_id, 'extra_id' => $extra->id, 'price' => $extra->price];
-        }
-
-        if ($skipped) {
-            Log::warning('Odoo product price webhook — skipped items: ' . json_encode($skipped));
+            $updated[] = ['odoo_id' => $extra->odoo_id, 'extra_id' => $extra->id, 'old_price' => $oldPrice, 'price' => $extra->price];
+            $this->priceLog('info', 'updated', $ctx);
         }
 
         return response()->json(['ok' => true, 'updated' => $updated, 'skipped' => $skipped]);
     }
 
+    // Dedicated log: storage/logs/odoo-product-price.log (one JSON line per entry).
+    // Warnings/errors are duplicated into the standard system log.
+    protected function priceLog(string $level, string $message, array $context = []): void
+    {
+        $line = json_encode([
+            'time'    => Carbon::now('Asia/Makassar')->format('Y-m-d H:i:s'),
+            'level'   => $level,
+            'message' => $message,
+            'context' => $context,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        @file_put_contents(storage_path('logs/odoo-product-price.log'), $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+
+        if ($level !== 'info') {
+            Log::$level('[Odoo product-price] ' . $message, $context);
+        }
+    }
+
+    protected function isPtavItem(array $item): bool
+    {
+        return ($item['_model'] ?? null) === 'product.template.attribute.value'
+            || array_key_exists('ptav_product_variant_ids', $item)
+            || array_key_exists('price_extra', $item);
+    }
+
+    // ptav → only `price_extra`. product.product → `lst_price` / `list_price`, then `price`
+    // (`price` is computed from pricelist context in Odoo and is usually 0 without it).
+    protected function extractPrice(array $item, bool $isPtav): array
+    {
+        $keys = $isPtav ? ['price_extra'] : ['lst_price', 'list_price', 'price'];
+        foreach ($keys as $key) {
+            if (array_key_exists($key, $item) && $item[$key] !== null && $item[$key] !== false) {
+                return [$key, $item[$key]];
+            }
+        }
+        return [null, null];
+    }
+
     // Extras.odoo_id is expected to be a product.product (variant) id — the same id
     // used as `product_id` when building sale.order.line (see OdooService::buildOrderLines).
-    // The webhook usually fires on `product.template.attribute.value` (see docs/extras-price-sync.md),
-    // whose own `id` is unrelated to the product. Try, in priority order:
-    //   1. `ptav_product_variant_ids` — the actual product.product variant id(s) this value applies to
-    //   2. `product_tmpl_id` — the product.template id, in case Extras.odoo_id was set up against that instead
-    //   3. `id` / `product_id` / `odoo_id` — plain top-level id (covers a direct product.product webhook)
-    protected function extractCandidateOdooIds(array $item): array
+    // ptav (`product.template.attribute.value`): ONLY `ptav_product_variant_ids` — the record's own `id`
+    // and `product_tmpl_id` belong to other id spaces and can accidentally match an unrelated Extras.odoo_id.
+    // Other models (direct product.product webhook): `id` / `product_id` / `odoo_id`, then `product_tmpl_id`.
+    protected function extractCandidateOdooIds(array $item, bool $isPtav): array
     {
         $ids = [];
 
-        $variantIds = $item['ptav_product_variant_ids'] ?? null;
-        if (is_array($variantIds)) {
-            foreach ($variantIds as $variantId) {
-                $ids[] = (int) (is_array($variantId) ? ($variantId[0] ?? 0) : $variantId);
+        if ($isPtav) {
+            $variantIds = $item['ptav_product_variant_ids'] ?? null;
+            if (is_array($variantIds)) {
+                foreach ($variantIds as $variantId) {
+                    $ids[] = (int) (is_array($variantId) ? ($variantId[0] ?? 0) : $variantId);
+                }
             }
+            return array_values(array_unique(array_filter($ids)));
         }
 
-        foreach (['product_tmpl_id', 'id', 'product_id', 'odoo_id'] as $key) {
+        foreach (['id', 'product_id', 'odoo_id', 'product_tmpl_id'] as $key) {
             if (!empty($item[$key])) {
                 $value = $item[$key];
                 $ids[] = (int) (is_array($value) ? ($value[0] ?? 0) : $value);
@@ -200,10 +283,15 @@ class OdooWebhookController extends Controller
 
     // Odoo may send a single record `{...}`, a batch under `records: [...]`,
     // or a bare list `[{...}, {...}]` — normalize all of these to a flat array.
+    // Top-level `_model` is propagated into batch items so ptav detection works per item.
     protected function normalizeProductPayload(array $payload): array
     {
         if (isset($payload['records']) && is_array($payload['records'])) {
-            return $payload['records'];
+            $model = $payload['_model'] ?? null;
+            return array_map(
+                fn($item) => is_array($item) && $model && !isset($item['_model']) ? $item + ['_model' => $model] : $item,
+                array_filter($payload['records'], 'is_array')
+            );
         }
 
         if (array_is_list($payload) && isset($payload[0]) && is_array($payload[0])) {

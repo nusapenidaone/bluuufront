@@ -178,6 +178,20 @@ tabs:
             spanClass: col-lg-2
             disabled: true
             tab: Main
+        lowseason_percent:
+            label: 'Low season (%)'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        lowseason_discount:
+            label: 'Low season discount'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
         total_price:
             label: Total
             span: row

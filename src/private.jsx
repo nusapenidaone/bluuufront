@@ -39,11 +39,14 @@ import {
   getAvailableDatesForRange,
   useImagePreload,
   setGlobalFormatPrice,
-  calculateBoatPrice,
-  useBoatPricing,
   usePricing,
-  getFlashSaleForDate
+  getFlashSaleForDate,
+  useBoatPricingDetailed,
+  withBoatPrice,
+  applyLowSeason,
+  maxLowSeasonPercent
 } from "./components/booking/utils";
+import { LowSeasonBadge, OldPrice } from "./components/booking/LowSeasonBadge";
 
 
 function SkeletonCard() {
@@ -2603,8 +2606,7 @@ function StepTwo({
     (date) => {
       if (!date) return;
       const rawBoat = (boats || []).find((b) => b.id === inlineDatesFor);
-      const price = rawBoat ? calculateBoatPrice(rawBoat.tourId, date, groupSize, privateTours) : null;
-      const boat = rawBoat ? { ...rawBoat, priceValue: price ?? rawBoat.priceValue } : null;
+      const boat = rawBoat ? withBoatPrice(rawBoat, date, groupSize, privateTours) : null;
       onSelectFlexDate(date);
       onDateSelectionPreference("pickNow");
       closePickDayMode();
@@ -2681,11 +2683,7 @@ function StepTwo({
     // Add dynamic pricing to each boat in the list
     const listWithPrices = base.map(y => {
       const dateForPricing = dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart);
-      const price = calculateBoatPrice(y.tourId, dateForPricing, groupSize, privateTours);
-      return {
-        ...y,
-        priceValue: price ?? y.priceValue
-      };
+      return withBoatPrice(y, dateForPricing, groupSize, privateTours);
     });
 
     const afterAvailability = (!hasDateCriteria || !fitsOnly)
@@ -2736,14 +2734,17 @@ function StepTwo({
     if (!hasDateCriteria) return [];
     const baseList = [...(boats || [])];
     const base = fitsOnly ? baseList.filter((y) => groupSize <= y.people) : baseList;
-    return base.filter((y) => {
-      const availability = availabilityByBoat?.[y.id];
-      if (dateMode === "exact") {
+    const dateForPricing = dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart);
+    return base
+      .filter((y) => {
+        const availability = availabilityByBoat?.[y.id];
         return availability && !availability.available;
-      }
-      return availability && !availability.available;
-    });
-  }, [availabilityByBoat, dateMode, fitsOnly, groupSize, hasDateCriteria]);
+      })
+      .map((y) => {
+        // Same pricing as `list` (tier + boat_price), otherwise unavailable cards show tier only
+        return withBoatPrice(y, dateForPricing, groupSize, privateTours);
+      });
+  }, [availabilityByBoat, dateMode, fitsOnly, groupSize, hasDateCriteria, boats, exactDate, selectedFlexDate, rangeStart, privateTours]);
   const dateSummary = !hasDateCriteria
     ? ""
     : dateMode === "exact" && exactDate
@@ -2767,8 +2768,7 @@ function StepTwo({
       // Exact date selected - select immediately and show confirm modal
       onSelectBoatId(boat.id);
       const rawBoat = (boats || []).find((b) => b.id === boat.id);
-      const price = rawBoat ? calculateBoatPrice(rawBoat.tourId, exactDate, groupSize, privateTours) : null;
-      const boatWithPrice = rawBoat ? { ...rawBoat, priceValue: price ?? rawBoat.priceValue } : null;
+      const boatWithPrice = rawBoat ? withBoatPrice(rawBoat, exactDate, groupSize, privateTours) : null;
       if (boatWithPrice) {
         setConfirmModalData({ boat: boatWithPrice, date: exactDate, adults, kids, routeTitle: selectedStyleTitle });
         const _numItems = (adults || 0) + (kids || 0);
@@ -2842,11 +2842,8 @@ function StepTwo({
     const boatDescriptionText = sanitizeDisplayText(boat.description, { stripTrailingOne: true });
     const hasBoatDescription = Boolean(boatDescriptionText);
 
-    let draftPriceValue = boat.priceValue;
-    if (draftDate && typeof calculateBoatPrice === 'function' && privateTours) {
-      const p = calculateBoatPrice(boat.tourId, draftDate, groupSize, privateTours);
-      if (p !== null) draftPriceValue = p;
-    }
+    const draftBoat = draftDate && privateTours ? withBoatPrice(boat, draftDate, groupSize, privateTours) : boat;
+    const draftPriceValue = draftBoat.priceValue;
 
     const flashSaleDate = draftDate || (dateMode === "exact" ? exactDate : "");
     const isFlashSale = flashSaleDate ? getFlashSaleForDate(boat.tourId, flashSaleDate, privateTours) : false;
@@ -2974,9 +2971,15 @@ function StepTwo({
                           </span>
                         </div>
                       )}
+                      {!isLocked && boat.id !== "angels" && draftBoat.priceOriginal ? (
+                        <div className="mb-1">
+                          <LowSeasonBadge percent={draftBoat.lowSeasonPercent} upTo={draftBoat.lowSeasonUpTo} />
+                        </div>
+                      ) : null}
                       {showFrom && <span className="text-xs leading-tight font-semibold uppercase tracking-wide text-secondary-400 leading-none mb-0.5">From</span>}
-                      <div className="flex items-baseline gap-x-1">
-                        <span className="text-xl font-black text-secondary-900 tracking-tight">
+                      {!isLocked && boat.id !== "angels" && draftBoat.priceOriginal ? <OldPrice value={draftBoat.priceOriginal} /> : null}
+                      <div className="flex flex-wrap items-baseline gap-x-1">
+                        <span className="whitespace-nowrap text-xl font-black text-secondary-900 tracking-tight">
                           {boat.id === "angels" ? formatIDR(33000000) : formatIDR(isLocked ? (boat.gross_price || boat.priceValue) : draftPriceValue)}
                         </span>
                         <span className="text-xs font-semibold text-secondary-400">
@@ -3126,6 +3129,12 @@ function StepTwo({
                       {new Date(`${draftDate}T00:00:00`).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                     <div className="flex items-baseline gap-1.5">
+                      {boat.id !== "angels" && draftBoat.priceOriginal ? (
+                        <>
+                          <LowSeasonBadge percent={draftBoat.lowSeasonPercent} className="self-center" />
+                          <OldPrice value={draftBoat.priceOriginal} />
+                        </>
+                      ) : null}
                       <span className="text-lg font-black text-secondary-900 tracking-tight">
                         {boat.id === "angels" ? formatIDR(33000000) : formatIDR(draftPriceValue)}
                       </span>
@@ -3450,6 +3459,12 @@ function StepTwo({
                 </div>
               </div>
 
+              {confirmModalData.boat.priceOriginal ? (
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <LowSeasonBadge percent={confirmModalData.boat.lowSeasonPercent} />
+                  <OldPrice value={confirmModalData.boat.priceOriginal} />
+                </div>
+              ) : null}
               <div className="mt-2 flex items-baseline justify-center gap-1">
                 <span className="text-xl font-black tracking-tight text-secondary-900">
                   {formatIDR(confirmModalData.boat.priceValue)}
@@ -5069,6 +5084,7 @@ function StepFive({
   selectedStyleId,
   selectedExtrasSummary,
   basePrice,
+  lowSeason,
   guestFeeTotal,
   extrasSubtotalIDR,
   onReserve,
@@ -5489,8 +5505,14 @@ function StepFive({
             <div className="mt-4 space-y-3 text-sm text-secondary-600">
               <div className="flex items-center justify-between">
                 <span>Boat base price</span>
-                <span className="font-semibold text-secondary-900">{formatIDR(basePrice)}</span>
+                <span className="font-semibold text-secondary-900">{formatIDR(lowSeason ? lowSeason.original : basePrice)}</span>
               </div>
+              {lowSeason && (
+                <div className="flex items-center justify-between">
+                  <span className="text-emerald-700">Low season −{lowSeason.percent}%</span>
+                  <span className="font-semibold text-emerald-700">−{formatIDR(lowSeason.discount)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span>Extras</span>
                 <span className="font-semibold text-secondary-900">{formatIDR(extrasSubtotalIDR)}</span>
@@ -7995,12 +8017,19 @@ export default function Premium_Private_With_Vibe() {
         const entry = pricelist.find(p => Number(p.members_count) === 1) || pricelist[0];
         defaultPrice = Number(entry?.price) || 0;
       }
+      // Private price = tier + boat rental (matches calculateBoatPrice)
+      // "From" price before a date is picked: with the max upcoming low season discount
+      const lowSeasonMax = maxLowSeasonPercent(tour);
+      const fromPrice = applyLowSeason(defaultPrice, Number(tour.boat_price) || 0, lowSeasonMax);
       return {
         id: String(tour.id),
         tourId: tour.id,
         name: tour.name || "Private Boat",
         slug: tour.slug || "",
-        priceValue: defaultPrice,
+        priceValue: fromPrice.total,
+        priceOriginal: lowSeasonMax > 0 ? fromPrice.original : null,
+        lowSeasonPercent: lowSeasonMax,
+        lowSeasonUpTo: true,
         boat_price: Number(tour.boat_price) || 0,
         isPartner: !!tour.partner,
         people: tour.capacity || 1,
@@ -8196,13 +8225,16 @@ export default function Premium_Private_With_Vibe() {
       return { ...t, pricesbydates: datePricing };
     });
   }, [privateTours, selectedYacht, datePricing]);
-  const dynamicBoatPrice = useBoatPricing(
+  const dynamicBoatPricing = useBoatPricingDetailed(
     selectedYacht?.tourId,
     dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart),
     totalGuests,
     pricingTourData
   );
-  const mainBasePrice = dynamicBoatPrice ?? (selectedYacht?.priceValue || 0);
+  // Tier + boat with low season applied (same math as TourPricing::quote on the backend)
+  const dynamicBoatPrice = dynamicBoatPricing?.total ?? null;
+  const lowSeasonInfo = dynamicBoatPricing?.percent > 0 ? dynamicBoatPricing : null;
+  const mainBasePrice = dynamicBoatPrice ?? (selectedYacht?.priceOriginal || selectedYacht?.priceValue || 0);
   // If we are using dynamic pricing from the pricelist, guest fee is usually built-in.
   // Otherwise, fallback to the manual guest fee calculation.
   const guestFeeTotal = dynamicBoatPrice !== null ? 0 : totalGuests * GUEST_FEE_IDR;
@@ -8475,8 +8507,11 @@ export default function Premium_Private_With_Vibe() {
       dropoff_address: dropoffAddress,
       pickup_lat: pickupLocation?.lat != null ? String(pickupLocation.lat) : "",
       pickup_lng: pickupLocation?.lng != null ? String(pickupLocation.lng) : "",
-      boatPrice: String(selectedYacht?.boat_price ?? 0),
+      boatPrice: String(dynamicBoatPricing ? dynamicBoatPricing.boat - dynamicBoatPricing.boatDiscount : (selectedYacht?.boat_price ?? 0)),
       totalBoatPrice: String(mainBasePrice ?? 0),
+      lsPercent: String(lowSeasonInfo?.percent ?? 0),
+      lsDiscount: String(lowSeasonInfo?.discount ?? 0),
+      lsOriginal: String(lowSeasonInfo?.original ?? 0),
       guestFeeTotal: String(guestFeeTotal ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
       analyticsCurrency: "IDR",
@@ -8868,7 +8903,7 @@ export default function Premium_Private_With_Vibe() {
                 {dateMode === "exact" ? (
                   <CustomDatePicker
                     mode="single"
-                    selected={exactDate ? new Date(exactDate) : undefined}
+                    selected={exactDate ? new Date(exactDate + "T00:00:00") : undefined}
                     onSelect={(date) => {
                       if (date) {
                         const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -9003,6 +9038,7 @@ export default function Premium_Private_With_Vibe() {
               selectedStyleId={selectedStyleId}
               selectedExtrasSummary={selectedExtrasSummary}
               basePrice={mainBasePrice}
+              lowSeason={lowSeasonInfo}
               guestFeeTotal={guestFeeTotal}
               extrasSubtotalIDR={extrasSubtotalIDR}
               onOpenTourInfo={openTourInfo}
@@ -9048,6 +9084,7 @@ export default function Premium_Private_With_Vibe() {
                     onSetStep={setCheckoutStep}
                     totalPrice={totalPrice}
                     partPrice={partPrice}
+                    lowSeason={lowSeasonInfo}
                     payMode={payMode}
                     onSetPayMode={setPayMode}
                     payMethod={payMethod}
@@ -9090,6 +9127,7 @@ function StepCheckout({
   onSetStep,
   totalPrice,
   partPrice,
+  lowSeason = null,
   payMode,
   onSetPayMode,
   payMethod,
@@ -9217,6 +9255,12 @@ function StepCheckout({
 
             {step === 1 && (
               <div className="space-y-2.5">
+                {lowSeason && (
+                  <div className="flex items-center gap-2 text-xs text-secondary-500 sm:text-sm">
+                    <LowSeasonBadge percent={lowSeason.percent} />
+                    <span>Prices include −{formatIDR(lowSeason.discount)} low season discount</span>
+                  </div>
+                )}
                 <button
                   onClick={() => onSetPayMode("part")}
                   className={cn(
