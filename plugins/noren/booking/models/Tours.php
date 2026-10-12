@@ -2,6 +2,7 @@
 
 use Model;
 use System\Models\File;
+use October\Rain\Exception\ValidationException;
 /**
  * Model
  */
@@ -19,6 +20,13 @@ class Tours extends Model
      * @var array rules for validation.
      */
     public $rules = [
+        'name' => 'required',
+        'types_id' => 'required',
+        'classes_id' => 'required',
+        //'route_id' => 'required',
+        'source_id' => 'required',
+        'capacity' => 'required',
+        'odoo_id' => 'required',
     ];
     protected $jsonable = ['props', 'list', 'json'];
     
@@ -57,7 +65,13 @@ class Tours extends Model
             'pivotModel' => ToursBoatPivot::class
         ],
         'category' => [Category::class, 'table' => 'noren_booking_tours_category'],
-        
+        'lowseasons' => [
+            LowSeason::class,
+            'table'    => 'noren_booking_lowseason_tours',
+            'key'      => 'tours_id',
+            'otherKey' => 'lowseason_id',
+        ],
+
         'similar' => [
             Tours::class,
             'table'    => 'noren_booking_tours_similar',
@@ -109,6 +123,13 @@ class Tours extends Model
     }
 
 
+
+public function beforeSave()
+{
+    if ($this->exists && $this->boat()->count() === 0) {
+        throw new ValidationException(['boat' => 'Select at least one boat.']);
+    }
+}
 
 public function beforeDelete()
 {

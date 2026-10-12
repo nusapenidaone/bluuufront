@@ -30,11 +30,11 @@ export default function SEO({ title, description, image, canonical, type = "webs
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={img} />
 
-      {schema && (
-        <script type="application/ld+json">
-          {JSON.stringify(schema)}
+      {schema && (Array.isArray(schema) ? schema : [schema]).filter(Boolean).map((s, i) => (
+        <script key={i} type="application/ld+json">
+          {JSON.stringify(s)}
         </script>
-      )}
+      ))}
     </Helmet>
   );
 }

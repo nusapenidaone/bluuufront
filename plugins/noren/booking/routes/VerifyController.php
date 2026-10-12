@@ -45,10 +45,11 @@ class VerifyController extends Controller
 
 	    } elseif (str_starts_with($external_id, 'odoo_')) {
 
-	    	if ($statusValue === 'PAID') {
-	    		$odooOrderId = (int) str_replace('odoo_', '', $external_id);
+	    	if ($statusValue === 'PAID' && preg_match('/^odoo_(\d+)(?:_f(\d+))?/', $external_id, $m)) {
+	    		$odooOrderId = (int) $m[1];
+	    		$feeAmount   = (float) ($m[2] ?? 0);
 	    		$amount      = (float) $request->input('amount');
-	    		OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_xendit', $external_id);
+	    		OdooService::registerPayment($odooOrderId, $amount - $feeAmount, 'x_studio_collected_by_xendit', $external_id, $feeAmount);
 	    	}
 
 	    } else {

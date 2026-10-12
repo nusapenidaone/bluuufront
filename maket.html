@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Макет: выбор трансфера (Private)</title>
+<style>
+  :root {
+    --primary-50: #E6F4FF;
+    --primary-100: #CCE9FF;
+    --primary-200: #99D3FF;
+    --primary-600: #0073E0;
+    --primary-700: #005CB3;
+    --secondary-400: #94a3b8;
+    --secondary-500: #64748b;
+    --secondary-600: #475569;
+    --secondary-900: #0f172a;
+    --neutral-50: #FAFBFB;
+    --neutral-100: #F3F5F6;
+    --neutral-200: #E6EAEC;
+    --amber-50: #fffbeb;
+    --amber-200: #fde68a;
+    --amber-700: #b45309;
+    --red-50: #fef2f2;
+    --red-200: #fecaca;
+    --red-700: #b91c1c;
+    --green-50: #f0fdf4;
+    --green-200: #bbf7d0;
+    --green-700: #15803d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 16px;
+    background: var(--neutral-100);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--secondary-900);
+  }
+  .card {
+    max-width: 640px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--neutral-200);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+  }
+  .card-header {
+    padding: 20px 24px;
+  }
+  .card-header .title { font-size: 20px; font-weight: 700; }
+  .card-header .subtitle { font-size: 14px; color: var(--secondary-500); margin-top: 2px; }
+  .divider { border-top: 1px solid var(--neutral-200); }
+
+  .option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--neutral-100);
+    transition: background .15s;
+  }
+  .option:hover { background: var(--neutral-50); }
+  .option.selected { background: var(--primary-50); }
+  .option .icon-circle {
+    width: 52px; height: 52px; border-radius: 999px;
+    background: var(--neutral-100);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--secondary-400);
+    flex-shrink: 0;
+  }
+  .option.selected .icon-circle { color: var(--primary-600); }
+  .option .body { flex: 1; min-width: 0; }
+  .option .name { font-size: 15px; font-weight: 700; }
+  .option .desc { font-size: 13px; color: var(--secondary-500); margin-top: 2px; }
+  .option .price-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .option .price { font-size: 15px; font-weight: 600; }
+  .option .price-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--secondary-600); }
+  .detail-btn {
+    margin-top: 8px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--primary-200); background: var(--primary-50);
+    color: var(--primary-700); font-size: 12px; font-weight: 600;
+    cursor: pointer;
+  }
+  .detail-btn:hover { background: var(--primary-100); }
+  .detail-text {
+    margin-top: 8px; font-size: 13px; line-height: 1.5; color: var(--secondary-600);
+    display: none;
+  }
+  .detail-text.show { display: block; }
+  .radio {
+    width: 24px; height: 24px; border-radius: 999px; border: 2px solid var(--neutral-200);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .radio svg { width: 12px; height: 12px; opacity: 0; color: #fff; }
+  .option.selected .radio { border-color: var(--primary-600); background: var(--primary-600); }
+  .option.selected .radio svg { opacity: 1; }
+
+  .pickup-panel {
+    padding: 4px 24px 20px;
+    border-bottom: 1px solid var(--neutral-100);
+  }
+  .pickup-panel label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--secondary-600);
+    margin-bottom: 6px;
+  }
+  .address-row { display: flex; gap: 8px; position: relative; }
+  .address-row input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+  }
+  .address-row input:focus { border-color: var(--primary-600); box-shadow: 0 0 0 3px var(--primary-100); }
+  .map-btn {
+    width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--neutral-200);
+    background: #fff; flex-shrink: 0; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--secondary-500);
+  }
+  .map-btn:hover { border-color: var(--primary-200); background: var(--primary-50); color: var(--primary-600); }
+
+  .suggestions {
+    margin-top: 4px;
+    border: 1px solid var(--neutral-200);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  }
+  .suggestions .sug {
+    display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; font-size: 13px; cursor: pointer;
+    border-bottom: 1px solid var(--neutral-100);
+  }
+  .suggestions .sug:last-child { border-bottom: none; }
+  .suggestions .sug:hover { background: var(--neutral-50); }
+  .suggestions .sug svg { color: var(--primary-600); flex-shrink: 0; margin-top: 2px; }
+  .suggestions .sug .main { font-weight: 600; }
+  .suggestions .sug .sec { color: var(--secondary-500); font-size: 12px; }
+
+  .hint { margin-top: 8px; font-size: 12px; color: var(--secondary-500); }
+
+  .status-box {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: none;
+    gap: 8px;
+    align-items: center;
+  }
+  .status-box.show { display: flex; }
+  .status-box svg { flex-shrink: 0; }
+  .status-idle { background: var(--neutral-50); border: 1px solid var(--neutral-200); color: var(--secondary-600); }
+  .status-loading { background: var(--neutral-50); border: 1px solid var(--neutral-200); color: var(--secondary-600); }
+  .status-short { background: var(--green-50); border: 1px solid var(--green-200); color: var(--green-700); }
+  .status-long { background: var(--amber-50); border: 1px solid var(--amber-200); color: var(--amber-700); }
+  .status-blocked { background: var(--red-50); border: 1px solid var(--red-200); color: var(--red-700); }
+
+  .spinner {
+    width: 14px; height: 14px; border-radius: 999px;
+    border: 2px solid var(--neutral-200); border-top-color: var(--secondary-500);
+    animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .footer {
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .footer .total { font-size: 14px; color: var(--secondary-600); }
+  .footer .total b { color: var(--secondary-900); font-size: 16px; }
+  .footer .caption { display: block; font-size: 11px; color: var(--secondary-500); margin-top: 2px; }
+  .cta {
+    padding: 12px 22px;
+    border-radius: 10px;
+    border: none;
+    background: var(--primary-600);
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .cta:disabled { background: var(--neutral-200); color: var(--secondary-500); cursor: not-allowed; }
+  .footer-note { padding: 0 24px 18px; font-size: 12px; color: var(--red-700); display: none; }
+  .footer-note.show { display: block; }
+
+  /* demo-only controls for reviewing this mockup — not part of the real UI */
+  .demo {
+    max-width: 640px;
+    margin: 24px auto 0;
+    padding: 14px 20px;
+    background: #fff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+  }
+  .demo .demo-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--secondary-500); margin-bottom: 10px; }
+  .demo-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+  .demo-buttons button {
+    padding: 7px 12px; border-radius: 999px; border: 1px solid var(--neutral-200);
+    background: var(--neutral-50); font-size: 12px; cursor: pointer;
+  }
+  .demo-buttons button.active { background: var(--secondary-900); color: #fff; border-color: var(--secondary-900); }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="title">Transfer</div>
+      <div class="subtitle" id="subtitle">Optional add pickup</div>
+    </div>
+    <div class="divider"></div>
+
+    <!-- No thanks -->
+    <div class="option" data-option="none" onclick="selectOption('none')">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-8a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </div>
+      <div class="body">
+        <div class="name">No, thanks. We'll meet you there.</div>
+        <div class="desc">Self-arrival at the meeting point</div>
+      </div>
+      <div class="radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></div>
+    </div>
+
+    <!-- Private Pick up -->
+    <div class="option selected" data-option="pickup" onclick="selectOption('pickup')">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+      </div>
+      <div class="body">
+        <div class="name">Private Pick up</div>
+        <div class="price-row">
+          <span class="price" id="price-pickup">Rp 350,000</span>
+          <span class="price-tag">group price</span>
+        </div>
+        <button class="detail-btn" onclick="toggleDetail(event, 'pickup')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          See full description
+        </button>
+        <div class="detail-text" id="detail-pickup">Book your transfer with us for a smooth trip! If you come on your own, you can take an online taxi (Go-Jek or Grab) to Serangan in the morning. But for the return, online taxis are not allowed by local government. You’ll need a local taxi, which is very expensive. It’s best to book your return transfer in advance with us!</div>
+      </div>
+      <div class="radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></div>
+    </div>
+
+    <!-- Pickup address panel — lives right under "Private Pick up", shown only when this row is selected -->
+    <div class="pickup-panel" id="panel-pickup" style="display:none"></div>
+
+    <!-- Pickup & Dropoff -->
+    <div class="option" data-option="pickupdropoff" onclick="selectOption('pickupdropoff')">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>
+      </div>
+      <div class="body">
+        <div class="name">Private Pick up &amp; Drop off</div>
+        <div class="price-row">
+          <span class="price" id="price-pickupdropoff">Rp 550,000</span>
+          <span class="price-tag">group price</span>
+        </div>
+        <button class="detail-btn" onclick="toggleDetail(event, 'pickupdropoff')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          See full description
+        </button>
+        <div class="detail-text" id="detail-pickupdropoff">Book your transfer with us for a smooth trip! If you come on your own, you can take an online taxi (Go-Jek or Grab) to Serangan in the morning. But for the return, online taxis are not allowed by local government. You’ll need a local taxi, which is very expensive. It’s best to book your return transfer in advance with us!</div>
+      </div>
+      <div class="radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></div>
+    </div>
+
+    <!-- Pickup address panel — lives right under "Private Pick up & Drop off", shown only when this row is selected -->
+    <div class="pickup-panel" id="panel-pickupdropoff" style="display:none"></div>
+
+    <!-- Free shuttle -->
+    <div class="option" data-option="shuttle" onclick="selectOption('shuttle')">
+      <div class="icon-circle">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/></svg>
+      </div>
+      <div class="body">
+        <div class="name">Free shuttle bus</div>
+        <div class="desc">Fixed pickup point, no address needed</div>
+      </div>
+      <div class="radio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m20 6-11 11-5-5"/></svg></div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="footer">
+      <div class="total">Total transfer<br /><b id="footer-price">Rp 350,000</b><span class="caption" id="footer-caption">standard rate</span></div>
+      <button class="cta" id="cta" onclick="alert('Демо: переход к оплате')">Complete booking</button>
+    </div>
+    <div class="footer-note" id="footer-note">Please confirm your pickup address to continue.</div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">Demo controls — переключить состояние расчёта дистанции (не часть реального UI)</div>
+    <div class="demo-buttons">
+      <button onclick="setStatus('idle')" id="btn-idle">Idle</button>
+      <button onclick="setStatus('loading')" id="btn-loading">Loading</button>
+      <button onclick="setStatus('short')" id="btn-short" class="active">Short &lt; 28 км</button>
+      <button onclick="setStatus('long')" id="btn-long">Long 28–45 км</button>
+      <button onclick="setStatus('blocked')" id="btn-blocked">Blocked &gt; 45 км</button>
+    </div>
+  </div>
+
+<script>
+  const prices = {
+    pickup: { short: 'Rp 350,000', long: 'Rp 550,000' },
+    pickupdropoff: { short: 'Rp 550,000', long: 'Rp 850,000' },
+  };
+  const pickupNeedingOptions = ['pickup', 'pickupdropoff'];
+  let currentOption = 'pickup';
+  const statusBySuffix = { pickup: 'short', pickupdropoff: 'idle' };
+
+  const pinSvg = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-8a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>';
+  const mapSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>';
+  const infoSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+  const checkCircleSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
+  const alertSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>';
+  const xCircleSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
+
+  // Renders one self-contained pickup-address panel — same markup, unique ids per option (suffix)
+  function panelHTML(suffix, addressValue) {
+    return `
+      <label>Pickup address</label>
+      <div class="address-row">
+        <input type="text" placeholder="Enter your hotel or villa address" value="${addressValue}" id="address-input-${suffix}" onfocus="showSuggestions('${suffix}')" />
+        <button class="map-btn" title="Show on map" onclick="toggleMap()">${mapSvg}</button>
+      </div>
+
+      <div class="suggestions" id="suggestions-${suffix}" style="display:none;">
+        <div class="sug" onclick="pickSuggestion('${suffix}', 'Jl. Sunset Road No. 88, Kuta')">${pinSvg}<div><div class="main">Jl. Sunset Road No. 88</div><div class="sec">Kuta, Badung, Bali</div></div></div>
+        <div class="sug" onclick="pickSuggestion('${suffix}', 'Jl. Sunset Road, Seminyak')">${pinSvg}<div><div class="main">Jl. Sunset Road</div><div class="sec">Seminyak, Badung, Bali</div></div></div>
+        <div class="sug" onclick="pickSuggestion('${suffix}', 'Sunset Road Business Centre')">${pinSvg}<div><div class="main">Sunset Road Business Centre</div><div class="sec">Kuta, Badung, Bali</div></div></div>
+      </div>
+
+      <div class="hint">Pick a suggestion above, or drop a pin on the map — typed addresses aren't used for pricing.</div>
+
+      <div class="status-box status-idle" id="status-idle-${suffix}">${infoSvg}<span>Select an address above to see your transfer price.</span></div>
+      <div class="status-box status-loading" id="status-loading-${suffix}"><span class="spinner"></span><span>Calculating distance…</span></div>
+      <div class="status-box status-short" id="status-short-${suffix}">${checkCircleSvg}<span><b>12.4 km</b> from our pier — standard rate.</span></div>
+      <div class="status-box status-long" id="status-long-${suffix}">${alertSvg}<span><b>34.8 km</b> from our pier — long-distance rate applies.</span></div>
+      <div class="status-box status-blocked" id="status-blocked-${suffix}">${xCircleSvg}<span>This address is more than 45 km away — transfer isn't available here.</span></div>
+    `;
+  }
+
+  document.getElementById('panel-pickup').innerHTML = panelHTML('pickup', 'Jl. Sunset Road No. 88, Kuta');
+  document.getElementById('panel-pickupdropoff').innerHTML = panelHTML('pickupdropoff', '');
+
+  function selectOption(opt) {
+    currentOption = opt;
+    document.querySelectorAll('.option').forEach(el => el.classList.toggle('selected', el.dataset.option === opt));
+    pickupNeedingOptions.forEach(suffix => {
+      document.getElementById('panel-' + suffix).style.display = (opt === suffix) ? 'block' : 'none';
+    });
+    document.getElementById('subtitle').textContent =
+      opt === 'none' ? "Optional add pickup" :
+      opt === 'shuttle' ? "Free shuttle bus" :
+      opt === 'pickup' ? "Private Pick up" : "Private Pick up & Drop off";
+    renderStatus();
+    updateFooter();
+  }
+
+  function setStatus(status) {
+    statusBySuffix[currentOption] = status;
+    renderStatus();
+    updateFooter();
+  }
+
+  function renderStatus() {
+    if (!pickupNeedingOptions.includes(currentOption)) return;
+    const status = statusBySuffix[currentOption];
+    ['idle','loading','short','long','blocked'].forEach(s => {
+      document.getElementById('status-' + s + '-' + currentOption)?.classList.toggle('show', s === status);
+      document.getElementById('btn-' + s)?.classList.toggle('active', s === status);
+    });
+  }
+
+  function updateFooter() {
+    const cta = document.getElementById('cta');
+    const note = document.getElementById('footer-note');
+    const footerPrice = document.getElementById('footer-price');
+    const footerCaption = document.getElementById('footer-caption');
+
+    if (!pickupNeedingOptions.includes(currentOption)) {
+      cta.disabled = false;
+      note.classList.remove('show');
+      footerPrice.textContent = currentOption === 'shuttle' ? 'Free' : 'Rp 0';
+      footerCaption.textContent = currentOption === 'shuttle' ? 'fixed meeting point' : 'no transfer';
+      return;
+    }
+
+    const status = statusBySuffix[currentOption];
+    const tierPrice = status === 'long' ? prices[currentOption].long
+                     : status === 'short' ? prices[currentOption].short
+                     : null;
+
+    const captions = {
+      idle: 'address not selected yet',
+      loading: 'calculating…',
+      short: 'standard rate (< 28 km)',
+      long: 'long-distance rate (28–45 km)',
+      blocked: 'unavailable — over 45 km',
+    };
+    footerCaption.textContent = captions[status];
+
+    if (status === 'short' || status === 'long') {
+      cta.disabled = false;
+      note.classList.remove('show');
+      footerPrice.textContent = tierPrice;
+    } else {
+      cta.disabled = true;
+      note.classList.add('show');
+      footerPrice.textContent = '—';
+    }
+
+    document.getElementById('price-pickup').textContent =
+      statusBySuffix.pickup === 'long' ? prices.pickup.long : prices.pickup.short;
+    document.getElementById('price-pickupdropoff').textContent =
+      statusBySuffix.pickupdropoff === 'long' ? prices.pickupdropoff.long : prices.pickupdropoff.short;
+  }
+
+  function showSuggestions(suffix) {
+    document.getElementById('suggestions-' + suffix).style.display = 'block';
+    setStatus('idle');
+  }
+  function pickSuggestion(suffix, text) {
+    document.getElementById('address-input-' + suffix).value = text;
+    document.getElementById('suggestions-' + suffix).style.display = 'none';
+    setStatus('loading');
+    setTimeout(() => setStatus('short'), 700);
+  }
+  function toggleMap() {
+    alert('Демо: здесь открылась бы встроенная карта для выбора точки (как в текущем AddressAutocomplete).');
+  }
+  function toggleDetail(event, suffix) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('detail-' + suffix).classList.toggle('show');
+  }
+
+  // init
+  selectOption('pickup');
+</script>
+
+</body>
+</html>

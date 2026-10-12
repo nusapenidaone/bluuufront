@@ -35,7 +35,7 @@ export const schemaLocalBusiness = {
   ],
 };
 
-export function schemaArticle(post, slug) {
+export function schemaArticle(post, slug, { wordCount, readTime } = {}) {
   return {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -44,11 +44,19 @@ export function schemaArticle(post, slug) {
     "image": post.cover || "https://bluuu.tours/storage/app/media/poster.webp",
     "datePublished": post.created_at || "",
     "dateModified": post.updated_at || post.created_at || "",
-    "author": {
-      "@type": "Organization",
-      "name": "Bluuu Tours",
-      "url": BASE_URL,
-    },
+    "author": post.author?.name
+      ? {
+          "@type": "Person",
+          "name": post.author.name,
+          ...(post.author.title ? { "jobTitle": post.author.title } : {}),
+          ...(post.author.avatar ? { "image": post.author.avatar } : {}),
+          "worksFor": { "@type": "Organization", "name": "Bluuu Tours" },
+        }
+      : {
+          "@type": "Organization",
+          "name": "Bluuu Tours",
+          "url": BASE_URL,
+        },
     "publisher": {
       "@type": "Organization",
       "name": "Bluuu Tours",
@@ -58,5 +66,32 @@ export function schemaArticle(post, slug) {
       },
     },
     "mainEntityOfPage": `${BASE_URL}/blog/${slug}`,
+    ...(wordCount ? { wordCount } : {}),
+    ...(readTime ? { timeRequired: `PT${readTime}M` } : {}),
+  };
+}
+
+export function schemaBreadcrumb(post, slug) {
+  const items = [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": BASE_URL },
+    { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${BASE_URL}/blog` },
+  ];
+  if (post?.category) {
+    items.push({
+      "@type": "ListItem",
+      "position": items.length + 1,
+      "name": post.category,
+    });
+  }
+  items.push({
+    "@type": "ListItem",
+    "position": items.length + 1,
+    "name": post?.title || "",
+    "item": `${BASE_URL}/blog/${slug}`,
+  });
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": items,
   };
 }

@@ -1,0 +1,10 @@
+name: 'Low Season'
+form: $/noren/booking/models/lowseason/fields.yaml
+modelClass: Noren\Booking\Models\LowSeason
+defaultRedirect: noren/booking/lowseason
+create:
+    redirect: 'noren/booking/lowseason/update/:id'
+    redirectClose: noren/booking/lowseason
+update:
+    redirect: noren/booking/lowseason
+    redirectClose: noren/booking/lowseason

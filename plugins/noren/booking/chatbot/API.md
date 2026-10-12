@@ -22,7 +22,7 @@ X-Api-Key: bluuu-chatbot-2026
 
 ## GET /api/v2/chatbot/boats/private
 
-Возвращает все active private charter туры (classes_id = 8).
+Возвращает все active private charter туры (`types_id = 2`, `source_id = 1` — только туры сайта, не Viator/другие OTA).
 
 ```
 GET https://bluuu.tours/api/v2/chatbot/boats/private
@@ -55,6 +55,7 @@ X-Api-Key: bluuu-chatbot-2026
   "capacity": 13,
   "currency": "IDR",
   "status": "ready",
+  "partner": false,
   "categories": [],
   "features": {
     "shade": "Partial shade",
@@ -65,6 +66,15 @@ X-Api-Key: bluuu-chatbot-2026
   },
   "best_for": "budget-friendly groups",
   "boat_type": "Speedboat",
+  "perks": [
+    { "text": "Free cancellation up to 24h before", "icon": "check-icon-green" }
+  ],
+  "included": [
+    { "id": 3, "name": "Snorkeling gear", "description": "<p>Mask, fins and snorkel for the whole trip.</p>", "icon_svg": "<svg>...</svg>" }
+  ],
+  "includes": [
+    { "id": 7, "name": "Lunch", "icon_svg": "<svg>...</svg>" }
+  ],
   "pricing": {
     "type": "per_boat",
     "boat_price": 2250000,
@@ -117,10 +127,16 @@ X-Api-Key: bluuu-chatbot-2026
 | `id` | int | ID тура |
 | `odoo_id` | int\|null | Odoo product ID тура |
 | `status` | string | `ready` / `busy` / `maintenance` |
+| `partner` | bool | `true` — лодка партнёрская, бронируется "по запросу" (сайт показывает "On Request" вместо "Instant confirmation"). См. CLAUDE.md "Партнёрские лодки" — при `true` фактическое бронирование идёт через respond.io (TODO, ещё не готово) |
+| `perks` | array | Короткий чек-лист на карточке тура — `{ text, icon }`, `icon` — один из `check-icon-green` / `none-icon-red` / `plus-icon-green` / `minis-icon-red` |
 | `pricing.type` | string | Всегда `per_boat` для private |
 | `pricing.boat_price` | int | Базовая доплата за лодку (IDR) |
 | `pricing.packages` | array | Основной прайслист — цена за группу по кол-ву гостей |
 | `pricing.seasonal_prices` | array | Сезонные переопределения (только будущие даты) |
+| `pricing.low_seasons` | array | Low season скидки тура `[{id, name, date_start, date_end, percent}]` — только активные и не закончившиеся. См. раздел «Low season» ниже |
+| `low_season_max_percent` | int | Максимальный % среди `pricing.low_seasons` (`0` если скидок нет) |
+| `included` | array | Развёрнутый список "что включено" (карточки с описанием и иконкой) — то же самое, что показывается на детальной странице тура |
+| `includes` | array | Короткий список "что включено" (только название + иконка, без описания) — чипы на карточке тура |
 | `boats` | array | Физические лодки с `odoo_id` и `company.odoo_id` |
 
 **Логика прайса:** из `packages[0].pricelist` берётся запись с `members_count == guests`. Если дата попадает в `seasonal_prices` — берётся тот прайслист. `total = tier_price + boat_price`.
@@ -139,7 +155,16 @@ X-Api-Key: bluuu-chatbot-2026
     "id": 1,
     "odoo_id": 65,
     "name": "Amarta Penida",
-    "menu": "<div>...</div>"
+    "description": "<p>Cliffside restaurant with ocean views.</p>",
+    "menu": "<div>...</div>",
+    "menu_sections": [
+      { "title": "Main Course", "items": [ { "name": "Grilled fish", "description": "Fresh catch of the day" } ] }
+    ],
+    "menu_note": "Should you desire cocktails, wine or other selections, please ask for the restaurant's general menu...",
+    "image": "https://bluuu.tours/storage/app/uploads/public/.../restaurant.jpg",
+    "images_with_thumbs": [
+      { "original": "https://.../original.webp", "hero": "https://.../hero.webp", "thumb": "https://.../thumb.webp", "thumb_small": "https://.../thumb_small.webp" }
+    ]
   },
   "itinerary": [
     { "time": "08:00", "title": "Meeting point" },
@@ -153,15 +178,28 @@ X-Api-Key: bluuu-chatbot-2026
     "Swim with mantas",
     "4 snorkeling spots"
   ],
-  "notes": "Diving license required"
+  "notes": "Diving license required",
+  "extra_categories": [
+    {
+      "id": 4,
+      "name": "Tour Add-ons",
+      "extras": [
+        { "id": 52, "odoo_id": 571, "name": "Beginner Diver 1-Pax Pack", "price": "2420000.00", "qty_type": "manual", "conflict_ids": [], "has_options": false, "options": [] }
+      ]
+    }
+  ]
 }
 ```
 
 | Поле | Тип | Описание |
 |------|-----|----------|
+| `restaurant.menu_sections` | array | Структурированное меню по категориям — `[{ title, items: [{ name, description }] }]`. Если не заполнено в админке — `[]`, используйте `restaurant.menu` (HTML) как фолбэк |
+| `restaurant.menu_note` | string\|null | Примечание под меню (например про напитки/доп. позиции по запросу) |
+| `restaurant.image` / `restaurant.images_with_thumbs` | string / array | Фото ресторана. `image` — одна ссылка (фолбэк), `images_with_thumbs` — массив `{ original, hero, thumb, thumb_small }` |
 | `itinerary` | array | Таймлайн дня — слияние `schedule_before_lunch` + `schedule_after_lunch` маршрута (те же данные, что в попапе маршрута на сайте). Каждый шаг — `{ time, title }`. Разделители "или" между альтернативными активностями в таймлайн не попадают |
 | `inclusions` | array | Список фишек/хайлайтов маршрута (`route.highlights[].label`) — то, что показывается чипами на карточке/попапе маршрута |
 | `notes` | string\|null | Доп. примечание к маршруту (например "Diving license required"), `null` если не заполнено |
+| `extra_categories` | array | Категории extras, доступные именно для этого route (`route.ecategories`, у каждой — свои `extras`, формат как в топ-level `extras[]`, включая `qty_type` и `conflict_ids`). **Используйте это поле, а не топ-level `extras[]`**, когда клиент уже выбрал route — при смене route набор категорий и extras внутри них меняется (см. CLAUDE.md "Extras & Ecategories") |
 
 ### extras[]
 
@@ -174,25 +212,36 @@ X-Api-Key: bluuu-chatbot-2026
   "price": "2420000.00",
   "currency": "IDR",
   "category": "Tour Add-ons",
+  "qty_type": "manual",
+  "conflict_ids": [],
   "has_options": false,
   "options": []
 }
 ```
 
-С вариантами (`has_options: true`):
+С вариантами (`has_options: true`) и конфликтом с другим extra:
 
 ```json
 {
   "id": 10,
   "odoo_id": 870,
   "name": "Snorkeling Equipment",
+  "qty_type": "manual",
+  "conflict_ids": [52],
   "has_options": true,
   "options": [
-    { "id": 11, "odoo_id": 871, "name": "Adult set", "price": "150000.00" },
-    { "id": 12, "odoo_id": 872, "name": "Kids set",  "price": "100000.00" }
+    { "id": 11, "odoo_id": 871, "name": "Adult set", "price": "150000.00", "conflict_ids": [] },
+    { "id": 12, "odoo_id": 872, "name": "Kids set",  "price": "100000.00", "conflict_ids": [] }
   ]
 }
 ```
+
+| Поле | Описание |
+|------|----------|
+| `qty_type` | Как считается количество, если бы этот extra бронировался (см. таблицу qty_type в CLAUDE.md): `manual` (клиент вводит сам), `per_car` (`ceil(guests/5)`), `per_14_guests` (`ceil(guests/14)`), `per_person` (`= guests`), `fixed` (всегда `1`). **Этот эндпоинт и `/quote` не принимают и не считают extras** — см. примечание в разделе `routes[]` и в `POST /quote` |
+| `conflict_ids` | ID других extras, которые **нельзя выбрать вместе с этим** (в админке — поле "Conflicts with (cannot be selected together)" на модели Extras). Список симметричный — не важно, с какой стороны настроен конфликт в БД, `conflict_ids` покажет его в обе стороны. Есть и у `options[]` (у вариантов своя таблица конфликтов). **Проверка только на фронтенде** — сайт не даёт добавить второй конфликтующий extra в корзину, но бэкенд это не валидирует. Раз этот эндпоинт — просто каталог (без бронирования), это поле для бота: не предлагайте клиенту одновременно два extras, если один из них в `conflict_ids` другого |
+
+**Важно:** этот список — общий каталог всех extras сайта, без привязки к route. Он **не отфильтрован** под конкретный маршрут — для этого использовать `routes[].extra_categories` (см. ниже). `/quote` extras не поддерживает (см. примечание в том разделе).
 
 ### transfers[]
 
@@ -230,7 +279,7 @@ X-Api-Key: bluuu-chatbot-2026
 
 ## GET /api/v2/chatbot/boats/shared
 
-Возвращает все active shared туры (classes_id = 9).
+Возвращает все active shared туры (`types_id = 1`, `source_id = 1` — только туры сайта, не Viator/другие OTA).
 
 ```
 GET https://bluuu.tours/api/v2/chatbot/boats/shared
@@ -261,6 +310,9 @@ X-Api-Key: bluuu-chatbot-2026
   "capacity": 14,
   "currency": "IDR",
   "status": "ready",
+  "badge_name": "Best value",
+  "badge_color": "#22c55e",
+  "headline": "The classic Nusa Penida day trip",
   "categories": [],
   "features": {
     "shade": "Partial shade",
@@ -269,8 +321,18 @@ X-Api-Key: bluuu-chatbot-2026
     "sound": null,
     "toilet": false
   },
+  "perks": [
+    { "text": "Free cancellation up to 24h before", "icon": "check-icon-green" }
+  ],
+  "included": [
+    { "id": 3, "name": "Snorkeling gear", "description": "<p>Mask, fins and snorkel for the whole trip.</p>", "icon_svg": "<svg>...</svg>" }
+  ],
+  "includes": [
+    { "id": 7, "name": "Lunch", "icon_svg": "<svg>...</svg>" }
+  ],
   "pricing": {
     "type": "per_guest",
+    "default_price": 1390000,
     "packages": [
       {
         "name": "Standard Shared Default Prices",
@@ -307,7 +369,16 @@ X-Api-Key: bluuu-chatbot-2026
     "id": 1,
     "odoo_id": 65,
     "name": "Amarta Penida",
-    "menu": "<div>...</div>"
+    "description": "<p>Cliffside restaurant with ocean views.</p>",
+    "menu": "<div>...</div>",
+    "menu_sections": [
+      { "title": "Main Course", "items": [ { "name": "Grilled fish", "description": "Fresh catch of the day" } ] }
+    ],
+    "menu_note": "Should you desire cocktails, wine or other selections, please ask for the restaurant's general menu...",
+    "image": "https://bluuu.tours/storage/app/uploads/public/.../restaurant.jpg",
+    "images_with_thumbs": [
+      { "original": "https://.../original.webp", "hero": "https://.../hero.webp", "thumb": "https://.../thumb.webp", "thumb_small": "https://.../thumb_small.webp" }
+    ]
   },
   "itinerary": [
     { "time": "08:00", "title": "Meeting point" },
@@ -338,7 +409,68 @@ X-Api-Key: bluuu-chatbot-2026
 
 `itinerary`, `inclusions`, `notes` — те же поля и та же логика, что в `routes[]` приватного эндпоинта (см. таблицу выше), только источник — маршрут, привязанный к этому shared-туру (`tour.route`). Для shared-туров маршрут один и не выбирается клиентом, поэтому эти поля лежат прямо в `boats[]`, а не в отдельном списке `routes[]`.
 
-**Логика прайса:** `pricing.type = per_guest`. Из `pricelist` берётся запись с `members_count == guests`. Если дата в `seasonal_prices` — берётся тот прайслист. `total = tier_price` (без boat_price).
+`included`/`includes` — те же поля и логика, что в приватном эндпоинте (см. таблицу выше): `included` — развёрнутые карточки "что включено" с описанием, `includes` — короткие чипы. Не путать с `inclusions` (это про route/маршрут, а не про тур).
+
+`perks` — тот же формат, что в приватном эндпоинте (см. таблицу выше).
+
+`badge_name`/`badge_color` — промо-плашка на карточке тура (например "Best value"), `null` если бейдж не назначен. Только у shared-туров — у private это поле сайтом сейчас не используется.
+
+`headline` — короткий подзаголовок под названием тура, `""` если не заполнен.
+
+**Логика прайса:** `pricing.type = per_guest`. Из `pricelist` берётся запись с `members_count == guests`. Если дата в `seasonal_prices` — берётся тот прайслист. `total = tier_price` (без boat_price). `pricing.default_price` — цена "по умолчанию" за 1 гостя, которая показывается на карточке тура **до** выбора даты/кол-ва людей (`show_price` → `gross_price` → `price`, первое ненулевое); для реального расчёта используйте `/quote` или `pricing.packages`, не `default_price`.
+
+Low season (shared): `pricing.low_seasons`, `low_season_max_percent` — как у private. Дополнительно `pricing.default_price_discounted` = `default_price` минус `low_season_max_percent` (цена «от» с максимальной будущей скидкой; равна `default_price`, если скидок нет).
+
+---
+
+## GET /api/v2/chatbot/policies
+
+Общие политики сайта (не привязаны к конкретному туру) — те же тексты, что показываются во всплывающих окнах политик на сайте (`FullController::getRules()`, `src/contexts/RulesContext.jsx`).
+
+```
+GET https://bluuu.tours/api/v2/chatbot/policies
+X-Api-Key: bluuu-chatbot-2026
+```
+
+### Пример ответа
+
+```json
+{
+  "payment": {
+    "title": "Payment",
+    "text": "<p>Enjoy hassle-free bookings with trusted cloud-based payments...</p>"
+  },
+  "cancellation": {
+    "title": "Cancelation policy",
+    "text": "<ul><li>It is possible to cancel a reservation and receive a full refund...</li></ul>"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "text": "<p>...</p>"
+  },
+  "health": {
+    "title": "Health, Safety & Sustainability",
+    "text": "<p>...</p>"
+  },
+  "liability": {
+    "title": "Release from Liability",
+    "text": "<p>...</p>"
+  },
+  "updated_at": "2026-04-06T07:12:00.000000Z"
+}
+```
+
+### Поля
+
+| Поле | Описание |
+|------|----------|
+| `payment` | Условия оплаты (депозит/остаток, способы оплаты) |
+| `cancellation` | Политика отмены и возврата средств. В БД поле называется `return` — здесь переименовано для ясности |
+| `privacy` | Политика конфиденциальности |
+| `health` | Стандарты здоровья/безопасности |
+| `liability` | Отказ от ответственности / согласие гостя. В БД поле называется `release` — здесь переименовано |
+
+Каждая политика — `{ title, text }`, где `text` — HTML (как в richeditor-полях остальных ответов этого API). Это **общие** политики сайта — не зависят от тура/route; для примечаний конкретного маршрута смотрите `routes[].notes`.
 
 ---
 
@@ -367,12 +499,12 @@ Content-Type: application/json
 | `boat_id` | int | — | ID физической лодки (из `boats[].boats[].id`). Если не передан — выбирается автоматически |
 | `pickup_address` | string | — | Адрес подачи |
 | `dropoff_address` | string | — | Адрес высадки |
-| `cars` | int | — | Кол-во машин |
 | `name` | string | — | Имя клиента |
 | `email` | string | — | Email клиента |
 | `whatsapp` | string | — | WhatsApp клиента |
 | `external_id` | string | — | Внешний ID (ссылка на лид в CRM) |
-| `extras` | array | — | `[{ "extra_id": int, "quantity": int }]` |
+
+**Extras этот эндпоинт не поддерживает.** Экстрасы бронируются только на самом сайте (клиент добирает их после перехода по `booking_url`) — не передавайте `extras`/`cars`, они не влияют на расчёт и молча отбрасываются.
 
 ### Пример запроса
 
@@ -388,14 +520,10 @@ Content-Type: application/json
   "boat_id": 15,
   "pickup_address": "Seminyak",
   "dropoff_address": "",
-  "cars": 1,
   "name": "John Doe",
   "email": "john@example.com",
   "whatsapp": "+1234567890",
-  "external_id": "",
-  "extras": [
-    { "extra_id": 52, "quantity": 1 }
-  ]
+  "external_id": ""
 }
 ```
 
@@ -404,7 +532,7 @@ Content-Type: application/json
 ```json
 {
   "success": true,
-  "booking_url": "https://bluuu.tours/new/private?date=2026-05-20&adults=4&tour=54&route=3&transfer=1&cover=2",
+  "booking_url": "https://bluuu.tours/private-tour-to-nusa-penida?date=2026-05-20&adults=4&tour=54&route=3&transfer=1&cover=2",
   "odoo_data": {
     "order": {
       "is_rental_order": true,
@@ -421,6 +549,8 @@ Content-Type: application/json
       "x_studio_drop_off_address": "",
       "x_studio_pickup_cars": 1,
       "x_studio_drop_off_cars": 1,
+      "x_studio_car_type": "Private Car",
+      "x_studio_tour_type": "Standard Private",
       "x_studio_deposit": 0,
       "client_order_ref": "",
       "partner_name": "John Doe",
@@ -428,44 +558,32 @@ Content-Type: application/json
       "partner_phone": "+1234567890"
     },
     "lines": [
-      { "label": "boat",                            "product_id": 71,   "qty": 1, "price": 0 },
-      { "label": "tour",                            "product_id": 1935, "qty": 1, "price": 16732000 },
-      { "label": "transfer",                        "product_id": 22,   "qty": 1, "price": 300000 },
-      { "label": "cover",                           "product_id": 1523, "qty": 1, "price": 1000000 },
-      { "label": "extra:Beginner Diver 1-Pax Pack", "product_id": 571,  "qty": 1, "price": 2420000 }
+      { "label": "boat",       "product_id": 71,   "qty": 1, "price": 0 },
+      { "label": "tour",       "product_id": 1935, "qty": 1, "price": 16732000 },
+      { "label": "transfer",   "product_id": 22,   "qty": 1, "price": 300000 },
+      { "label": "cover",      "product_id": 1523, "qty": 1, "price": 1000000 },
+      { "label": "restaurant", "product_id": 65,   "qty": 4, "price": 0 }
     ]
   },
   "currency_idr": {
-    "total_price": 20452000,
-    "price_per_pax": 5113000,
+    "total_price": 18032000,
+    "price_per_pax": 4508000,
     "breakdown": {
       "boat_base_price": 16732000,
       "transfer": 300000,
       "insurance": 1000000,
-      "extras_total": 2420000,
-      "extras": [
-        {
-          "extra_id": 52,
-          "odoo_id": 571,
-          "name": "Beginner Diver 1-Pax Pack",
-          "qty": 1,
-          "unit_price_idr": 2420000,
-          "subtotal_idr": 2420000
-        }
-      ],
-      "final_total": 20452000
+      "final_total": 18032000
     }
   },
   "currency_usd": {
     "rate": 0.00005878,
-    "total_price": 1202,
-    "price_per_pax": 301,
+    "total_price": 1060,
+    "price_per_pax": 265,
     "breakdown": {
       "boat_base_price": 984,
       "transfer": 18,
       "insurance": 59,
-      "extras_total": 142,
-      "final_total": 1202
+      "final_total": 1060
     }
   },
   "meta": {
@@ -500,8 +618,10 @@ Content-Type: application/json
 | `x_studio_lunch` | string | Ресторан / обед по маршруту (`restaurant.odoo_name`) |
 | `x_studio_pickup_address` | string | Адрес подачи |
 | `x_studio_drop_off_address` | string | Адрес высадки |
-| `x_studio_pickup_cars` | int | Машин на подачу |
-| `x_studio_drop_off_cars` | int | Машин на высадку (`0` если transfer type = `pickup`) |
+| `x_studio_pickup_cars` | int | `1` если `transfer` = 1 или 2, иначе `0`. Число машин из запроса не используется — это флаг "есть подача", не количество |
+| `x_studio_drop_off_cars` | int | `1` только если `transfer` = 2 (Private Pick up & Drop off), иначе `0` |
+| `x_studio_car_type` | string\|false | `"Private Car"` (`transfer` 1/2, `guests` ≤ 5) / `"Private Hi-Ace"` (`transfer` 1/2, `guests` > 5) / `"Free Shuttle Bus"` (`transfer` = 3) / `false` (нет трансфера) |
+| `x_studio_tour_type` | string | `tour.odoo_type` |
 | `x_studio_deposit` | float | Депозит — всегда `0` (заполняется при оплате) |
 | `client_order_ref` | string | Внешний ID (лид CRM) |
 | `partner_name` | string | Имя клиента (для `res.partner`) |
@@ -512,26 +632,28 @@ Content-Type: application/json
 
 #### odoo_data.lines
 
-Строки заказа — готовы для `sale.order.line/create`.
+Строки заказа — готовы для `sale.order.line/create`. Extras сюда **не попадают** (см. примечание в параметрах запроса выше).
 
 | Поле | Тип | Описание |
 |------|-----|----------|
-| `label` | string | `boat` / `tour` / `transfer` / `cover` / `extra:<name>` |
+| `label` | string | `boat` / `tour` / `transfer` / `cover` / `restaurant`. `restaurant` добавляется всегда, если у route есть ресторан с `odoo_id` |
 | `product_id` | int | Odoo product ID |
-| `qty` | int | Количество. Для cover: `1` если `per_boat`, иначе = кол-во гостей. Для shared tour: кол-во гостей |
-| `price` | float | Цена в IDR. Для `boat` всегда `0` |
+| `qty` | int | Количество. Для cover: `1` если `per_boat`, иначе = кол-во гостей. Для shared tour и restaurant: кол-во гостей |
+| `price` | float | Цена в IDR. Для `boat` и `restaurant` всегда `0`. Для `tour` — цена **со** скидкой low season (как уходит в Odoo) |
+| `discount` | float | Только у `tour`: всегда `0` — скидка low season уже учтена в `price` |
 
 #### currency_idr / currency_usd
 
 | Поле | Описание |
 |------|----------|
-| `total_price` | Итоговая сумма |
+| `total_price` | Итоговая сумма (boat + transfer + insurance, без extras — см. примечание выше) |
 | `price_per_pax` | Цена на 1 гостя |
-| `breakdown.boat_base_price` | Стоимость тура (tier_price + boat_price для private) |
+| `breakdown.original_boat_base_price` | Стоимость тура **без** low season скидки (tier_price + boat_price для private) |
+| `breakdown.low_season_percent` | % low season скидки на эту дату (`0` если нет) |
+| `breakdown.low_season_discount` | Сумма скидки (`0` если нет) |
+| `breakdown.boat_base_price` | Стоимость тура **со** скидкой = `original_boat_base_price - low_season_discount` |
 | `breakdown.transfer` | Стоимость трансфера. >5 гостей → `bus_price` |
 | `breakdown.insurance` | Стоимость cover |
-| `breakdown.extras_total` | Сумма всех доп. услуг |
-| `breakdown.extras[].odoo_id` | Odoo ID каждой доп. услуги |
 | `currency_usd` | `null` если курс USD не задан в БД |
 
 #### meta
@@ -542,6 +664,7 @@ Content-Type: application/json
 | `adults` | Взрослые из запроса |
 | `kids` | Дети из запроса |
 | `guests` | Итого (adults + kids) |
+| `low_season` | `{id, name, date_start, date_end, percent}` если на дату действует low season скидка, иначе `null` |
 
 ---
 
@@ -589,6 +712,7 @@ X-Api-Key: bluuu-chatbot-2026
 | `type` | оба списка | `private` или `shared` — влияет на то, какой параметр (`tour`) и на какую страницу (`/private-tour-to-nusa-penida` или `/shared-tour-to-nusa-penida`) вести клиента при бронировании |
 | `capacity` | `available[]` | Суммарная вместимость всех лодок тура (сумма `capacity` физических лодок), но не больше официально зарегистрированного `tour.capacity` (если сумма больше — показывается `tour.capacity`, если меньше — сумма). **Не то же самое**, что статичное поле `capacity` в `boats/private` / `boats/shared` |
 | `slots_left` | `available[]` | **Private**: сколько ещё физических лодок этого тура свободно на дату (лодка сдаётся целиком одному клиенту). **Shared**: сколько мест на **самой вместительной из ещё не занятых лодок** — группа всегда едет на одной лодке, поэтому это не сумма по всем лодкам, а "самый большой кусок", который реально можно продать одной группе |
+| `low_season_percent` | `available[]` | % low season скидки тура на эту дату, `0` если нет |
 | `reason` | `unavailable[]` | `fully_booked` — тур раскуплен реальными заказами (или группа `guests` не помещается ни на одну лодку). `blackout` — дата закрыта вручную менеджером, cron-закрытием (21:30 каждый день на завтра) или лодка занята другим типом заказа (private/другой shared-тур) |
 
 ### Как влияет `guests`
@@ -600,6 +724,48 @@ X-Api-Key: bluuu-chatbot-2026
 
 - Если у тура вообще нет лодок или все они выключены (`disabled`), тур не попадёт в ответ (используйте `boats/private` и `boats/shared`, чтобы получить полный список туров независимо от даты).
 - `tour_id` берётся из `boats[].id` в ответах `boats/private` / `boats/shared` — это ID тура, а не физической лодки.
+
+---
+
+## GET /api/v2/chatbot/low-season
+
+Активные и будущие low season скидки (сезонная процентная скидка на выбранные туры в интервале дат). Для ответа на «есть ли сейчас скидки / когда дешевле?».
+
+```
+GET https://bluuu.tours/api/v2/chatbot/low-season
+X-Api-Key: bluuu-chatbot-2026
+```
+
+### Пример ответа
+
+```json
+{
+  "success": true,
+  "low_seasons": [
+    {
+      "name": "Low season January",
+      "date_start": "2027-01-10",
+      "date_end": "2027-03-15",
+      "percent": 20,
+      "tours": [
+        { "tour_id": 54, "name": "Classic Boat", "type": "private" },
+        { "tour_id": 57, "name": "Classic Shared Tour", "type": "shared" }
+      ]
+    }
+  ],
+  "note": "Discount applies to the tour price only (tour + boat for private). Transfer, insurance and extras are full price.",
+  "updated_at": "2026-10-05T07:12:00.000000Z"
+}
+```
+
+### Правила low season
+
+- Скидка действует, если дата тура попадает в `[date_start, date_end]` (включительно) активного правила, привязанного к туру.
+- Скидка только на стоимость тура (`tier_price` + `boat_price` для private). Трансфер, cover (insurance) и extras — по полной цене.
+- Сумма скидки = `round((tier_price + boat_price) × percent / 100)`.
+- Если на дату попадает несколько правил — берётся максимальный `percent`.
+- `/quote` уже возвращает цену со скидкой (`breakdown.boat_base_price`, `total_price`). Сайт по `booking_url` применит ту же скидку сам.
+- В списке только туры сайта (`source_id = 1`, не `disabled`); правила без таких туров не показываются.
 
 ---
 

@@ -22,7 +22,16 @@ export default function Footer() {
               <a href={`mailto:${contacts.email}`} className="block text-sm font-medium transition-colors hover:text-white" style={{ color: 'var(--h2-text-body, rgba(255,255,255,0.78))' }}>
                 {contacts.email}
               </a>
-              <div className="text-sm leading-relaxed" style={{ color: 'var(--h2-text-muted, rgba(255,255,255,0.5))' }} dangerouslySetInnerHTML={{ __html: contacts.address }} />
+              {contacts.address && (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(String(contacts.address).replace(/<[^>]*>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim())}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-sm leading-relaxed transition-colors hover:text-white hover:underline"
+                  style={{ color: 'var(--h2-text-muted, rgba(255,255,255,0.5))' }}
+                  dangerouslySetInnerHTML={{ __html: contacts.address }}
+                />
+              )}
             </div>
           </div>
 

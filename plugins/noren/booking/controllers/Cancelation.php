@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Cancelation extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_cancelation'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

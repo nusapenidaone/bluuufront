@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class OrderType extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_ordertype'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

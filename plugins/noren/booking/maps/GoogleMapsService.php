@@ -9,6 +9,22 @@ class GoogleMapsService
     protected const DEST_LAT = -8.721838291230016;
     protected const DEST_LNG = 115.2383718942317;
 
+    // Тарифные пороги для трансфера (по прямому расстоянию до офиса, км)
+    public const SHORT_DISTANCE_MAX_KM = 28.0; // < 28 → short (стандартная цена)
+    public const LONG_DISTANCE_MAX_KM  = 45.0; // 28–45 → long (доплата), > 45 → blocked
+
+    // 'short' | 'long' | 'blocked' — единая точка классификации для фронта и бэкенда
+    public static function classifyDistance(float $km): string
+    {
+        if ($km < self::SHORT_DISTANCE_MAX_KM) {
+            return 'short';
+        }
+        if ($km <= self::LONG_DISTANCE_MAX_KM) {
+            return 'long';
+        }
+        return 'blocked';
+    }
+
     protected static function cfg(): array
     {
         static $cfg = null;

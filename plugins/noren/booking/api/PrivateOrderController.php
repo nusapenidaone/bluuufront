@@ -8,10 +8,14 @@ use Illuminate\Support\Facades\Session;
 
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Transfer;
 use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Route;
 
+use Noren\Booking\Maps\GoogleMapsService;
+
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 
@@ -82,6 +86,41 @@ class PrivateOrderController extends Controller
         $order->restaurant_id = optional($route)->restaurant_id ?? ($data['selectedRestaurantId'] ?? null);
         $order->cars          = $data['cars'] ?? ($order->transfer_id ? (int) ceil($order->members / 5) : 0);
 
+        // ── Pickup distance (transfer_id 1/2 require a resolved location) ──────
+        // Server-authoritative: never trust the client for the pickup transfer price —
+        // computed here from real driving distance, applied further down after the
+        // partner-boat recompute block (which would otherwise clobber it).
+        $transferNeedsPickup = in_array((string) $order->transfer_id, ['1', '2'], true);
+        $serverTransferPrice = null;
+        if ($transferNeedsPickup) {
+            $pickupLat = $data['pickupLat'] ?? null;
+            $pickupLng = $data['pickupLng'] ?? null;
+
+            // Временная совместимость: пока старый фронтенд ещё не заменён на новый,
+            // он не шлёт pickupLat/pickupLng — для таких запросов пропускаем
+            // серверную валидацию/пересчёт дистанции полностью (доверяем клиенту,
+            // как было раньше). Как только весь трафик перейдёт на новый фронт
+            // (он всегда шлёт координаты), эта ветка станет фактически недостижима.
+            if (is_numeric($pickupLat) && is_numeric($pickupLng)) {
+                try {
+                    $eta  = GoogleMapsService::estimateDrivingTime((float) $pickupLat, (float) $pickupLng);
+                    $tier = GoogleMapsService::classifyDistance($eta['distance_km']);
+                } catch (\Exception $e) {
+                    return response()->json(['error' => 'Could not verify pickup distance, please try again.'], 422);
+                }
+
+                if ($tier === 'blocked') {
+                    return response()->json(['error' => 'Pickup transfer is not available for addresses more than 45 km from our pier.'], 422);
+                }
+
+                $transferModel = Transfer::find($order->transfer_id);
+                $unitPrice = $tier === 'long'
+                    ? (int) ($transferModel->long_distance_price ?? 0)
+                    : (int) ($transferModel->price ?? 0);
+                $serverTransferPrice = $unitPrice * (int) $order->cars;
+            }
+        }
+
         // ── Pricing ───────────────────────────────────────────────────
         $order->boat_price     = $data['boatPrice']     ?? 0;
         $order->tour_price     = $data['tourPrice']     ?? 0;
@@ -95,32 +134,32 @@ class PrivateOrderController extends Controller
         $order->discount_price = $data['discountPrice'] ?? 0;
         $order->discount       = $data['discount']      ?? 0;
 
+        $tourForPricing = Tours::find($data['tourId']);
+        $members        = (int) ($order->members ?? 0);
+        $quote          = ($tourForPricing && $members > 0)
+            ? TourPricing::quote($tourForPricing, $order->travel_date, $members, true)
+            : null;
+
         // Partner boat request (deposite=0): frontend sends 0 prices — calculate server-side
-        if ($order->status_id == 4 && $order->tour_price == 0) {
-            $tourForPricing = Tours::with(['packages', 'pricesbydates.packages'])->find($data['tourId']);
-            if ($tourForPricing) {
-                $pricelist = $tourForPricing->packages?->pricelist ?? [];
-                if ($order->travel_date && $tourForPricing->pricesbydates->isNotEmpty()) {
-                    $seasonal = $tourForPricing->pricesbydates->first(
-                        fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
-                    );
-                    if ($seasonal?->packages?->pricelist) {
-                        $pricelist = $seasonal->packages->pricelist;
-                    }
-                }
-                $members = (int) ($order->members ?? 0);
-                $tierPrice = 0;
-                if (!empty($pricelist) && $members > 0) {
-                    $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-                    $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-                    $tierPrice = (int) ($entry['price'] ?? 0);
-                }
-                $boatPrice = (int) ($tourForPricing->boat_price ?? 0);
-                $order->tour_price  = $tierPrice;
-                $order->boat_price  = $boatPrice;
-                $order->total_price = $tierPrice + $boatPrice;
-                $order->full_price  = $tierPrice + $boatPrice;
-            }
+        if ($order->status_id == 4 && $order->tour_price == 0 && $tourForPricing) {
+            $tierPrice = $quote['tier_price'] ?? 0;
+            $boatPrice = (int) ($tourForPricing->boat_price ?? 0);
+            $order->tour_price  = $tierPrice;
+            $order->boat_price  = $boatPrice;
+            $order->total_price = $tierPrice + $boatPrice;
+            $order->full_price  = $tierPrice + $boatPrice;
+        }
+
+        // ── Low season (server-authoritative only while a discount is active) ──
+        // Без активной скидки цену, присланную фронтом, не трогаем (как раньше).
+        $this->applyLowSeason($order, $quote);
+
+        // ── Apply server-authoritative pickup transfer price ────────────
+        if ($serverTransferPrice !== null && $serverTransferPrice !== (int) $order->transfer_price) {
+            $delta = $serverTransferPrice - (int) $order->transfer_price;
+            $order->transfer_price = $serverTransferPrice;
+            $order->total_price   += $delta;
+            $order->full_price    += $delta;
         }
 
         // ── Promo / agent ─────────────────────────────────────────────
@@ -166,6 +205,31 @@ class PrivateOrderController extends Controller
     }
 
     /**
+     * Low season: если на дату тура есть активная скидка — сервер сам выставляет
+     * tour_price/boat_price со скидкой и переносит разницу в total_price/full_price.
+     * Transfer/cover/extras не затрагиваются.
+     */
+    private function applyLowSeason(Order $order, ?array $quote): void
+    {
+        $order->lowseason_percent  = 0;
+        $order->lowseason_discount = 0;
+
+        if (!$quote || !$quote['has_pricelist'] || $quote['percent'] <= 0) {
+            return;
+        }
+
+        $clientTourBoat = (int) $order->tour_price + (int) $order->boat_price;
+        $delta          = $quote['total'] - $clientTourBoat;
+
+        $order->tour_price         = $quote['tour_price'];
+        $order->boat_price         = $quote['boat_price_final'];
+        $order->total_price        = (int) $order->total_price + $delta;
+        $order->full_price         = (int) $order->full_price + $delta;
+        $order->lowseason_percent  = $quote['percent'];
+        $order->lowseason_discount = $quote['discount'];
+    }
+
+    /**
      * POST /api/new/order/private/pay
      *
      * Accepts {external_id}, loads the saved order, calls Xendit or DOKU,
@@ -205,8 +269,14 @@ class PrivateOrderController extends Controller
             // Charge includes the donation on top of the deposit/full payment,
             // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
+            // Full payment carries a 2.5% gateway surcharge, charged to the customer but
+            // never reflected in deposite_summ/Odoo — that stays the clean tour price.
+            if ($order->deposite == 100) {
+                $chargeAmount = round($order->deposite_summ * 1.025) + ($order->donation_amount ?? 0);
+            }
 
             $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+            $cancelUrl = url('/new/success') . '?type=failed';
 
             if ($order->method_id == 3) {
                 $url = DokuService::createPaymentLink(
@@ -214,7 +284,7 @@ class PrivateOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Private Tour'
                 );
             } else {
@@ -223,7 +293,7 @@ class PrivateOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Private Tour'
                 );
             }

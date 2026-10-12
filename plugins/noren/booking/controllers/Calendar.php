@@ -13,7 +13,7 @@ use Carbon\Carbon;
 
 class Calendar extends Controller
 {
-    public $requiredPermissions = []; 
+    public $requiredPermissions = ['noren.booking.access_calendar'];
 
     public function __construct()
     {

@@ -8,10 +8,14 @@ use Illuminate\Support\Facades\Session;
 
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Tours;
+use Noren\Booking\Models\Transfer;
 use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Route;
 
+use Noren\Booking\Maps\GoogleMapsService;
+
 use Noren\Booking\Classes\XenditService;
+use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
 
@@ -88,6 +92,40 @@ class SharedOrderController extends Controller
             $order->restaurant_id = optional($route)->restaurant_id ?? ($data['selectedRestaurantId'] ?? null);
             $order->cars = $data['cars'] ?? ($order->transfer_id ? (int) ceil($order->members / 5) : 0);
 
+            // ── Pickup distance (transfer_id 1/2 require a resolved location) ──────
+            // Server-authoritative, same rule as PrivateOrderController: never trust
+            // the client for the pickup transfer price.
+            $transferNeedsPickup = in_array((string) $order->transfer_id, ['1', '2'], true);
+            $serverTransferPrice = null;
+            if ($transferNeedsPickup) {
+                $pickupLat = $data['pickupLat'] ?? null;
+                $pickupLng = $data['pickupLng'] ?? null;
+
+                // Временная совместимость: пока старый фронтенд ещё не заменён на новый,
+                // он не шлёт pickupLat/pickupLng — для таких запросов пропускаем
+                // серверную валидацию/пересчёт дистанции полностью (доверяем клиенту,
+                // как было раньше). Как только весь трафик перейдёт на новый фронт
+                // (он всегда шлёт координаты), эта ветка станет фактически недостижима.
+                if (is_numeric($pickupLat) && is_numeric($pickupLng)) {
+                    try {
+                        $eta  = GoogleMapsService::estimateDrivingTime((float) $pickupLat, (float) $pickupLng);
+                        $tier = GoogleMapsService::classifyDistance($eta['distance_km']);
+                    } catch (\Exception $e) {
+                        return response()->json(['error' => 'Could not verify pickup distance, please try again.'], 422);
+                    }
+
+                    if ($tier === 'blocked') {
+                        return response()->json(['error' => 'Pickup transfer is not available for addresses more than 45 km from our pier.'], 422);
+                    }
+
+                    $transferModel = Transfer::find($order->transfer_id);
+                    $unitPrice = $tier === 'long'
+                        ? (int) ($transferModel->long_distance_price ?? 0)
+                        : (int) ($transferModel->price ?? 0);
+                    $serverTransferPrice = $unitPrice * (int) $order->cars;
+                }
+            }
+
             // ── Pricing ───────────────────────────────────────────────────
             $order->boat_price = 0;   // shared tours price per person, not per boat
             $order->tour_price = $data['tourPrice'] ?? 0;
@@ -100,6 +138,32 @@ class SharedOrderController extends Controller
             $order->full_price = $data['fullPrice'] ?? 0;
             $order->discount_price = $data['discountPrice'] ?? 0;
             $order->discount = $data['discount'] ?? 0;
+
+            // ── Low season (server-authoritative only while a discount is active) ──
+            // Без активной скидки цену, присланную фронтом, не трогаем (как раньше).
+            $order->lowseason_percent  = 0;
+            $order->lowseason_discount = 0;
+            $tourForPricing = Tours::find($data['tourId']);
+            $members        = (int) $order->members;
+            if ($tourForPricing && $members > 0) {
+                $quote = TourPricing::quote($tourForPricing, $order->travel_date, $members, false);
+                if ($quote['has_pricelist'] && $quote['percent'] > 0) {
+                    $delta = $quote['total'] - (int) $order->tour_price;
+                    $order->tour_price         = $quote['tour_price'];
+                    $order->total_price        = (int) $order->total_price + $delta;
+                    $order->full_price         = (int) $order->full_price + $delta;
+                    $order->lowseason_percent  = $quote['percent'];
+                    $order->lowseason_discount = $quote['discount'];
+                }
+            }
+
+            // ── Apply server-authoritative pickup transfer price ────────────
+            if ($serverTransferPrice !== null && $serverTransferPrice !== (int) $order->transfer_price) {
+                $delta = $serverTransferPrice - (int) $order->transfer_price;
+                $order->transfer_price = $serverTransferPrice;
+                $order->total_price   += $delta;
+                $order->full_price    += $delta;
+            }
 
             // ── Promo / agent ─────────────────────────────────────────────
             $order->promocode = $data['promocode'] ?? null;
@@ -184,8 +248,14 @@ class SharedOrderController extends Controller
             // Charge includes the donation on top of the deposit/full payment,
             // but deposite_summ itself stays donation-free (it feeds Odoo's x_studio_deposit).
             $chargeAmount = $order->deposite_summ + ($order->donation_amount ?? 0);
+            // Full payment carries a 2.5% gateway surcharge, charged to the customer but
+            // never reflected in deposite_summ/Odoo — that stays the clean tour price.
+            if ($order->deposite == 100) {
+                $chargeAmount = round($order->deposite_summ * 1.025) + ($order->donation_amount ?? 0);
+            }
 
             $successUrl = $successBase . '&amount=' . $chargeAmount . '&currency=IDR';
+            $cancelUrl = url('/new/success') . '?type=failed';
 
             if ($order->method_id == 3) {
                 $url = DokuService::createPaymentLink(
@@ -193,7 +263,7 @@ class SharedOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Shared Tour'
                 );
             } else {
@@ -202,7 +272,7 @@ class SharedOrderController extends Controller
                     $chargeAmount,
                     $order->email,
                     $successUrl,
-                    url('/error'),
+                    $cancelUrl,
                     $order->tours->name ?? 'Shared Tour'
                 );
             }

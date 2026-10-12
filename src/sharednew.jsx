@@ -41,8 +41,13 @@ import {
   getAvailableDatesForRange,
   useImagePreload,
   setGlobalFormatPrice,
-  getFlashSaleForDate
+  getFlashSaleForDate,
+  calculateBoatPrice,
+  useBoatPricingDetailed,
+  withBoatPrice,
+  maxLowSeasonPercent
 } from "./components/booking/utils";
+import { LowSeasonBadge, LowSeasonTag } from "./components/booking/LowSeasonBadge";
 import {
   BRAND,
   LINKS,
@@ -63,7 +68,9 @@ import ScheduleModal from "./components/tour/ScheduleModal";
 import RestaurantCard from "./components/tour/RestaurantCard";
 import TourDetailsCard from "./components/tour/TourDetailsCard";
 import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
-import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
+import { CoversCompact } from "./components/booking/TransferCoverPanels";
+import TransferPickerModal, { resolveTransferUnitPrice } from "./components/booking/TransferPickerModal";
+import CoverPickerModal, { resolveCoverQuantity } from "./components/booking/CoverPickerModal";
 import Section from "./components/common/Section";
 import { PremiumSection, PremiumContainer } from "./components/booking/ui/Section";
 import { PremiumCard as Card } from "./components/booking/ui/Card";
@@ -286,64 +293,7 @@ try {
 const INPUT_BASE =
   "h-11 w-full rounded-full border border-neutral-200 bg-white text-base text-secondary-900 shadow-none outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-50";
 
-// Utility hooks for pricing and availability
-function calculateBoatPrice(tourId, date, membersCount, privateTours) {
-  if (!tourId || !privateTours?.length) return null;
-  const tour = privateTours.find((t) => Number(t.id) === Number(tourId));
-  if (!tour) return null;
-
-  // Robust date comparison: convert date object to YYYY-MM-DD string
-  let dateStr = date;
-  if (date instanceof Date) {
-    dateStr = date.toISOString().split('T')[0];
-  } else if (date && typeof date === 'object' && date.startDate) {
-    // Handle date range objects if necessary
-    dateStr = new Date(date.startDate).toISOString().split('T')[0];
-  }
-
-  // Flexibility for 'package' vs 'packages'
-  let pricelist = tour.packages?.pricelist || tour.package?.pricelist || tour.pricelist || [];
-  let boatPriceToAdd = Number(tour.boat_price) || 0;
-
-  // Check for date-specific pricing
-  if (dateStr && tour.pricesbydates?.length) {
-    const specificPricing = tour.pricesbydates.find((p) => {
-      const start = p.date_start;
-      const end = p.date_end;
-      return dateStr >= start && dateStr <= end;
-    });
-    if (specificPricing) {
-      const pkg = specificPricing.packages || specificPricing.package;
-      if (pkg?.pricelist) {
-        pricelist = pkg.pricelist;
-      }
-      if (specificPricing.boat_price !== undefined && specificPricing.boat_price !== null) {
-        boatPriceToAdd = Number(specificPricing.boat_price);
-      }
-    }
-  }
-
-  if (!pricelist.length) return null;
-
-  // Find price for membersCount
-  const countStr = String(membersCount);
-  let priceEntry = pricelist.find((p) => String(p.members_count) === countStr);
-
-  // Fallback: if not found, use the closest one or the highest one
-  if (!priceEntry) {
-    const sorted = [...pricelist].sort((a, b) => Number(a.members_count) - Number(b.members_count));
-    priceEntry = sorted.reverse().find((p) => Number(p.members_count) <= membersCount) || sorted[0];
-  }
-
-  // Shared tours (classes_id 9 or 10 usually, or identified by context)
-  const isShared = Number(tour.classes_id) === 9 || Number(tour.classes_id) === 10;
-
-  return priceEntry ? Number(priceEntry.price) + (isShared ? 0 : boatPriceToAdd) : null;
-}
-
-function useBoatPricing(tourId, date, membersCount, privateTours) {
-  return useMemo(() => calculateBoatPrice(tourId, date, membersCount, privateTours), [tourId, date, membersCount, privateTours]);
-}
+// Pricing (calculateBoatPrice / low season) lives in components/booking/utils.js
 function usePricing(date, initialPrice = 0) {
   const [state, setState] = useState({
     price: initialPrice,
@@ -1886,8 +1836,11 @@ function Hero({ children }) {
             Shared tour to <span className="italic" style={{ color: 'var(--primary-300)' }}>Nusa Penida</span>
           </h2>
           <p className="mt-4 max-w-xl text-sm font-normal text-white/70 sm:text-base">
-            Comfort boat + snorkeling + mantas + Kelingking.<br className="sm:hidden" /> All-inclusive.
+            A full day on the yacht + snorkeling with mantas + Kelingking Cliff.
           </p>
+          <div className="mt-4">
+            <RatingPill />
+          </div>
           <p className="mt-3 text-xs font-normal text-white/60 sm:text-sm">
             From <span className="font-bold text-white">{formatUSD(80)}</span> / person
             <span className="mx-1.5 text-white/30">·</span>
@@ -2677,7 +2630,10 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
       ? backendChips
       : [...extraChips, ...baseChips.map((item) => ({ icon: item.icon, label: item.label }))];
     const mainChips = allRawChips.filter((item) => !MINOR_LABELS.includes(item.label || item.name)).sort((a, b) => (a.label||a.name||"").length - (b.label||b.name||"").length);
-    const minorItems = backendChips ? [] : [...baseChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label), ...extraChips.filter((item) => MINOR_LABELS.includes(item.label)).map((item) => item.label)];
+    // Core inclusions (snorkeling gear, water, towels, …) rendered as pills — same
+    // style as mainChips, not a plain-text footnote — with "Snorkeling equipment" leading.
+    const minorItems = backendChips ? [] : [...baseChips.filter((item) => MINOR_LABELS.includes(item.label)), ...extraChips.filter((item) => MINOR_LABELS.includes(item.label))]
+      .sort((a, b) => (a.label === "Snorkeling equipment" ? -1 : b.label === "Snorkeling equipment" ? 1 : 0));
     const tierColors = {
       0: { card: "border border-primary-200/50 bg-primary-50/50 hover:bg-primary-50/70", iconBg: "bg-primary-500/10", iconText: "text-primary-600", chip: "border border-primary-200 bg-transparent", chipIcon: "text-primary-600" },
       1: { card: "border border-indigo-200/50 bg-indigo-50/50 hover:bg-indigo-50/70", iconBg: "bg-indigo-500/10", iconText: "text-indigo-600", chip: "border border-primary-200 bg-transparent", chipIcon: "text-primary-600" },
@@ -2705,9 +2661,9 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
           );
         })}
       </div>
-      {/* Included chips */}
+      {/* Included chips — core inclusions (minorItems) lead, then the rest */}
       <div className="flex flex-wrap gap-2">
-        {mainChips.map((item) => {
+        {[...minorItems, ...mainChips].map((item) => {
           const Icon = item.icon;
           const label = item.label || item.name;
           return (
@@ -2720,10 +2676,6 @@ function TourTabContent({ activeTab, tierIndex = 1, includedSections, cancellati
           );
         })}
       </div>
-      {/* Minor items as text */}
-      {minorItems.length > 0 && (
-        <p className="text-xs sm:text-sm text-secondary-400">{minorItems.join(" · ")}</p>
-      )}
     </div>
   );
   }
@@ -3375,11 +3327,7 @@ function StepTwo({
     // Add dynamic pricing to each boat in the list
     const listWithPrices = baseList.map(y => {
       const dateForPricing = dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart);
-      const price = calculateBoatPrice(y.tourId, dateForPricing, groupSize, privateTours);
-      return {
-        ...y,
-        priceValue: price ?? y.priceValue
-      };
+      return withBoatPrice(y, dateForPricing, groupSize, privateTours);
     });
 
     return listWithPrices;
@@ -3566,11 +3514,8 @@ function StepTwo({
     const boatDescriptionText = sanitizeDisplayText(boat.description, { stripTrailingOne: true });
     const hasBoatDescription = Boolean(boatDescriptionText);
 
-    let draftPriceValue = boat.priceValue;
-    if (draftDate && typeof calculateBoatPrice === 'function' && privateTours) {
-      const p = calculateBoatPrice(boat.tourId, draftDate, groupSize, privateTours);
-      if (p !== null) draftPriceValue = p;
-    }
+    const draftBoat = draftDate && privateTours ? withBoatPrice(boat, draftDate, groupSize, privateTours) : boat;
+    const draftPriceValue = draftBoat.priceValue;
 
     const flashSaleDate = draftDate || (dateMode === "exact" ? exactDate : "");
     const isFlashSale = flashSaleDate ? getFlashSaleForDate(boat.tourId, flashSaleDate, privateTours) : false;
@@ -3673,6 +3618,7 @@ function StepTwo({
                 <div className="flex items-center gap-2.5"><Sparkles className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">Drone footage</strong> + next-day delivery</span></div>
                 <div className="flex items-center gap-2.5"><Ship className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">New yacht</strong> + senior guides only</span></div>
               </>) : null}
+              <div className="flex items-center gap-2.5"><Users className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">{boat.people}</strong> guests max</span></div>
             </div>
 
             {/* Bottom section */}
@@ -3686,18 +3632,18 @@ function StepTwo({
                     </span>
                   </div>
                 )}
-                <div className="flex items-baseline justify-between gap-2">
-                  <div className="flex items-baseline gap-1">
+                {boat.id !== "angels" && <LowSeasonTag item={draftBoat} className="mb-1" />}
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1.5">
+                  <div className="flex items-baseline gap-1 whitespace-nowrap">
                     {showFrom && <span className="text-sm font-medium text-secondary-400">from</span>}
-                    <span className={cn("text-2xl sm:text-3xl font-black tracking-tight", isUnavailable ? "text-primary-300" : "text-primary-600")}>
+                    <span className={cn("text-xl sm:text-2xl font-black tracking-tight whitespace-nowrap", isUnavailable ? "text-primary-300" : "text-primary-600")}>
                       {boat.id === "angels" ? renderPrice(33000000) : renderPrice(draftPriceValue)}
                     </span>
-                    <span className="text-sm font-medium text-secondary-400">
+                    <span className="text-xs sm:text-sm font-medium text-secondary-400 whitespace-nowrap">
                       {`/ ${Math.max(1, groupSize)} person${groupSize > 1 ? "s" : ""}`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={cn("inline-flex items-center gap-1 text-sm font-medium text-secondary-400 whitespace-nowrap", !isUnavailable && lowSeats && "hidden")}><Users className="h-3.5 w-3.5" />{boat.people}</span>
                     {!isUnavailable && lowSeats && (
                       <span className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full bg-amber-50 border border-amber-200 px-2 sm:px-2.5 py-0.5 sm:py-1 text-2xs sm:text-xs font-bold text-amber-700 whitespace-nowrap">
                         <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 shrink-0 rounded-full bg-amber-500 animate-pulse" />
@@ -3967,7 +3913,8 @@ function StepTwo({
                       {isFlashSale && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">⚡ Sale</span>
                       )}
-                      <span className="text-lg font-black text-primary-600 tracking-tight">
+                      {boat.id !== "angels" && <LowSeasonTag item={draftBoat} className="self-center" />}
+                      <span className="whitespace-nowrap text-lg font-black text-primary-600 tracking-tight">
                         {boat.id === "angels" ? renderPrice(33000000) : renderPrice(draftPriceValue)}
                       </span>
                       <span className="text-sm font-medium text-secondary-400">
@@ -4224,6 +4171,7 @@ function StepTwo({
                 </div>
               </div>
 
+              <LowSeasonTag item={confirmModalData.boat} className="mt-2 justify-center" />
               <div className="mt-2 flex items-baseline justify-center gap-1">
                 <span className="text-xl font-black tracking-tight text-secondary-900">
                   {formatIDR(confirmModalData.boat.priceValue)}
@@ -4391,6 +4339,7 @@ function StepTwo({
                 <p className="mt-1.5 text-sm text-secondary-500 max-w-lg leading-relaxed">
                   {descriptions[tierIdx] || boat.description || ""}
                 </p>
+                <LowSeasonTag item={boat} className="mt-2" />
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-xs font-medium text-secondary-400">from</span>
                   <span className="text-lg font-black tracking-tight text-primary-600">{formatIDR(boat.priceValue)}</span>
@@ -5545,6 +5494,8 @@ function StepExtras({
   onSetPickupAddress,
   dropoffAddress = "",
   onSetDropoffAddress,
+  onSetPickupLocation,
+  transferDistance = { status: "idle", km: null, tier: null },
 }) {
   const { categories, sharedRoutes: privateRoutes } = useExtras();
   const contacts = useSiteContacts();
@@ -5860,17 +5811,18 @@ function StepExtras({
     if (!selectedTransferId) return null;
     const transfer = transfers?.find((t) => String(t.id) === String(selectedTransferId));
     if (!transfer) return null;
-    const isLargeGroup = totalGuests > 5;
-    const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
+    const resolvedTier = transferDistance.status === "ready" && transferDistance.tier !== "blocked" ? transferDistance.tier : null;
+    const price = resolveTransferUnitPrice(transfer, resolvedTier);
+    const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
     return {
       id: `transfer-${transfer.id}`,
       kind: "transfer",
       name: transfer.name,
       price,
       pricingType: "per_booking",
-      quantity: 1,
+      quantity,
     };
-  }, [selectedTransferId, transfers, totalGuests]);
+  }, [selectedTransferId, transfers, totalGuests, transferDistance]);
   const selectedCoverItem = useMemo(() => {
     if (!selectedCoverId) return null;
     const cover = covers?.find((c) => String(c.id) === String(selectedCoverId));
@@ -5880,8 +5832,8 @@ function StepExtras({
       kind: "cover",
       name: cover.name,
       price: Number(cover.price || 0),
-      pricingType: "per_person",
-      quantity: totalGuests,
+      pricingType: cover.per_boat ? "per_boat" : "per_person",
+      quantity: resolveCoverQuantity(cover, totalGuests),
     };
   }, [selectedCoverId, covers, totalGuests]);
   const selectedAddonsList = useMemo(() => {
@@ -6068,88 +6020,68 @@ function StepExtras({
                 <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white">
                   <button
                     type="button"
-                    onClick={() => setIsTransferOpen((prev) => !prev)}
+                    onClick={() => setIsTransferOpen(true)}
                     className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
-                    aria-expanded={isTransferOpen}
-                    aria-controls={`${sectionId}-transfer-panel`}
                   >
                     <div className="min-w-0">
                       <div className="text-base sm:text-xl font-semibold text-secondary-900">Transfer</div>
-                      <div className="mt-1 text-sm text-secondary-500">{transferSummary}</div>
+                      <div className="mt-1 text-sm text-secondary-500">
+                        {transferSummary}
+                        {selectedTransferItem && (
+                          <span className="ml-1.5 font-semibold text-primary-600">
+                            {selectedTransferItem.price ? formatIDR(selectedTransferItem.price * selectedTransferItem.quantity) : "Free"}
+                          </span>
+                        )}
+                      </div>
+                      {(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && pickupAddress && (
+                        <div className="mt-0.5 truncate text-xs text-secondary-400">{pickupAddress}</div>
+                      )}
                     </div>
-                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
-                      {isTransferOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                    </span>
+                    <span className="text-sm font-semibold text-primary-600 shrink-0">{selectedTransferId ? "Change" : "Select"}</span>
                   </button>
-                  <AnimatePresence initial={false}>
-                    {isTransferOpen && (
-                      <motion.div
-                        id={`${sectionId}-transfer-panel`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="overflow-hidden border-t border-neutral-200"
-                      >
-                        <StepTransfers
-                          embedded
-                          showContinue={false}
-                          showCovers={false}
-                          showHeader={false}
-                          framed={false}
-                          transfers={transfers}
-                          selectedTransferId={selectedTransferId}
-                          onSelectTransferId={onSelectTransferId}
-                          covers={covers}
-                          selectedCoverId={selectedCoverId}
-                          onSelectCoverId={onSelectCoverId}
-                          totalGuests={totalGuests}
-                          pickupAddress={pickupAddress}
-                          onSetPickupAddress={onSetPickupAddress}
-                          dropoffAddress={dropoffAddress}
-                          onSetDropoffAddress={onSetDropoffAddress}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <TransferPickerModal
+                    open={isTransferOpen}
+                    onClose={() => setIsTransferOpen(false)}
+                    transfers={transfers}
+                    totalGuests={totalGuests}
+                    selectedTransferId={selectedTransferId}
+                    pickupAddress={pickupAddress}
+                    dropoffAddress={dropoffAddress}
+                    onConfirm={({ transferId, pickupAddress: confirmedPickup, dropoffAddress: confirmedDropoff, pickupLocation: confirmedLocation }) => {
+                      onSelectTransferId(transferId);
+                      onSetPickupAddress?.(confirmedPickup);
+                      onSetDropoffAddress?.(confirmedDropoff);
+                      onSetPickupLocation?.(confirmedLocation);
+                    }}
+                  />
                 </div>
                 <div className="overflow-hidden rounded-3xl border border-neutral-200 bg-white">
                   <button
                     type="button"
-                    onClick={() => setIsInsuranceOpen((prev) => !prev)}
+                    onClick={() => setIsInsuranceOpen(true)}
                     className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition-colors hover:bg-neutral-50"
-                    aria-expanded={isInsuranceOpen}
-                    aria-controls={`${sectionId}-insurance-panel`}
                   >
                     <div className="min-w-0">
                       <div className="text-base sm:text-xl font-semibold text-secondary-900">Insurance</div>
-                      <div className="mt-1 text-sm text-secondary-500">{insuranceSummary}</div>
+                      <div className="mt-1 text-sm text-secondary-500">
+                        {insuranceSummary}
+                        {selectedCoverItem && (
+                          <span className="ml-1.5 font-semibold text-primary-600">
+                            {selectedCoverItem.price ? formatIDR(selectedCoverItem.price * selectedCoverItem.quantity) : "Free"}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <span className="flex h-7 w-7 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-secondary-700">
-                      {isInsuranceOpen ? <Minus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-                    </span>
+                    <span className="text-sm font-semibold text-primary-600 shrink-0">{selectedCoverId ? "Change" : "Select"}</span>
                   </button>
-                  <AnimatePresence initial={false}>
-                    {isInsuranceOpen && (
-                      <motion.div
-                        id={`${sectionId}-insurance-panel`}
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.2, ease: "easeOut" }}
-                        className="overflow-hidden border-t border-neutral-200"
-                      >
-                        <CoversCompact
-                          covers={covers}
-                          selectedCoverId={selectedCoverId}
-                          onSelectCoverId={onSelectCoverId}
-                          formatPrice={formatIDR}
-                          showHeader={false}
-                          framed={false}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  <CoverPickerModal
+                    open={isInsuranceOpen}
+                    onClose={() => setIsInsuranceOpen(false)}
+                    covers={covers}
+                    totalGuests={totalGuests}
+                    selectedCoverId={selectedCoverId}
+                    onConfirm={({ coverId }) => onSelectCoverId(coverId)}
+                  />
                 </div>
                 {/* TourInfoInline removed — content moved to Tour details tabs */}
                 {onReview && (
@@ -6522,6 +6454,7 @@ function StepFive({
   selectedStyleId,
   selectedExtrasSummary,
   basePrice,
+  lowSeason,
   guestFeeTotal,
   extrasSubtotalIDR,
   onReserve,
@@ -6552,10 +6485,14 @@ function StepFive({
   onSetDropoffAddressConfirmed,
   pendingTransferModal,
   onPendingTransferModalConsumed,
+  onSetPickupLocation,
+  transferDistance = { status: "idle", km: null, tier: null },
 }) {
   const [activeEditor, setActiveEditor] = useState(null);
   const contacts = useSiteContacts();
   const totalGuests = (adults || 0) + (kids || 0);
+  const pickupRequiresDistance = String(selectedTransferId) === "1" || String(selectedTransferId) === "2";
+  const pickupBlocking = pickupRequiresDistance && !(transferDistance.status === "ready" && transferDistance.tier !== "blocked");
   const isDateSelected = dateLabel && dateLabel !== "Date not selected";
   const isBoatSelected = Boolean(selectedBoat);
   const extrasCount = selectedExtrasSummary?.reduce((sum, extra) => sum + (extra.quantity || 0), 0) || 0;
@@ -6658,25 +6595,14 @@ function StepFive({
     }
   }, [pendingTransferModal, onPendingTransferModalConsumed]);
   const [transferInfoModal, setTransferInfoModal] = useState(null);
-  const [expandedTransferDetailId3, setExpandedTransferDetailId3] = useState(null);
-  const [showSharedMap, setShowSharedMap] = useState(false);
-  const [skipSharedAddress, setSkipSharedAddress] = useState(false);
-  const [sameSharedAddress, setSameSharedAddress] = useState(false);
-  const [expandedCoverDetailId3, setExpandedCoverDetailId3] = useState(null);
-  const selectedTransferForAddress = transfers?.find(t => String(t.id) === String(selectedTransferId));
-  const isShuttleTransfer = selectedTransferForAddress?.name?.toLowerCase().includes("shuttle") || selectedTransferForAddress?.name?.toLowerCase().includes("free");
-  const hasDropoffTransfer = selectedTransferForAddress?.name?.toLowerCase().includes("drop");
-  const pickupAddressNeedsConfirm = Boolean(selectedTransferId && !isShuttleTransfer && !skipSharedAddress && pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
-  const dropoffAddressNeedsConfirm = Boolean(selectedTransferId && !isShuttleTransfer && hasDropoffTransfer && !sameSharedAddress && !skipSharedAddress && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
-  const addressNeedsConfirm = pickupAddressNeedsConfirm || dropoffAddressNeedsConfirm;
-  const isReserveEnabled = isDateSelected && isBoatSelected && !addressNeedsConfirm;
+  const isReserveEnabled = isDateSelected && isBoatSelected && !pickupBlocking;
   const reserveLabel = !isDateSelected
     ? "Select date to continue"
     : !isBoatSelected
       ? "Select option to continue"
-      : addressNeedsConfirm
+      : pickupBlocking
         ? "Confirm pickup address to continue"
-        : "Reserve Now";
+        : "RESERVE WITH 30%";
   const handleRowClick = (row) => {
     if (row.expandable) {
       setExpandedRow(expandedRow === row.id ? null : row.id);
@@ -6753,7 +6679,7 @@ function StepFive({
                               <CustomDatePicker
                                 mode="single"
                                 inline
-                                selected={draftExactDate ? new Date(draftExactDate) : undefined}
+                                selected={draftExactDate ? new Date(draftExactDate + "T00:00:00") : undefined}
                                 onSelect={(date) => {
                                   if (date) {
                                     const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -6896,8 +6822,8 @@ function StepFive({
                   <div className="mt-0.5 text-base font-semibold text-secondary-900">
                     {transferConfirmed ? (selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.name || "Selected") : "Make my own way") : "Not selected"}
                   </div>
-                  <div className={cn("mt-0.5 text-sm font-semibold", transferConfirmed ? (() => { const p = selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.price || 0) : 0; return p === 0 ? "text-emerald-600" : "text-primary-700"; })() : "text-secondary-400")}>
-                    {transferConfirmed ? (() => { const p = selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.price || 0) : 0; return p === 0 ? "Free" : formatIDR(p); })() : "—"}
+                  <div className={cn("mt-0.5 text-sm font-semibold", transferConfirmed ? (() => { const t = selectedTransferId ? transfers?.find(tr => String(tr.id) === String(selectedTransferId)) : null; const tier = pickupRequiresDistance && transferDistance.status === "ready" && transferDistance.tier !== "blocked" ? transferDistance.tier : null; const unit = t ? resolveTransferUnitPrice(t, tier) : 0; return unit === 0 ? "text-emerald-600" : "text-primary-700"; })() : "text-secondary-400")}>
+                    {transferConfirmed ? (() => { const t = selectedTransferId ? transfers?.find(tr => String(tr.id) === String(selectedTransferId)) : null; const tier = pickupRequiresDistance && transferDistance.status === "ready" && transferDistance.tier !== "blocked" ? transferDistance.tier : null; const unit = t ? resolveTransferUnitPrice(t, tier) : 0; const cars = unit > 0 ? Math.ceil(totalGuests / 5) : 1; return unit === 0 ? "Free" : formatIDR(unit * cars); })() : "—"}
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-primary-600 shrink-0">{transferConfirmed ? "Edit" : "Select"}</span>
@@ -6915,8 +6841,8 @@ function StepFive({
                   <div className="mt-0.5 text-base font-semibold text-secondary-900">
                     {coverConfirmed ? (selectedCoverId ? (covers?.find(cv => String(cv.id) === String(selectedCoverId))?.name || "Selected") : "No coverage") : "Not selected"}
                   </div>
-                  <div className={cn("mt-0.5 text-sm font-semibold", coverConfirmed ? (() => { const p = selectedCoverId ? (covers?.find(cv => String(cv.id) === String(selectedCoverId))?.price || 0) : 0; return p === 0 ? "text-emerald-600" : "text-primary-700"; })() : "text-secondary-400")}>
-                    {coverConfirmed ? (() => { const p = selectedCoverId ? (covers?.find(cv => String(cv.id) === String(selectedCoverId))?.price || 0) : 0; return p === 0 ? "Free" : formatIDR(p * totalGuests); })() : "—"}
+                  <div className={cn("mt-0.5 text-sm font-semibold", coverConfirmed ? (() => { const c = selectedCoverId ? covers?.find(cv => String(cv.id) === String(selectedCoverId)) : null; const p = c ? Number(c.price || 0) * resolveCoverQuantity(c, totalGuests) : 0; return p === 0 ? "text-emerald-600" : "text-primary-700"; })() : "text-secondary-400")}>
+                    {coverConfirmed ? (() => { const c = selectedCoverId ? covers?.find(cv => String(cv.id) === String(selectedCoverId)) : null; const p = c ? Number(c.price || 0) * resolveCoverQuantity(c, totalGuests) : 0; return p === 0 ? "Free" : formatIDR(p); })() : "—"}
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-primary-600 shrink-0">{coverConfirmed ? "Change" : "Select"}</span>
@@ -6924,264 +6850,32 @@ function StepFive({
             </div>
 
             {/* Transfer picker modal */}
-            <Modal open={expandedRow === "transfer-modal"} onClose={() => setExpandedRow(null)} maxWidth="max-w-2xl" showClose hideDragHandle
-              title="Transfer" bodyClassName="px-6 pb-6 pt-3"
-              footer={
-                <div className="space-y-3">
-                  <div className="text-sm text-secondary-500">
-                    Selected: <b className="text-secondary-900">{selectedTransferId ? (transfers?.find(tr => String(tr.id) === String(selectedTransferId))?.name || "—") : "Free shuttle"}</b>
-                  </div>
-                  <Button
-                    className="h-12 w-full text-sm !font-black disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={(() => {
-                      if (!selectedTransferId || skipSharedAddress) return false;
-                      const selT = transfers?.find(tr => String(tr.id) === String(selectedTransferId));
-                      const isShuttleSel = selT?.name?.toLowerCase().includes("shuttle") || selT?.name?.toLowerCase().includes("free");
-                      if (isShuttleSel) return false;
-                      const hasDropoffSel = selT?.name?.toLowerCase().includes("drop");
-                      const pickupNeedsConfirm = Boolean(pickupAddress && pickupAddress.trim() && !pickupAddressConfirmed);
-                      const dropoffNeedsConfirm = Boolean(hasDropoffSel && !sameSharedAddress && dropoffAddress && dropoffAddress.trim() && !dropoffAddressConfirmed);
-                      return pickupNeedsConfirm || dropoffNeedsConfirm;
-                    })()}
-                    onClick={() => { onTransferConfirm?.(); setExpandedRow(null); }}
-                  >
-                    Confirm
-                  </Button>
-                </div>
-              }>
-              <div>
-                  <div className="space-y-2.5">
-                    {/* Self-arrival */}
-                    <button type="button" onClick={() => onSelectTransferId?.("")}
-                      className={cn("flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all", !selectedTransferId ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-neutral-300")}>
-                      <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", !selectedTransferId ? "bg-primary-600" : "border-[1.5px] border-neutral-300 bg-white")}>
-                        {!selectedTransferId && <Check className="h-3 w-3 text-white" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-secondary-900">Make my own way</div>
-                        <div className="text-xs text-secondary-500 mt-0.5">I'll get to Serangan Harbor myself</div>
-                      </div>
-                      <span className="text-base font-semibold text-emerald-600 shrink-0">Free</span>
-                    </button>
-                    {/* Transfers from API */}
-                    {transfers?.map((t) => {
-                      const isSel = String(selectedTransferId) === String(t.id);
-                      return (
-                        <div key={t.id} role="button" tabIndex={0} onClick={() => onSelectTransferId?.(t.id)}
-                          className={cn("flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all cursor-pointer", isSel ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-neutral-300")}>
-                          <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", isSel ? "bg-primary-600" : "border-[1.5px] border-neutral-300 bg-white")}>
-                            {isSel && <Check className="h-3 w-3 text-white" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-semibold text-secondary-900">{t.name}</div>
-                            <div className="text-xs text-secondary-500 mt-0.5">{t.name?.toLowerCase().includes("drop") ? "Door-to-door, both ways" : "Door-to-door pickup to the harbor"}</div>
-                            {(t.description || t.short_description) && (
-                              <>
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedTransferDetailId3(prev => prev === t.id ? null : t.id); }}
-                                  className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100">
-                                  <Info className="h-3.5 w-3.5" />
-                                  {expandedTransferDetailId3 === t.id ? "Hide description" : "See full description"}
-                                  {expandedTransferDetailId3 === t.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                </button>
-                                {expandedTransferDetailId3 === t.id && (() => {
-                                  const name = (t.name || "").toLowerCase();
-                                  const isShuttle = name.includes("shuttle") || name.includes("free");
-                                  const TRANSFER_IMAGE = "https://bluuu.tours/storage/app/media/driver.webp";
-                                  const PRIVATE_DESC = "Book your transfer with us for a smooth trip! If you come on your own, you can take an online taxi (Go-Jek or Grab) to Serangan in the morning. But for the return, online taxis are not allowed by local government. You'll need a local taxi, which is very expensive. It's best to book your return transfer in advance with us!";
-                                  const SHUTTLE_HUBS = ["Canggu/Berawa", "Batu Belig", "Seminyak", "Legian/Kuta"];
-                                  if (isShuttle) {
-                                    return (
-                                      <div className="mt-2 space-y-2.5 rounded-xl border border-neutral-100 bg-neutral-50/60 p-3">
-                                        <p className="text-xs text-secondary-600 leading-relaxed">
-                                          Free pickup from major tourist hubs. After booking, we message the exact timing and the closest pickup point. Expect a short 5–10 minute pickup window based on your area. <span className="italic text-primary-600">Optional: private transfer upgrade for faster, more comfortable pickup.</span>
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs text-secondary-700">
-                                          <Anchor className="h-3.5 w-3.5 text-primary-500 shrink-0" />
-                                          <span><b>Meeting point:</b> Serangan Harbor (Bluuu lounge)</span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                          {SHUTTLE_HUBS.map(h => (
-                                            <span key={h} className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-2.5 py-1 text-xs font-medium text-secondary-700">
-                                              <MapPin className="h-3 w-3 text-primary-500" strokeWidth={1.5} />{h}
-                                            </span>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                  return (
-                                    <div className="mt-2 text-xs text-secondary-600 leading-relaxed rounded-xl border border-neutral-100 bg-neutral-50/60 p-3">
-                                      {PRIVATE_DESC}
-                                    </div>
-                                  );
-                                })()}
-                              </>
-                            )}
-                          </div>
-                          <span className={cn("text-base font-semibold shrink-0", !t.price || t.price === 0 ? "text-emerald-600" : "text-primary-700")}>{!t.price || t.price === 0 ? "Free" : formatIDR(t.price)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {/* Address fields — hidden for Free Shuttle Bus */}
-                  {selectedTransferId && (() => {
-                    const selT = transfers?.find(tr => String(tr.id) === String(selectedTransferId));
-                    const isShuttle = selT?.name?.toLowerCase().includes("shuttle") || selT?.name?.toLowerCase().includes("free");
-                    if (isShuttle) return null;
-                    const hasDropoff = selT?.name?.toLowerCase().includes("drop");
-                    return (
-                      <div className="mt-4 space-y-3">
-                        {!skipSharedAddress && (
-                          <>
-                            <div>
-                              <label className="text-[10px] font-bold uppercase tracking-widest text-secondary-400">Pickup address</label>
-                              <AddressAutocomplete
-                                value={pickupAddress || ""}
-                                onChange={(val) => {
-                                  onSetPickupAddress?.(val);
-                                  if (sameSharedAddress && onSetDropoffAddress) onSetDropoffAddress(val);
-                                }}
-                                confirmed={pickupAddressConfirmed}
-                                onConfirmedChange={(val) => {
-                                  onSetPickupAddressConfirmed?.(val);
-                                  if (sameSharedAddress) onSetDropoffAddressConfirmed?.(val);
-                                }}
-                                placeholder="Enter your hotel or villa address"
-                                className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
-                              />
-                            </div>
-                            {hasDropoff && !sameSharedAddress && (
-                              <div>
-                                <label className="text-[10px] font-bold uppercase tracking-widest text-secondary-400">Dropoff address</label>
-                                <AddressAutocomplete
-                                  value={dropoffAddress || ""}
-                                  onChange={(val) => onSetDropoffAddress?.(val)}
-                                  confirmed={dropoffAddressConfirmed}
-                                  onConfirmedChange={(val) => onSetDropoffAddressConfirmed?.(val)}
-                                  placeholder="Enter your dropoff address"
-                                  className="mt-1 w-full h-12 rounded-2xl border border-neutral-200 bg-white px-4 text-sm text-secondary-900 placeholder:text-secondary-400 focus:border-primary-400 focus:outline-none focus:ring-1 focus:ring-primary-400"
-                                />
-                              </div>
-                            )}
-                            {showSharedMap && (
-                              <div className="overflow-hidden rounded-2xl border border-neutral-200">
-                                <iframe
-                                  title="Pick location on map"
-                                  src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d126000!2d115.2!3d-8.7!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2sid"
-                                  className="w-full h-56 sm:h-64 border-0"
-                                  allowFullScreen
-                                  loading="lazy"
-                                  referrerPolicy="no-referrer-when-downgrade"
-                                />
-                                <div className="flex items-center gap-1.5 bg-neutral-50 px-3 py-2 text-xs text-secondary-400">
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0"><circle cx="12" cy="10" r="3"/><path d="M12 2a8 8 0 0 0-8 8c0 1.892.402 3.13 1.5 4.5L12 22l6.5-7.5c1.098-1.37 1.5-2.608 1.5-4.5a8 8 0 0 0-8-8z"/></svg>
-                                  Click the map to pick a point, or drag the marker
-                                </div>
-                              </div>
-                            )}
-                            {hasDropoff && (
-                              <label className="flex cursor-pointer items-center gap-2">
-                                <input type="checkbox" checked={sameSharedAddress}
-                                  onChange={(e) => {
-                                    setSameSharedAddress(e.target.checked);
-                                    if (e.target.checked && onSetDropoffAddress) {
-                                      onSetDropoffAddress(pickupAddress || "");
-                                      onSetDropoffAddressConfirmed?.(pickupAddressConfirmed);
-                                    }
-                                  }}
-                                  className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
-                                <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
-                              </label>
-                            )}
-                          </>
-                        )}
-                        <label className="flex cursor-pointer items-center gap-2">
-                          <input type="checkbox" checked={skipSharedAddress}
-                            onChange={(e) => {
-                              setSkipSharedAddress(e.target.checked);
-                              if (e.target.checked) {
-                                onSetPickupAddress?.("");
-                                onSetDropoffAddress?.("");
-                                onSetPickupAddressConfirmed?.(false);
-                                onSetDropoffAddressConfirmed?.(false);
-                              }
-                            }}
-                            className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600" />
-                          <span className="text-xs text-secondary-400">Skip for now — add address in your account later</span>
-                        </label>
-                      </div>
-                    );
-                  })()}
-                </div>
-            </Modal>
+            <TransferPickerModal
+              open={expandedRow === "transfer-modal"}
+              onClose={() => setExpandedRow(null)}
+              transfers={transfers}
+              totalGuests={totalGuests}
+              selectedTransferId={selectedTransferId}
+              pickupAddress={pickupAddress}
+              dropoffAddress={dropoffAddress}
+              onConfirm={({ transferId, pickupAddress: confirmedPickup, dropoffAddress: confirmedDropoff, pickupLocation: confirmedLocation }) => {
+                onSelectTransferId?.(transferId);
+                onSetPickupAddress?.(confirmedPickup);
+                onSetDropoffAddress?.(confirmedDropoff);
+                onSetPickupLocation?.(confirmedLocation);
+                onTransferConfirm?.();
+              }}
+            />
 
             {/* Insurance picker modal */}
-            <Modal open={expandedRow === "insurance-modal"} onClose={() => setExpandedRow(null)} maxWidth="max-w-2xl" showClose hideDragHandle
-              title="Trip protection"
-              footer={
-                <div className="space-y-3">
-                  <div className="text-sm text-secondary-500">
-                    Selected: <b className="text-secondary-900">{selectedCoverId ? (covers?.find(cv => String(cv.id) === String(selectedCoverId))?.name || "Coverage") : "No coverage"}</b>
-                  </div>
-                  <Button className="h-12 w-full text-sm !font-black" onClick={() => { onCoverConfirm?.(); setExpandedRow(null); }}>
-                    Confirm
-                  </Button>
-                </div>
-              }>
-              <div className="space-y-2.5">
-                  <button type="button" onClick={() => onSelectCoverId?.(null)}
-                    className={cn("flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all", !selectedCoverId ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-neutral-300")}>
-                    <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", !selectedCoverId ? "bg-primary-600" : "border-[1.5px] border-neutral-300 bg-white")}>
-                      {!selectedCoverId && <Check className="h-3 w-3 text-white" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-secondary-900">No coverage</div>
-                      <div className="text-xs text-secondary-500 mt-0.5">I have my own insurance</div>
-                    </div>
-                    <span className="text-base font-semibold text-emerald-600 shrink-0">Free</span>
-                  </button>
-                  {covers?.map((c) => {
-                    const isSel = String(selectedCoverId) === String(c.id);
-                    return (
-                      <div key={c.id} role="button" tabIndex={0} onClick={() => onSelectCoverId?.(c.id)}
-                        className={cn("flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition-all cursor-pointer", isSel ? "border-primary-500 bg-primary-50" : "border-neutral-200 hover:border-neutral-300")}>
-                        <div className={cn("flex h-5 w-5 shrink-0 items-center justify-center rounded-full", isSel ? "bg-primary-600" : "border-[1.5px] border-neutral-300 bg-white")}>
-                          {isSel && <Check className="h-3 w-3 text-white" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-semibold text-secondary-900">{c.name}</div>
-                          <div className="text-xs text-secondary-500 mt-0.5">100% refund cancellation protection</div>
-                          {(c.description || c.short_description) && (
-                            <>
-                              <button type="button" onClick={(e) => { e.stopPropagation(); setExpandedCoverDetailId3(prev => prev === c.id ? null : c.id); }}
-                                className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-primary-200 bg-primary-50 px-3 py-1.5 text-xs font-semibold text-primary-700 transition-colors hover:bg-primary-100">
-                                <Info className="h-3.5 w-3.5" />
-                                {expandedCoverDetailId3 === c.id ? "Hide description" : "See full description"}
-                                {expandedCoverDetailId3 === c.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                              </button>
-                              {expandedCoverDetailId3 === c.id && (
-                                <div className="mt-2 space-y-1.5 rounded-xl border border-neutral-100 bg-neutral-50/60 p-3 text-xs text-secondary-600 leading-relaxed">
-                                  <p className="font-semibold text-secondary-900">Fully Flexible Ticket with 100% Refund Cancellation Protection</p>
-                                  <p>Upgrade to a fully flexible ticket:</p>
-                                  <ul className="space-y-1 list-none">
-                                    <li>– x1 time reschedule at no extra charge</li>
-                                    <li>– 100% refund for: sickness, accident, COVID-19, "Bali belly", hangover, flight disruption, adverse weather, transport failure, pre-existing conditions, theft, bike crash, home emergency</li>
-                                  </ul>
-                                  <p className="italic text-secondary-400">Refund does not apply to car transportation if service was already provided.</p>
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                        <div className="text-right shrink-0">
-                          <span className="text-base font-semibold text-primary-700">{formatIDR(c.price)}</span>
-                          <span className="text-xs text-secondary-400 sm:ml-1 block sm:inline">/ person</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-            </Modal>
+            <CoverPickerModal
+              open={expandedRow === "insurance-modal"}
+              onClose={() => setExpandedRow(null)}
+              covers={covers}
+              totalGuests={totalGuests}
+              selectedCoverId={selectedCoverId}
+              onConfirm={({ coverId }) => { onSelectCoverId?.(coverId); onCoverConfirm?.(); }}
+            />
 
             {/* Trust alert popups */}
           </div>
@@ -7191,8 +6885,14 @@ function StepFive({
             <div className="mt-[46px] space-y-3 text-sm text-secondary-600">
               <div className="flex items-center justify-between">
                 <span>Boat base price</span>
-                <span className="text-base font-semibold text-secondary-900">{formatIDR(basePrice)}</span>
+                <span className="text-base font-semibold text-secondary-900">{formatIDR(lowSeason ? lowSeason.original : basePrice)}</span>
               </div>
+              {lowSeason && (
+                <div className="flex items-center justify-between">
+                  <span className="text-emerald-700">Low season −{lowSeason.percent}%</span>
+                  <span className="text-base font-semibold text-emerald-700">−{formatIDR(lowSeason.discount)}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span>Extras</span>
                 <span className="text-base font-semibold text-secondary-900">{formatIDR(extrasSubtotalIDR)}</span>
@@ -7205,8 +6905,17 @@ function StepFive({
               )}
               <div className="h-px w-full bg-neutral-200 my-2" />
               <div className="flex items-center justify-between text-base font-semibold text-secondary-900">
-                <span>Total</span>
-                <span className="text-xl font-black text-primary-500">{formatIDR(basePrice + guestFeeTotal + extrasSubtotalIDR)}</span>
+                <span>Pay today (30%)</span>
+                <span className="text-xl font-black text-primary-500">{formatIDR(Math.round((basePrice + guestFeeTotal + extrasSubtotalIDR) * 0.3))}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Pay at check-in (70%)</span>
+                <span className="text-base font-semibold text-secondary-900">{formatIDR((basePrice + guestFeeTotal + extrasSubtotalIDR) - Math.round((basePrice + guestFeeTotal + extrasSubtotalIDR) * 0.3))}</span>
+              </div>
+              <div className="h-px w-full bg-neutral-200 my-2" />
+              <div className="flex items-center justify-between">
+                <span>Total price</span>
+                <span className="text-base font-semibold text-secondary-900">{formatIDR(basePrice + guestFeeTotal + extrasSubtotalIDR)}</span>
               </div>
             </div>
             <div className="mt-7 space-y-4">
@@ -7214,7 +6923,7 @@ function StepFive({
                 {reserveLabel} {isReserveEnabled ? <ArrowRight className="h-4 w-4" /> : null}
               </Button>
               <div className="text-center text-sm text-secondary-500">
-                {isReserveEnabled ? "Secure checkout · Instant confirmation" : ""}
+                {isReserveEnabled ? "Only 30% today · Remaining balance at check-in" : ""}
               </div>
             </div>
             <div className="mt-auto pt-6 space-y-4">
@@ -9067,13 +8776,49 @@ export default function Shared_tour_01() {
   const [dropoffAddress, setDropoffAddress] = useState("");
   const [pickupAddressConfirmed, setPickupAddressConfirmed] = useState(false);
   const [dropoffAddressConfirmed, setDropoffAddressConfirmed] = useState(false);
+  const [pickupLocation, setPickupLocation] = useState(null); // {lat, lng} | null — резолвится из AddressAutocomplete
+  const [transferDistance, setTransferDistance] = useState({ status: "idle", km: null, tier: null });
+  const [transferBlockedNotice, setTransferBlockedNotice] = useState(null);
+
+  const pickupRequiresDistance = String(selectedTransferId) === "1" || String(selectedTransferId) === "2";
+
+  // Пересчитываем дистанцию/тариф pickup-адреса при выборе точки на карте/подсказке.
+  // >45км — трансфер автоматически снимается с выбора (нельзя оставить выбранным).
+  useEffect(() => {
+    if (!pickupRequiresDistance || !pickupLocation) {
+      setTransferDistance({ status: "idle", km: null, tier: null });
+      return;
+    }
+    let cancelled = false;
+    setTransferDistance({ status: "loading", km: null, tier: null });
+    setTransferBlockedNotice(null);
+    fetch(apiUrl(`transfer/distance?lat=${pickupLocation.lat}&lng=${pickupLocation.lng}`))
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!data.success) {
+          setTransferDistance({ status: "error", km: null, tier: null });
+          return;
+        }
+        setTransferDistance({ status: "ready", km: data.distance_km, tier: data.tier });
+        if (data.tier === "blocked") {
+          setTransferBlockedNotice(`This address is ${data.distance_km} km away — more than 45 km, so this transfer isn't available here. Please choose a different address or "No, thanks".`);
+          setSelectedTransferId(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setTransferDistance({ status: "error", km: null, tier: null });
+      });
+    return () => { cancelled = true; };
+  }, [pickupLocation, pickupRequiresDistance]);
+
   const [inlineRouteSchedule, setInlineRouteSchedule] = useState(null);
   const [isFetchingInlineRoute, setIsFetchingInlineRoute] = useState(false);
   const [inlineRestaurantPopup, setInlineRestaurantPopup] = useState(null);
 
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState(1);
-  const [payMode, setPayMode] = useState("full");
+  const [payMode, setPayMode] = useState("part");
   const [payMethod, setPayMethod] = useState("card");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -9095,7 +8840,10 @@ export default function Shared_tour_01() {
     // Map the filtered tours to shared options.
     const options = validTours.map((tour) => {
       // Price from show_price / gross_price for shared tours (per guest)
-      const defaultPrice = Number(tour.show_price) || Number(tour.gross_price) || Number(tour.price) || 0;
+      const fullDefaultPrice = Number(tour.show_price) || Number(tour.gross_price) || Number(tour.price) || 0;
+      // "From" price before a date is picked: with the max upcoming low season discount
+      const lowSeasonMax = maxLowSeasonPercent(tour);
+      const defaultPrice = fullDefaultPrice - Math.round(fullDefaultPrice * lowSeasonMax / 100);
       const json = tour.json || {};
       const scheduleRaw = Array.isArray(json.schedule) ? json.schedule : Array.isArray(tour.schedule) ? tour.schedule : [];
       const schedule = scheduleRaw
@@ -9143,6 +8891,9 @@ export default function Shared_tour_01() {
         name: tour.name || "Shared Tour",
         slug: tour.slug || "",
         priceValue: defaultPrice,
+        priceOriginal: lowSeasonMax > 0 ? fullDefaultPrice : null,
+        lowSeasonPercent: lowSeasonMax,
+        lowSeasonUpTo: true,
         isPartner: tour.account_id !== 1 && !!tour.account_id,
         people: Number(tour.capacity) || 14,
         lengthMeters: getBoatLength(tour),
@@ -9434,13 +9185,16 @@ export default function Shared_tour_01() {
       return { ...t, pricesbydates: datePricing };
     });
   }, [sharedTours, selectedYacht, datePricing]);
-  const dynamicBoatPrice = useBoatPricing(
+  const dynamicBoatPricing = useBoatPricingDetailed(
     selectedYacht?.tourId,
     dateMode === "exact" ? exactDate : (selectedFlexDate || rangeStart),
     totalGuests,
     pricingTourData
   );
-  const mainBasePrice = dynamicBoatPrice ?? ((selectedYacht?.priceValue || 0) * totalGuests);
+  // Tier price with low season applied (same math as TourPricing::quote on the backend)
+  const dynamicBoatPrice = dynamicBoatPricing?.total ?? null;
+  const lowSeasonInfo = dynamicBoatPricing?.percent > 0 ? dynamicBoatPricing : null;
+  const mainBasePrice = dynamicBoatPrice ?? ((selectedYacht?.priceOriginal || selectedYacht?.priceValue || 0) * totalGuests);
   // If we are using dynamic pricing from the pricelist, guest fee is usually built-in.
   // Otherwise, fallback to the manual guest fee calculation.
   const guestFeeTotal = dynamicBoatPrice !== null ? 0 : totalGuests * GUEST_FEE_IDR;
@@ -9577,24 +9331,26 @@ export default function Shared_tour_01() {
       if (!extra) return acc;
       return acc + quantity * Number(extra.price || 0);
     }, 0);
-    // Add selected transfer
-    if (selectedTransferId) {
+    // Add selected transfer — skipped while a pickup-requiring transfer's distance
+    // isn't resolved yet (or is blocked), so it can't be paid for in that state.
+    if (selectedTransferId && (!pickupRequiresDistance || (transferDistance.status === "ready" && transferDistance.tier !== "blocked"))) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const isLargeGroup = totalGuests > 5;
-        const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
-        sum += price;
+        const resolvedTier = pickupRequiresDistance ? transferDistance.tier : null;
+        const price = resolveTransferUnitPrice(transfer, resolvedTier);
+        const cars = price > 0 ? Math.ceil(totalGuests / 5) : 1;
+        sum += price * cars;
       }
     }
     // Add selected cover
     if (selectedCoverId) {
       const cover = covers?.find(c => String(c.id) === String(selectedCoverId));
       if (cover) {
-        sum += Number(cover.price || 0) * totalGuests;
+        sum += Number(cover.price || 0) * resolveCoverQuantity(cover, totalGuests);
       }
     }
     return sum;
-  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests]);
+  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests, pickupRequiresDistance, transferDistance]);
   const selectedExtrasSummary = useMemo(() => {
     const summary = Object.entries(selectedExtras)
       .map(([id, qty]) => {
@@ -9605,18 +9361,20 @@ export default function Shared_tour_01() {
         return { ...extra, quantity };
       })
       .filter(Boolean);
-    // Add transfer to summary
-    if (selectedTransferId) {
+    // Add transfer to summary — same "skip until resolved" rule as extrasSubtotalIDR,
+    // since this list feeds the checkout payload.
+    if (selectedTransferId && (!pickupRequiresDistance || (transferDistance.status === "ready" && transferDistance.tier !== "blocked"))) {
       const transfer = transfers?.find(t => String(t.id) === String(selectedTransferId));
       if (transfer) {
-        const isLargeGroup = totalGuests > 5;
-        const price = (isLargeGroup && transfer.bus_price) ? Number(transfer.bus_price) : Number(transfer.price || 0);
+        const resolvedTier = pickupRequiresDistance ? transferDistance.tier : null;
+        const price = resolveTransferUnitPrice(transfer, resolvedTier);
+        const quantity = price > 0 ? Math.ceil(totalGuests / 5) : 1;
         summary.push({
           id: `transfer-${transfer.id}`,
           name: transfer.name,
-          price: price,
+          price,
           pricingType: "per_booking",
-          quantity: 1
+          quantity,
         });
       }
     }
@@ -9628,13 +9386,13 @@ export default function Shared_tour_01() {
           id: `cover-${cover.id}`,
           name: cover.name,
           price: Number(cover.price || 0),
-          pricingType: "per_person",
-          quantity: totalGuests
+          pricingType: cover.per_boat ? "per_boat" : "per_person",
+          quantity: resolveCoverQuantity(cover, totalGuests),
         });
       }
     }
     return summary;
-  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests]);
+  }, [selectedExtras, extraLookupById, selectedTransferId, selectedCoverId, transfers, covers, totalGuests, pickupRequiresDistance, transferDistance]);
   const hasDateCriteria = dateMode === "exact" ? !!exactDate : !!(rangeStart && rangeEnd);
   const canProceedFromStepOne = hasDateCriteria && totalGuests > 0;
   const boatAvailability = useMemo(() => {
@@ -9680,7 +9438,7 @@ export default function Shared_tour_01() {
   }, [searchDateMode, searchExactDate, searchRangeStart, searchRangeEnd, searchTotalGuests, yachtOptions, isDateAvailable, getAvailableDates, availabilityMap]);
 
   const totalPrice = mainBasePrice + guestFeeTotal + extrasSubtotalIDR;
-  const partPrice = Math.round(totalPrice * 0.5);
+  const partPrice = Math.round(totalPrice * 0.3);
   const donationAmount = Math.round(totalPrice * 0.01);
   const handleOpenCheckout = () => {
     const analyticsItem = buildTourAnalyticsItem({
@@ -9731,8 +9489,13 @@ export default function Shared_tour_01() {
       requests: specialRequests,
       pickup_address: pickupAddress,
       dropoff_address: dropoffAddress,
+      pickup_lat: pickupLocation?.lat != null ? String(pickupLocation.lat) : "",
+      pickup_lng: pickupLocation?.lng != null ? String(pickupLocation.lng) : "",
       boatPrice: "0",
       totalBoatPrice: String(mainBasePrice ?? 0),
+      lsPercent: String(lowSeasonInfo?.percent ?? 0),
+      lsDiscount: String(lowSeasonInfo?.discount ?? 0),
+      lsOriginal: String(lowSeasonInfo?.original ?? 0),
       extrasTotal: String(extrasSubtotalIDR ?? 0),
       ...(_availBoatId ? { availBoatId: String(_availBoatId) } : {}),
       analyticsCurrency: "IDR",
@@ -10116,7 +9879,7 @@ export default function Shared_tour_01() {
                 {dateMode === "exact" ? (
                   <CustomDatePicker
                     mode="single"
-                    selected={exactDate ? new Date(exactDate) : undefined}
+                    selected={exactDate ? new Date(exactDate + "T00:00:00") : undefined}
                     onSelect={(date) => {
                       if (date) {
                         const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -10130,8 +9893,8 @@ export default function Shared_tour_01() {
                   <CustomDatePicker
                     mode="range"
                     selected={{
-                      from: rangeStart ? new Date(rangeStart) : undefined,
-                      to: rangeEnd ? new Date(rangeEnd) : undefined,
+                      from: rangeStart ? new Date(rangeStart + "T00:00:00") : undefined,
+                      to: rangeEnd ? new Date(rangeEnd + "T00:00:00") : undefined,
                     }}
                     onSelect={(range) => {
                       if (range?.from) {
@@ -10209,6 +9972,7 @@ export default function Shared_tour_01() {
                         onRestaurantClick={setInlineRestaurantPopup}
                         schedulePhotos={inlineRouteSchedule?.schedulePhotos || selectedYacht?.routeSchedule?.schedulePhotos}
                         priceDisplay={selectedYacht ? formatIDR((() => { const dateForPrice = dateMode === "exact" ? exactDate : selectedFlexDate; if (dateForPrice && selectedYacht.tourId) { const p = calculateBoatPrice(selectedYacht.tourId, dateForPrice, totalGuests, sharedTours); if (p !== null) return p; } return selectedYacht.priceValue; })()) : null}
+                        priceSubDisplay={selectedYacht ? `${formatIDR((() => { const dateForPrice = dateMode === "exact" ? exactDate : selectedFlexDate; let total = selectedYacht.priceValue; if (dateForPrice && selectedYacht.tourId) { const p = calculateBoatPrice(selectedYacht.tourId, dateForPrice, totalGuests, sharedTours); if (p !== null) total = p; } return total / Math.max(1, totalGuests); })())} / person` : null}
                         dateDisplay={dateMode === "exact" ? (exactDate ? new Date(exactDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : null) : (selectedFlexDate ? new Date(selectedFlexDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : rangeStart && rangeEnd ? `${new Date(rangeStart + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(rangeEnd + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : null)}
                         guestsDisplay={`${adults} adult${adults !== 1 ? "s" : ""}${kids > 0 ? `, ${kids} kid${kids !== 1 ? "s" : ""}` : ""}`}
                         isUnavailable={boatUnavailable}
@@ -10243,6 +10007,11 @@ export default function Shared_tour_01() {
 
         {/* StepExtras removed — transfer & insurance moved to review */}
         {showReview && <>
+        <PremiumSection id="why-book-now-section" className="pt-8 sm:pt-10 pb-0" backgroundClassName={SECTION_BACKGROUNDS.mist}>
+          <PremiumContainer>
+            <WhyBookNow />
+          </PremiumContainer>
+        </PremiumSection>
         <div className="relative">
         <div className="relative">
           <div className={cn(stepFiveLocked && "pointer-events-none select-none opacity-45")}>
@@ -10266,6 +10035,7 @@ export default function Shared_tour_01() {
               selectedStyleId={selectedStyleId}
               selectedExtrasSummary={selectedExtrasSummary}
               basePrice={mainBasePrice}
+              lowSeason={lowSeasonInfo}
               guestFeeTotal={guestFeeTotal}
               extrasSubtotalIDR={extrasSubtotalIDR}
               onOpenTourInfo={openTourInfo}
@@ -10300,6 +10070,8 @@ export default function Shared_tour_01() {
               onSetDropoffAddressConfirmed={setDropoffAddressConfirmed}
               pendingTransferModal={pendingTransferModal}
               onPendingTransferModalConsumed={() => setPendingTransferModal(false)}
+              onSetPickupLocation={setPickupLocation}
+              transferDistance={transferDistance}
             />
             <AnimatePresence>
               {isCheckoutOpen && (
@@ -10315,6 +10087,7 @@ export default function Shared_tour_01() {
                     onSetStep={setCheckoutStep}
                     totalPrice={totalPrice}
                     partPrice={partPrice}
+                    lowSeason={lowSeasonInfo}
                     payMode={payMode}
                     onSetPayMode={setPayMode}
                     payMethod={payMethod}
@@ -10340,6 +10113,7 @@ export default function Shared_tour_01() {
                     dropoffAddress={dropoffAddress}
                     onSetDropoffAddress={setDropoffAddress}
                     onFinalize={handleApplyCheckout}
+                    pickupBlocking={(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && !(transferDistance.status === "ready" && transferDistance.tier !== "blocked")}
                     onCancel={() => {
                       setIsCheckoutOpen(false);
                       setTimeout(() => document.getElementById("step-review")?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
@@ -10354,6 +10128,7 @@ export default function Shared_tour_01() {
         </div>
         </>}
         </div>{/* end step 4 wrapper */}
+        <FAQ />
         <ReviewsSection />
         <Footer />
       </div>
@@ -10371,6 +10146,7 @@ function StepCheckout({
   onSetStep,
   totalPrice,
   partPrice,
+  lowSeason = null,
   payMode,
   onSetPayMode,
   payMethod,
@@ -10397,21 +10173,11 @@ function StepCheckout({
   onSetDropoffAddress,
   onFinalize,
   onCancel,
+  pickupBlocking = false,
 }) {
   const isLastStep = step === 2;
-  const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability) : true;
+  const canContinue = isLastStep ? (contactName && contactEmail && agreedTerms && agreedLiability && !pickupBlocking) : true;
   const [errors, setErrors] = useState({});
-  const [sameAddress, setSameAddress] = useState(false);
-
-  const handleSameAddressChange = (checked) => {
-    setSameAddress(checked);
-    if (checked) onSetDropoffAddress(pickupAddress);
-  };
-
-  const handlePickupChange = (val) => {
-    onSetPickupAddress(val);
-    if (sameAddress) onSetDropoffAddress(val);
-  };
 
   const validateEmail = (email) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).toLowerCase());
@@ -10423,6 +10189,7 @@ function StepCheckout({
   };
 
   const handleFinalize = () => {
+    if (pickupBlocking) return;
     const newErrors = {};
     if (!contactName?.trim()) newErrors.contactName = "Name is required";
     if (!contactEmail?.trim()) {
@@ -10462,7 +10229,9 @@ function StepCheckout({
         <div className="mx-auto max-w-2xl">
           <div className="mb-6 text-center">
             <h2 className="text-2xl font-bold text-secondary-900 sm:text-3xl">Complete your booking</h2>
-            <p className="mt-1 text-sm text-secondary-500 sm:text-base">Secure your spot in just a few steps.</p>
+            <p className="mt-1 text-sm text-secondary-500 sm:text-base">
+              {step === 1 ? "Secure your booking by paying only 30% today." : "Secure your spot in just a few steps."}
+            </p>
           </div>
 
           <div className="mb-7 flex items-start justify-center">
@@ -10504,40 +10273,17 @@ function StepCheckout({
 
           <div className={`${CARD.radius} ${CARD.border} ${CARD.bg} p-4 shadow-lg shadow-neutral-100/40 sm:p-6`}>
             <h3 className="mb-4 text-lg font-bold text-secondary-900 sm:mb-5 sm:text-xl">
-              {step === 1 ? "How would you like to pay?" : "Contact details"}
+              {step === 1 ? "Choose how you'd like to pay" : "Contact details"}
             </h3>
 
             {step === 1 && (
               <div className="space-y-2.5">
-                <button
-                  onClick={() => onSetPayMode("full")}
-                  className={cn(
-                    "relative flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
-                    payMode === "full"
-                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
-                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
-                  )}
-                >
-                  <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all", payMode === "full" ? "border-primary-600 bg-primary-600" : "border-neutral-300 bg-transparent")}>
-                    {payMode === "full" && <Check className="h-3.5 w-3.5 text-white" />}
+                {lowSeason && (
+                  <div className="flex items-center gap-2 text-xs text-secondary-500 sm:text-sm">
+                    <LowSeasonBadge percent={lowSeason.percent} />
+                    <span>Prices include −{formatIDR(lowSeason.discount)} low season discount</span>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                      <span className="font-bold text-secondary-900">Pay in full</span>
-                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice + (supportChildren ? donationAmount : 0))}</span>
-                    </div>
-                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      Secure your boat immediately with a single seamless payment.
-                    </div>
-                    {payMode === "full" && (
-                      <div className="mt-2 flex items-center gap-2 text-xs font-bold text-primary-700">
-                        <Check className="h-3.5 w-3.5" />
-                        <span>Most popular choice</span>
-                      </div>
-                    )}
-                  </div>
-                </button>
-
+                )}
                 <button
                   onClick={() => onSetPayMode("part")}
                   className={cn(
@@ -10553,13 +10299,39 @@ function StepCheckout({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-secondary-900">Pay 50% deposit</span>
-                        <span className="rounded-full border border-primary-200 bg-primary-50/50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-primary-600">Flexible</span>
+                        <span className="font-bold text-secondary-900">Reserve with 30% today</span>
+                        <span className="rounded-full border border-primary-600 bg-primary-600 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide text-white">Recommended</span>
                       </div>
                       <span className="font-bold text-secondary-900">{formatIDR(partPrice + (supportChildren ? donationAmount : 0))}</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
-                      Pay {formatIDR(partPrice + (supportChildren ? donationAmount : 0))} now, and the rest ({formatIDR(totalPrice - partPrice)}) on the day.
+                      Pay {formatIDR(partPrice + (supportChildren ? donationAmount : 0))} now to confirm your booking.
+                    </div>
+                    <div className="mt-0.5 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                      Pay the remaining {formatIDR(totalPrice - partPrice)} at check-in before departure.
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => onSetPayMode("full")}
+                  className={cn(
+                    "relative flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200",
+                    payMode === "full"
+                      ? "border-primary-600 bg-primary-50/50 ring-1 ring-primary-600/20"
+                      : "border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50"
+                  )}
+                >
+                  <div className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all", payMode === "full" ? "border-primary-600 bg-primary-600" : "border-neutral-300 bg-transparent")}>
+                    {payMode === "full" && <Check className="h-3.5 w-3.5 text-white" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                      <span className="font-bold text-secondary-900">Pay in full</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice + (supportChildren ? donationAmount : 0))} + 2.5% Xendit fee</span>
+                    </div>
+                    <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
+                      Pay the full amount now and have nothing left to pay on the day.
                     </div>
                   </div>
                 </button>
@@ -10646,41 +10418,16 @@ function StepCheckout({
                   </div>
                 </div>
                 {(String(selectedTransferId) === "1" || String(selectedTransferId) === "2") && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address*</label>
-                    <input
-                      type="text"
-                      autoComplete="new-password"
-                      value={pickupAddress}
-                      onChange={(e) => handlePickupChange(e.target.value)}
-                      placeholder="Enter your hotel or villa address"
-                      className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
-                    />
-                  </div>
-                )}
-                {String(selectedTransferId) === "2" && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address*</label>
-                    {!sameAddress && (
-                      <input
-                        type="text"
-                        autoComplete="new-password"
-                        value={dropoffAddress}
-                        onChange={(e) => onSetDropoffAddress(e.target.value)}
-                        placeholder="Enter your dropoff address"
-                        className="mt-1 w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm focus:border-primary-600 focus:ring-1 focus:ring-primary-600"
-                      />
+                  <div className="sm:col-span-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-secondary-700">
+                    <div className="text-xs font-bold uppercase tracking-wider text-secondary-600">Pickup address</div>
+                    <div className="mt-0.5">{pickupAddress || "—"}</div>
+                    {String(selectedTransferId) === "2" && (
+                      <>
+                        <div className="mt-2 text-xs font-bold uppercase tracking-wider text-secondary-600">Dropoff address</div>
+                        <div className="mt-0.5">{dropoffAddress || "—"}</div>
+                      </>
                     )}
-                    <label className="mt-2 flex cursor-pointer items-center gap-2">
-                      <input
-                        id="same-address"
-                        type="checkbox"
-                        checked={sameAddress}
-                        onChange={(e) => handleSameAddressChange(e.target.checked)}
-                        className="h-4 w-4 rounded border-neutral-300 text-primary-600 accent-primary-600"
-                      />
-                      <span className="text-xs text-secondary-400">Same address for pickup and dropoff</span>
-                    </label>
+                    <div className="mt-1.5 text-xs text-secondary-400">To change it, go back and edit the Transfer selection above.</div>
                   </div>
                 )}
                 <div>
@@ -10759,12 +10506,17 @@ function StepCheckout({
               )}
               <Button
                 onClick={() => step < 2 ? onSetStep(step + 1) : handleFinalize()}
-                disabled={step === 2 && (!agreedTerms || !agreedLiability)}
+                disabled={step === 2 && (!agreedTerms || !agreedLiability || pickupBlocking)}
                 className="h-11 min-w-32 px-5 shadow-md shadow-primary-600/20"
               >
-                {step < 2 ? "Continue" : "Complete booking"}
+                {step < 2 ? (payMode === "part" ? "CONTINUE WITH 30%" : "CONTINUE WITH FULL PAYMENT") : "Complete booking"}
               </Button>
             </div>
+            {step === 2 && pickupBlocking && (
+              <div className="mt-3 text-right text-xs font-semibold text-red-600">
+                Please confirm your pickup address to continue.
+              </div>
+            )}
           </div>
         </div>
       </Section>

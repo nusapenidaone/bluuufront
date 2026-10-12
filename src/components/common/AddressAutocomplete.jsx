@@ -1,12 +1,12 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { MapPin, Map } from 'lucide-react';
+import { MapPin, Map, X } from 'lucide-react';
 import { loadGoogleMaps } from '../../lib/googleMaps';
 
 const BALI_BOUNDS = { south: -9.0, west: 114.4, north: -7.9, east: 116.0 };
 const BALI_CENTER = { lat: -8.719, lng: 115.169 }; // Kuta area
 
-export default function AddressAutocomplete({ value, onChange, placeholder, className, confirmed = false, onConfirmedChange }) {
+export default function AddressAutocomplete({ value, onChange, placeholder, className, confirmed = false, onConfirmedChange, onLocationChange, defaultShowMap = false }) {
   const inputRef = useRef(null);
   const mapDivRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -15,7 +15,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const [location, setLocation] = useState(null);
-  const [showMap, setShowMap] = useState(false);
+  const [showMap, setShowMap] = useState(defaultShowMap);
   const [dropdownRect, setDropdownRect] = useState(null);
 
   // Sync externally-controlled value (e.g. "same address" checkbox)
@@ -35,7 +35,12 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
       );
       const { suggestions: raw } = await google.maps.places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
         input,
-        locationBias: bounds,
+        // locationRestriction (hard filter) instead of locationBias (soft preference) —
+        // we only ever want Bali pickup addresses, not "closest match anywhere in the
+        // world" when the typed text doesn't match anything nearby. includedRegionCodes
+        // narrows it further to Indonesia as a belt-and-suspenders country filter.
+        locationRestriction: bounds,
+        includedRegionCodes: ['id'],
       });
       setSuggestions(raw ?? []);
       if (inputRef.current) setDropdownRect(inputRef.current.getBoundingClientRect());
@@ -49,6 +54,11 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
     const v = e.target.value;
     onChange(v);
     onConfirmedChange?.(false);
+    // Текст мог измениться после того как координаты уже были получены (выбор
+    // подсказки/точки на карте) — сбрасываем их, чтобы цена не считалась по
+    // адресу, который клиент потом отредактировал вручную.
+    setLocation(null);
+    onLocationChange?.(null);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => fetchSuggestions(v), 250);
   };
@@ -68,9 +78,34 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
       const place = suggestion.placePrediction.toPlace();
       await place.fetchFields({ fields: ['location'] });
       const loc = place.location;
-      if (loc) setLocation({ lat: loc.lat(), lng: loc.lng() });
+      if (loc) {
+        const pos = { lat: loc.lat(), lng: loc.lng() };
+        setLocation(pos);
+        onLocationChange?.(pos);
+      } else {
+        onLocationChange?.(null);
+      }
     } catch {
-      // координаты не критичны
+      // координаты не критичны для адреса, но важны для расчёта дистанции —
+      // сообщаем родителю что их нет
+      onLocationChange?.(null);
+    }
+  };
+
+  // Когда карта всегда видна (defaultShowMap), кнопка рядом с полем переключается
+  // с "показать/скрыть карту" (бессмысленно, если карта и так всегда открыта) на
+  // очистку адреса — так проще начать выбор заново, не редактируя текст руками.
+  const handleClear = () => {
+    onChange('');
+    onConfirmedChange?.(false);
+    if (inputRef.current) inputRef.current.value = '';
+    setSuggestions([]);
+    setOpen(false);
+    setLocation(null);
+    onLocationChange?.(null);
+    if (markerRef.current) {
+      markerRef.current.setMap(null);
+      markerRef.current = null;
     }
   };
 
@@ -105,6 +140,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
         mapInstanceRef.current.addListener('click', (e) => {
           const pos = { lat: e.latLng.lat(), lng: e.latLng.lng() };
           setLocation(pos);
+          onLocationChange?.(pos);
           if (!markerRef.current) {
             markerRef.current = new google.maps.Marker({
               position: pos,
@@ -114,6 +150,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
             markerRef.current.addListener('dragend', (ev) => {
               const p = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
               setLocation(p);
+              onLocationChange?.(p);
               reverseGeocode(p);
             });
           } else {
@@ -131,6 +168,7 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
           markerRef.current.addListener('dragend', (ev) => {
             const p = { lat: ev.latLng.lat(), lng: ev.latLng.lng() };
             setLocation(p);
+            onLocationChange?.(p);
             reverseGeocode(p);
           });
         }
@@ -158,14 +196,26 @@ export default function AddressAutocomplete({ value, onChange, placeholder, clas
           className={className}
           autoComplete="off"
         />
-        <button
-          type="button"
-          onClick={() => setShowMap((v) => !v)}
-          title={showMap ? 'Hide map' : 'Show on map'}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-secondary-500 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600"
-        >
-          <Map className="h-4 w-4" />
-        </button>
+        {defaultShowMap ? (
+          <button
+            type="button"
+            onClick={handleClear}
+            disabled={!value}
+            title="Clear address"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-secondary-500 transition hover:border-red-300 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-neutral-200 disabled:hover:bg-white disabled:hover:text-secondary-500"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowMap((v) => !v)}
+            title={showMap ? 'Hide map' : 'Show on map'}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-white text-secondary-500 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600"
+          >
+            <Map className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {showConfirmPrompt && (

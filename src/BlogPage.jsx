@@ -59,8 +59,15 @@ function FeaturedCard({ post }) {
       </div>
 
       <div className="flex flex-1 flex-col justify-center bg-white p-8 lg:p-10">
-        <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-primary-600">
-          Featured
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary-50 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-primary-600">
+            Featured
+          </span>
+          {post.category && (
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-bold uppercase tracking-widest text-secondary-500">
+              {post.category}
+            </span>
+          )}
         </div>
 
         <h2 className="mb-3 text-2xl font-bold leading-snug text-secondary-900 group-hover:text-primary-600 transition-colors duration-200 lg:text-3xl">
@@ -132,6 +139,11 @@ function BlogCard({ post, index }) {
       </div>
 
       <div className="flex flex-1 flex-col p-5">
+        {post.category && (
+          <span className="mb-2 inline-flex w-fit items-center text-2xs font-black uppercase tracking-widest text-primary-600">
+            {post.category}
+          </span>
+        )}
         <h2 className="mb-3 text-base font-bold leading-snug text-secondary-900 line-clamp-2 group-hover:text-primary-600 transition-colors duration-200">
           {post.title}
         </h2>

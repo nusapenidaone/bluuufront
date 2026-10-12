@@ -58,14 +58,15 @@ class Plugin extends PluginBase
         ],
 
 
-        'banners' => [
-            'label' => 'Banners',
-            'description' => 'Popups',
-            'category' => 'Page Settings',
-            'icon' => 'icon-image',
-            'class' => \Noren\Bluuu\Models\Banners::class,
-            'permissions' => ['all']
-        ],
+        // Banners disabled: nothing on the site reads it
+        // 'banners' => [
+        //     'label' => 'Banners',
+        //     'description' => 'Popups',
+        //     'category' => 'Page Settings',
+        //     'icon' => 'icon-image',
+        //     'class' => \Noren\Bluuu\Models\Banners::class,
+        //     'permissions' => ['all']
+        // ],
 
 
         'registration' => [

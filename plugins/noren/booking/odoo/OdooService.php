@@ -5,6 +5,7 @@ use Http;
 use Log;
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Extras;
+use Noren\Booking\Classes\TourPricing;
 
 class OdooService
 {
@@ -139,6 +140,20 @@ class OdooService
     public static function draftOrder(int $odooOrderId): void
     {
         static::post('/json/2/sale.order/action_draft', ['ids' => [$odooOrderId]]);
+    }
+
+    // Directly writes state=draft, bypassing action_cancel/action_draft — avoids
+    // transiting through 'cancel' (Odoo automations fire customer emails on both
+    // 'cancel' and 'confirm'; the site→Odoo webhook also treats 'cancel' as
+    // "delete closeddates"). action_draft() only accepts orders already in
+    // cancel/sent state, so this is the only way to reach draft from a confirmed
+    // 'sale' order without a real cancellation.
+    public static function forceDraft(int $odooOrderId): void
+    {
+        static::post('/json/2/sale.order/write', [
+            'ids'  => [$odooOrderId],
+            'vals' => ['state' => 'draft'],
+        ]);
     }
 
     // ─── Update Odoo order header fields only (no order lines touched) ──────────
@@ -279,6 +294,7 @@ class OdooService
             'x_studio_drop_off_address' => $lead['dropoff_address'],
             'x_studio_special_requests' => $lead['special_requests'],
             'x_studio_deposit'          => max($odooDeposit, $localDeposit),
+            'x_studio_extra_processing_fee' => $lead['extra_processing_fee'],
             'x_studio_donation_to_orphanage' => $lead['donation_amount'],
             'x_studio_pickup_cars'      => in_array($transferId, [1, 2]) ? (int) $lead['cars'] : 0,
             'x_studio_drop_off_cars'    => $transferId === 2 ? (int) $lead['cars'] : 0,
@@ -541,29 +557,19 @@ class OdooService
             }
 
             if ($isShared && $tourOdooId && (int) $productId === (int) $tourOdooId) {
-                $pricelist = $tour->packages?->pricelist ?? [];
-                if ($order->travel_date && $tour->pricesbydates->isNotEmpty()) {
-                    $seasonal = $tour->pricesbydates->first(
-                        fn($pbd) => $order->travel_date >= $pbd->date_start && $order->travel_date <= $pbd->date_end
-                    );
-                    if ($seasonal?->packages?->pricelist) {
-                        $pricelist = $seasonal->packages->pricelist;
-                    }
-                }
+                // price_unit — цена УЖЕ со скидкой low season; discount строки всегда 0
+                $quote     = TourPricing::quote($tour, $order->travel_date, $members, false);
+                $tierPrice = $quote['total'];
 
-                $tierPrice = 0;
-                if (!empty($pricelist)) {
-                    $sorted    = collect($pricelist)->sortBy(fn($p) => (int) $p['members_count']);
-                    $entry     = $sorted->last(fn($p) => (int) $p['members_count'] <= $members) ?? $sorted->first();
-                    $tierPrice = (int) ($entry['price'] ?? 0);
-                }
+                $lineVals = [
+                    'product_uom_qty' => $members,
+                    'price_unit'      => $members > 0 ? $tierPrice / $members : 0.0,
+                    'discount'        => 0.0,
+                ];
 
                 static::post('/json/2/sale.order.line/write', [
                     'ids'  => [$line['id']],
-                    'vals' => [
-                        'product_uom_qty' => $members,
-                        'price_unit'      => $members > 0 ? $tierPrice / $members : 0.0,
-                    ],
+                    'vals' => $lineVals,
                 ]);
                 continue;
             }
@@ -588,7 +594,7 @@ class OdooService
             // record exists and opens fine directly by URL in the Odoo UI.
             'context' => ['active_test' => false],
             'fields' => [
-                'id', 'name', 'state', 'partner_id',
+                'id', 'name', 'state', 'locked', 'partner_id',
                 'rental_start_date',
                 'x_studio_source',
                 'x_studio_boat_name',
@@ -635,7 +641,7 @@ class OdooService
         if ($lineIds) {
             $lines = static::post('/json/2/sale.order.line/search_read', [
                 'domain' => [['id', 'in', array_values($lineIds)]],
-                'fields' => ['id', 'name', 'product_id', 'product_uom_qty', 'price_unit'],
+                'fields' => ['id', 'name', 'product_id', 'product_uom_qty', 'price_unit', 'discount', 'price_subtotal'],
                 'limit'  => 50,
             ]);
         }
@@ -683,7 +689,7 @@ class OdooService
         // Callers always pass a real numeric Odoo id, so no name fallback is needed.
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit', 'x_studio_unique_key'],
+            'fields' => ['id', 'name', 'state', 'x_studio_collect', 'amount_total', 'x_studio_deposit', 'x_studio_unique_key', 'partner_id'],
             'limit'  => 1,
         ]);
 
@@ -694,18 +700,34 @@ class OdooService
 
         $row = $result[0];
 
+        // partner_id приходит как [id, "Name"] (или false, если контакт не задан).
+        $partnerId   = is_array($row['partner_id'] ?? null) ? ($row['partner_id'][0] ?? null) : null;
+        $partnerName = is_array($row['partner_id'] ?? null) ? ($row['partner_id'][1] ?? '') : '';
+        $phone       = '';
+
+        if ($partnerId) {
+            try {
+                $partner = static::readPartners([$partnerId])[$partnerId] ?? [];
+                $phone   = $partner['phone'] ?? '';
+            } catch (\Throwable $e) {
+                Log::warning('OdooService::getOrderInfo — partner fetch failed', ['odoo_id' => $odooOrderId, 'error' => $e->getMessage()]);
+            }
+        }
+
         return [
-            'state'      => $row['state'] ?? '',
-            'collect'    => (float) ($row['x_studio_collect'] ?? 0),
-            'unique_key' => $row['x_studio_unique_key'] ?? '',
+            'state'         => $row['state'] ?? '',
+            'collect'       => (float) ($row['x_studio_collect'] ?? 0),
+            'unique_key'    => $row['x_studio_unique_key'] ?? '',
+            'customer_name' => $partnerName,
+            'phone'         => $phone,
         ];
     }
 
-    public static function registerPayment(int $odooOrderId, float $amount, string $field = 'x_studio_collected_by_xendit', ?string $invoiceNumber = null): void
+    public static function registerPayment(int $odooOrderId, float $amount, string $field = 'x_studio_collected_by_xendit', ?string $invoiceNumber = null, float $feeAmount = 0): void
     {
         $result = static::post('/json/2/sale.order/search_read', [
             'domain' => [['id', '=', $odooOrderId]],
-            'fields' => [$field, 'x_studio_payment_reference'],
+            'fields' => [$field, 'x_studio_payment_reference', 'x_studio_extra_processing_fee'],
             'limit'  => 1,
         ]);
 
@@ -720,6 +742,13 @@ class OdooService
             $field => $currentCollected + $amount,
         ];
 
+        // Online-payment surcharge (2.5%) on a remainder payment — accumulates on top
+        // of whatever fee was already recorded at booking time, never replaces it.
+        if ($feeAmount > 0) {
+            $currentFee = (float) ($result[0]['x_studio_extra_processing_fee'] ?? 0);
+            $vals['x_studio_extra_processing_fee'] = $currentFee + $feeAmount;
+        }
+
         if ($invoiceNumber) {
             $existingRef = trim((string) ($result[0]['x_studio_payment_reference'] ?? ''));
             $vals['x_studio_payment_reference'] = $existingRef !== ''
@@ -732,7 +761,11 @@ class OdooService
             'vals' => $vals,
         ]);
 
-        $via = $field === 'x_studio_collected_by_doku' ? 'DOKU' : 'Xendit';
+        $via = match ($field) {
+            'x_studio_collected_by_doku'    => 'DOKU',
+            'x_studio_collected_by_cashlez' => 'Cashlez',
+            default                          => 'Xendit',
+        };
         static::addLogNote($odooOrderId,
             '<p>💳 Weblink payment received: <strong>' . number_format($amount, 0, '.', ',') . ' IDR</strong> via ' . $via . '.</p>'
         );
@@ -776,8 +809,11 @@ class OdooService
             ['Cars',           (int)($order->cars ?? 0)],
             ['Cover',          $fmt($cover->name ?? '—')],
             ['Extras',         $extras ? implode('<br/>', $extras) : '—'],
+            ['Low season',     (int)($order->lowseason_percent ?? 0) > 0
+                ? '−' . (int) $order->lowseason_percent . '% (−' . number_format((float) $order->lowseason_discount, 0, '.', ',') . ' IDR)'
+                : '—'],
             ['Total',          number_format((float)($order->total_price ?? 0), 0, '.', ',') . ' IDR'],
-            ['Deposit paid',   number_format((float)($order->deposite_summ ?? 0), 0, '.', ',') . ' IDR'],
+            ['Deposit paid',  number_format((float)($order->deposite_summ ?? 0), 0, '.', ',') . ' IDR'],
             ['Payment method', $fmt(optional($order->method)->name ?? '—')],
             ['Special requests', $fmt($order->requests ?? '—')],
         ];
@@ -842,6 +878,11 @@ class OdooService
             'route_end'        => optional($order->route)->end   ?? '18:00:00',
             'restaurant_name'  => optional($order->restaurant)->odoo_name ?? '',
             'deposite_summ'    => (float)($order->deposite_summ ?? 0),
+            // 2.5% gateway surcharge charged only on full payment — informational for Odoo,
+            // never folded into x_studio_deposit itself. Mirrors *OrderController::createPaymentLink.
+            'extra_processing_fee' => $order->deposite == 100
+                ? round((float)($order->deposite_summ ?? 0) * 0.025)
+                : 0,
             'donation_amount'  => (float)($order->donation_amount ?? 0),
             'total_price'      => (float)($order->total_price   ?? 0),
             'name'             => $order->name,
@@ -856,6 +897,11 @@ class OdooService
         ];
 
         // ── Products ──────────────────────────────────────────────────────────
+        // NOTE: this $lines array (and the 'lines' key in this method's return value)
+        // is currently DEAD CODE — createSaleOrder() only reads $data['lead'] from
+        // buildOrderData()'s return value, and the real order lines sent to Odoo are
+        // built independently by addOrderLines() below in this file. If order-line
+        // pricing ever needs fixing, that's the function to change, not this one.
         $lines = [];
 
         // 1. Boat — qty 1, price 0
@@ -878,13 +924,14 @@ class OdooService
             ];
         }
 
-        // 3. Transfer
+        // 3. Transfer (unused — see dead-code note above; not kept in sync with the
+        // real pricing logic in addOrderLines())
         if ($order->transfer_id && $order->transfer && $order->transfer->odoo_id) {
             $lines[] = [
                 'label'      => 'transfer',
                 'product_id' => (int) $order->transfer->odoo_id,
                 'qty'        => 1,
-                'price'      => (float)($order->transfer_price ?? $order->transfer->price ?? 0),
+                'price'      => (float) ($order->transfer_price ?? 0),
             ];
         }
 
@@ -1000,6 +1047,7 @@ class OdooService
             'rental_return_date' => $rentalEnd,
 
             'x_studio_deposit'          => $lead['deposite_summ'],
+            'x_studio_extra_processing_fee' => $lead['extra_processing_fee'],
             'x_studio_donation_to_orphanage' => $lead['donation_amount'],
             'x_studio_pickup_address'   => $lead['pickup_address'],
             'x_studio_drop_off_address' => $lead['dropoff_address'],
@@ -1084,20 +1132,25 @@ class OdooService
 
         // 2. Tour
         if ($order->tours && $order->tours->odoo_id) {
+            // Low season: tour_price/boat_price на ордере уже со скидкой — так и уходят в price_unit.
+            // Поле `discount` строки не используем (0); сама скидка видна в заметке к ордеру.
+            $tourTotal = (float)(($order->tour_price ?? 0) + ($isShared ? 0 : ($order->boat_price ?? 0)));
+
             if ($isShared) {
                 $qty   = $members;
-                $price = $members > 0 ? (float)($order->tour_price ?? 0) / $members : 0.0;
+                $price = $members > 0 ? $tourTotal / $members : 0.0;
             } else {
                 $qty   = 1;
-                $price = (float)(($order->tour_price ?? 0) + ($order->boat_price ?? 0));
+                $price = $tourTotal;
             }
-            $vals[] = [
+            $tourLine = [
                 'order_id'        => $odooOrderId,
                 'name'            => $order->tours->name ?? 'Tour',
                 'product_id'      => (int) $order->tours->odoo_id,
                 'product_uom_qty' => $qty,
                 'price_unit'      => $price,
             ];
+            $vals[] = $tourLine;
         }
 
         // 3. Transfer
@@ -1110,12 +1163,21 @@ class OdooService
                 'price_unit'      => 0.0,
             ];
         } else {
+            // $order->transfer->price is the flat BASE product price — it ignores the
+            // long-distance tier that PrivateOrderController/SharedOrderController may
+            // already have applied server-side into $order->transfer_price (the real,
+            // authoritative total actually charged). Deriving price_unit from
+            // transfer_price / qty instead keeps qty*price_unit equal to that total
+            // regardless of tier, so a long-distance booking doesn't silently send the
+            // standard rate to Odoo.
+            $transferQty   = max(1, $cars);
+            $transferTotal = (float) ($order->transfer_price ?? 0);
             $vals[] = [
                 'order_id'        => $odooOrderId,
                 'name'            => $order->transfer->name ?? 'Transfer',
                 'product_id'      => (int) $order->transfer->odoo_id,
-                'product_uom_qty' => max(1, $cars),
-                'price_unit'      => (float)($order->transfer->price ?? 0),
+                'product_uom_qty' => $transferQty,
+                'price_unit'      => $transferTotal / $transferQty,
             ];
         }
 

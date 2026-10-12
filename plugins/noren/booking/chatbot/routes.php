@@ -7,3 +7,5 @@ Route::get('api/v2/chatbot/boats/private', [ChatbotControllerV2::class, 'getPriv
 Route::get('api/v2/chatbot/boats/shared',  [ChatbotControllerV2::class, 'getSharedBoats']);
 Route::post('api/v2/chatbot/quote',        [ChatbotControllerV2::class, 'getQuote']);
 Route::get('api/v2/chatbot/availability',  [ChatbotControllerV2::class, 'getAvailability']);
+Route::get('api/v2/chatbot/policies',      [ChatbotControllerV2::class, 'getPolicies']);
+Route::get('api/v2/chatbot/low-season',    [ChatbotControllerV2::class, 'getLowSeasons']);

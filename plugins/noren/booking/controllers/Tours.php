@@ -7,6 +7,7 @@ use DB;
 
 class Tours extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_tours'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class,

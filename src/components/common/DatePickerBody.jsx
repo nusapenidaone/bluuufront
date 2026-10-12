@@ -73,7 +73,7 @@ export default function DatePickerBody({
           <CustomDatePicker
             mode="single"
             inline={inline}
-            selected={exactDate ? new Date(exactDate) : undefined}
+            selected={exactDate ? new Date(exactDate + "T00:00:00") : undefined}
             onSelect={(date) => {
               if (date) {
                 const iso = new Date(date.getTime() - date.getTimezoneOffset() * 60000)

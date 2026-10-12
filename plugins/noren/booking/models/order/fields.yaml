@@ -151,7 +151,7 @@ tabs:
             span: row
             options:
                 0: '0'
-                50: '50'
+                30: '30'
                 100: '100'
             showSearch: true
             spanClass: col-lg-2
@@ -173,6 +173,20 @@ tabs:
             tab: Main
         discount_price:
             label: 'Discount Price'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        lowseason_percent:
+            label: 'Low season (%)'
+            span: row
+            type: number
+            spanClass: col-lg-2
+            disabled: true
+            tab: Main
+        lowseason_discount:
+            label: 'Low season discount'
             span: row
             type: number
             spanClass: col-lg-2

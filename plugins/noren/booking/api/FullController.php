@@ -18,9 +18,35 @@ use System\Models\File as SystemFile;
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Boat;
 use Noren\Bluuu\Models\Settings;
+use Noren\Booking\Classes\TourPricing;
 
 class FullController extends Controller
 {
+    // GET /api/new/order/status/{external_id}
+    // Used by the /new/success page to confirm the payment actually landed
+    // (status_id=2) before showing "Booking confirmed" — the redirect back
+    // from the payment gateway happens regardless of real payment outcome,
+    // the webhook is the only source of truth.
+    public function getOrderStatus($externalId)
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, OPTIONS');
+        header('Access-Control-Allow-Headers: *');
+
+        $order = Order::where('external_id', $externalId)->first();
+
+        if (!$order) {
+            return response()->json(['found' => false], 404);
+        }
+
+        return response()->json([
+            'found' => true,
+            'confirmed' => (int) $order->status_id === 2,
+            'failed' => in_array((int) $order->status_id, [3, 5]),
+            'status_id' => $order->status_id,
+        ]);
+    }
+
     public function getRestaurants()
     {
         header('Access-Control-Allow-Origin: *');
@@ -75,7 +101,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat', 'included', 'includes'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'category', 'boat', 'included', 'includes', 'lowseasons'])
             ->whereIn('classes_id', [8])
             ->orderBy('sort_order')
             ->get();
@@ -94,6 +120,8 @@ class FullController extends Controller
                 'packages' => $tour->packages,
                 'boat_price' => $tour->boat_price,
                 'pricesbydates' => $tour->pricesbydates,
+                // Low season: [{id, name, date_start, date_end, percent}] — будущие активные скидки
+                'low_seasons' => TourPricing::lowSeasonsFor($tour),
                 'status' => $tour->status ?: 'ready',
                 'fleet_size' => $tour->boat->count(),
                 'categories' => $tour->category->filter(fn($c) => $c->status == 1)->map(fn($c) => ['id' => $c->id, 'name' => $c->name])->values(),
@@ -139,6 +167,12 @@ class FullController extends Controller
                     $pbd->boat_price = 0;
                 }
             }
+        }
+
+        if ($tour) {
+            // Low season: [{id, name, date_start, date_end, percent}] — будущие активные скидки
+            $tour->setAttribute('low_seasons', TourPricing::lowSeasonsFor($tour));
+            $tour->unsetRelation('lowseasons');
         }
 
         return $tour;
@@ -317,7 +351,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $tours = Tours::with(['packages', 'pricesbydates.packages', 'route', 'route.restaurant', 'route.restaurant.images', 'boat', 'badge'])
+        $tours = Tours::with(['packages', 'pricesbydates.packages', 'route', 'route.restaurant', 'route.restaurant.images', 'boat', 'badge', 'lowseasons'])
             ->whereIn('classes_id', [9])
             ->orderBy('sort_order')
             ->get();
@@ -343,6 +377,8 @@ class FullController extends Controller
                 'packages' => $tour->packages,
                 'boat_price' => 0,
                 'pricesbydates' => $tour->pricesbydates,
+                // Low season: [{id, name, date_start, date_end, percent}] — будущие активные скидки
+                'low_seasons' => TourPricing::lowSeasonsFor($tour),
                 'status' => $tour->status ?: 'ready',
                 'odoo_type' => $tour->odoo_type,
                 'fleet_size' => $tour->boat->count(),
@@ -717,6 +753,7 @@ class FullController extends Controller
             'id'                => $t->id,
             'name'              => $t->name,
             'price'             => $t->price,
+            'long_distance_price' => $t->long_distance_price,
             'bus_price'         => $t->bus_price,
             'classes_id'        => $t->classes_id,
             'description'       => $t->description,
@@ -809,6 +846,7 @@ class FullController extends Controller
                 'title'             => $p->title,
                 'description'       => $p->description,
                 'slug'              => $p->slug,
+                'category'          => $p->category,
                 'created_at'        => $p->created_at,
                 'cover'             => $cover,
                 'cover_thumb'       => $coverThumb,
@@ -823,7 +861,7 @@ class FullController extends Controller
         header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
         header('Access-Control-Allow-Headers: *');
 
-        $post = \Noren\Bluuu\Models\Blog::with('images')->where('slug', $slug)->first();
+        $post = \Noren\Bluuu\Models\Blog::with(['images', 'author'])->where('slug', $slug)->first();
 
         if (!$post) {
             return response()->json(null, 404);
@@ -832,6 +870,25 @@ class FullController extends Controller
         $data = $post->toArray();
         $images = $this->resolveBlogImages($post, 1200, 675);
 
+        $avatar = null;
+        if ($post->author) {
+            $avatar = $post->author->avatar;
+            if ($photo = $post->author->photo) {
+                try {
+                    $avatar = $photo->getThumb(200, 200, ['mode' => 'crop', 'extension' => 'webp', 'quality' => 85]);
+                } catch (\Throwable $e) {
+                    $avatar = $photo->getPath();
+                }
+            }
+        }
+
+        $data['author'] = $post->author ? [
+            'name'   => $post->author->name,
+            'slug'   => $post->author->slug,
+            'title'  => $post->author->title,
+            'bio'    => $post->author->bio,
+            'avatar' => $avatar,
+        ] : null;
         $data['images']      = $images;
         $data['cover']       = $images[0]['url']   ?? null;
         $data['cover_thumb'] = $images[0]['thumb'] ?? null;

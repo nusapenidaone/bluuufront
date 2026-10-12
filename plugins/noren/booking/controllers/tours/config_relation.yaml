@@ -7,7 +7,17 @@ pricesbydates:
     view:
         list: $/noren/booking/models/pricesbydates/columns.yaml
         toolbarButtons: create|delete
-        
+
+lowseasons:
+    label: 'Low season'
+    manage:
+        form: $/noren/booking/models/lowseason/fields_tour.yaml
+        list: $/noren/booking/models/lowseason/columns.yaml
+        showSearch: true
+    view:
+        list: $/noren/booking/models/lowseason/columns.yaml
+        toolbarButtons: create|add|remove
+
 ecategories:
     label: Extras Categories
     manage:

@@ -5,9 +5,11 @@ import Navbar, { SITE_NAV_LINKS } from "./components/common/Navbar";
 import Footer from "./components/common/Footer";
 import Button from "./components/common/Button";
 import CustomDatePicker from "./components/common/CustomDatePicker";
-import { TransfersCompact, CoversCompact } from "./components/booking/TransferCoverPanels";
+import TransferPickerModal, { resolveTransferUnitPrice } from "./components/booking/TransferPickerModal";
+import CoverPickerModal, { resolveCoverQuantity } from "./components/booking/CoverPickerModal";
 import { apiUrl } from "./api/base";
 import { cn, getExtraConflict } from "./lib/utils";
+import { applyLowSeason, getLowSeasonForDate } from "./components/booking/utils";
 import {
   ChevronLeft,
   ChevronRight,
@@ -36,11 +38,12 @@ import {
 import { useSiteContacts } from "./hooks/useSiteContacts";
 import { WA, EMAIL } from "./lib/contacts";
 import ScheduleItemCompact from "./components/tour/ScheduleItemCompact";
+import SeeYouAgain from "./components/common/SeeYouAgain";
 import { useCurrency } from "./CurrencyContext";
 
 function fmtDate(iso) {
   if (!iso) return "—";
-  const d = new Date(iso);
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + "T00:00:00") : new Date(iso);
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -617,8 +620,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [editDate, setEditDate] = useState("");
   const [editPickup, setEditPickup] = useState("");
   const [editDropoff, setEditDropoff] = useState("");
-  const [editPickupConfirmed, setEditPickupConfirmed] = useState(false);
-  const [editDropoffConfirmed, setEditDropoffConfirmed] = useState(false);
+  // {lat, lng, tier} once the pickup address has been resolved via Google in
+  // TransferPickerModal — null until the customer (re-)confirms it there.
+  const [editPickupLocation, setEditPickupLocation] = useState(null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
   const [editAdults, setEditAdults] = useState(0);
   const [editKids, setEditKids] = useState(0);
   const [editTransfer, setEditTransfer] = useState(null);
@@ -640,12 +646,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
   const [lastPrices, setLastPrices] = useState(null);
   const [initialAddOns, setInitialAddOns] = useState(null);
   const [paying, setPaying] = useState(false);
-  const [upgrading, setUpgrading] = useState(false);
-  const [upgradeError, setUpgradeError] = useState(null);
-  const [upgradeChecked, setUpgradeChecked] = useState(false);
-  const [upgradeChecking, setUpgradeChecking] = useState(false);
-  const [upgradeCheckData, setUpgradeCheckData] = useState(null);
-  const [upgradeCheckError, setUpgradeCheckError] = useState(null);
 
   // Tour details tab (Itinerary / What's included)
   const [detailTab, setDetailTab] = useState("itinerary");
@@ -660,8 +660,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
   const [showRouteContactModal, setShowRouteContactModal] = useState(false);
   const [showSharedEditModal, setShowSharedEditModal] = useState(false);
-  const [showUpgradeContactModal, setShowUpgradeContactModal] = useState(false);
-  const [upgradeContactTier, setUpgradeContactTier] = useState("");
 
   // Active category tab in the extras panel
   const [extrasActiveCat, setExtrasActiveCat] = useState(null);
@@ -684,8 +682,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
       setEditDate(json.local.travel_date || "");
       setEditPickup(json.local.pickup_address || "");
       setEditDropoff(json.local.dropoff_address || "");
-      setEditPickupConfirmed(Boolean(json.local.pickup_address));
-      setEditDropoffConfirmed(Boolean(json.local.dropoff_address));
+      setEditPickupLocation(null);
       setEditAdults(json.local.adults || 0);
       setEditKids(json.local.kids || 0);
       const initTransfer = json.local.transfer_id ? Number(json.local.transfer_id) : null;
@@ -740,9 +737,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
   useEffect(() => {
     setAvailChecked(false);
     setAvailResult(null);
-    setUpgradeChecked(false);
-    setUpgradeCheckData(null);
-    setUpgradeCheckError(null);
     if (!data || !editDate || editAdults + editKids <= 0) return;
     const origDate    = data.local?.travel_date || "";
     const origAdults  = data.local?.adults || 0;
@@ -886,8 +880,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     setEditDate(local.travel_date || "");
     setEditPickup(local.pickup_address || "");
     setEditDropoff(local.dropoff_address || "");
-    setEditPickupConfirmed(Boolean(local.pickup_address));
-    setEditDropoffConfirmed(Boolean(local.dropoff_address));
+    setEditPickupLocation(null);
     setEditAdults(local.adults || 0);
     setEditKids(local.kids || 0);
     setEditTransfer(local.transfer_id ? Number(local.transfer_id) : null);
@@ -911,14 +904,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
   // Live add-ons price estimate (instant, no server round-trip)
   const livePrices = useMemo(() => {
     if (!data) return null;
-    const isPrivate = !!data.local.is_private;
 
     let transferPrice = 0;
     if (editTransfer) {
       const t = (data.options.transfers || []).find((t) => Number(t.id) === Number(editTransfer));
       if (t) {
         const cars = [1, 2].includes(Number(editTransfer)) ? Math.max(1, Math.ceil(editMembers / 5)) : 0;
-        const unitPrice = editMembers > 5 && t.bus_price ? t.bus_price : t.price;
+        const unitPrice = resolveTransferUnitPrice(t, editPickupLocation?.tier ?? null);
         transferPrice = unitPrice * Math.max(1, cars);
       }
     }
@@ -926,7 +918,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     let coverPrice = 0;
     if (editCover) {
       const c = (data.options.covers || []).find((c) => Number(c.id) === Number(editCover));
-      if (c) coverPrice = c.price * (isPrivate ? 1 : Math.max(1, editMembers));
+      if (c) coverPrice = Number(c.price || 0) * resolveCoverQuantity(c, editMembers);
     }
 
     let extrasTotal = 0;
@@ -937,7 +929,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
     }
 
     return { transferPrice, coverPrice, extrasTotal, total: transferPrice + coverPrice + extrasTotal };
-  }, [data, editAdults, editKids, editTransfer, editCover, editExtras]);
+  }, [data, editAdults, editKids, editTransfer, editCover, editExtras, editPickupLocation]);
 
   // Capture the initial add-ons total once after data first loads
   useEffect(() => {
@@ -945,44 +937,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
       setInitialAddOns(livePrices.total);
     }
   }, [data, livePrices, initialAddOns]);
-
-  const checkUpgradeLive = async () => {
-    setUpgradeChecking(true);
-    setUpgradeCheckError(null);
-    setUpgradeCheckData(null);
-    try {
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/upgrade`));
-      const json = await res.json();
-      setUpgradeCheckData(json);
-      setUpgradeChecked(true);
-    } catch {
-      setUpgradeCheckError("Could not check availability");
-    } finally {
-      setUpgradeChecking(false);
-    }
-  };
-
-  const doUpgrade = async (toursId) => {
-    setUpgrading(true);
-    setUpgradeError(null);
-    try {
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/upgrade`), {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tours_id: toursId }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        await fetchOrder();
-      } else {
-        setUpgradeError(json.error || "Upgrade failed");
-      }
-    } catch (e) {
-      setUpgradeError("Network error");
-    } finally {
-      setUpgrading(false);
-    }
-  };
 
   const saveAll = async () => {
     setSaving(true);
@@ -993,6 +947,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
         date: editDate,
         pickup_address: editPickup,
         dropoff_address: editDropoff,
+        pickup_lat: editPickupLocation?.lat ?? null,
+        pickup_lng: editPickupLocation?.lng ?? null,
         adults: editAdults,
         kids: editKids,
         transfer_id: editTransfer || null,
@@ -1003,7 +959,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
         }),
       };
 
-      const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}`), {
+      const res = await fetch(apiUrl(`cabinet/v2/${odooId}/${uniqueKey}`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -1039,7 +995,8 @@ export default function Cabinet({ odooId, uniqueKey }) {
       const res = await fetch(apiUrl(`cabinet/${odooId}/${uniqueKey}/pay`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+        body: JSON.stringify({ method: 3 }), // Sent for API-shape compatibility only — the backend ignores it
+        // and always picks the gateway via PaymentMethod::default() (payment_method.config.php).
       });
       const json = await res.json();
       if (json.payment_url) {
@@ -1081,6 +1038,12 @@ export default function Cabinet({ odooId, uniqueKey }) {
     <div className="rounded-2xl border border-neutral-200 bg-white px-6 py-14 text-center">
       <h1 className="text-xl font-bold text-secondary-900">Order not found</h1>
       <p className="mt-2 text-sm text-secondary-500">Please check the link from your confirmation email.</p>
+    </div>
+  );
+
+  if (data.expired) return renderShell(
+    <div className="flex justify-center">
+      <SeeYouAgain name={data.local?.name} ctaHref="/private-tour-to-nusa-penida" ctaLabel="Book your next trip" />
     </div>
   );
 
@@ -1190,8 +1153,42 @@ export default function Cabinet({ odooId, uniqueKey }) {
     const closest = [...sorted].reverse().find((r) => Number(r.members_count) <= Number(members));
     return Number((closest || sorted[0]).price);
   };
-  const baseTourPrice = plLookup(resolvePricelist(local.travel_date), local.members);
-  const liveTourPrice = plLookup(resolvePricelist(editDate), editAdults + editKids);
+  // Low season: the order's current discount lives on the Odoo tour line (`discount` %).
+  // Same rules as CabinetController::performUpdate + TourPricing::quote.
+  const tourLine = (() => {
+    const lines = Array.isArray(odoo.lines) ? odoo.lines : [];
+    const tourOdooId = Number(local.tour_odoo_id) || 0;
+    if (tourOdooId) {
+      return lines.find((l) => {
+        const pid = Array.isArray(l.product_id) ? Number(l.product_id[0]) : Number(l.product_id);
+        return pid === tourOdooId && Number(l.product_uom_qty) > 0;
+      }) || null;
+    }
+    return lines.find((l) => Number(l.discount) > 0) || null;
+  })();
+  // Odoo price_unit is already discounted (discount = 0); the % comes from the local order.
+  // Fallback: legacy orders that carried the % in the line's `discount` field.
+  const legacyLinePct = Number(tourLine?.discount) || 0;
+  const currentLsPct = Number(local.lowseason_percent) || legacyLinePct;
+  const lsBoatPrice = Number(options.pricing?.boat_price) || 0;
+  const tourDateChanged = (editDate || "") !== (local.travel_date || "");
+  const tourMembersChanged = (editAdults + editKids) !== Number(local.members);
+  const dateLsPct = Number(getLowSeasonForDate({ low_seasons: options.pricing?.low_seasons }, editDate)?.percent) || 0;
+  const liveLsPct = !(tourDateChanged || tourMembersChanged)
+    ? currentLsPct
+    : dateLsPct > 0
+      ? dateLsPct
+      : (tourDateChanged ? 0 : currentLsPct);
+
+  const baseTier = plLookup(resolvePricelist(local.travel_date), local.members);
+  const liveTier = plLookup(resolvePricelist(editDate), editAdults + editKids);
+  const baseTourPrice = baseTier !== null ? applyLowSeason(baseTier, lsBoatPrice, currentLsPct).total : null;
+  const currentLsAmount = currentLsPct <= 0
+    ? 0
+    : legacyLinePct > 0 && tourLine
+      ? Math.round(Number(tourLine.price_unit || 0) * Number(tourLine.product_uom_qty || 0) - Number(tourLine.price_subtotal ?? 0))
+      : (baseTier !== null ? applyLowSeason(baseTier, lsBoatPrice, currentLsPct).discount : 0);
+  const liveTourPrice = liveTier !== null ? applyLowSeason(liveTier, lsBoatPrice, liveLsPct).total : null;
   const tourPriceDelta = hasChanges && baseTourPrice !== null && liveTourPrice !== null
     ? liveTourPrice - baseTourPrice
     : 0;
@@ -1559,39 +1556,35 @@ export default function Cabinet({ odooId, uniqueKey }) {
 
         {/* Transfer */}
         <EditableRow icon={Car} label="Transfer" value={transferSummary}
-          isEditing={editingField === "transfer"} onEdit={() => toggleEdit("transfer")}
-          disabled={allEditLocked}>
-          <TransfersCompact
-            transfers={options.transfers || []}
-            selectedTransferId={editTransfer}
-            onSelectTransferId={handleTransferChange}
-            pickupAddress={editPickup}
-            setPickupAddress={setEditPickup}
-            dropoffAddress={editDropoff}
-            setDropoffAddress={setEditDropoff}
-            pickupAddressConfirmed={editPickupConfirmed}
-            setPickupAddressConfirmed={setEditPickupConfirmed}
-            dropoffAddressConfirmed={editDropoffConfirmed}
-            setDropoffAddressConfirmed={setEditDropoffConfirmed}
-            totalGuests={editMembers}
-            showHeader={false}
-          />
-        </EditableRow>
+          isEditing={false} onEdit={() => setIsTransferModalOpen(true)}
+          disabled={allEditLocked} />
+        <TransferPickerModal
+          open={isTransferModalOpen}
+          onClose={() => setIsTransferModalOpen(false)}
+          transfers={options.transfers || []}
+          totalGuests={editMembers}
+          selectedTransferId={editTransfer}
+          pickupAddress={editPickup}
+          onConfirm={({ transferId, pickupAddress, dropoffAddress, pickupLocation, tier }) => {
+            handleTransferChange(transferId);
+            setEditPickup(pickupAddress);
+            setEditDropoff(dropoffAddress);
+            setEditPickupLocation(pickupLocation ? { ...pickupLocation, tier } : null);
+          }}
+        />
 
         {/* Insurance */}
         <EditableRow icon={ShieldCheck} label="Insurance" value={coverSummary}
-          isEditing={editingField === "cover"} onEdit={() => toggleEdit("cover")}
-          disabled={allEditLocked}>
-          <CoversCompact
-            covers={options.covers || []}
-            selectedCoverId={editCover}
-            onSelectCoverId={handleCoverChange}
-            priceLabel={local.is_private ? "per group" : "per person"}
-            formatPrice={(v) => formatPrice(Number(v))}
-            showHeader={false}
-            framed
-          />
-        </EditableRow>
+          isEditing={false} onEdit={() => setIsCoverModalOpen(true)}
+          disabled={allEditLocked} />
+        <CoverPickerModal
+          open={isCoverModalOpen}
+          onClose={() => setIsCoverModalOpen(false)}
+          covers={options.covers || []}
+          totalGuests={editMembers}
+          selectedCoverId={editCover}
+          onConfirm={({ coverId }) => handleCoverChange(coverId)}
+        />
 
         {/* Extras (private only) */}
         {local.is_private && (
@@ -1770,70 +1763,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
       })()}
 
 
-      {/* ── Upgrade banner (shared only) ─────────────────────────────────── */}
-      {!local.is_private && options.upgrade_tour && !allEditLocked && sourceIsOurs && (() => {
-        const up = options.upgrade_tour;
-        const tierLabels = { "Premium Shared": "Premium", "First Class Shared": "First Class" };
-        const tierLabel  = tierLabels[up.odoo_type] || up.name;
-        const cd = upgradeCheckData;
-        return (
-          <div className="mb-5 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
-            <div className="px-5 py-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-bold text-amber-900">Upgrade to {tierLabel}</div>
-                  <div className="mt-0.5 text-xs text-amber-700">
-                    {!upgradeChecked
-                      ? "More comfort, better experience"
-                      : cd?.available
-                        ? `${(cd.available_seats > 10 ? "10+" : cd.available_seats)} seats available on your date`
-                        : "Not available on your date"}
-                  </div>
-                  {upgradeChecked && cd?.available && cd.boat_name && (
-                    <div className="mt-0.5 text-xs text-amber-700">
-                      Boat: <span className="font-semibold">&ldquo;{cd.boat_name}&rdquo;</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Price difference badge */}
-              {upgradeChecked && cd?.available && cd.price_diff > 0 && (
-                <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-3">
-                  <div className="flex-1 text-xs text-amber-700">Extra to pay for upgrade</div>
-                  <div className="text-base font-extrabold text-amber-900">+{formatPrice(cd.price_diff)}</div>
-                </div>
-              )}
-
-              {upgradeCheckError && <p className="mt-2 text-xs text-red-500">{upgradeCheckError}</p>}
-              {!upgradeChecked ? (
-                <button
-                  type="button"
-                  onClick={checkUpgradeLive}
-                  disabled={upgradeChecking}
-                  className="mt-3 w-full rounded-full border border-amber-400 bg-white py-2.5 text-sm font-semibold text-amber-700 transition hover:bg-amber-50 active:scale-[0.98] disabled:opacity-60"
-                >
-                  {upgradeChecking ? "Checking…" : "Check availability →"}
-                </button>
-              ) : cd?.available ? (
-                <button
-                  type="button"
-                  onClick={() => { setUpgradeContactTier(tierLabel); setShowUpgradeContactModal(true); }}
-                  className="mt-3 w-full rounded-full bg-amber-500 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[0.98]"
-                >
-                  {cd.price_diff > 0
-                    ? `Upgrade · +${formatPrice(cd.price_diff)} →`
-                    : `Upgrade to ${tierLabel} →`}
-                </button>
-              ) : null}
-            </div>
-          </div>
-        );
-      })()}
-
       {/* ── What's included ─────────────────────────────────────────────── */}
       {(tourIncluded.length > 0 || tourIncludes.length > 0) && (
         <div className="mb-5 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
@@ -1907,6 +1836,13 @@ export default function Cabinet({ odooId, uniqueKey }) {
               </>
             ) : null}
 
+            {currentLsAmount > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-emerald-700">Low season −{currentLsPct}%</span>
+                <span className="text-sm font-semibold text-emerald-700">− {formatPrice(currentLsAmount)}</span>
+              </div>
+            )}
+
             {/* Always show totals */}
             <div className={cn("flex items-center justify-between", lastPrices ? "border-t border-neutral-100 pt-2.5" : "")}>
               <span className="text-sm font-bold text-secondary-900">Total</span>
@@ -1953,6 +1889,11 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   ? `New total: ${formatPrice(estNewTotal)}`
                   : "Refund will be processed through Odoo"}
               </div>
+              {(tourDateChanged || tourMembersChanged) && liveLsPct > 0 && (
+                <div className="mt-1 text-[11px] font-semibold text-emerald-600">
+                  Includes low season −{liveLsPct}% on the tour price
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2039,12 +1980,18 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <CheckCircle2 className="h-3.5 w-3.5" /> Changes saved
               </div>
             )}
+            <div className="mt-3 flex items-start gap-2.5 rounded-xl bg-white px-4 py-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+              <div className="text-xs leading-snug text-secondary-700">
+                <span className="font-bold text-secondary-900">No rush.</span> You can pay the remaining {formatPrice(collect)} at check-in, in the office — no commission.
+              </div>
+            </div>
             <button
               onClick={payCollect}
               disabled={paying}
-              className="btn-pay-now mt-3 w-full rounded-full bg-white py-3 text-sm font-bold text-primary-700 transition hover:bg-white/90 active:scale-[0.98] disabled:opacity-60"
+              className="mt-2.5 w-full text-center text-xs font-semibold text-white/70 underline underline-offset-2 transition hover:text-white disabled:opacity-60"
             >
-              {paying ? "Redirecting…" : `Pay ${formatPrice(collect)} →`}
+              {paying ? "Redirecting…" : `or pay online now — ${formatPrice(collect)} + 2.5% Xendit fee`}
             </button>
           </div>
         )}
@@ -2107,62 +2054,6 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   </a>
                   <a
                     href={`mailto:info@bluuu.tours?subject=Booking update ${odoo.order_number || odooId}`}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
-                  >
-                    <Mail className="h-4 w-4" />
-                    Email us
-                  </a>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* ── Upgrade: contact-support modal ───────────────────────────────────── */}
-      <AnimatePresence>
-        {showUpgradeContactModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowUpgradeContactModal(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, y: 40, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 40, scale: 0.97 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              className="fixed inset-x-4 bottom-0 z-[101] mx-auto max-w-sm overflow-hidden rounded-t-3xl bg-white pb-safe-bottom sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-3xl"
-            >
-              <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
-                <span className="text-sm font-bold text-secondary-900">Upgrade to {upgradeContactTier}</span>
-                <button type="button" onClick={() => setShowUpgradeContactModal(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-full bg-neutral-100 text-secondary-500 hover:bg-neutral-200">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="px-6 py-5">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-500">
-                  <Sparkles className="h-6 w-6" />
-                </div>
-                <h3 className="text-base font-bold text-secondary-900">Want to upgrade your booking?</h3>
-                <p className="mt-1.5 text-sm text-secondary-500">
-                  Upgrades are processed by our team. Contact us and we&apos;ll take care of it for you right away.
-                </p>
-                <div className="mt-5 space-y-3">
-                  <a
-                    href={waLink}
-                    target="_blank" rel="noreferrer"
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-3.5 text-sm font-bold text-white transition hover:brightness-105 active:scale-[0.98]"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="shrink-0">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                    </svg>
-                    WhatsApp us
-                  </a>
-                  <a
-                    href={`mailto:info@bluuu.tours?subject=Upgrade request ${odoo.order_number || odooId} to ${upgradeContactTier}`}
                     className="flex w-full items-center justify-center gap-2 rounded-2xl border border-neutral-200 bg-white py-3.5 text-sm font-semibold text-secondary-700 transition hover:bg-neutral-50 active:scale-[0.98]"
                   >
                     <Mail className="h-4 w-4" />

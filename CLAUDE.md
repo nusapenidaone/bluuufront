@@ -119,12 +119,14 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 
 ## Payment flow
 
-- Депозит (`deposite_summ`) = 50% или 100% от суммы — платится онлайн (Xendit / DOKU, за `?m=test`)
+- Депозит (`deposite_summ`) = 30% или 100% от суммы — платится онлайн (Xendit / DOKU, за `?m=test`)
+- При 100% (полной оплате) с клиента реально списывается +2.5% ("Xendit fee") сверху — наценка идёт в сумму инвойса платёжного шлюза (см. `PrivateOrderController::createPaymentLink` / `SharedOrderController::createPaymentLink`) и отдельно пишется в Odoo как `x_studio_extra_processing_fee`; `deposite_summ`/`x_studio_deposit` наценку не включают — это чистая стоимость тура
 - Остаток (`x_studio_collect`) = `total_price - deposite_summ` — оплачивается позже
 - **Личный кабинет** (в разработке): клиент заходит по ссылке из письма (по `key` / `external_id`), без логина
 - Данные берутся из **Odoo** (не локальной БД) — чтобы работало для всех источников (сайт, Viator, ручные заказы)
 - Клиент может менять детали заказа и оплатить collect онлайн — всё сохраняется в Odoo
 - **Check-in** (в разработке): оплата на месте
+- Доплата остатка (`x_studio_collect`) онлайн — в личном кабинете (`CabinetController::createPayment`) и на check-in (`CheckinController::pay`) — тоже несёт +2.5% наценку; оплата "в офисе" (check-in) или "at the office" (кабинет) — без наценки, это чисто информационная альтернатива без похода в платёжный шлюз. Наценка кодируется в `external_id`/`invoice_number` вида `odoo_{id}_f{fee}`, вебхуки (`DokuWebhookController`, `VerifyController`) парсят её обратно и **добавляют** (не перезаписывают) к уже имеющемуся `x_studio_extra_processing_fee` через `OdooService::registerPayment()`
 
 ## Pricing
 
@@ -135,6 +137,19 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
   3. У каждого количества людей своя цена (price per pax)
   4. Каждый тур имеет свой прайс-лист
 - В Odoo уходит: `tour_price + boat_price` как цена строки тура
+- **Единый расчёт цены** — `classes/TourPricing.php` (`pricelistFor`, `tierPrice`, `quote`). Новые места расчёта цены тура — только через него (Viator пока на своей копии)
+
+## Low season (сезонная скидка)
+
+Полное описание, статус деплоя и план фронта — `plugins/noren/booking/docs/low-season.md`
+
+- Модель `LowSeason` (`noren_booking_lowseason`: `name`, `date_start`, `date_end`, `percent` 1–90, `is_active`) ↔ `Tours` через pivot `noren_booking_lowseason_tours` (`Tours.lowseasons`). Админка: Tours → Low Season, а также вкладка Price в форме тура. Permission `noren.booking.access_lowseason`
+- Действует, если дата тура ∈ `[date_start, date_end]` активного правила тура. Пересечение правил → max %
+- Скидка **только на тур**: `tier_price` (+ `boat_price` для private). Transfer/cover/extras — полная цена. `discount = round((tier + boat) × % / 100)`, делится: `boat_discount = round(boat × %)`, остаток — с tier
+- На ордере: `tour_price`/`boat_price` уже **со** скидкой, `lowseason_percent`, `lowseason_discount` (отдельно от legacy `discount`/`discount_price` — те не трогаем). `total_price`/`full_price`/`deposite_summ` — со скидкой
+- Создание заказа (`Private/SharedOrderController`): сервер перезаписывает цену тура **только если скидка активна** на дату; без скидки — цена от фронта как раньше
+- Odoo: строка тура `price_unit` = цена **уже со скидкой**, `discount` строки = 0 (решение пользователя 2026-10-08; было: полная цена + `discount` = %). Так же в `CabinetController::performUpdate`, `OdooService::syncOrderLineQuantities` и `odoo_data` чатбота. Сама скидка видна только в лог-ноте ордера ("Low season −X% (−сумма)"). Кабинет берёт % из локального `Order.lowseason_percent` (`local.lowseason_percent` в GET); при смене только людей без скидки на дату — сохраняется % заказа
+- API: `low_seasons[]` в `tours/private`, `tours/shared`, `tour/{slug}`, кабинет `options.pricing.low_seasons`; чатбот — см. `chatbot/API.md` (в т.ч. `GET /api/v2/chatbot/low-season`)
 
 ## Tours & Boats
 
@@ -144,6 +159,14 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - У каждого тура свой список лодок (связь `noren_booking_tours_boat`)
 - **Private**: клиент выбирает лодку сам на сайте
 - **Shared**: система автоматически подбирает лодку при бронировании по доступности и приоритету (`sort_order` на модели `Boat` — чем меньше, тем выше приоритет). Несколько shared заказов могут попасть на одну лодку до заполнения вместимости
+
+**Прочие поля `Tours`, реально используемые на сайте:**
+- `Tours.badge` (belongsTo `Badge`: `name`, `color`) — промо-плашка на карточке тура ("Best value" и т.п.). Используется **только для shared** (`getSharedTours()`/сайт), для private сейчас не отображается
+- `Tours.partner` (bool) — **только private**: `true` → лодка "по запросу" (On Request, через respond.io — TODO), `false` → Instant confirmation
+- `Tours.list` (repeater `{icon, test}`, поле `test` — это опечатка автора формы, реально хранится текст перка; иногда лежит fallback-ом в `Tours.json.list`) — короткий чек-лист/перки на карточке
+- `Tours.json` (jsonable, не редактируется в текущей админ-форме — легаси) — иногда содержит `subtitle`/`headline` (подзаголовок тура, только shared)
+- `Tours.show_price` / `gross_price` / `price` — цена "по умолчанию" за гостя на карточке shared-тура **до** выбора даты/кол-ва людей (первое ненулевое в этом порядке); реальный расчёт — через `packages`/`pricesbydates`, не эти поля
+- Отношения `cancelation`, `meeting`, `additional`, `overview`, `program`, `why`, `restaurant` (M2M), `reviews`, `faq` на `Tours` — **legacy, закомментированы в админ-форме** (`models/tours/fields.yaml`), не редактируются и не читаются фронтендом. Не путать с сайт-wide политиками (`Noren\Bluuu\Models\Rules`, см. ниже) и с `Route->restaurant` (belongsTo, другая, активная связь)
 
 ## Transfer
 
@@ -157,6 +180,10 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - `classes_id = 8` → только для private
 - `classes_id = 9` → только для shared
 - `classes_id = null` (или `false`) → отображается на **обоих** типах туров
+
+**Миграция classes_id → types_id + source_id** (`plugins/noren/booking/docs/types_id-migration-plan.md`): `classes_id` — старый способ различать private/shared у Tours/Transfer/Cover; `types_id` — его "родитель" (у `Classes` есть `belongsTo Types`), значения `types_id=2` → private, `types_id=1` → shared, обобщает сразу несколько classes_id (например classes_id 9 и 10 оба относятся к types_id=1). `source_id` на Tours = канал (`1` = сайт, другое = Viator/OTA) — нужен только при выборке **списков** туров, не при работе с уже загруженным туром. Статус миграции по файлам:
+  - `ChatbotControllerV2.php` — **мигрирован** (2026-09-21): листинги туров на `types_id`+`source_id`, transfer/cover фильтры на `types_id`, ветвление private/shared на `types_id`. Route не трогали — у него нет `types_id`
+  - `FullController.php`, `CabinetController.php`, `AccountController.php`, `ViatorController.php`, `OdooService.php`, `OdooWebhookController.php` — **ещё на classes_id**, не мигрированы
 
 ## Extras & Ecategories
 
@@ -179,10 +206,17 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 |----------|--------------|----------------|
 | `manual` (default) | вводит клиент вручную | клиент |
 | `per_car` | `ceil(members / 5)` — по числу машин | авто |
+| `per_14_guests` | `ceil(members / 14)` | авто |
 | `per_person` | `= members` (adults + kids) | авто |
 | `fixed` | всегда `1` | авто |
 
-- При изменении `members` на существующем ордере (`CabinetController`) qty у extras с `qty_type = per_person/per_car/fixed` **пересчитывается автоматически**; `manual` не трогается
+- При изменении `members` на существующем ордере (`CabinetController`) qty у extras с `qty_type = per_person/per_car/per_14_guests/fixed` **пересчитывается автоматически**; `manual` не трогается
+
+**Конфликтующие extras (`Extras.conflicts`):**
+- Self-relation many-to-many через pivot `noren_booking_extras_conflicts` (`extras_id` ↔ `conflict_extras_id`). В админке — поле "Conflicts with (cannot be selected together)" на модели Extras
+- Вычисляемый атрибут `conflict_ids` (`Extras::getConflictIdsAttribute()`) — симметричный, объединяет обе стороны связи независимо от того, с какой стороны настроен конфликт в БД
+- У `children` (вариантов extras) — свои собственные `conflicts`/`conflict_ids`
+- **Проверка только на фронтенде** (`src/lib/utils.js: getExtraConflict`, используется в `private.jsx`, `cabinet.jsx`, `ExtraPopup.jsx`, `TourDetailsCard.jsx` и т.д.) — блокирует добавление второго конфликтующего extra в корзину. Бэкенд это не валидирует ни при создании, ни при редактировании заказа
 
 ## Cover (страховка)
 
@@ -319,6 +353,7 @@ currency_id           — [11, "IDR"]
 | `x_studio_tour_type` | selection | — | ✓ | Тип тура из `Tours.odoo_type` |
 | `x_studio_lunch` | selection | — | ✓ | Ресторан/обед. **Единственное актуальное поле.** `x_studio_lunch_resto` и `x_studio_lunch_restaurant` **удалены из Odoo** |
 | `x_studio_special_requests` | char | — | — | Спец. пожелания клиента |
+| `x_studio_extra_processing_fee` | monetary | — | ✓ | 2.5% наценка платёжного шлюза при 100% оплате (0 при депозите). Информационное поле — не входит в `x_studio_deposit`/`x_studio_collect` |
 | `x_studio_respondio_id` | char | — | — | ID в respond.io (для партнёрских лодок — TODO) |
 | `x_studio_respondio_weblink` | char | — | — | Weblink для respond.io |
 | `x_studio_weblink` | char | **readonly** | — | Ссылка на портал Odoo (вычисляется автоматически) |
@@ -347,6 +382,12 @@ currency_id           — [11, "IDR"]
 - ~~`x_studio_route`~~ → заменено на `x_studio_route_new`
 - ~~`x_studio_lunch_restaurant`~~ → заменено на `x_studio_lunch`
 - ~~`x_studio_lunch_resto`~~ → заменено на `x_studio_lunch`
+
+## Site-wide policies
+
+- Общие политики сайта (payment, cancellation/return, privacy, health, release/liability) — НЕ на модели `Tours`, а отдельный settings-singleton `Noren\Bluuu\Models\Rules` (`plugins/noren/bluuu/models/Rules.php`), поля `{title, text}` (richeditor HTML)
+- Отдаётся через `GET /api/new/rules` (`FullController::getRules()`) и чат-бот `GET /api/v2/chatbot/policies`
+- На фронтенде — `src/contexts/RulesContext.jsx`, всплывающие окна политик
 
 ## Important notes
 

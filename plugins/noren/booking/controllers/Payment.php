@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class Payment extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_payment'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

@@ -37,9 +37,10 @@ class DokuWebhookController extends Controller
         if (str_starts_with($externalId, 'bluuu')) {
             (new OrderPaymentService)->handle(3, $externalId, $isPaid ? 1 : 2, $rawBody);
         } elseif (str_starts_with($externalId, 'odoo_')) {
-            if ($isPaid) {
-                $odooOrderId = (int) str_replace('odoo_', '', $externalId);
-                OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_doku', $externalId);
+            if ($isPaid && preg_match('/^odoo_(\d+)(?:_f(\d+))?/', $externalId, $m)) {
+                $odooOrderId = (int) $m[1];
+                $feeAmount   = (float) ($m[2] ?? 0);
+                OdooService::registerPayment($odooOrderId, $amount - $feeAmount, 'x_studio_collected_by_doku', $externalId, $feeAmount);
             }
         }
 

@@ -160,7 +160,8 @@ export default function AccountPage() {
       const res = await fetch(API + key + "/pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: 3 }), // DOKU. Xendit stays as an emergency backend fallback, no URL flag to force it.
+        body: JSON.stringify({ method: 3 }), // Sent for API-shape compatibility only — the backend ignores it
+        // and always picks the gateway via PaymentMethod::default() (payment_method.config.php).
       });
       const json = await res.json();
       if (json.payment_url) {

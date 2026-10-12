@@ -65,7 +65,9 @@ export default function Payment() {
   const styleId = params.get("style") || "";                  // route/program ID
   const pickupAddressParam = params.get("pickup_address") || "";
   const dropoffAddressParam = params.get("dropoff_address") || "";
-  const payMode = params.get("payMode") || "full";            // "full" | "part"
+  const pickupLatParam = params.get("pickup_lat") || "";
+  const pickupLngParam = params.get("pickup_lng") || "";
+  const payMode = params.get("payMode") || "part";             // "full" | "part"
   const name = params.get("name") || "";
   const email = params.get("email") || "";
   const phone = params.get("phone") || "";
@@ -73,6 +75,11 @@ export default function Payment() {
   const boatPrice = parseFloat(params.get("boatPrice") || "0");       // raw boat_price surcharge
   const totalBoatPrice = parseFloat(params.get("totalBoatPrice") || String(boatPrice)); // pricelist + surcharge
   const guestFeeTotal = parseFloat(params.get("guestFeeTotal") || "0");
+  // Low season: totalBoatPrice already has the discount applied; these are for display only
+  const lsPercent = parseInt(params.get("lsPercent") || "0", 10) || 0;
+  const lsDiscount = parseFloat(params.get("lsDiscount") || "0") || 0;
+  const lsOriginal = parseFloat(params.get("lsOriginal") || "0") || 0;
+  const hasLowSeason = lsPercent > 0 && lsDiscount > 0 && lsOriginal > 0;
   const extrasTotal = parseFloat(params.get("extrasTotal") || "0");
   const donationAmount = parseFloat(params.get("donationAmount") || "0");
   const restaurantId = params.get("restaurantId")
@@ -91,8 +98,9 @@ export default function Payment() {
 
   // ── Derived values ───────────────────────────────────────────────────────
   const totalGuests = adults + kids;
-  const deposite = payMode === "part" ? 50 : 100;
-  const method = 3; // 3=DOKU (default). Xendit stays as an emergency fallback in the backend, no URL flag to force it.
+  const deposite = payMode === "part" ? 30 : 100;
+  const method = 3; // Sent for API-shape compatibility only — the backend ignores it and always
+  // picks the gateway via PaymentMethod::default() (plugins/noren/booking/payment_method.config.php).
 
   // Extract transfer/cover IDs from extras (they use "transfer-{id}", "cover-{id}" prefixes)
   const transferExtra = extras.find((e) => String(e.id).startsWith("transfer-"));
@@ -113,9 +121,12 @@ export default function Payment() {
   // Total without discount = all price components summed
   const fullTotal = totalBoatPrice + pureExtrasTotal + transferTotalPrice + coverTotalPrice;
   const depositAmount = Math.round((fullTotal * deposite) / 100);
+  // Full payment carries a 2.5% gateway surcharge, charged to the customer but never
+  // folded into depositAmount/Odoo — mirrors the backend in *OrderController::createPaymentLink.
+  const xenditFee = deposite === 100 ? Math.round(fullTotal * 0.025) : 0;
   // Donation is added on top of whatever is charged now, but never folded into the
   // deposit amount itself — the deposit field in Odoo must stay donation-free.
-  const chargeAmount = depositAmount + donationAmount;
+  const chargeAmount = depositAmount + donationAmount + xenditFee;
   const analyticsCurrency = params.get("analyticsCurrency") || "IDR";
   const analyticsTotal = parseFloat(params.get("analyticsTotal") || String(fullTotal));
   const analyticsItemId = params.get("tourId") || boatId || `${tourType}-tour`;
@@ -265,6 +276,8 @@ export default function Payment() {
       requests: requests.trim() || null,
       pickupAddress: pickupAddressParam || null,
       dropoffAddress: dropoffAddressParam || null,
+      pickupLat: pickupLatParam ? parseFloat(pickupLatParam) : null,
+      pickupLng: pickupLngParam ? parseFloat(pickupLngParam) : null,
 
       ga_client_id: getGaClientId(),
       utm: getUtmParams(),
@@ -361,7 +374,7 @@ export default function Payment() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   const methodLabel = "Card / Bank transfer";
-  const depositLabel = payMode === "part" ? "50% deposit" : "Full payment";
+  const depositLabel = payMode === "part" ? "30% deposit" : "Full payment";
 
   if (ratesLoading && !isIDR) {
     return (
@@ -556,7 +569,13 @@ export default function Payment() {
               {totalBoatPrice > 0 && (
                 <div className="flex justify-between">
                   <span className="text-secondary-500">{tourType === "shared" ? "Shared tour" : "Private tour"}</span>
-                  <span className="font-semibold text-secondary-900">{fmt(totalBoatPrice)}</span>
+                  <span className="font-semibold text-secondary-900">{fmt(hasLowSeason ? lsOriginal : totalBoatPrice)}</span>
+                </div>
+              )}
+              {totalBoatPrice > 0 && hasLowSeason && (
+                <div className="flex justify-between">
+                  <span className="text-emerald-700">Low season −{lsPercent}%</span>
+                  <span className="font-semibold text-emerald-700">−{fmt(lsDiscount)}</span>
                 </div>
               )}
               {extras.map((e, i) => (
@@ -627,6 +646,11 @@ export default function Payment() {
                 {donationAmount > 0 && (
                   <div className="mt-0.5 text-xs text-secondary-500">
                     Includes {fmt(donationAmount)} donation
+                  </div>
+                )}
+                {xenditFee > 0 && (
+                  <div className="mt-0.5 text-xs text-secondary-500">
+                    Includes {fmt(xenditFee)} Xendit fee (2.5%)
                   </div>
                 )}
               </div>

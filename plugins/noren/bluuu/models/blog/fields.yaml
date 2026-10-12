@@ -38,6 +38,13 @@ tabs:
             span: auto
             type: textarea
             tab: Main
+        category:
+            label: Category / Tag
+            span: auto
+            type: text
+            placeholder: 'Travel Guides'
+            comment: 'Shown as the overline above the title, in breadcrumbs and on related-article cards.'
+            tab: Main
         tours:
             label: Tours
             nameFrom: name
@@ -65,8 +72,18 @@ tabs:
             span: full
             type: richeditor
             tab: Content
+        hero_caption:
+            label: Hero image caption
+            span: full
+            type: text
+            placeholder: 'Kelingking Beach at 9:30 AM — the sweet spot before the tour buses arrive.'
+            comment: 'Small italic caption shown under the main hero image.'
+            tab: Content
         sections:
             label: Content Sections
+            prompt: 'Add section'
+            displayMode: accordion
+            titleFrom: title
             span: full
             type: repeater
             tab: Content

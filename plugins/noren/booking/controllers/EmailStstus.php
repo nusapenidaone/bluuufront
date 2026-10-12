@@ -6,6 +6,7 @@ use Backend\Classes\Controller;
 
 class EmailStstus extends Controller
 {
+    public $requiredPermissions = ['noren.booking.access_emailststus'];
     public $implement = [
         \Backend\Behaviors\FormController::class,
         \Backend\Behaviors\ListController::class

@@ -1,0 +1,32 @@
+columns:
+    id:
+        label: ID
+        type: number
+        invisible: true
+    name:
+        label: Name
+        type: text
+        searchable: true
+        sortable: true
+    percent:
+        label: 'Discount (%)'
+        type: number
+        sortable: true
+    date_start:
+        label: 'Date start'
+        type: date
+        sortable: true
+    date_end:
+        label: 'Date end'
+        type: date
+        sortable: true
+    tours:
+        label: Tours
+        type: text
+        relation: tours
+        select: name
+        sortable: false
+    is_active:
+        label: Active
+        type: switch
+        sortable: true
