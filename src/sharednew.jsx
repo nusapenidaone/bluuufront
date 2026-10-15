@@ -2363,7 +2363,7 @@ function StepOne({
                         <div className="flex items-start gap-2.5">
                           <Info className="mt-0.5 h-4 w-4 shrink-0 text-secondary-400" />
                           <p className="text-xs leading-relaxed text-secondary-500 text-left">
-                            Minimum age for shared tours is 7 — traveling with younger kids? <a href="/privatenew" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">A private tour is the way to go.</a>
+                            Minimum age for shared tours is 7 — traveling with younger kids? <a href="/private-tour-to-nusa-penida" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">A private tour is the way to go.</a>
                           </p>
                         </div>
                       </div>
@@ -3615,7 +3615,7 @@ function StepTwo({
                 <div className="flex items-center gap-2.5"><Camera className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">Pro photographer</strong> full day</span></div>
                 <div className="flex items-center gap-2.5"><UtensilsCrossed className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">La Rossa Beach Club</strong> lunch</span></div>
               </>) : tierIndex === 2 ? (<>
-                <div className="flex items-center gap-2.5"><Sparkles className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">Drone footage</strong> + next-day delivery</span></div>
+                <div className="flex items-center gap-2.5"><Sparkles className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">First class</strong> experience</span></div>
                 <div className="flex items-center gap-2.5"><Ship className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">New yacht</strong> + senior guides only</span></div>
               </>) : null}
               <div className="flex items-center gap-2.5"><Users className="h-4 w-4 shrink-0 text-primary-500" /><span className="text-sm text-secondary-500"><strong className="text-secondary-800">{boat.people}</strong> guests max</span></div>
@@ -4006,7 +4006,7 @@ function StepTwo({
                     Change parameters
                   </button>
                   <a
-                    href="/privatenew"
+                    href="/private-tour-to-nusa-penida"
                     className="inline-flex items-center rounded-full bg-primary-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary-700"
                   >
                     Private tour
@@ -4031,7 +4031,7 @@ function StepTwo({
                     Change parameters
                   </button>
                   <a
-                    href="/privatenew"
+                    href="/private-tour-to-nusa-penida"
                     className="inline-flex items-center rounded-full bg-primary-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-primary-700"
                   >
                     Private tour
@@ -8248,7 +8248,7 @@ function Compare() {
       cta: "Get more info",
       primary: true,
       toBook: true,
-      href: "/prepiumprivate",
+      href: "/private-tour-to-nusa-penida",
     },
     {
       name: "Private",
@@ -8264,7 +8264,7 @@ function Compare() {
       cta: "See private options",
       primary: false,
       toBook: true,
-      href: "/prepiumprivate",
+      href: "/private-tour-to-nusa-penida",
     },
   ];
   const cardBase = "p-6 rounded-xl";
@@ -9728,7 +9728,7 @@ export default function Shared_tour_01() {
         <Navbar
           variant="fullbar"
           links={SITE_NAV_LINKS}
-          cta={{ label: "Check availability", href: "#booking" }}
+          cta={{ label: "Check availability", href: "#hero-section" }}
         />
         <Hero>
           <StepOne

@@ -1369,7 +1369,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 <div className="mt-0.5 text-xs text-white/50">Fill in passenger details to speed up boarding</div>
               </div>
               <a
-                href={`/checkin/${odooId}`}
+                href={`/checkin/${odooId}/${uniqueKey}`}
                 className="shrink-0 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#0b2d4e] shadow-md transition hover:bg-white/90 active:scale-[0.98]"
               >
                 Start →

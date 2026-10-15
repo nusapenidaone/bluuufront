@@ -67,6 +67,11 @@
 | Apply on | match all records (не фильтрует) |
 | Action | Execute Code |
 
+Фильтр по компании — **в самом скрипте** (`BALI_ROOT_COMPANY_ID`): ETA считается только для
+заказов PT Day Trip Bali (id 1) и её дочерних компаний. Заказы Bluuu Tours Phuket (id 43) и её
+дочерних пропускаются — у Таиланда свой сайт и своя копия этой автоматизации.
+Актуальная копия скрипта для вставки в Odoo: [odoo-automations/eta-google-maps.py](odoo-automations/eta-google-maps.py).
+
 Все фильтрация — через Trigger Fields: скрипт выполняется только когда
 `rental_start_date` или `x_studio_pickup_address` реально изменились
 (Odoo сам сравнивает старое/новое значение перед запуском). Поэтому в
@@ -75,13 +80,21 @@
 изменилось, и пересчёт нужен всегда.
 
 ```python
-import requests
 
 ETA_URL = "https://bluuu.tours/api/new/eta"
 ACCESS_KEY = "8bbfb28fc8e76843829e8f745c6381c39021f33378a8f61d"
 REQUEST_TIMEOUT = 40  # backend: geocode 15s + distance matrix 15s + запас
+BALI_ROOT_COMPANY_ID = 1  # PT Day Trip Bali — считаем ETA только для неё и её дочерних компаний
 
 for rec in records:
+    # Головная компания заказа: поднимаемся по parent_id до корня.
+    # Не Бали (например Bluuu Tours Phuket и её дочерние) — пропускаем.
+    root = rec.company_id
+    while root.parent_id:
+        root = root.parent_id
+    if root.id != BALI_ROOT_COMPANY_ID:
+        continue
+
     address = (rec.x_studio_pickup_address or "").strip()
 
     if not address:
@@ -169,3 +182,7 @@ for rec in records:
    адреса/даты дополнительно обнуляются `x_studio_estimated_*` в том же PATCH-запросе в Odoo —
    это больше не требуется для исправления бага (п.4), но осталось как no-op подстраховка:
    Odoo всё равно пересчитает эти поля сразу после, увидев изменение триггер-полей.
+6. **Фильтр по компании (2026-10-13)** — перед запуском Таиланда (тот же Odoo, компания
+   Bluuu Tours Phuket). Скрипт поднимается от `rec.company_id` по `parent_id` до корня и
+   пропускает всё, что не под PT Day Trip Bali (id 1) — иначе тайским заказам записывалось бы
+   время pickup до балийского пирса.

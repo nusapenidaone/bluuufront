@@ -2,8 +2,8 @@ import "./index.css";
 import { Suspense, lazy, useEffect, useLayoutEffect } from "react";
 
 const Home = lazy(() => import("./home.jsx"));
-const Private = lazy(() => import("./private.jsx"));
-const Shared = lazy(() => import("./shared.jsx"));
+// Old design (private.jsx / shared.jsx) is switched off but kept in the repo.
+// The new design is served on the canonical URLs below.
 const PrivateNew = lazy(() => import("./privatenew.jsx"));
 const SharedNew = lazy(() => import("./sharednew.jsx"));
 const Payment = lazy(() => import("./Payment.jsx"));
@@ -17,8 +17,8 @@ const BlogPostPage = lazy(() => import("./BlogPostPage.jsx"));
 const SuccessPage = lazy(() => import("./SuccessPage.jsx"));
 const AccountPage = lazy(() => import("./AccountPage.jsx"));
 const Cabinet = lazy(() => import("./cabinet.jsx"));
-const Checkin1 = lazy(() => import("./checkin1.jsx"));
-const Checkin1Qr = lazy(() => import("./checkin1qr.jsx"));
+const Checkin = lazy(() => import("./checkin.jsx"));
+const CheckinQr = lazy(() => import("./checkinqr.jsx"));
 const GlobalImagePreloader = lazy(() => import("./components/common/GlobalImagePreloader.jsx"));
 
 function NotFound() {
@@ -191,8 +191,8 @@ export default function App() {
   useEffect(() => {
     if (path !== "/") return;
     const t = setTimeout(() => {
-      import("./private.jsx");
-      import("./shared.jsx");
+      import("./privatenew.jsx");
+      import("./sharednew.jsx");
     }, 1500);
     return () => clearTimeout(t);
   }, []);
@@ -211,18 +211,10 @@ export default function App() {
 
 
     if (path === "/private-tour-to-nusa-penida") {
-      return <Private />;
-    }
-
-    if (path === "/shared-tour-to-nusa-penida") {
-      return <Shared />;
-    }
-
-    if (path === "/privatenew") {
       return <PrivateNew />;
     }
 
-    if (path === "/sharednew") {
+    if (path === "/shared-tour-to-nusa-penida") {
       return <SharedNew />;
     }
 
@@ -243,14 +235,21 @@ export default function App() {
       return <Cabinet odooId={cabinetMatch[1]} uniqueKey={cabinetMatch[2]} />;
     }
 
-    const checkin1QrMatch = path.match(/^\/checkin1\/(\d+)\/([^/]+)\/qr$/);
-    if (checkin1QrMatch) {
-      return <Checkin1Qr odooId={checkin1QrMatch[1]} uniqueKey={checkin1QrMatch[2]} />;
+    // Key segment is optional: /checkin/:id[/:key][/qr]. Key-less "qr" is
+    // matched first so it is never mistaken for a key.
+    const checkinQrNoKeyMatch = path.match(/^\/checkin\/(\d+)\/qr$/);
+    if (checkinQrNoKeyMatch) {
+      return <CheckinQr odooId={checkinQrNoKeyMatch[1]} />;
     }
 
-    const checkin1Match = path.match(/^\/checkin1\/(\d+)\/([^/]+)$/);
-    if (checkin1Match) {
-      return <Checkin1 odooId={checkin1Match[1]} uniqueKey={checkin1Match[2]} />;
+    const checkinQrMatch = path.match(/^\/checkin\/(\d+)\/([^/]+)\/qr$/);
+    if (checkinQrMatch) {
+      return <CheckinQr odooId={checkinQrMatch[1]} uniqueKey={checkinQrMatch[2]} />;
+    }
+
+    const checkinMatch = path.match(/^\/checkin\/(\d+)(?:\/([^/]+))?$/);
+    if (checkinMatch) {
+      return <Checkin odooId={checkinMatch[1]} uniqueKey={checkinMatch[2]} />;
     }
 
     if (path === "/reviews") {

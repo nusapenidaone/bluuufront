@@ -7,6 +7,16 @@ import App from "./App.jsx";
 import { captureUtm } from "./lib/analytics";
 import { initWaUtm } from "./lib/waUtm";
 
+// Preview URLs of the new design → canonical URLs (keeps query string and hash).
+const LEGACY_REDIRECTS = {
+  "/privatenew": "/private-tour-to-nusa-penida",
+  "/sharednew": "/shared-tour-to-nusa-penida",
+};
+const legacyRedirect = LEGACY_REDIRECTS[window.location.pathname.replace(/\/+$/, "")];
+if (legacyRedirect) {
+  window.location.replace(legacyRedirect + window.location.search + window.location.hash);
+}
+
 captureUtm();
 initWaUtm();
 

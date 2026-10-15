@@ -1,7 +1,7 @@
 import { Waves } from "lucide-react";
 
 // Shared "trip already happened" screen — dropped into cabinet.jsx (inside its
-// normal Navbar/Footer shell) and checkin1.jsx/checkin1qr.jsx (inside their
+// normal Navbar/Footer shell) and checkin.jsx/checkinqr.jsx (inside their
 // minimal CenteredShell) once a link's travel_date has passed. Replaces what
 // would otherwise be a stale edit form / check-in wizard for a trip that's over.
 export default function SeeYouAgain({ name, ctaHref = "/", ctaLabel = "Back to Bluuu Tours" }) {

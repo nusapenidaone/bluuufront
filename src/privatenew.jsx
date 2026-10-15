@@ -9704,7 +9704,7 @@ function Compare() {
       cta: "Get more info",
       primary: true,
       toBook: true,
-      href: "/prepiumprivate",
+      href: "/private-tour-to-nusa-penida",
     },
     {
       name: "Private",
@@ -9720,7 +9720,7 @@ function Compare() {
       cta: "See private options",
       primary: false,
       toBook: true,
-      href: "/prepiumprivate",
+      href: "/private-tour-to-nusa-penida",
     },
   ];
   const cardBase = "p-6 rounded-2xl";
@@ -11117,7 +11117,7 @@ export default function Premium_Private_With_Vibe() {
         <Navbar
           variant="fullbar"
           links={SITE_NAV_LINKS}
-          cta={{ label: "Check availability", href: "#booking" }}
+          cta={{ label: "Check availability", href: "#hero-section" }}
         />
         <Hero>
           <StepOne

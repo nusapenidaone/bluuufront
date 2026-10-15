@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Noren\Booking\Models\Closeddates;
 use Noren\Booking\Models\Boat;
+use Noren\Booking\Models\Company;
 use Noren\Booking\Models\Tours;
 use Noren\Booking\Models\Extras;
 use Noren\Booking\Odoo\OdooService;
@@ -21,6 +22,21 @@ class OdooWebhookController extends Controller
 
         if (!$odooId) {
             return response()->json(['ok' => false], 400);
+        }
+
+        // Заказы чужих компаний (напр. Bluuu Tours Phuket) календарь этого сайта не трогают.
+        // «Свои» компании — те, что заведены на сайте (Company.odoo_id, к ним привязаны лодки).
+        // company_id приходит как id или [id, name]. Нет поля → обрабатываем как раньше,
+        // чтобы не сломать календарь из-за настройки автоматизации.
+        if (array_key_exists('company_id', $payload)) {
+            $company   = $payload['company_id'];
+            $companyId = (int) (is_array($company) ? ($company[0] ?? 0) : $company);
+            if (!$companyId || !Company::where('odoo_id', $companyId)->exists()) {
+                Log::info("Odoo webhook SKIP foreign company | odoo_id={$odooId} | company_id={$companyId}");
+                return response()->json(['ok' => true, 'skipped' => 'foreign company']);
+            }
+        } else {
+            Log::warning("Odoo webhook: no company_id in payload | odoo_id={$odooId}");
         }
 
         $state = $payload['state'] ?? null;
