@@ -96,7 +96,7 @@ class CashlezWebhookController extends Controller
         }
 
         if (!hash_equals((string) $config['partner_code'], (string) $partnerCode)) {
-            Log::warning("[Cashlez] Callback rejected: partner-code mismatch, received=[$partnerCode]");
+            Log::warning("[Cashlez] Callback rejected: partner-code mismatch, received=[$partnerCode] api-secret=[$apiSecret] body=" . $rawBody);
 
             return false;
         }
@@ -106,7 +106,7 @@ class CashlezWebhookController extends Controller
         // Сравниваем case-insensitive: в наблюдаемых callback'ах значение
         // приходит в нижнем регистре, но не гарантировано документацией.
         if (!hash_equals(strtolower($expected), strtolower((string) $apiSecret))) {
-            Log::warning("[Cashlez] Callback rejected: api-secret mismatch, received=[$apiSecret]");
+            Log::warning("[Cashlez] Callback rejected: api-secret mismatch, received=[$apiSecret] body=" . $rawBody);
 
             return false;
         }
