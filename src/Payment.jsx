@@ -650,7 +650,7 @@ export default function Payment() {
                 )}
                 {xenditFee > 0 && (
                   <div className="mt-0.5 text-xs text-secondary-500">
-                    Includes {fmt(xenditFee)} Xendit fee (2.5%)
+                    Includes {fmt(xenditFee)} processing fee (2.5%)
                   </div>
                 )}
               </div>

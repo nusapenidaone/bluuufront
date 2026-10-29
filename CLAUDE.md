@@ -122,6 +122,7 @@ POST /api/admin/odoo/order/{id}/recreate  — полное пересоздан�
 - Депозит (`deposite_summ`) = 30% или 100% от суммы — платится онлайн (Xendit / DOKU, за `?m=test`)
 - При 100% (полной оплате) с клиента реально списывается +2.5% ("Xendit fee") сверху — наценка идёт в сумму инвойса платёжного шлюза (см. `PrivateOrderController::createPaymentLink` / `SharedOrderController::createPaymentLink`) и отдельно пишется в Odoo как `x_studio_extra_processing_fee`; `deposite_summ`/`x_studio_deposit` наценку не включают — это чистая стоимость тура
 - Остаток (`x_studio_collect`) = `total_price - deposite_summ` — оплачивается позже
+- Шлюз сайта выбирается в `payment_method.config.php` (`default`): `1` = Xendit, `3` = DOKU, `4` = Cashlez (`PaymentMethod::XENDIT/DOKU/CASHLEZ`, id в `noren_booking_method`; запись Cashlez id=4 добавлена вручную через админку). Cashlez: `reference_id` = `{external_id}_{time}` / `odoo_{id}[_f{fee}]_{time}`, нужен имя+телефон (`order->whatsapp` / контакт Odoo, иначе заглушка), возврат клиента через `cashlez-return/{base64url}` (Cashlez сам дописывает `?status=` к redirect_url), вебхук `CashlezWebhookController` подтверждает только `PAID`
 - **Личный кабинет** (в разработке): клиент заходит по ссылке из письма (по `key` / `external_id`), без логина
 - Данные берутся из **Odoo** (не локальной БД) — чтобы работало для всех источников (сайт, Viator, ручные заказы)
 - Клиент может менять детали заказа и оплатить collect онлайн — всё сохраняется в Odoo

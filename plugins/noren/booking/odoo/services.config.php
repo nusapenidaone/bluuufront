@@ -3,7 +3,7 @@
 return [
     'url'         => 'https://pt-day-trip-bali.odoo.com',
     'db'          => 'pt-day-trip-bali',
-    'api_key'     => '30f271163aac8949eeeabdd8b1810fd1928a8304',
+    'api_key'     => 'ef9474a6f8c7c65db560483e18f3c020da4641ec',
     'admin_token'     => 'adm_bluuu_a3f9c2e1d8b74056af2c93e5',  // Bearer token for /api/admin/* and /api/new/calendar/* routes
     'cron_key'        => 'e4f3b1a9c2d8e7f6a1b2c3d4e5f67890',  // key for cron /api/boats/close
     'odoo_webhook_key' => 'odoo_wh_38fe18f8b0c0ea819e118e7897b10e6a',  // key for /api/odoo/webhook/product-price (?key=...)
@@ -14,6 +14,7 @@ return [
         'drivers' => 'Drivers2026!',
         'vendors' => 'Vendors2026!',
         'penida'  => 'Penida2026!',
+        'photographer' => 'Photo2026!',
     ],
     // Per-manager passwords for the /manage page (Login with name + password)
     'managers' => [

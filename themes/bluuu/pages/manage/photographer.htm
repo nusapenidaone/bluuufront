@@ -1,0 +1,373 @@
+title = "Photographer"
+url = "/manage/photographer"
+is_hidden = 0
+==
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bluuu Photographer</title>
+     <link rel="icon" type="image/png" href="https://bluuu.tours/themes/bluuu/assets/favicon.png" />
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.23.10/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-100 text-slate-800 p-4 md:p-6 font-['Outfit']">
+<div id="root"></div>
+{% verbatim %}
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useCallback } = React;
+
+const TOKEN_KEY = 'bluuu_admin_token';
+const INPUT  = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 py-1.5 text-sm outline-none focus:border-blue-400';
+const SELECT = 'bg-white border border-slate-300 text-slate-800 rounded-lg px-2.5 h-9 text-sm outline-none';
+
+function todayBali() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Makassar' });
+}
+function shiftDay(ymd, n) {
+    const d = new Date(ymd + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function fmtDisplayDate(ymd) {
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${d}.${m}.${y}`;
+}
+function fmtTime(utcStr) {
+    if (!utcStr) return null;
+    return new Date(utcStr.replace(' ', 'T') + 'Z')
+        .toLocaleTimeString('en-GB', { timeZone: 'Asia/Makassar', hour: '2-digit', minute: '2-digit' });
+}
+function partnerName(o) {
+    if (Array.isArray(o.partner_id)) return o.partner_id[1] || '—';
+    return o.partner_id || '—';
+}
+function strVal(v) {
+    return v && v !== false ? String(v) : null;
+}
+function numVal(v) {
+    const n = Number(v);
+    return isNaN(n) ? 0 : n;
+}
+function totalPax(o) {
+    return numVal(o.x_studio_count_of_people) || (numVal(o.x_studio_adults) + numVal(o.x_studio_kids));
+}
+function guidesOf(o) {
+    return [o.x_studio_guide_1_1, o.x_studio_guide_2_1].filter(v => v && v !== false).map(String);
+}
+function isPrivate(o) {
+    return /private/i.test(strVal(o.x_studio_tour_type) || '');
+}
+function waLink(phone) {
+    return `https://wa.me/${String(phone).replace(/[^\d]/g, '')}`;
+}
+function copyPhone(phone) {
+    navigator.clipboard.writeText(phone).catch(() => {});
+}
+function shareCard(o) {
+    const kids  = numVal(o.x_studio_kids);
+    const lines = [
+        `${strVal(o.x_studio_tour_type) || 'Boat Tour'} — ${o.x_studio_boat_name || '—'} — ${totalPax(o)} persons${kids ? ` (${kids} kids)` : ''}`,
+        `Departure: ${fmtTime(o.rental_start_date) || '—'}`,
+        strVal(o.x_studio_route_new) ? `Route: ${o.x_studio_route_new}` : null,
+        strVal(o.x_studio_lunch) ? `Lunch: ${o.x_studio_lunch}` : null,
+        `Guides: ${guidesOf(o).join(', ') || '—'}`,
+        strVal(o.x_studio_group_lanyard_color) ? `Lanyard: ${o.x_studio_group_lanyard_color}` : null,
+        strVal(o.x_studio_special_requests) ? `Comments: ${o.x_studio_special_requests}` : null,
+        `${partnerName(o)}${o.odoo_phone ? ' ' + o.odoo_phone : ''}`,
+    ].filter(Boolean).join('\n');
+    navigator.clipboard.writeText(lines).catch(() => {});
+}
+
+// ─── Row (one booking) ────────────────────────────────────────────────────────
+function Row({ label, children }) {
+    return (
+        <div className="border-b border-white/70 pb-2">
+            <span className="font-semibold text-slate-700">{label}: </span>
+            <span className="text-slate-600">{children}</span>
+        </div>
+    );
+}
+
+function BookingCard({ o }) {
+    const priv     = isPrivate(o);
+    const kids     = numVal(o.x_studio_kids);
+    const adults   = numVal(o.x_studio_adults);
+    const guides   = guidesOf(o);
+    const route    = strVal(o.x_studio_route_new);
+    const lunch    = strVal(o.x_studio_lunch);
+    const lanyard  = strVal(o.x_studio_group_lanyard_color);
+    const comments = strVal(o.x_studio_special_requests);
+    const phone    = o.odoo_phone || null;
+    const card     = priv ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200';
+    const title    = priv ? 'text-amber-600' : 'text-blue-600';
+
+    return (
+        <div className={`border rounded-2xl overflow-hidden shadow-sm flex flex-col ${card}`}>
+            <div className="px-4 pt-4 pb-3 border-b border-white/60">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                    <a href={`https://pt-day-trip-bali.odoo.com/odoo/rental/${o.id}`}
+                        target="_blank" rel="noopener"
+                        className={`text-base font-bold leading-snug hover:underline ${title}`}>
+                        {strVal(o.x_studio_tour_type) || 'Boat Tour'}
+                    </a>
+                    <div className="flex items-center gap-1 shrink-0">
+                        <span className="text-sm font-bold text-slate-700 tabular-nums">{fmtTime(o.rental_start_date) || '—'}</span>
+                        <button onClick={() => shareCard(o)} title="Copy to clipboard"
+                            className="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div className="text-sm font-semibold text-slate-700">
+                    {o.x_studio_boat_name || <span className="text-slate-300">—</span>}
+                </div>
+                <div className="mt-1 text-sm text-slate-600">
+                    <strong>{totalPax(o)}</strong> persons
+                    <span className="text-slate-400"> · {adults} adults{kids > 0 ? ` · ${kids} kids` : ''}</span>
+                </div>
+            </div>
+
+            <div className="px-4 py-3 space-y-2 flex-1 text-sm">
+                <Row label="Guides">{guides.length ? guides.join(', ') : '—'}</Row>
+                {route   && <Row label="Route">{route}</Row>}
+                {lunch   && <Row label="Lunch">{lunch}</Row>}
+                {lanyard && <Row label="Lanyard">{lanyard}</Row>}
+                {comments && <Row label="Comments">{comments}</Row>}
+            </div>
+
+            <div className="px-4 py-3 bg-white/40 border-t border-white/60 flex items-center justify-between gap-3">
+                <span className="text-sm font-semibold text-slate-700 truncate">{partnerName(o)}</span>
+                {phone && (
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <a href={waLink(phone)} target="_blank" rel="noopener noreferrer"
+                            className="text-sm font-semibold text-emerald-600 hover:text-emerald-500 transition-colors tabular-nums">
+                            {phone}
+                        </a>
+                        <button onClick={() => copyPhone(phone)}
+                            className="text-slate-400 hover:text-slate-600 transition-colors p-0.5" title="Copy">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                            </svg>
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─── LoginScreen ──────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+    const [password, setPassword] = useState('');
+    const [loading,  setLoading]  = useState(false);
+    const [error,    setError]    = useState('');
+
+    const submit = async e => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            const res  = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password, page: 'photographer' }),
+            });
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Wrong password');
+            localStorage.setItem(TOKEN_KEY, json.token);
+            onLogin(json.token);
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center justify-center min-h-screen">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 w-full max-w-xs">
+                <h1 className="text-base font-bold text-slate-800 mb-6 uppercase tracking-[0.2em] text-center">Bluuu Photographer</h1>
+                <form onSubmit={submit} className="space-y-3">
+                    <input type="password" placeholder="Password" value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        className={INPUT + ' w-full'} autoFocus />
+                    {error && <div className="text-xs text-red-500 font-semibold">{error}</div>}
+                    <button type="submit" disabled={loading}
+                        className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl uppercase tracking-widest text-sm transition-colors disabled:opacity-50">
+                        {loading ? '...' : 'Enter'}
+                    </button>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+function App() {
+    const [token,      setToken]      = useState(() => localStorage.getItem(TOKEN_KEY) || '');
+    const [date,       setDate]       = useState(todayBali);
+    const [data,       setData]       = useState(null);
+    const [loading,    setLoading]    = useState(false);
+    const [error,      setError]      = useState('');
+    const [filterType, setFilterType] = useState('');
+    const [filterBoat, setFilterBoat] = useState('');
+
+    const load = useCallback(async d => {
+        setLoading(true);
+        setError('');
+        try {
+            const res  = await fetch(`/api/admin/leads?date_from=${d}&date_to=${d}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const json = await res.json();
+            if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setToken(''); return; }
+            if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+            setData(json);
+            setFilterType('');
+            setFilterBoat('');
+        } catch (e) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    useEffect(() => { if (token) load(date); }, [date, token, load]);
+
+    const orders = useMemo(() => data?.orders || [], [data]);
+
+    const typeOptions = useMemo(() =>
+        [...new Set(orders.map(o => strVal(o.x_studio_tour_type)).filter(Boolean))].sort()
+    , [orders]);
+
+    const boatOptions = useMemo(() =>
+        [...new Set(orders.map(o => o.x_studio_boat_name).filter(Boolean))].sort()
+    , [orders]);
+
+    const filtered = useMemo(() => orders.filter(o => {
+        if (filterType && strVal(o.x_studio_tour_type) !== filterType) return false;
+        if (filterBoat && (o.x_studio_boat_name || '') !== filterBoat) return false;
+        return true;
+    }), [orders, filterType, filterBoat]);
+
+    // Group by boat — photographer works boat by boat; boats ordered by earliest departure
+    const groups = useMemo(() => {
+        const map = new Map();
+        filtered.forEach(o => {
+            const key = o.x_studio_boat_name || 'No boat';
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(o);
+        });
+        return [...map.entries()]
+            .map(([boat, list]) => {
+                list.sort((a, b) => (a.rental_start_date || '') < (b.rental_start_date || '') ? -1 : 1);
+                return {
+                    boat,
+                    list,
+                    pax:    list.reduce((s, o) => s + totalPax(o), 0),
+                    first:  list[0].rental_start_date || '',
+                    guides: [...new Set(list.flatMap(guidesOf))],
+                };
+            })
+            .sort((a, b) => a.first < b.first ? -1 : 1);
+    }, [filtered]);
+
+    const totalGuests = filtered.reduce((s, o) => s + totalPax(o), 0);
+    const isToday = date === todayBali();
+
+    if (!token) return <LoginScreen onLogin={setToken} />;
+
+    return (
+        <div>
+            {/* Sticky header */}
+            <div className="sticky top-0 z-30 bg-slate-100 -mx-4 md:-mx-6 px-4 md:px-6 py-3 flex flex-wrap items-center gap-2 border-b border-slate-200/80 shadow-[0_3px_10px_rgba(0,0,0,0.07)]">
+                <select className={SELECT + ' flex-1 min-w-[120px]'} value={filterType} onChange={e => setFilterType(e.target.value)}>
+                    <option value="">All tours</option>
+                    {typeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <select className={SELECT + ' flex-1 min-w-[120px]'} value={filterBoat} onChange={e => setFilterBoat(e.target.value)}>
+                    <option value="">All Boats</option>
+                    {boatOptions.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+
+                <div className="w-full md:hidden" />
+                <div className="flex-1" />
+                {loading && <span className="text-[10px] text-blue-500 animate-pulse uppercase tracking-widest">Loading…</span>}
+                {data && <span className="text-[10px] text-slate-400 uppercase tracking-widest">{filtered.length} of {orders.length}</span>}
+
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setDate(d => shiftDay(d, -1))}
+                        className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all text-xl font-bold leading-none">
+                        ‹
+                    </button>
+                    <button onClick={() => !isToday && setDate(todayBali())}
+                        className={`h-9 px-4 flex items-center border rounded-lg text-sm font-bold shadow-sm transition-all ${isToday ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'}`}>
+                        {fmtDisplayDate(date)}
+                    </button>
+                    <button onClick={() => setDate(d => shiftDay(d, 1))}
+                        className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all text-xl font-bold leading-none">
+                        ›
+                    </button>
+                </div>
+                <button onClick={() => load(date)} disabled={loading}
+                    className="h-9 w-9 flex items-center justify-center bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-800 shadow-sm transition-all disabled:opacity-40 text-base">
+                    ↺
+                </button>
+            </div>
+
+            {/* Summary */}
+            {!loading && data && filtered.length > 0 && (
+                <div className="mt-4 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 flex flex-wrap gap-x-6 gap-y-1">
+                    <span><strong>Boats — {groups.length}</strong></span>
+                    <span>Bookings — {filtered.length}</span>
+                    <span>Guests — {totalGuests}</span>
+                </div>
+            )}
+
+            <div className="mt-4">
+                {error && (
+                    <div className="mb-4 rounded-2xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+                )}
+                {loading && (
+                    <div className="flex justify-center mt-16 text-blue-500 font-bold animate-pulse tracking-[0.2em] text-sm">LOADING FROM ODOO...</div>
+                )}
+                {!loading && data && filtered.length === 0 && (
+                    <div className="text-center py-16 text-sm text-slate-400">No tours for {fmtDisplayDate(date)}</div>
+                )}
+                {!loading && groups.map(g => (
+                    <section key={g.boat} className="mb-6">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mb-2 px-1">
+                            <h2 className="text-lg font-bold text-slate-800">{g.boat}</h2>
+                            <span className="text-sm text-slate-500">
+                                {fmtTime(g.first) || '—'} · {g.pax} guests · {g.list.length} booking{g.list.length > 1 ? 's' : ''}
+                            </span>
+                            {g.guides.length > 0 && (
+                                <span className="text-sm text-slate-500">· Guides: {g.guides.join(', ')}</span>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {g.list.map(o => <BookingCard key={o.id} o={o} />)}
+                        </div>
+                    </section>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+{% endverbatim %}
+</body>
+</html>

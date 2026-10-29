@@ -1189,11 +1189,22 @@ export default function Cabinet({ odooId, uniqueKey }) {
       ? Math.round(Number(tourLine.price_unit || 0) * Number(tourLine.product_uom_qty || 0) - Number(tourLine.price_subtotal ?? 0))
       : (baseTier !== null ? applyLowSeason(baseTier, lsBoatPrice, currentLsPct).discount : 0);
   const liveTourPrice = liveTier !== null ? applyLowSeason(liveTier, lsBoatPrice, liveLsPct).total : null;
-  const tourPriceDelta = hasChanges && baseTourPrice !== null && liveTourPrice !== null
-    ? liveTourPrice - baseTourPrice
+  // CabinetController overwrites the tour line with the fresh quote, so the delta is
+  // measured against what the line actually costs now — the order may have been booked
+  // at a different price than today's pricelist gives for its original date.
+  const currentTourLinePrice = tourLine && local.tour_odoo_id ? Number(tourLine.price_subtotal ?? 0) : null;
+  const tourPriceDelta = hasChanges && (tourDateChanged || tourMembersChanged) && liveTourPrice !== null
+    ? liveTourPrice - (currentTourLinePrice ?? baseTourPrice ?? liveTourPrice)
     : 0;
 
   const priceDelta  = addonsDelta + tourPriceDelta;
+  // A price decrease first comes off the remaining balance; only what's left over
+  // (new total below what's already been paid) is an actual refund.
+  const estNewCollect = collect + priceDelta;
+  const refundDue     = estNewCollect < 0 ? -estNewCollect : 0;
+  const decreaseNote  = refundDue > 0
+    ? `Overpaid by ${formatPrice(refundDue)} — our team will contact you about the refund`
+    : `New remaining balance: ${formatPrice(estNewCollect)}`;
 
   // estNewTotal: swap add-ons + tour portion
   // amount_total comes straight from Odoo's sale.order — the authoritative total.
@@ -1834,6 +1845,10 @@ export default function Cabinet({ odooId, uniqueKey }) {
                 {lastPrices.cover_price > 0 && <PriceRow label="Insurance" value={formatPrice(lastPrices.cover_price)} />}
                 {lastPrices.extras_total > 0 && <PriceRow label="Extras" value={formatPrice(lastPrices.extras_total)} />}
               </>
+            ) : currentLsAmount > 0 ? (
+              // Odoo total is already discounted — show the pre-discount price so the
+              // low season row reads as "subtotal − discount = total", not a second deduction.
+              <PriceRow label="Price" value={formatPrice(odooTotal + currentLsAmount)} />
             ) : null}
 
             {currentLsAmount > 0 && (
@@ -1844,7 +1859,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
             )}
 
             {/* Always show totals */}
-            <div className={cn("flex items-center justify-between", lastPrices ? "border-t border-neutral-100 pt-2.5" : "")}>
+            <div className={cn("flex items-center justify-between", lastPrices || currentLsAmount > 0 ? "border-t border-neutral-100 pt-2.5" : "")}>
               <span className="text-sm font-bold text-secondary-900">Total</span>
               <span className={cn("text-sm font-extrabold", hasChanges && priceDelta !== 0 ? "text-secondary-300 line-through" : "text-secondary-900")}>
                 {formatPrice(lastPrices ? lastPrices.full_price : odooTotal)}
@@ -1887,7 +1902,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               <div className={cn("mt-1 text-[11px]", priceDelta > 0 ? "text-amber-500" : "text-emerald-500")}>
                 {priceDelta > 0
                   ? `New total: ${formatPrice(estNewTotal)}`
-                  : "Refund will be processed through Odoo"}
+                  : decreaseNote}
               </div>
               {(tourDateChanged || tourMembersChanged) && liveLsPct > 0 && (
                 <div className="mt-1 text-[11px] font-semibold text-emerald-600">
@@ -1920,7 +1935,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
                   <>
                     <div className="text-xs font-semibold text-white/70">Price difference</div>
                     <div className="mt-0.5 text-base font-extrabold text-white">−{formatPrice(Math.abs(priceDelta))}</div>
-                    <div className="mt-1 text-[11px] text-white/60">Refund will be processed through Odoo</div>
+                    <div className="mt-1 text-[11px] text-white/60">{decreaseNote}</div>
                   </>
                 )}
               </div>
@@ -1991,7 +2006,7 @@ export default function Cabinet({ odooId, uniqueKey }) {
               disabled={paying}
               className="mt-2.5 w-full text-center text-xs font-semibold text-white/70 underline underline-offset-2 transition hover:text-white disabled:opacity-60"
             >
-              {paying ? "Redirecting…" : `or pay online now — ${formatPrice(collect)} + 2.5% Xendit fee`}
+              {paying ? "Redirecting…" : `or pay online now — ${formatPrice(collect)} + 2.5% processing fee`}
             </button>
           </div>
         )}

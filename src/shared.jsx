@@ -1795,7 +1795,7 @@ function StepOne({
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-secondary-900">Kids</span>
-                        <span className="text-xs font-semibold text-secondary-500">Ages 8-14</span>
+                        <span className="text-xs font-semibold text-secondary-500">Ages 8-12</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 rounded-full border border-neutral-200 bg-white p-1.5 shadow-none">
@@ -5057,7 +5057,7 @@ function StepFive({
                                   </div>
                                   <div className="flex flex-col">
                                     <span className="text-sm font-black text-secondary-900">Kids</span>
-                                    <span className="text-xs font-semibold text-secondary-300">Ages 8-14</span>
+                                    <span className="text-xs font-semibold text-secondary-300">Ages 8-12</span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-4 rounded-full bg-neutral-100 p-1">
@@ -8266,7 +8266,7 @@ function StepCheckout({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                       <span className="font-bold text-secondary-900">Pay in full</span>
-                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice)} + 2.5% Xendit fee</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice)} + 2.5% processing fee</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
                       Pay the full amount now and have nothing left to pay on the day.

@@ -13,6 +13,9 @@ Route::post('api/cashlez/webhook', [CashlezWebhookController::class, 'handle']);
 Route::get('cashlez-weblink/{id}/{key}', [CashlezPayController::class, 'pay'])->where('id', '[0-9]+');
 Route::get('cashlez-weblink/{id}/{key}/callback', [CashlezPayController::class, 'callback'])->where('id', '[0-9]+');
 
+// Возврат клиента после оплаты на сайте/в кабинете/на чек-ине — см. CashlezService::returnUrl
+Route::get('cashlez-return/{target}', [CashlezPayController::class, 'back'])->where('target', '[A-Za-z0-9_-]+');
+
 // TEMP: ручной тест генерации ссылки и проверки статуса — удалить после проверки
 Route::get('api/cashlez/test', [CashlezTestController::class, 'test']);
 Route::get('api/cashlez/status/{order_id}', [CashlezTestController::class, 'status']);

@@ -4,6 +4,8 @@ use Illuminate\Routing\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use Noren\Booking\Odoo\OdooService;
+use Noren\Booking\Classes\OrderPaymentService;
+use Noren\Booking\Classes\PaymentMethod;
 use Log;
 
 /**
@@ -13,12 +15,12 @@ use Log;
  * 2026-09-29 (карта, CNP/Mastercard, и QRIS — через хостинговую страницу).
  *
  * Диспетчер по префиксу reference_id, как в DokuWebhookController:37-45:
- *   odoo_*      -> реальный заказ, оплаченный по ручной ссылке из Odoo
- *                  (CashlezPayController) — пишем сумму в Odoo.
+ *   bluuu<digits>_* -> оплата заказа на сайте (Private/SharedOrderController) —
+ *                  подтверждаем заказ через OrderPaymentService, как DOKU/Xendit.
+ *   odoo_*      -> доплата остатка: ручная ссылка из Odoo (CashlezPayController),
+ *                  кабинет, чек-ин, account — пишем сумму в Odoo.
  *   bluuu_test_* -> наши собственные ручные тесты через CashlezTestController,
  *                  не привязаны к реальному заказу — только логируем.
- * Локальные заказы сайта (обычный 'bluuu<timestamp>', как у DOKU/Xendit) через
- * Cashlez пока не создаются — сайт с этим шлюзом не интегрирован, см. план.
  */
 class CashlezWebhookController extends Controller
 {
@@ -49,11 +51,21 @@ class CashlezWebhookController extends Controller
             $rawBody
         ));
 
-        if ($isPaid && str_starts_with($referenceId, 'odoo_') && preg_match('/^odoo_(\d+)/', $referenceId, $m)) {
+        // Только PAID: в отличие от DOKU, неоплаченные статусы Cashlez не
+        // документированы, а OrderPaymentService со статусом "не оплачен"
+        // удаляет заказ — не рискуем, неоплаченный заказ просто остаётся New.
+        if ($isPaid && preg_match('/^(bluuu\d+)/', $referenceId, $m)) {
+            // Заказ сайта: reference_id = {external_id}_{time} (нонс на случай,
+            // если Cashlez не примет повторный reference_id при повторной оплате).
+            (new OrderPaymentService)->handle(PaymentMethod::CASHLEZ, $m[1], 1, $rawBody);
+        } elseif ($isPaid && preg_match('/^odoo_(\d+)(?:_f(\d+))?/', $referenceId, $m)) {
+            // Доплата остатка: odoo_{id}[_f{fee}]_{time} — наценка 2.5% из кабинета/
+            // чек-ина приходит в "_f{fee}", как у DOKU; ручная ссылка из Odoo — без неё.
             $odooOrderId = (int) $m[1];
+            $feeAmount   = (float) ($m[2] ?? 0);
 
             try {
-                OdooService::registerPayment($odooOrderId, $amount, 'x_studio_collected_by_cashlez', $referenceId);
+                OdooService::registerPayment($odooOrderId, $amount - $feeAmount, 'x_studio_collected_by_cashlez', $referenceId, $feeAmount);
             } catch (\Throwable $e) {
                 Log::error("[Cashlez] Callback: registerPayment failed for odoo_id=$odooOrderId: " . $e->getMessage());
             }

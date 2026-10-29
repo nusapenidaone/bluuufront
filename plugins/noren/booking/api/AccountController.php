@@ -10,6 +10,7 @@ use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
+use Noren\Booking\Cashlez\CashlezService;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Order;
 use Noren\Booking\Models\Transfer;
@@ -317,6 +318,11 @@ class AccountController extends Controller
             // (int) casting stops at the first non-digit character.
             $payUrl = DokuService::createPaymentLink(
                 $collectExtId . '_' . time(), $collectAmount, $order->email, $successUrl, $cancelUrl, $description
+            );
+        } elseif ($method === PaymentMethod::CASHLEZ) {
+            $payUrl = CashlezService::createPaymentLink(
+                $collectExtId . '_' . time(), $collectAmount, $order->name ?: 'Customer',
+                CashlezService::phone($order->whatsapp), CashlezService::returnUrl($successUrl)
             );
         } else {
             $payUrl = XenditService::createPaymentLink(

@@ -18,6 +18,7 @@ use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
+use Noren\Booking\Cashlez\CashlezService;
 
 use Log;
 
@@ -265,6 +266,16 @@ class SharedOrderController extends Controller
                     $successUrl,
                     $cancelUrl,
                     $order->tours->name ?? 'Shared Tour'
+                );
+            } elseif ($order->method_id == PaymentMethod::CASHLEZ) {
+                // Нонс в reference_id — на случай, если Cashlez не примет повторный
+                // reference_id при повторной попытке оплаты; вебхук берёт bluuu<digits>.
+                $url = CashlezService::createPaymentLink(
+                    $order->external_id . '_' . time(),
+                    $chargeAmount,
+                    $order->name ?: 'Customer',
+                    CashlezService::phone($order->whatsapp),
+                    CashlezService::returnUrl($successUrl)
                 );
             } else {
                 $url = XenditService::createPaymentLink(

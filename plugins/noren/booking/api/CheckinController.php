@@ -12,6 +12,7 @@ use Log;
 use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
+use Noren\Booking\Cashlez\CashlezService;
 use Noren\Booking\Odoo\OdooService;
 use Noren\Bluuu\Models\Registration;
 
@@ -196,6 +197,13 @@ class CheckinController extends Controller
             // odoo_{id} prefix (needed by the webhook) still parses fine since the
             // regex there stops at the first non-digit/non-"_f<digits>" segment.
             $payUrl = DokuService::createPaymentLink($extId . '_' . time(), $chargeAmount, $email, $successUrl, $cancelUrl, $desc);
+        } elseif ($method === PaymentMethod::CASHLEZ) {
+            // Cashlez требует имя и телефон вместо email — берём из контакта Odoo.
+            $info   = OdooService::getOrderInfo($odoo_id);
+            $payUrl = CashlezService::createPaymentLink(
+                $extId . '_' . time(), $chargeAmount, $info['customer_name'] ?: 'Customer',
+                CashlezService::phone($info['phone']), CashlezService::returnUrl($successUrl)
+            );
         } else {
             $payUrl = XenditService::createPaymentLink($extId, $chargeAmount, $email, $successUrl, $cancelUrl, $desc);
         }

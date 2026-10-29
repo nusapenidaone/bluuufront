@@ -79,4 +79,24 @@ class CashlezPayController extends Controller
     {
         return view('noren.booking::odoo_pay_success');
     }
+
+    // ─── GET /cashlez-return/{target} ──────────────────────────────────────────
+    // Возврат с оплаты сайта/кабинета/чек-ина — см. CashlezService::returnUrl.
+    // Добавленные Cashlez'ом ?status=... отбрасываем: оплату подтверждает
+    // только вебхук, страницы возврата сами опрашивают статус.
+
+    public function back(string $target)
+    {
+        $url = base64_decode(strtr($target, '-_', '+/'), true);
+
+        // Только на свой сайт — иначе это открытый редирект.
+        $host = parse_url((string) $url, PHP_URL_HOST);
+        $own  = parse_url(url('/'), PHP_URL_HOST);
+
+        if (!$url || !$host || preg_replace('/^www\./', '', $host) !== preg_replace('/^www\./', '', (string) $own)) {
+            return redirect(url('/'));
+        }
+
+        return redirect($url);
+    }
 }

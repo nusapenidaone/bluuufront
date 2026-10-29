@@ -10,6 +10,7 @@ use Noren\Booking\Classes\XenditService;
 use Noren\Booking\Classes\TourPricing;
 use Noren\Booking\Classes\PaymentMethod;
 use Noren\Booking\Doku\DokuService;
+use Noren\Booking\Cashlez\CashlezService;
 use Noren\Booking\Models\Boat;
 use Noren\Booking\Models\Cover;
 use Noren\Booking\Models\Extras;
@@ -450,9 +451,17 @@ class CabinetController extends Controller
         // ── Header fields ──────────────────────────────────────────────────────
         $fields = [];
 
-        if ($date) {
-            $fields['rental_start_date']  = Carbon::parse($date . ' 08:00:00', 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
-            $fields['rental_return_date'] = Carbon::parse($date . ' 18:00:00', 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+        // Move the order to the new day but keep its existing tour time (route time or
+        // whatever a manager set in Odoo) — only fall back to 08:00–18:00 if it has none.
+        if ($dateChanged) {
+            $shiftToDate = function ($utc, $fallbackTime) use ($date) {
+                $time = !empty($utc)
+                    ? Carbon::parse($utc, 'UTC')->setTimezone('Asia/Makassar')->format('H:i:s')
+                    : $fallbackTime;
+                return Carbon::parse($date . ' ' . $time, 'Asia/Makassar')->utc()->format('Y-m-d H:i:s');
+            };
+            $fields['rental_start_date']  = $shiftToDate($odooOrder['rental_start_date']  ?? null, '08:00:00');
+            $fields['rental_return_date'] = $shiftToDate($odooOrder['rental_return_date'] ?? null, '18:00:00');
         }
 
         if ($adults !== null) $fields['x_studio_adults'] = $newAdults;
@@ -886,10 +895,12 @@ class CabinetController extends Controller
 
         $partnerId = is_array($odooOrder['partner_id'] ?? null) ? $odooOrder['partner_id'][0] : null;
         $email     = null;
+        $phone     = null;
         if ($partnerId) {
             try {
                 $partners = OdooService::readPartners([$partnerId]);
                 $email    = $partners[$partnerId]['email'] ?? null;
+                $phone    = $partners[$partnerId]['phone'] ?? null;
             } catch (\Exception $e) {
                 Log::warning('CabinetController::createPayment — partner fetch failed', ['odoo_id' => $odooId]);
             }
@@ -915,6 +926,12 @@ class CabinetController extends Controller
             // regex there stops at the first non-digit/non-"_f<digits>" segment.
             $payUrl = DokuService::createPaymentLink(
                 $collectExtId . '_' . time(), $chargeAmount, $email ?? '', $baseUrl . '?paid=1', $baseUrl, $description
+            );
+        } elseif ($method === PaymentMethod::CASHLEZ) {
+            $customerName = is_array($odooOrder['partner_id'] ?? null) ? ($odooOrder['partner_id'][1] ?? '') : '';
+            $payUrl = CashlezService::createPaymentLink(
+                $collectExtId . '_' . time(), $chargeAmount, $customerName ?: 'Customer',
+                CashlezService::phone($phone), CashlezService::returnUrl($baseUrl . '?paid=1')
             );
         } else {
             $payUrl = XenditService::createPaymentLink(

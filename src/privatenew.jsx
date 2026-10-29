@@ -11726,7 +11726,7 @@ function StepCheckout({
                   <div className="flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
                       <span className="font-bold text-secondary-900">Pay in full</span>
-                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice + (supportChildren ? donationAmount : 0))} + 2.5% Xendit fee</span>
+                      <span className="font-bold text-secondary-900">{formatIDR(totalPrice + (supportChildren ? donationAmount : 0))} + 2.5% processing fee</span>
                     </div>
                     <div className="mt-1 text-xs leading-relaxed text-secondary-500 sm:text-sm">
                       Pay the full amount now and have nothing left to pay on the day.

@@ -124,6 +124,30 @@ class CashlezService
     }
 
     /**
+     * phone_no у Cashlez обязателен — у части заказов телефона нет, тогда
+     * заглушка (как в CashlezPayController), иначе Generate Link упадёт.
+     */
+    public static function phone(?string $raw): string
+    {
+        $phone = preg_replace('/[^\d+]/', '', (string) $raw);
+
+        return strlen(ltrim($phone, '+')) >= 6 ? $phone : '0000000000';
+    }
+
+    /**
+     * Cashlez дописывает к redirect_url "?status=&referenceId=&orderId=" — без
+     * проверки, есть ли в URL уже "?". Наши страницы возврата сами несут
+     * query (/new/success?type=...&amount=..., /cabinet/...?paid=1), так что
+     * склейка ломала бы последний параметр. Поэтому возвращаем клиента через
+     * cashlez-return/{цель в base64url}, который просто редиректит на цель
+     * (см. CashlezPayController::back).
+     */
+    public static function returnUrl(string $target): string
+    {
+        return url('cashlez-return/' . rtrim(strtr(base64_encode($target), '+/', '-_'), '='));
+    }
+
+    /**
      * Проверка статуса платежа. $orderId — UUID из ответа generate
      * (не наш reference_id).
      */

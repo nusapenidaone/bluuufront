@@ -595,7 +595,7 @@ class OdooService
             'context' => ['active_test' => false],
             'fields' => [
                 'id', 'name', 'state', 'locked', 'partner_id',
-                'rental_start_date',
+                'rental_start_date', 'rental_return_date',
                 'x_studio_source',
                 'x_studio_boat_name',
                 'x_studio_route_new',

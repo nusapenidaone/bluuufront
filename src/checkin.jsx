@@ -699,7 +699,7 @@ function StepPay({ order, setOrder, goBack }) {
         </div>
         <RadioOpt
           label="Pay Online Now"
-          sub={`Skip the morning queue · ${fmtIDR(order.collect)} + 2.5% Xendit fee`}
+          sub={`Skip the morning queue · ${fmtIDR(order.collect)} + 2.5% processing fee`}
           checked={order.pay === true}
           onClick={() => setOrder((o) => ({ ...o, pay: true }))}
         />
@@ -713,7 +713,7 @@ function StepPay({ order, setOrder, goBack }) {
         <div className="mt-6">
           {!loading ? (
             order.pay === true ? (
-              <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} + 2.5% Xendit fee <ArrowRight className="h-[15px] w-[15px]" /></PrimaryBtn>
+              <PrimaryBtn onClick={payOnline}>Pay {fmtIDR(order.collect)} + 2.5% processing fee <ArrowRight className="h-[15px] w-[15px]" /></PrimaryBtn>
             ) : (
               <PrimaryBtn onClick={finish}>Complete Check-In <ArrowRight className="h-[15px] w-[15px]" /></PrimaryBtn>
             )
